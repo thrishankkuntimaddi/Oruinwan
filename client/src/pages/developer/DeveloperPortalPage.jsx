@@ -686,11 +686,13 @@ export default function DeveloperPortalPage({ workspaceId }) {
 
       {/* Content */}
       <div className="dp-body">
-        {activeTab === 'api-keys' && <ApiKeysTab workspaceId={wsId} />}
-        {activeTab === 'webhooks' && <WebhooksTab workspaceId={wsId} />}
-        {activeTab === 'bots'     && <BotsTab     workspaceId={wsId} />}
-        {activeTab === 'apps'     && <AppsTab     workspaceId={wsId} />}
-        {activeTab === 'docs'     && <DocsTab />}
+        <div className="dp-body-inner">
+          {activeTab === 'api-keys' && <ApiKeysTab workspaceId={wsId} />}
+          {activeTab === 'webhooks' && <WebhooksTab workspaceId={wsId} />}
+          {activeTab === 'bots'     && <BotsTab     workspaceId={wsId} />}
+          {activeTab === 'apps'     && <AppsTab     workspaceId={wsId} />}
+          {activeTab === 'docs'     && <DocsTab />}
+        </div>
       </div>
     </div>
   );

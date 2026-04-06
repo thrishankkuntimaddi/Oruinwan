@@ -33,13 +33,13 @@ import {
 } from "lucide-react";
 
 const NOTE_TYPE_CONFIG = {
-    note: { Icon: FileText, label: 'Document', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    brainstorm: { Icon: Lightbulb, label: 'Brainstorm', color: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' },
-    meeting: { Icon: Users, label: 'Meeting', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' },
-    sop: { Icon: ClipboardList, label: 'SOP', color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-    projectspec: { Icon: FolderKanban, label: 'Project Spec', color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400' },
-    techdesign: { Icon: Cpu, label: 'Tech Design', color: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400' },
-    announcement: { Icon: Megaphone, label: 'Announcement', color: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' },
+    note: { Icon: FileText, label: 'Document', color: 'bg-sky-900/30 text-sky-400 dark:bg-sky-900/30 dark:text-sky-400' },
+    brainstorm: { Icon: Lightbulb, label: 'Brainstorm', color: 'bg-violet-900/30 text-violet-400 dark:bg-violet-900/30 dark:text-violet-400' },
+    meeting: { Icon: Users, label: 'Meeting', color: 'bg-emerald-900/30 text-emerald-400 dark:bg-emerald-900/30 dark:text-emerald-400' },
+    sop: { Icon: ClipboardList, label: 'SOP', color: 'bg-amber-900/30 text-amber-400 dark:bg-amber-900/30 dark:text-amber-400' },
+    projectspec: { Icon: FolderKanban, label: 'Project Spec', color: 'bg-cyan-900/30 text-cyan-400 dark:bg-cyan-900/30 dark:text-cyan-400' },
+    techdesign: { Icon: Cpu, label: 'Tech Design', color: 'bg-slate-800/50 text-slate-400 dark:bg-slate-800/50 dark:text-slate-400' },
+    announcement: { Icon: Megaphone, label: 'Announcement', color: 'bg-rose-900/30 text-rose-400 dark:bg-rose-900/30 dark:text-rose-400' },
 };
 const DEFAULT_TYPE = NOTE_TYPE_CONFIG.note;
 
@@ -460,7 +460,8 @@ ${blockHtml}
         return (
             <div
                 key={block.id}
-                className={`relative group/block transition-all ${dragOverId === block.id ? 'ring-2 ring-blue-400 ring-offset-2 rounded-lg' : ''}`}
+                className={`relative group/block transition-all ${dragOverId === block.id ? 'outline outline-1 outline-offset-2' : ''}`}
+                style={dragOverId === block.id ? { outlineColor: '#b8956a' } : {}}
                 draggable
                 onDragStart={e => handleDragStart(e, block.id)}
                 onDragOver={e => handleDragOver(e, block.id)}
@@ -469,7 +470,7 @@ ${blockHtml}
             >
                 {/* Drag handle */}
                 <div className="absolute -left-7 top-2 opacity-0 group-hover/block:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing transition-opacity z-10">
-                    <GripVertical size={14} className="text-gray-400" />
+                    <GripVertical size={14} style={{ color: 'rgba(228,228,228,0.25)' }} />
                 </div>
                 {el}
             </div>
@@ -477,19 +478,19 @@ ${blockHtml}
     };
 
     return (
-        <div className="flex h-full bg-white dark:bg-gray-900 relative overflow-hidden">
+        <div style={{ display: 'flex', height: '100%', background: '#0c0c0c', position: 'relative', overflow: 'hidden' }}>
             {/* Main editor column */}
             <div className="flex flex-col flex-1 min-w-0">
                 {/* ── Toolbar ── */}
-                <div className="h-14 px-8 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shrink-0 z-10 relative">
+                <div style={{ height: '52px', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0c0c0c', flexShrink: 0, zIndex: 10, position: 'relative' }}>
                     <div className="flex items-center gap-3">
                         {/* Note type badge — Lucide icon */}
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${typeConf.color}`}>
                             <typeConf.Icon size={12} />
                             {typeConf.label}
                         </span>
-                        <div className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
-                            <Clock size={12} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'rgba(228,228,228,0.25)', fontFamily: 'monospace' }}>
+                            <Clock size={11} />
                             <span className="hidden sm:block">{formattedDate}</span>
                         </div>
                     </div>
@@ -498,7 +499,9 @@ ${blockHtml}
                         {/* AI button */}
                         <button
                             onClick={() => { setShowAI(v => !v); setShowHistory(false); }}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${showAI ? 'bg-violet-600 text-white shadow-md' : 'bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-105'}`}
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: showAI ? 'rgba(184,149,106,0.2)' : '#b8956a', border: showAI ? '1px solid rgba(184,149,106,0.4)' : 'none', color: showAI ? '#b8956a' : '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                         >
                             <Sparkles size={13} /> AI
                         </button>
@@ -508,8 +511,10 @@ ${blockHtml}
                         {/* Share */}
                         <button
                             onClick={() => setShowShareModal(true)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors border border-gray-200 dark:border-gray-700"
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                             title="Share note"
+                            onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                         >
                             <Users size={13} /> Share
                         </button>
@@ -517,8 +522,10 @@ ${blockHtml}
                         {/* History */}
                         <button
                             onClick={() => { setShowHistory(v => !v); setShowAI(false); }}
-                            className={`p-2 rounded-lg transition-colors ${showHistory ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            style={{ padding: '6px', background: showHistory ? 'rgba(184,149,106,0.15)' : 'transparent', border: 'none', color: showHistory ? '#b8956a' : 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Version history"
+                            onMouseEnter={e => { if (!showHistory) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; } }}
+                            onMouseLeave={e => { if (!showHistory) { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; } }}
                         >
                             <History size={16} />
                         </button>
@@ -526,11 +533,10 @@ ${blockHtml}
                         {/* Pin / Favorite */}
                         <button
                             onClick={() => togglePin && togglePin(id)}
-                            className={`p-2 rounded-lg transition-colors ${note.isPinned
-                                ? 'text-amber-500 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20'
-                                : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20'
-                                }`}
+                            style={{ padding: '6px', background: note.isPinned ? 'rgba(251,191,36,0.1)' : 'transparent', border: 'none', color: note.isPinned ? '#fbbf24' : 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title={note.isPinned ? 'Remove from Favorites' : 'Add to Favorites'}
+                            onMouseEnter={e => { if (!note.isPinned) { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; } }}
+                            onMouseLeave={e => { if (!note.isPinned) { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; } }}
                         >
                             <Star size={16} className={note.isPinned ? 'fill-current' : ''} />
                         </button>
@@ -538,31 +544,55 @@ ${blockHtml}
                         {/* Archive */}
                         <button
                             onClick={() => toggleArchive && toggleArchive(id)}
-                            className="p-2 text-gray-400 hover:text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-lg transition-colors"
+                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Archive note"
+                            onMouseEnter={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.background = 'rgba(167,139,250,0.08)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
                         >
                             <Archive size={16} />
                         </button>
 
                         {/* Delete */}
-                        <button onClick={() => setIsDeleteModalOpen(true)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete note">
+                        <button onClick={() => setIsDeleteModalOpen(true)}
+                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                            title="Delete note"
+                            onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+                        >
                             <Trash2 size={16} />
                         </button>
 
                         {/* More menu */}
                         <div className="relative" ref={menuRef}>
-                            <button onClick={() => setShowMenu(v => !v)} className={`p-2 rounded-lg transition-colors ${showMenu ? 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                            <button onClick={() => setShowMenu(v => !v)}
+                                style={{ padding: '6px', background: showMenu ? 'rgba(255,255,255,0.07)' : 'transparent', border: 'none', color: showMenu ? '#e4e4e4' : 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                                onMouseEnter={e => { if (!showMenu) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; } }}
+                                onMouseLeave={e => { if (!showMenu) { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; } }}
+                            >
                                 <MoreHorizontal size={16} />
                             </button>
                             {showMenu && (
-                                <div className="absolute right-0 mt-2 w-52 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                                    <button onClick={handleDuplicate} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"><Copy size={14} className="text-gray-400" /> Duplicate</button>
-                                    <button onClick={handleDownloadPDF} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"><Download size={14} className="text-gray-400" /> Download PDF</button>
-                                    <button onClick={() => { handleCopyLink(); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
-                                        {showShareTooltip ? <Check size={14} className="text-green-500" /> : <Share2 size={14} className="text-gray-400" />} Copy link
+                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '200px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', zIndex: 20 }}>
+                                    {[{ label: 'Duplicate', Icon: Copy, action: handleDuplicate },
+                                      { label: 'Download PDF', Icon: Download, action: handleDownloadPDF },
+                                      { label: 'Copy link', Icon: showShareTooltip ? Check : Share2, action: () => { handleCopyLink(); setShowMenu(false); }, amber: showShareTooltip },
+                                    ].map(({ label, Icon: Ic, action, amber }) => (
+                                        <button key={label} onClick={action}
+                                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: amber ? '#34d399' : 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <Ic size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> {label}
+                                        </button>
+                                    ))}
+                                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
+                                    <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }}
+                                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <Info size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Note Info
                                     </button>
-                                    <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
-                                    <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors"><Info size={14} className="text-gray-400" /> Note Info</button>
                                 </div>
                             )}
                         </div>
@@ -577,33 +607,44 @@ ${blockHtml}
                             type="text"
                             value={title}
                             onChange={handleTitleChange}
-                            className="text-4xl font-bold text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 border-none focus:ring-0 p-0 mb-3 w-full bg-transparent outline-none"
+                            style={{
+                                fontSize: '2.5rem', fontWeight: 800, color: '#e4e4e4',
+                                border: 'none', outline: 'none', padding: 0, marginBottom: '10px',
+                                width: '100%', background: 'transparent', fontFamily: 'Inter, system-ui, sans-serif',
+                                lineHeight: 1.15,
+                            }}
+                            className="placeholder-gray-700 dark:placeholder-gray-700"
                             placeholder="Untitled Note"
                         />
 
                         {/* Tags row */}
                         <div className="flex flex-wrap items-center gap-2 mb-6 min-h-[28px]">
                             {tags.map(tag => (
-                                <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-medium">
+                                <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', color: '#b8956a', fontSize: '11px', fontWeight: 600, fontFamily: 'monospace' }}>
                                     #{tag}
-                                    <button onClick={() => removeTag(tag)} className="hover:text-red-500 transition-colors ml-0.5">
-                                        <X size={10} />
-                                    </button>
+                                    <button onClick={() => removeTag(tag)}
+                                        style={{ background: 'transparent', border: 'none', color: 'rgba(184,149,106,0.5)', cursor: 'pointer', padding: 0, display: 'flex', transition: 'color 150ms ease' }}
+                                        onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(184,149,106,0.5)'}
+                                    ><X size={10} /></button>
                                 </span>
                             ))}
                             {showTagInput ? (
                                 <input
-                                    autoFocus
-                                    type="text"
-                                    value={tagInput}
+                                    autoFocus type="text" value={tagInput}
                                     onChange={e => setTagInput(e.target.value)}
                                     onKeyDown={e => { if (e.key === 'Enter') addTag(); if (e.key === 'Escape') { setShowTagInput(false); setTagInput(''); } }}
                                     onBlur={addTag}
                                     placeholder="tag name..."
-                                    className="px-2 py-1 border border-blue-300 dark:border-blue-600 rounded-full text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 outline-none focus:ring-1 focus:ring-blue-400 w-28"
+                                    style={{ padding: '3px 10px', border: '1px solid rgba(184,149,106,0.35)', background: 'rgba(184,149,106,0.08)', color: '#b8956a', fontSize: '11px', fontFamily: 'monospace', outline: 'none', width: '100px', colorScheme: 'dark' }}
+                                    onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.6)'}
                                 />
                             ) : (
-                                <button onClick={() => setShowTagInput(true)} className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-400 dark:text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-full transition-colors">
+                                <button onClick={() => setShowTagInput(true)}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'rgba(228,228,228,0.3)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
+                                    onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
+                                >
                                     <Tag size={11} /><Plus size={9} /> tag
                                 </button>
                             )}
@@ -616,14 +657,13 @@ ${blockHtml}
 
                         {/* Add block prompt */}
                         <div
-                            className="mt-6 py-3 text-sm text-gray-300 dark:text-gray-600 cursor-text hover:text-gray-400 dark:hover:text-gray-500 transition-colors select-none"
-                            onClick={() => {
-                                const rect = { x: 120, y: 400 };
-                                addBlock('text', '');
-                            }}
+                            style={{ marginTop: '24px', padding: '12px 0', fontSize: '12px', color: 'rgba(228,228,228,0.2)', cursor: 'text', userSelect: 'none', transition: 'color 150ms ease' }}
+                            onClick={() => addBlock('text', '')}
+                            onMouseEnter={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
                         >
-                            <span className="inline-flex items-center gap-1.5">
-                                Type <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">/</kbd> to insert a block, or click to add text
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                Type <kbd style={{ padding: '2px 6px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontFamily: 'monospace' }}>/</kbd> to insert a block, or click to add text
                             </span>
                         </div>
 
@@ -643,9 +683,11 @@ ${blockHtml}
                                 <button
                                     key={`${type}-${label}`}
                                     onClick={() => addBlock(type, content ?? '', meta || {})}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs font-medium transition-colors"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 500, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.background = 'transparent'; }}
                                 >
-                                    <span className="text-[11px]">{emoji}</span> {label}
+                                    <span style={{ fontSize: '11px' }}>{emoji}</span> {label}
                                 </button>
                             ))}
                         </div>

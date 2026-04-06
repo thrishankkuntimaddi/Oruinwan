@@ -1,6 +1,8 @@
 import React, { useState } from "react";
-import { Puzzle, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Puzzle, ExternalLink, CheckCircle2, Circle } from "lucide-react";
 import { MOCK_INTEGRATIONS } from "../../apps/mock/mockIntegrations";
+
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 // Channel-relevant integrations only
 const CHANNEL_INTEGRATIONS = MOCK_INTEGRATIONS.filter((i) =>
@@ -29,93 +31,150 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
   };
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <p style={{
+        fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 4px',
+        lineHeight: 1.65, fontFamily: FONT,
+      }}>
         Enable integrations for this channel. Events from connected apps will appear here as messages.
       </p>
 
       {CHANNEL_INTEGRATIONS.map((integration) => {
         const isGloballyConnected = globalConnectedMap[integration.id] ?? integration.connected;
         const isEnabled = channelEnabled[integration.id];
+        const isActive = isEnabled && isGloballyConnected;
 
         return (
           <div
             key={integration.id}
-            className={`flex items-center gap-4 p-4 rounded-xl border transition-all ${
-              isEnabled && isGloballyConnected
-                ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/10"
-                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/50"
-            }`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '14px',
+              padding: '12px 14px', borderRadius: '2px',
+              border: `1px solid ${isActive ? 'rgba(184,149,106,0.3)' : 'var(--border-default)'}`,
+              backgroundColor: isActive ? 'rgba(184,149,106,0.06)' : 'var(--bg-active)',
+              transition: 'border-color 150ms ease, background-color 150ms ease',
+            }}
           >
-            {/* Icon */}
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${integration.color} flex items-center justify-center text-xl flex-shrink-0`}>
+            {/* Emoji icon */}
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '2px', flexShrink: 0,
+              backgroundColor: 'var(--bg-hover)',
+              border: '1px solid var(--border-default)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '18px',
+            }}>
               {integration.emoji}
             </div>
 
             {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                <span style={{
+                  fontSize: '13px', fontWeight: 500,
+                  color: 'var(--text-primary)', fontFamily: FONT,
+                }}>
                   {integration.name}
                 </span>
                 {isGloballyConnected ? (
-                  <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-700 rounded-full px-1.5 py-0.5">
-                    <CheckCircle2 size={9} />
-                    Connected
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '3px',
+                    fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em',
+                    color: 'var(--accent)',
+                    backgroundColor: 'rgba(184,149,106,0.12)',
+                    border: '1px solid rgba(184,149,106,0.2)',
+                    borderRadius: '99px', padding: '1px 7px', fontFamily: FONT,
+                  }}>
+                    <CheckCircle2 size={9} /> Connected
                   </span>
                 ) : (
-                  <span className="text-[10px] font-medium text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700 rounded-full px-1.5 py-0.5">
+                  <span style={{
+                    fontSize: '9px', fontWeight: 600,
+                    color: 'var(--text-muted)',
+                    backgroundColor: 'var(--bg-hover)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: '99px', padding: '1px 7px', fontFamily: FONT,
+                  }}>
                     Not Connected
                   </span>
                 )}
               </div>
-              {isEnabled && isGloballyConnected ? (
-                <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-0.5 font-medium">
+
+              {isActive ? (
+                <p style={{
+                  fontSize: '11px', color: 'var(--accent)', margin: 0,
+                  fontWeight: 500, fontFamily: FONT,
+                }}>
                   ✓ Events will appear in this channel.
                 </p>
               ) : !isGloballyConnected ? (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                  Connect {integration.name} in{" "}
-                  <span className="text-blue-500 dark:text-blue-400 cursor-pointer hover:underline inline-flex items-center gap-0.5">
-                    Apps <ExternalLink size={10} />
-                  </span>{" "}
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontFamily: FONT }}>
+                  Connect {integration.name} in{' '}
+                  <span style={{
+                    color: 'var(--accent)', cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: '2px',
+                    transition: 'opacity 150ms ease',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                  >
+                    Apps <ExternalLink size={9} />
+                  </span>{' '}
                   to enable.
                 </p>
               ) : (
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontFamily: FONT }}>
                   {integration.description.slice(0, 60)}…
                 </p>
               )}
             </div>
 
-            {/* Toggle */}
+            {/* Toggle switch */}
             <button
               onClick={() => isGloballyConnected && toggleIntegration(integration.id)}
               disabled={!isGloballyConnected}
-              className={`relative w-11 h-6 rounded-full transition-all flex-shrink-0 ${
-                !isGloballyConnected
-                  ? "bg-gray-200 dark:bg-gray-700 cursor-not-allowed opacity-50"
-                  : isEnabled
-                  ? "bg-emerald-500"
-                  : "bg-gray-200 dark:bg-gray-700"
-              }`}
-              title={!isGloballyConnected ? `Connect ${integration.name} first in Apps` : ""}
+              title={!isGloballyConnected ? `Connect ${integration.name} first in Apps` : ''}
+              style={{
+                position: 'relative', width: '40px', height: '22px',
+                backgroundColor: isActive ? 'var(--accent)' : 'var(--bg-hover)',
+                border: `1px solid ${isActive ? 'var(--border-accent)' : 'var(--border-default)'}`,
+                borderRadius: '2px', flexShrink: 0, outline: 'none',
+                cursor: !isGloballyConnected ? 'not-allowed' : 'pointer',
+                opacity: !isGloballyConnected ? 0.4 : 1,
+                transition: 'background-color 150ms ease',
+              }}
+              role="switch"
+              aria-checked={isActive}
             >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${
-                  isEnabled && isGloballyConnected ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
+              <span style={{
+                position: 'absolute', top: '3px',
+                left: isActive ? '20px' : '3px',
+                width: '14px', height: '14px',
+                backgroundColor: isActive ? '#0c0c0c' : 'var(--text-muted)',
+                borderRadius: '1px',
+                transition: 'left 150ms ease',
+              }} />
             </button>
           </div>
         );
       })}
 
-      {/* Empty hint */}
-      <div className="mt-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-start gap-3">
-        <Puzzle size={16} className="text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
-        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-          Want more integrations? Visit <span className="text-blue-500 dark:text-blue-400 font-medium cursor-pointer hover:underline">Apps & Integrations</span> to connect additional tools to your workspace.
+      {/* Footer hint */}
+      <div style={{
+        marginTop: '4px', padding: '12px 14px', borderRadius: '2px',
+        backgroundColor: 'var(--bg-active)',
+        border: '1px solid var(--border-subtle)',
+        display: 'flex', alignItems: 'flex-start', gap: '10px',
+      }}>
+        <Puzzle size={14} style={{ color: 'var(--text-muted)', flexShrink: 0, marginTop: '1px' }} />
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.65, fontFamily: FONT }}>
+          Want more integrations? Visit{' '}
+          <span style={{ color: 'var(--accent)', fontWeight: 500, cursor: 'pointer' }}
+            onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+          >
+            Apps &amp; Integrations
+          </span>
+          {' '}to connect additional tools to your workspace.
         </p>
       </div>
     </div>

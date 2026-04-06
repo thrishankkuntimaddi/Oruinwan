@@ -1,128 +1,76 @@
+// Step5ReviewForm.jsx — Monolith Flow Design System
 import React from 'react';
-import { Building, User, ShieldCheck, FileText } from 'lucide-react';
+import { Building, User, ShieldCheck, FileText, Edit3 } from 'lucide-react';
 
-/**
- * Step5ReviewForm Component
- * Summary review cards with click-to-edit functionality
- */
-const Step5ReviewForm = ({
-    formData,
-    onEdit,
-    theme
-}) => {
-    return (
-        <div className="max-w-3xl mx-auto space-y-6 animate-fadeIn">
-            <div className="text-center mb-8">
-                <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Verify your information before submitting.
-                </p>
+const ReviewCard = ({ icon: Icon, title, step, onEdit, children }) => (
+    <div onClick={() => onEdit(step)}
+        style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', padding: '20px', cursor: 'pointer', transition: 'border-color 200ms ease', position: 'relative' }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '28px', height: '28px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon size={13} style={{ color: '#b8956a' }} />
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>{title}</span>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Card 1: Organization */}
-                <div
-                    className={`${theme === 'dark' ? 'bg-slate-800/60 border-gray-700 hover:border-indigo-400' : 'bg-white/60 border-gray-200 hover:border-indigo-300'} p-6 rounded-3xl border transition-all cursor-pointer group`}
-                    onClick={() => onEdit(1)}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-                            <Building size={18} className={`${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`} /> Organization
-                        </h3>
-                        <span className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                            Edit
-                        </span>
-                    </div>
-                    <div className="space-y-3">
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>Name</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{formData.companyName}</span>
-                        </div>
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>Domain</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{formData.companyDomain}</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Card 2: Admin */}
-                <div
-                    className={`${theme === 'dark' ? 'bg-slate-800/60 border-gray-700 hover:border-indigo-400' : 'bg-white/60 border-gray-200 hover:border-indigo-300'} p-6 rounded-3xl border transition-all cursor-pointer group`}
-                    onClick={() => onEdit(2)}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-                            <User size={18} className={`${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`} /> Admin
-                        </h3>
-                        <span className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                            Edit
-                        </span>
-                    </div>
-                    <div className="space-y-3">
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>Name</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{formData.adminName}</span>
-                        </div>
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>Role</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{formData.role === "Other" ? formData.roleOther : formData.role}</span>
-                        </div>
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>Contact</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'} text-sm`}>
-                                {formData.personalEmail}<br />{formData.phoneCode} {formData.phone}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Card 3: Account */}
-                <div
-                    className={`${theme === 'dark' ? 'bg-slate-800/60 border-gray-700 hover:border-indigo-400' : 'bg-white/60 border-gray-200 hover:border-indigo-300'} p-6 rounded-3xl border transition-all cursor-pointer group`}
-                    onClick={() => onEdit(3)}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-                            <ShieldCheck size={18} className={`${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`} /> Account
-                        </h3>
-                        <span className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                            Edit
-                        </span>
-                    </div>
-                    <div className="space-y-3">
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>Comp. Email</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{formData.companyEmail}</span>
-                        </div>
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>Password</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>••••••••</span>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Card 4: Documents */}
-                <div
-                    className={`${theme === 'dark' ? 'bg-slate-800/60 border-gray-700 hover:border-indigo-400' : 'bg-white/60 border-gray-200 hover:border-indigo-300'} p-6 rounded-3xl border transition-all cursor-pointer group`}
-                    onClick={() => onEdit(4)}
-                >
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} flex items-center gap-2`}>
-                            <FileText size={18} className={`${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`} /> Documents
-                        </h3>
-                        <span className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                            Edit
-                        </span>
-                    </div>
-                    <div className="space-y-3">
-                        <div>
-                            <span className={`text-xs ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} font-bold uppercase block`}>File</span>
-                            <span className={`${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>{formData.documents?.name}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#b8956a', fontWeight: 600 }}>
+                <Edit3 size={11} />Edit
+            </span>
         </div>
-    );
-};
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {children}
+        </div>
+    </div>
+);
+
+const Field = ({ label, value }) => (
+    <div>
+        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.3)', display: 'block', marginBottom: '2px' }}>{label}</span>
+        <span style={{ fontSize: '13px', color: 'rgba(228,228,228,0.75)' }}>{value || '—'}</span>
+    </div>
+);
+
+// Ignore legacy theme prop
+const Step5ReviewForm = ({ formData, onEdit, theme }) => (
+    <div style={{ maxWidth: '680px', margin: '0 auto' }}>
+        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', textAlign: 'center', marginBottom: '28px' }}>
+            Verify your information before submitting.
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <ReviewCard icon={Building} title="Organization" step={1} onEdit={onEdit}>
+                <Field label="Name" value={formData.companyName} />
+                <Field label="Domain" value={formData.companyDomain} />
+            </ReviewCard>
+
+            <ReviewCard icon={User} title="Admin" step={2} onEdit={onEdit}>
+                <Field label="Name" value={formData.adminName} />
+                <Field label="Role" value={formData.role === 'Other' ? formData.roleOther : formData.role} />
+                <Field label="Contact" value={`${formData.personalEmail} · ${formData.phoneCode} ${formData.phone}`} />
+            </ReviewCard>
+
+            <ReviewCard icon={ShieldCheck} title="Account" step={3} onEdit={onEdit}>
+                <Field label="Company Email" value={formData.companyEmail} />
+                <Field label="Password" value="••••••••" />
+            </ReviewCard>
+
+            <ReviewCard icon={FileText} title="Documents" step={4} onEdit={onEdit}>
+                <Field label="File" value={formData.documents?.name} />
+                {formData.documents && (
+                    <Field label="Size" value={`${(formData.documents.size / 1024 / 1024).toFixed(2)} MB`} />
+                )}
+            </ReviewCard>
+        </div>
+
+        <div style={{ marginTop: '20px', padding: '14px 16px', background: 'rgba(184,149,106,0.05)', border: '1px solid rgba(184,149,106,0.15)' }}>
+            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.7' }}>
+                By submitting, you confirm all information is accurate and you agree to Chttrix's{' '}
+                <span style={{ color: '#b8956a', fontWeight: 600 }}>Terms of Service</span> and{' '}
+                <span style={{ color: '#b8956a', fontWeight: 600 }}>Privacy Policy</span>.
+            </p>
+        </div>
+    </div>
+);
 
 export default Step5ReviewForm;

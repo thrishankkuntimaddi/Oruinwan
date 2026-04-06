@@ -6,287 +6,239 @@ import {
     Activity, CheckCircle, AlertCircle, Megaphone, ArrowRight
 } from 'lucide-react';
 
+/* ─── Shared tokens ─── */
+const T = {
+    label: { fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.13em', textTransform: 'uppercase', margin: '0 0 4px' },
+    subtext: { fontSize: '13px', color: 'var(--text-secondary)', margin: 0 },
+    title: { fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', margin: 0 },
+};
+
 const Overview = () => {
     const navigate = useNavigate();
-    const [stats, setStats] = useState({
-        totalCompanies: 0,
-        activeUsers: 0,
-        openTickets: 0,
-        monthlyRevenue: 0,
-        pendingRequests: 0,
-        growthRate: 0
-    });
+    const [stats, setStats] = useState({ totalCompanies: 0, activeUsers: 0, openTickets: 0, monthlyRevenue: 0, pendingRequests: 0, growthRate: 0 });
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        fetchOverviewData();
-    }, []);
+    useEffect(() => { fetchOverviewData(); }, []);
 
     const fetchOverviewData = async () => {
         try {
-            // Fetch stats
-            const statsRes = await api.get(`/api/admin/overview/stats`);
+            const [statsRes, activitiesRes] = await Promise.all([
+                api.get('/api/admin/overview/stats'),
+                api.get('/api/admin/overview/activities')
+            ]);
             setStats(statsRes.data);
-
-            // Fetch recent activities
-            const activitiesRes = await api.get(`/api/admin/overview/activities`);
             setActivities(activitiesRes.data);
-
-            setLoading(false);
         } catch (err) {
             console.error('Failed to fetch overview data:', err);
+        } finally {
             setLoading(false);
         }
     };
 
-    const StatCard = ({ icon: Icon, label, value, change, trend, color, onClick }) => (
-        <div
-            onClick={onClick}
-            className={`bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 transition-all hover:shadow-lg hover:scale-105 ${onClick ? 'cursor-pointer' : ''}`}
-        >
-            <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                        {label}
-                    </p>
-                    <p className="text-3xl font-black text-gray-900 dark:text-white mb-3">
-                        {value}
-                    </p>
-                    {change !== undefined && (
-                        <div className="flex items-center gap-1 text-sm">
-                            {trend === 'up' ? (
-                                <TrendingUp className="text-green-500" size={16} />
-                            ) : (
-                                <TrendingDown className="text-red-500" size={16} />
-                            )}
-                            <span className={trend === 'up' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                                {change}%
-                            </span>
-                            <span className="text-gray-400 text-xs ml-1">vs last month</span>
-                        </div>
-                    )}
-                </div>
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
-                    <Icon className="text-white" size={24} />
-                </div>
-            </div>
-        </div>
-    );
-
-    const ActivityItem = ({ activity }) => {
-        const getActivityIcon = (type) => {
-            switch (type) {
-                case 'company_registered': return <Building2 size={16} className="text-blue-500" />;
-                case 'company_approved': return <CheckCircle size={16} className="text-green-500" />;
-                case 'ticket_created': return <Ticket size={16} className="text-orange-500" />;
-                case 'broadcast_sent': return <Megaphone size={16} className="text-purple-500" />;
-                default: return <Activity size={16} className="text-gray-500" />;
-            }
-        };
-
-        return (
-            <div className="flex items-start gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
-                    {getActivityIcon(activity.type)}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {activity.description}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        {new Date(activity.timestamp).toLocaleString()}
-                    </p>
-                </div>
-            </div>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-            </div>
-        );
-    }
+    if (loading) return <LoadingSpinner />;
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2">
+                <h1 style={{ fontSize: '26px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
                     Platform Overview
                 </h1>
-                <p className="text-gray-500 dark:text-gray-400">
-                    Monitor your platform's health and activity
-                </p>
+                <p style={T.subtext}>Monitor your platform's health and activity</p>
             </div>
 
-            {/* Platform Status Banner */}
-            <div className="bg-gradient-to-r from-emerald-500 to-green-600 rounded-2xl p-6 text-white shadow-lg shadow-emerald-500/10">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                            <CheckCircle size={28} />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold mb-1">All Systems Operational</h2>
-                            <p className="text-green-50">All services are running smoothly • Last checked: {new Date().toLocaleTimeString()}</p>
+            {/* Status Banner */}
+            <div style={{
+                padding: '20px 24px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--state-success)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <CheckCircle size={18} style={{ color: 'var(--state-success)', flexShrink: 0 }} />
+                    <div>
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>All Systems Operational</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            All services running smoothly · Last checked: {new Date().toLocaleTimeString()}
                         </div>
                     </div>
-                    <button
-                        onClick={() => navigate('/chttrix-admin/health')}
-                        className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-bold backdrop-blur-sm transition-colors"
-                    >
-                        View Details →
-                    </button>
                 </div>
+                <ViewDetailsBtn onClick={() => navigate('/chttrix-admin/health')} />
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                    icon={Building2}
-                    label="Total Companies"
-                    value={stats.totalCompanies}
-                    change={stats.companiesGrowth}
-                    trend={stats.companiesGrowth >= 0 ? 'up' : 'down'}
-                    color="from-blue-500 to-blue-600"
-                    onClick={() => navigate('/chttrix-admin/companies')}
-                />
-                <StatCard
-                    icon={Users}
-                    label="Active Users"
-                    value={stats.activeUsers}
-                    change={stats.usersGrowth}
-                    trend={stats.usersGrowth >= 0 ? 'up' : 'down'}
-                    color="from-green-500 to-green-600"
-                />
-                <StatCard
-                    icon={Ticket}
-                    label="Open Tickets"
-                    value={stats.openTickets}
-                    color="from-orange-500 to-orange-600"
-                    onClick={() => navigate('/chttrix-admin/tickets')}
-                />
-                <StatCard
-                    icon={DollarSign}
-                    label="Monthly Revenue"
-                    value={`$${stats.monthlyRevenue.toLocaleString()}`}
-                    change={stats.revenueGrowth}
-                    trend={stats.revenueGrowth >= 0 ? 'up' : 'down'}
-                    color="from-purple-500 to-purple-600"
-                    onClick={() => navigate('/chttrix-admin/billing')}
-                />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
+                <StatCard icon={Building2} label="Total Companies" value={stats.totalCompanies} change={stats.companiesGrowth} trend={stats.companiesGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/chttrix-admin/companies')} />
+                <StatCard icon={Users} label="Active Users" value={stats.activeUsers} change={stats.usersGrowth} trend={stats.usersGrowth >= 0 ? 'up' : 'down'} />
+                <StatCard icon={Ticket} label="Open Tickets" value={stats.openTickets} onClick={() => navigate('/chttrix-admin/tickets')} />
+                <StatCard icon={DollarSign} label="Monthly Revenue" value={`$${(stats.monthlyRevenue || 0).toLocaleString()}`} change={stats.revenueGrowth} trend={stats.revenueGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/chttrix-admin/billing')} />
             </div>
 
             {/* Pending Requests Alert */}
             {stats.pendingRequests > 0 && (
-                <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-700 rounded-2xl p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center">
-                                <AlertCircle className="text-white" size={24} />
+                <div style={{
+                    padding: '20px 24px',
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--accent)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <AlertCircle size={18} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                        <div>
+                            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                                {stats.pendingRequests} Pending Company Registration{stats.pendingRequests > 1 ? 's' : ''}
                             </div>
-                            <div>
-                                <h3 className="font-bold text-gray-900 dark:text-white text-lg">
-                                    {stats.pendingRequests} Pending Company Registration{stats.pendingRequests > 1 ? 's' : ''}
-                                </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-300">
-                                    Companies waiting for verification
-                                </p>
-                            </div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Companies waiting for verification</div>
                         </div>
-                        <button
-                            onClick={() => navigate('/chttrix-admin/pending')}
-                            className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold hover:bg-black dark:hover:bg-gray-100 transition-all flex items-center gap-2 shadow-lg"
-                        >
-                            Review Now
-                            <ArrowRight size={18} />
-                        </button>
                     </div>
+                    <ReviewBtn onClick={() => navigate('/chttrix-admin/pending')} />
                 </div>
             )}
 
-            {/* Recent Activity Feed - Full Width */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Activity size={20} />
-                            Recent Activity
-                        </h2>
-                        <span className="text-xs text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full font-bold">
-                            Live
-                        </span>
+            {/* Recent Activity */}
+            <div style={{ border: '1px solid var(--border-subtle)' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Activity size={16} style={{ color: 'var(--text-muted)' }} />
+                        <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Recent Activity</span>
                     </div>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: 'var(--state-success)', textTransform: 'uppercase', padding: '2px 6px', border: '1px solid var(--state-success)' }}>Live</span>
                 </div>
-                <div className="p-4 space-y-2 max-h-96 overflow-y-auto">
-                    {activities.length > 0 ? (
-                        activities.map((activity, index) => (
-                            <ActivityItem key={index} activity={activity} />
-                        ))
-                    ) : (
-                        <div className="text-center py-8 text-gray-400">
-                            No recent activity
-                        </div>
+                <div style={{ maxHeight: '320px', overflowY: 'auto' }} className="custom-scrollbar">
+                    {activities.length > 0 ? activities.map((activity, index) => (
+                        <ActivityItem key={index} activity={activity} />
+                    )) : (
+                        <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>No recent activity</div>
                     )}
                 </div>
             </div>
 
-            {/* Quick Actions - Bottom Horizontal Row */}
+            {/* Quick Actions */}
             <div>
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">
-                    Quick Actions
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <button
-                        onClick={() => navigate('/chttrix-admin/pending')}
-                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
-                            <CheckCircle size={20} className="text-gray-900 dark:text-white" />
-                        </div>
-                        <span className="font-bold text-gray-900 dark:text-white block mb-1">Review Requests</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Manage company verifications</span>
-                    </button>
-
-                    <button
-                        onClick={() => navigate('/chttrix-admin/broadcast')}
-                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
-                            <Megaphone size={20} className="text-gray-900 dark:text-white" />
-                        </div>
-                        <span className="font-bold text-gray-900 dark:text-white block mb-1">Send Broadcast</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Notify all companies</span>
-                    </button>
-
-                    <button
-                        onClick={() => navigate('/chttrix-admin/tickets')}
-                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
-                            <Ticket size={20} className="text-gray-900 dark:text-white" />
-                        </div>
-                        <span className="font-bold text-gray-900 dark:text-white block mb-1">View Tickets</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Resolve support issues</span>
-                    </button>
-
-                    <button
-                        onClick={() => navigate('/chttrix-admin/health')}
-                        className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md transition-all group text-left"
-                    >
-                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center mb-3 group-hover:bg-gray-200 dark:group-hover:bg-gray-600 transition-colors">
-                            <Activity size={20} className="text-gray-900 dark:text-white" />
-                        </div>
-                        <span className="font-bold text-gray-900 dark:text-white block mb-1">System Health</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 block">Monitor platform status</span>
-                    </button>
+                <h2 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '12px' }}>Quick Actions</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
+                    <QuickAction icon={CheckCircle} title="Review Requests" desc="Manage company verifications" onClick={() => navigate('/chttrix-admin/pending')} />
+                    <QuickAction icon={Megaphone} title="Send Broadcast" desc="Notify all companies" onClick={() => navigate('/chttrix-admin/broadcast')} />
+                    <QuickAction icon={Ticket} title="View Tickets" desc="Resolve support issues" onClick={() => navigate('/chttrix-admin/tickets')} />
+                    <QuickAction icon={Activity} title="System Health" desc="Monitor platform status" onClick={() => navigate('/chttrix-admin/health')} />
                 </div>
             </div>
         </div>
     );
 };
+
+const StatCard = ({ icon: Icon, label, value, change, trend, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <div
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                background: hov && onClick ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                padding: '20px',
+                cursor: onClick ? 'pointer' : 'default',
+                transition: 'background 150ms ease'
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <Icon size={16} style={{ color: 'var(--text-muted)' }} />
+                {change !== undefined && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: trend === 'up' ? 'var(--state-success)' : 'var(--state-danger)' }}>
+                        {trend === 'up' ? <TrendingUp size={11} /> : <TrendingDown size={11} />}
+                        {Math.abs(change)}%
+                    </div>
+                )}
+            </div>
+            <div style={{ fontSize: '26px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{value}</div>
+            <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '4px' }}>{label}</div>
+        </div>
+    );
+};
+
+const ActivityItem = ({ activity }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <div
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                display: 'flex', alignItems: 'flex-start', gap: '12px',
+                padding: '12px 20px',
+                borderBottom: '1px solid var(--border-subtle)',
+                background: hov ? 'var(--bg-hover)' : 'transparent',
+                transition: 'background 150ms ease'
+            }}
+        >
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--border-accent)', flexShrink: 0, marginTop: '6px' }} />
+            <div style={{ flex: 1 }}>
+                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{activity.description}</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{new Date(activity.timestamp).toLocaleString()}</p>
+            </div>
+        </div>
+    );
+};
+
+const QuickAction = ({ icon: Icon, title, desc, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                padding: '20px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                transition: 'background 150ms ease', width: '100%'
+            }}
+        >
+            <Icon size={16} style={{ color: hov ? 'var(--accent)' : 'var(--text-muted)', marginBottom: '12px', transition: 'color 150ms ease' }} />
+            <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>{title}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{desc}</div>
+        </button>
+    );
+};
+
+const ViewDetailsBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ padding: '6px 12px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 150ms ease' }}>
+            View Details <ArrowRight size={13} />
+        </button>
+    );
+};
+
+const ReviewBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ padding: '8px 16px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', transition: 'background 150ms ease' }}>
+            Review Now <ArrowRight size={14} />
+        </button>
+    );
+};
+
+const LoadingSpinner = () => (
+    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-base)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
+            {[1,2,3,4].map(i => (
+                <div key={i} style={{ background: 'var(--bg-surface)', padding: '16px 18px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '8px' }}><div className="sk" style={{ width: '12px', height: '12px' }} /><div className="sk" style={{ height: '8px', width: '70px' }} /></div>
+                    <div className="sk" style={{ height: '28px', width: '50px', marginBottom: '5px' }} />
+                    <div className="sk" style={{ height: '8px', width: '80px' }} />
+                </div>
+            ))}
+        </div>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+            {[1,2,3,4,5].map(i => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <div className="sk" style={{ width: '28px', height: '28px', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}><div className="sk" style={{ height: '10px', width: '140px', marginBottom: '4px' }} /><div className="sk" style={{ height: '8px', width: '100px' }} /></div>
+                    <div className="sk" style={{ height: '18px', width: '55px', flexShrink: 0 }} />
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default Overview;

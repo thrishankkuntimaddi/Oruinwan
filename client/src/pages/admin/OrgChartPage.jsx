@@ -1,149 +1,136 @@
+// client/src/pages/admin/OrgChartPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
-import { API_BASE } from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-
-const DEPT_COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#ef4444','#14b8a6'];
-
-function getColor(idx) { return DEPT_COLORS[idx % DEPT_COLORS.length]; }
+import { GitBranch, RefreshCw, ChevronDown, ChevronRight, Users } from 'lucide-react';
 
 function OrgNode({ node, color, depth = 0 }) {
-  const [expanded, setExpanded] = useState(depth < 2);
-  const hasChildren = (node.teams && node.teams.length > 0) || (node.children && node.children.length > 0);
+    const [expanded, setExpanded] = useState(depth < 2);
+    const hasChildren = (node.teams && node.teams.length > 0) || (node.children && node.children.length > 0);
 
-  return (
-    <div style={{ marginLeft: depth === 0 ? 0 : 24, position: 'relative' }}>
-      {depth > 0 && (
-        <div style={{ position: 'absolute', left: -16, top: 24, width: 16, height: 1, background: '#e5e7eb' }} />
-      )}
-      <div
-        style={{ background: '#fff', border: `2px solid ${color}`, borderRadius: 12, padding: '12px 16px', display: 'inline-flex', alignItems: 'center', gap: 10, cursor: hasChildren ? 'pointer' : 'default', minWidth: 160, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', userSelect: 'none', transition: 'box-shadow 0.2s' }}
-        onClick={() => hasChildren && setExpanded(e => !e)}
-        onMouseEnter={e => e.currentTarget.style.boxShadow = `0 4px 16px ${color}40`}
-        onMouseLeave={e => e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.06)'}
-      >
-        <span style={{ fontSize: 18 }}>{node.icon || (depth === 0 ? '🏢' : depth === 1 ? '📂' : '👥')}</span>
-        <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{node.name}</div>
-          {node.memberCount !== undefined && <div style={{ fontSize: 11, color: '#9ca3af' }}>{node.memberCount} members</div>}
-          {node.lead && <div style={{ fontSize: 11, color: '#9ca3af' }}>Lead: {node.lead.username}</div>}
-        </div>
-        {hasChildren && (
-          <span style={{ marginLeft: 'auto', fontSize: 10, color: color, fontWeight: 700 }}>{expanded ? '▲' : '▼'}</span>
-        )}
-      </div>
+    return (
+        <div style={{ marginLeft: depth === 0 ? 0 : 20, position: 'relative' }}>
+            {depth > 0 && (
+                <div style={{ position: 'absolute', left: -12, top: 20, width: 12, height: 1, background: 'var(--border-accent)' }} />
+            )}
+            <div
+                style={{ background: 'var(--bg-surface)', border: `1px solid ${color}`, padding: '10px 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: hasChildren ? 'pointer' : 'default', minWidth: '160px', userSelect: 'none', transition: 'border-color 150ms ease' }}
+                onClick={() => hasChildren && setExpanded(e => !e)}
+                onMouseEnter={e => { if (hasChildren) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-surface)'; }}>
+                <div>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>{node.name}</p>
+                    {node.memberCount !== undefined && <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{node.memberCount} members</p>}
+                    {node.lead && <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Lead: {node.lead.username}</p>}
+                </div>
+                {hasChildren && (
+                    <div style={{ marginLeft: 'auto', color, flexShrink: 0 }}>
+                        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                    </div>
+                )}
+            </div>
 
-      {expanded && hasChildren && (
-        <div style={{ marginTop: 12, paddingLeft: 24, borderLeft: `2px dashed ${color}40`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {(node.teams || []).map((team, ti) => (
-            <OrgNode key={team.id} node={team} color={getColor(ti + 3)} depth={depth + 1} />
-          ))}
-          {(node.children || []).map((child, ci) => (
-            <OrgNode key={child.id} node={child} color={getColor(ci + 1)} depth={depth + 1} />
-          ))}
+            {expanded && hasChildren && (
+                <div style={{ marginTop: '8px', paddingLeft: '20px', borderLeft: `1px dashed ${color}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(node.teams || []).map((team, ti) => (
+                        <OrgNode key={team.id} node={team} color={NODE_COLORS[(ti + 3) % NODE_COLORS.length]} depth={depth + 1} />
+                    ))}
+                    {(node.children || []).map((child, ci) => (
+                        <OrgNode key={child.id} node={child} color={NODE_COLORS[(ci + 1) % NODE_COLORS.length]} depth={depth + 1} />
+                    ))}
+                </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
+const NODE_COLORS = ['var(--accent)', '#5aba8a', '#9b8ecf', '#e05252', '#7a7a7a', '#b8956a', '#5ab8ba', '#ba5a8a'];
+
 export default function OrgChartPage() {
-  const { user } = useAuth();
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+    const { user } = useAuth();
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-  // Resolve companyId from auth context — same pattern as Analytics.jsx
-  const companyId = typeof user?.companyId === 'object'
-    ? user?.companyId?._id || user?.companyId?.id
-    : user?.companyId;
+    const companyId = typeof user?.companyId === 'object' ? (user?.companyId?._id || user?.companyId?.id) : user?.companyId;
 
-  const fetchOrgChart = useCallback(async () => {
-    if (!companyId) {
-      setError('No company found. Org chart is available for company accounts only.');
-      setLoading(false);
-      return;
-    }
-    try {
-      setLoading(true);
-      setError(null);
-      const { data: orgData } = await api.get(
-        `/api/companies/${companyId}/org-chart`
-      );
-      setData(orgData);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load org chart');
-    } finally { setLoading(false); }
-  }, [companyId]);
+    const fetchOrgChart = useCallback(async () => {
+        if (!companyId) { setError('No company found. Org chart is available for company accounts only.'); setLoading(false); return; }
+        try {
+            setLoading(true); setError(null);
+            const { data: orgData } = await api.get(`/api/companies/${companyId}/org-chart`);
+            setData(orgData);
+        } catch (err) {
+            setError(err.response?.data?.message || 'Failed to load org chart');
+        } finally { setLoading(false); }
+    }, [companyId]);
 
-  useEffect(() => { fetchOrgChart(); }, [fetchOrgChart]);
+    useEffect(() => { fetchOrgChart(); }, [fetchOrgChart]);
 
-  return (
-    <div style={{ padding: '32px', fontFamily: 'Inter, sans-serif', minHeight: '100vh', background: '#f9fafb' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Org Chart</h1>
-            <p style={{ margin: '4px 0 0', color: '#6b7280', fontSize: 14 }}>
-              {data ? `${data.company?.name} · ${data.totalEmployees} employees · ${data.departments?.length} departments` : 'Company structure visualization'}
-            </p>
-          </div>
-          <button
-            id="refresh-org-btn"
-            onClick={fetchOrgChart}
-            style={{ padding: '10px 20px', borderRadius: 8, border: '1.5px solid #e5e7eb', background: '#fff', color: '#374151', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}
-          >
-            ↻ Refresh
-          </button>
-        </div>
-
-        {loading && <div style={{ textAlign: 'center', padding: 80, color: '#9ca3af' }}>Loading org chart…</div>}
-        {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: 16, color: '#dc2626' }}>{error}</div>}
-
-        {data && !loading && (
-          <>
-            {/* Stats bar */}
-            <div style={{ display: 'flex', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
-              {[
-                { label: 'Total Employees', value: data.totalEmployees, icon: '👤', color: '#6366f1' },
-                { label: 'Departments', value: data.departments?.length || 0, icon: '📂', color: '#8b5cf6' },
-                { label: 'Unassigned', value: data.unassignedCount || 0, icon: '⚠️', color: '#f59e0b' },
-              ].map(stat => (
-                <div key={stat.label} style={{ background: '#fff', borderRadius: 12, padding: '16px 24px', border: '1.5px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 12, flex: '1 1 160px', minWidth: 140 }}>
-                  <span style={{ fontSize: 24 }}>{stat.icon}</span>
-                  <div>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: stat.color }}>{stat.value}</div>
-                    <div style={{ fontSize: 12, color: '#9ca3af' }}>{stat.label}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Company root node */}
-            <div style={{ background: '#fff', borderRadius: 20, padding: 32, border: '1.5px solid #f3f4f6', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
-              {/* Company Header */}
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 14, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', padding: '14px 24px', borderRadius: 14, color: '#fff', marginBottom: 32 }}>
-                <span style={{ fontSize: 28 }}>🏢</span>
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {/* Header */}
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{data.company?.name}</div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>{data.company?.industry || 'Company'}</div>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <GitBranch size={16} style={{ color: 'var(--accent)' }} />
+                        Org Chart
+                    </h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>
+                        {data ? `${data.company?.name} · ${data.totalEmployees} employees · ${data.departments?.length} departments` : 'Company structure visualization'}
+                    </p>
                 </div>
-              </div>
+                <button onClick={fetchOrgChart}
+                    style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+                    <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
+                </button>
+            </header>
 
-              {/* Department tree */}
-              {data.departments?.length === 0 && (
-                <p style={{ color: '#9ca3af', fontSize: 14 }}>No departments found. Add departments from the Departments page.</p>
-              )}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {(data.departments || []).map((dept, idx) => (
-                  <OrgNode key={dept.id} node={dept} color={getColor(idx)} depth={1} />
-                ))}
-              </div>
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                {loading && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
+                    <RefreshCw size={22} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} /></div>}
+
+                {error && <div style={{ padding: '12px 16px', background: 'rgba(224,82,82,0.08)', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '12px', marginBottom: '16px' }}>{error}</div>}
+
+                {data && !loading && (
+                    <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {/* Stats */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
+                            {[
+                                { label: 'Total Employees', value: data.totalEmployees },
+                                { label: 'Departments', value: data.departments?.length || 0 },
+                                { label: 'Unassigned', value: data.unassignedCount || 0, warn: data.unassignedCount > 0 },
+                            ].map(stat => (
+                                <div key={stat.label} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '4px' }}>{stat.label}</p>
+                                    <p style={{ fontSize: '28px', fontWeight: 700, color: stat.warn && stat.value > 0 ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '-0.02em' }}>{stat.value}</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Tree */}
+                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '24px' }}>
+                            {/* Company root */}
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: 'var(--accent)', padding: '12px 20px', marginBottom: '24px' }}>
+                                <Users size={18} style={{ color: 'var(--bg-base)' }} />
+                                <div>
+                                    <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--bg-base)', marginBottom: '1px' }}>{data.company?.name}</p>
+                                    <p style={{ fontSize: '11px', color: 'rgba(12,12,12,0.7)' }}>{data.company?.industry || 'Company'}</p>
+                                </div>
+                            </div>
+
+                            {data.departments?.length === 0
+                                ? <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No departments found. Add departments from the Departments page.</p>
+                                : <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {(data.departments || []).map((dept, idx) => (
+                                        <OrgNode key={dept.id} node={dept} color={NODE_COLORS[idx % NODE_COLORS.length]} depth={1} />
+                                    ))}
+                                </div>}
+                        </div>
+                    </div>
+                )}
             </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 }

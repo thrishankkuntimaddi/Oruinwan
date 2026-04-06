@@ -81,13 +81,29 @@ function EmojiPicker({ onSelect, onClose }) {
     }, [onClose]);
     return (
         <div ref={ref}
-            className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 p-3"
-            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Choose icon</p>
-            <div className="grid grid-cols-8 gap-1">
+            style={{
+                position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+                width: '240px', backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)', borderRadius: '2px',
+                zIndex: 50, padding: '12px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}>
+            <p style={{
+                fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
+                textTransform: 'uppercase', letterSpacing: '0.14em',
+                marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            }}>Choose icon</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '4px' }}>
                 {EMOJIS.map(e => (
                     <button key={e} onClick={() => { onSelect(e); onClose(); }}
-                        className="w-8 h-8 flex items-center justify-center text-lg rounded-lg hover:bg-gray-100 transition-colors">
+                        style={{
+                            width: 32, height: 32, display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', fontSize: '16px',
+                            borderRadius: '2px', background: 'none', border: 'none',
+                            cursor: 'pointer', transition: 'background-color 150ms ease',
+                        }}
+                        onMouseEnter={e2 => e2.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                        onMouseLeave={e2 => e2.currentTarget.style.backgroundColor = 'transparent'}>
                         {e}
                     </button>
                 ))}
@@ -107,18 +123,29 @@ function CoverPicker({ current, onSelect, onClose }) {
     }, [onClose]);
     return (
         <div ref={ref}
-            className="absolute top-full left-0 mt-2 w-52 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 p-3"
-            style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">Cover color</p>
-            <div className="grid grid-cols-5 gap-2">
+            style={{
+                position: 'absolute', top: 'calc(100% + 8px)', left: 0,
+                width: '200px', backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)', borderRadius: '2px',
+                zIndex: 50, padding: '12px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            }}>
+            <p style={{
+                fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
+                textTransform: 'uppercase', letterSpacing: '0.14em',
+                marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            }}>Cover color</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
                 {COVER_COLORS.map(c => (
                     <button key={c.value} onClick={() => { onSelect(c.value); onClose(); }}
-                        className="w-8 h-8 rounded-full transition-transform hover:scale-110"
                         style={{
-                            background: c.value,
-                            outline: current === c.value ? `3px solid ${c.value}` : 'none',
-                            outlineOffset: 2
+                            width: 28, height: 28, borderRadius: '2px',
+                            background: c.value, border: 'none', cursor: 'pointer',
+                            outline: current === c.value ? `2px solid ${c.value}` : '2px solid transparent',
+                            outlineOffset: 2, transition: 'transform 150ms ease',
                         }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                         title={c.label} />
                 ))}
             </div>
@@ -129,10 +156,19 @@ function CoverPicker({ current, onSelect, onClose }) {
 // ─── Toolbar Button ───────────────────────────────────────────────────────────
 
 function TBtn({ icon: Icon, onClick, title, active }) {
+    const [hovered, setHovered] = React.useState(false);
     return (
         <button onClick={onClick} title={title}
-            className={`p-1.5 rounded-md transition-all ${active ? 'bg-indigo-100 text-indigo-700' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800'}`}>
-            <Icon size={15} strokeWidth={2} />
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                padding: '5px', borderRadius: '2px', background: 'none', border: 'none',
+                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                color: active ? 'var(--accent)' : (hovered ? 'var(--text-primary)' : 'var(--text-muted)'),
+                backgroundColor: active ? 'rgba(184,149,106,0.1)' : 'transparent',
+                transition: 'color 150ms ease, background-color 150ms ease',
+            }}>
+            <Icon size={14} strokeWidth={2} />
         </button>
     );
 }
@@ -169,23 +205,35 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
     const offlineRest = sorted.filter(m => !viewerIds.has(m.userId) && !onlineUserIds.has(m.userId));
 
     return (
-        <div className="flex flex-col h-full bg-white border-l border-gray-100 w-[220px] flex-shrink-0 overflow-y-auto">
+        <div style={{
+            display: 'flex', flexDirection: 'column', height: '100%',
+            backgroundColor: 'var(--bg-surface)', borderLeft: '1px solid var(--border-default)',
+            width: '200px', flexShrink: 0, overflowY: 'auto',
+        }}>
             {/* Header */}
-            <div className="px-4 pt-5 pb-3 border-b border-gray-100">
-                <div className="flex items-center gap-2">
-                    <Users size={13} className="text-gray-400" />
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Members</span>
+            <div style={{ padding: '16px 12px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                    <Users size={12} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{
+                        fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
+                        textTransform: 'uppercase', letterSpacing: '0.14em',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>Members</span>
                 </div>
-                <p className="text-[11px] text-gray-400 mt-0.5">{members.length} in channel</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+                    {members.length} in channel
+                </p>
             </div>
 
             {/* Viewing Now */}
             {viewingNow.length > 0 && (
-                <div className="px-3 pt-3 pb-1">
-                    <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider mb-2 px-1">
-                        👁 Viewing now · {viewingNow.length}
-                    </p>
-                    <div className="flex flex-col gap-1">
+                <div style={{ padding: '12px 12px 4px' }}>
+                    <p style={{
+                        fontSize: '9px', fontWeight: 700, color: 'var(--accent)',
+                        textTransform: 'uppercase', letterSpacing: '0.14em',
+                        marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>Viewing · {viewingNow.length}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {viewingNow.map(m => (
                             <MemberRow key={m.userId} member={m} status="viewing"
                                 isSelf={m.userId === currentUserId} accent={coverColor} />
@@ -196,11 +244,13 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
 
             {/* Online */}
             {onlineRest.length > 0 && (
-                <div className="px-3 pt-3 pb-1">
-                    <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider mb-2 px-1">
-                        Online · {onlineRest.length}
-                    </p>
-                    <div className="flex flex-col gap-1">
+                <div style={{ padding: '12px 12px 4px' }}>
+                    <p style={{
+                        fontSize: '9px', fontWeight: 700, color: 'var(--state-success)',
+                        textTransform: 'uppercase', letterSpacing: '0.14em',
+                        marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>Online · {onlineRest.length}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {onlineRest.map(m => (
                             <MemberRow key={m.userId} member={m} status="online"
                                 isSelf={m.userId === currentUserId} />
@@ -211,11 +261,13 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
 
             {/* Offline */}
             {offlineRest.length > 0 && (
-                <div className="px-3 pt-3 pb-3">
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 px-1">
-                        Offline · {offlineRest.length}
-                    </p>
-                    <div className="flex flex-col gap-1">
+                <div style={{ padding: '12px 12px 12px' }}>
+                    <p style={{
+                        fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)',
+                        textTransform: 'uppercase', letterSpacing: '0.14em',
+                        marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>Offline · {offlineRest.length}</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         {offlineRest.map(m => (
                             <MemberRow key={m.userId} member={m} status="offline"
                                 isSelf={m.userId === currentUserId} />
@@ -226,13 +278,16 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
 
             {/* Last edited */}
             {lastEditedUser && (
-                <div className="mt-auto border-t border-gray-100 px-4 py-3">
-                    <p className="text-[10px] text-gray-400 font-medium mb-1.5">Last edited</p>
-                    <div className="flex items-center gap-2">
+                <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)', padding: '12px' }}>
+                    <p style={{
+                        fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400,
+                        marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>Last edited</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Avatar name={lastEditedUser.username || '?'} src={lastEditedUser.profilePicture} size={22} />
                         <div>
-                            <p className="text-xs font-semibold text-gray-700 leading-none">{lastEditedUser.username}</p>
-                            {lastEdited && <p className="text-[10px] text-gray-400 mt-0.5">{timeAgo(lastEdited)}</p>}
+                            <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', margin: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{lastEditedUser.username}</p>
+                            {lastEdited && <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{timeAgo(lastEdited)}</p>}
                         </div>
                     </div>
                 </div>
@@ -242,23 +297,39 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
 }
 
 function MemberRow({ member, status, isSelf, accent }) {
-    const dotColor = status === 'viewing' ? (accent || '#6366F1')
-        : status === 'online' ? '#10B981'
-            : '#D1D5DB';
+    const dotColor = status === 'viewing' ? (accent || 'var(--accent)')
+        : status === 'online' ? 'var(--state-success)'
+            : 'var(--bg-hover)';
 
     return (
-        <div className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg transition-colors ${status === 'viewing' ? 'bg-indigo-50/60' : 'hover:bg-gray-50'}`}>
-            <div className="relative flex-shrink-0">
-                <Avatar name={member.username} src={member.profilePic} size={26} />
-                <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white"
-                    style={{ background: dotColor }} />
+        <div style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '6px 8px', borderRadius: '2px',
+            backgroundColor: status === 'viewing' ? 'rgba(184,149,106,0.06)' : 'transparent',
+        }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+                <Avatar name={member.username} src={member.profilePic} size={24} />
+                <span style={{
+                    position: 'absolute', bottom: '-1px', right: '-1px',
+                    width: '8px', height: '8px', borderRadius: '50%',
+                    border: '1.5px solid var(--bg-surface)',
+                    backgroundColor: dotColor,
+                }} />
             </div>
-            <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-gray-800 truncate leading-none">
-                    {member.username}{isSelf && <span className="text-gray-400"> (you)</span>}
+            <div style={{ minWidth: 0, flex: 1 }}>
+                <p style={{
+                    fontSize: '12px', fontWeight: 400, color: 'var(--text-primary)',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    margin: 0, lineHeight: 1.2,
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>
+                    {member.username}{isSelf && <span style={{ color: 'var(--text-muted)' }}> (you)</span>}
                 </p>
-                <p className="text-[10px] mt-0.5 leading-none"
-                    style={{ color: dopColor(status, accent) }}>
+                <p style={{
+                    fontSize: '10px', color: dopColor(status, accent),
+                    margin: '1px 0 0', lineHeight: 1,
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>
                     {status === 'viewing' ? '● Viewing' : status === 'online' ? '● Online' : 'Offline'}
                 </p>
             </div>
@@ -267,9 +338,9 @@ function MemberRow({ member, status, isSelf, accent }) {
 }
 
 function dopColor(status, accent) {
-    if (status === 'viewing') return accent || '#6366F1';
-    if (status === 'online') return '#10B981';
-    return '#9CA3AF';
+    if (status === 'viewing') return accent || 'var(--accent)';
+    if (status === 'online') return 'var(--state-success)';
+    return 'var(--text-muted)';
 }
 
 // ─── Main Editor ──────────────────────────────────────────────────────────────
@@ -449,55 +520,76 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
     const lastEditedUser = tab.lastEditedBy || null;
 
     return (
-        <div ref={containerRef} className="flex flex-col flex-1 min-w-0 bg-gray-50 overflow-hidden">
+        <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
 
             {/* ── Toolbar ── */}
-            <div className="flex-shrink-0 bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between gap-2 overflow-x-auto">
-                <div className="flex items-center gap-0.5 flex-shrink-0">
+            <div style={{
+                flexShrink: 0, backgroundColor: 'var(--bg-surface)',
+                borderBottom: '1px solid var(--border-default)',
+                padding: '6px 12px', display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', gap: '8px', overflowX: 'auto',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1px', flexShrink: 0 }}>
                     {toolbarGroups.map((group, gi) => (
                         <React.Fragment key={gi}>
-                            {gi > 0 && <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />}
+                            {gi > 0 && <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-default)', margin: '0 4px', flexShrink: 0 }} />}
                             {group.map((btn, bi) => (
                                 <TBtn key={bi} icon={btn.icon} title={btn.title}
                                     onClick={() => btn.action ? btn.action() : execFormat(btn.cmd, btn.value)} />
                             ))}
                         </React.Fragment>
                     ))}
-                    <div className="w-px h-5 bg-gray-200 mx-1 flex-shrink-0" />
+                    <div style={{ width: '1px', height: '16px', backgroundColor: 'var(--border-default)', margin: '0 4px', flexShrink: 0 }} />
                     <TBtn icon={isFullScreen ? Minimize2 : Maximize2} onClick={toggleFullScreen} title="Fullscreen" />
                 </div>
 
                 {/* Right: status + sidebar toggle */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     {!connected && (
-                        <span className="flex items-center gap-1 text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                        <span style={{
+                            display: 'flex', alignItems: 'center', gap: '4px',
+                            fontSize: '11px', color: 'var(--accent)',
+                            padding: '2px 8px', border: '1px solid rgba(184,149,106,0.2)', borderRadius: '2px',
+                        }}>
                             <WifiOff size={11} /> Offline
                         </span>
                     )}
-                    {/* Live viewer avatars */}
                     {viewers.length > 0 && (
-                        <div className="flex items-center">
-                            <div className="flex -space-x-1.5">
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                            <div style={{ display: 'flex' }}>
                                 {viewers.slice(0, 4).map(v => (
-                                    <Avatar key={v.userId} name={v.username} src={v.profilePicture} size={22}
+                                    <Avatar key={v.userId} name={v.username} src={v.profilePicture} size={20}
                                         ring={coverColor} />
                                 ))}
                             </div>
                             {viewers.length > 4 && (
-                                <span className="text-xs text-gray-400 ml-1.5">+{viewers.length - 4}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '4px' }}>+{viewers.length - 4}</span>
                             )}
                         </div>
                     )}
-                    <span className={`flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${saveStatus === 'saving' ? 'text-blue-600 bg-blue-50' : 'text-emerald-600 bg-emerald-50'}`}>
+                    <span style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        fontSize: '11px', fontWeight: 400, padding: '2px 8px',
+                        color: saveStatus === 'saving' ? 'var(--text-secondary)' : 'var(--state-success)',
+                        border: '1px solid var(--border-subtle)', borderRadius: '2px',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
                         {saveStatus === 'saving'
-                            ? <><Loader2 size={11} className="animate-spin" />Saving…</>
+                            ? <><Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />Saving…</>
                             : <><Check size={11} strokeWidth={3} />Saved</>}
                     </span>
-                    {/* Sidebar toggle */}
                     <button onClick={() => setShowSidebar(s => !s)}
                         title={showSidebar ? 'Hide members' : 'Show members'}
-                        className={`p-1.5 rounded-lg transition-all ${showSidebar ? 'bg-indigo-100 text-indigo-600' : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'}`}>
-                        <Users size={15} />
+                        style={{
+                            padding: '5px', borderRadius: '2px', background: 'none', border: 'none',
+                            cursor: 'pointer', display: 'flex', alignItems: 'center',
+                            color: showSidebar ? 'var(--accent)' : 'var(--text-muted)',
+                            backgroundColor: showSidebar ? 'rgba(184,149,106,0.1)' : 'transparent',
+                            transition: 'color 150ms ease, background-color 150ms ease',
+                        }}
+                        onMouseEnter={e => { if (!showSidebar) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { if (!showSidebar) e.currentTarget.style.color = 'var(--text-muted)'; }}>
+                        <Users size={14} />
                     </button>
                 </div>
             </div>
@@ -507,70 +599,98 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
 
                 {/* ── Editor area ── */}
                 <div className="flex-1 overflow-y-auto">
-                    <div className="max-w-3xl mx-auto px-6 py-10">
+                    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '32px 24px' }}>
                         {/* Cover color strip */}
-                        <div className="h-2 rounded-t-xl mb-8 transition-colors duration-300"
-                            style={{ background: `linear-gradient(90deg, ${coverColor}, ${coverColor}99)` }} />
+                        <div style={{
+                            height: '3px', marginBottom: '24px',
+                            background: `linear-gradient(90deg, ${coverColor}, ${coverColor}60)`,
+                            transition: 'background 300ms ease',
+                        }} />
 
                         {/* Paper */}
-                        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden mb-10"
-                            style={{ boxShadow: '0 1px 20px rgba(0,0,0,0.06)' }}>
+                        <div style={{
+                            backgroundColor: 'var(--bg-surface)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '2px', overflow: 'hidden', marginBottom: '32px',
+                        }}>
 
                             {/* Doc header */}
-                            <div className="px-10 pt-10 pb-6 border-b border-gray-100">
-                                <div className="flex items-center gap-2 mb-4 relative">
-                                    <div className="relative">
+                            <div style={{ padding: '32px 40px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', position: 'relative' }}>
+                                    <div style={{ position: 'relative' }}>
                                         <button onClick={() => { setShowEmojiPicker(s => !s); setShowCoverPicker(false); }}
-                                            className="text-4xl hover:bg-gray-100 rounded-xl p-1.5 transition-colors leading-none" title="Change icon">
+                                            style={{
+                                                fontSize: '32px', lineHeight: 1, padding: '6px',
+                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                borderRadius: '2px', transition: 'background-color 150ms ease',
+                                            }}
+                                            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                                            title="Change icon">
                                             {emoji}
                                         </button>
                                         {showEmojiPicker && <EmojiPicker onSelect={handleEmojiChange} onClose={() => setShowEmojiPicker(false)} />}
                                     </div>
-                                    <div className="relative">
+                                    <div style={{ position: 'relative' }}>
                                         <button onClick={() => { setShowCoverPicker(s => !s); setShowEmojiPicker(false); }}
-                                            className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-gray-700 hover:bg-gray-100 px-2 py-1.5 rounded-lg transition-colors">
-                                            <span className="w-3 h-3 rounded-full inline-block" style={{ background: coverColor }} />
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)',
+                                                background: 'none', border: 'none', cursor: 'pointer',
+                                                padding: '4px 8px', borderRadius: '2px',
+                                                transition: 'color 150ms ease, background-color 150ms ease',
+                                                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                            }}
+                                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}>
+                                            <span style={{ width: 10, height: 10, borderRadius: '1px', display: 'inline-block', background: coverColor }} />
                                             Cover
                                         </button>
                                         {showCoverPicker && <CoverPicker current={coverColor} onSelect={handleCoverChange} onClose={() => setShowCoverPicker(false)} />}
                                     </div>
                                 </div>
 
-                                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight leading-tight mb-2">{tab.name}</h1>
+                                <h1 style={{
+                                    fontSize: '24px', fontWeight: 600, color: 'var(--text-primary)',
+                                    letterSpacing: '-0.015em', lineHeight: '1.2', marginBottom: '8px',
+                                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                }}>{tab.name}</h1>
 
-                                <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-                                    {wordCount > 0 && <span>{wordCount} words · {readTime} read</span>}
-                                    {lastSaved && <><span className="text-gray-200">·</span><span>Saved {timeAgo(lastSaved)}</span></>}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                    {wordCount > 0 && <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{wordCount} words · {readTime} read</span>}
+                                    {lastSaved && <>
+                                        <span style={{ color: 'var(--border-default)' }}>·</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Saved {timeAgo(lastSaved)}</span>
+                                    </>}
                                     {viewers.length > 1 && (
-                                        <><span className="text-gray-200">·</span>
-                                            <span style={{ color: coverColor }}>{viewers.length} viewing</span></>
+                                        <><span style={{ color: 'var(--border-default)' }}>·</span>
+                                            <span style={{ fontSize: '12px', color: coverColor, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>{viewers.length} viewing</span></>
                                     )}
                                 </div>
                             </div>
 
                             {/* Editor body */}
-                            <div className="px-10 py-8 min-h-[500px]">
+                            <div style={{ padding: '32px 40px', minHeight: '500px' }}>
                                 <ContentEditable
                                     innerRef={editorRef}
                                     html={content}
                                     onChange={handleChange}
                                     className={`
                                         prose prose-base max-w-none focus:outline-none
-                                        prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-gray-900
+                                        prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-gray-200
                                         prose-h1:text-3xl prose-h1:mb-4 prose-h1:mt-8 first:prose-h1:mt-0
                                         prose-h2:text-2xl prose-h2:mb-3 prose-h2:mt-7
                                         prose-h3:text-xl prose-h3:mb-2 prose-h3:mt-5
-                                        prose-p:text-gray-700 prose-p:leading-relaxed prose-p:mb-3
-                                        prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
-                                        prose-strong:text-gray-900 prose-strong:font-bold
-                                        prose-code:bg-gray-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-indigo-600 prose-code:font-mono prose-code:text-sm
-                                        prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded-xl prose-pre:shadow-lg prose-pre:font-mono
-                                        prose-blockquote:border-l-4 prose-blockquote:bg-indigo-50/60 prose-blockquote:py-3 prose-blockquote:px-5 prose-blockquote:my-5 prose-blockquote:rounded-r-xl prose-blockquote:not-italic
+                                        prose-p:text-gray-300 prose-p:leading-relaxed prose-p:mb-3
+                                        prose-a:text-amber-500 prose-a:no-underline hover:prose-a:underline
+                                        prose-strong:text-gray-100 prose-strong:font-bold
+                                        prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-amber-400 prose-code:font-mono prose-code:text-sm
+                                        prose-pre:bg-gray-900 prose-pre:text-gray-100 prose-pre:p-4 prose-pre:rounded prose-pre:font-mono
+                                        prose-blockquote:border-l-2 prose-blockquote:border-amber-600 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:my-4 prose-blockquote:not-italic prose-blockquote:text-gray-400
                                         prose-ul:my-3 prose-ul:list-disc prose-ul:pl-6
                                         prose-ol:my-3 prose-ol:list-decimal prose-ol:pl-6
-                                        prose-li:text-gray-700 prose-li:my-1
-                                        prose-hr:border-gray-200 prose-hr:my-8
-                                        selection:bg-indigo-100 selection:text-indigo-900
+                                        prose-li:text-gray-300 prose-li:my-1
+                                        prose-hr:border-gray-700 prose-hr:my-8
                                         min-h-[400px]
                                     `}
                                     data-placeholder="Start writing…"

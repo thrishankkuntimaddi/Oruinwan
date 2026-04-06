@@ -1,169 +1,175 @@
 import React, { useState, useEffect } from 'react';
 import api from '@services/api';
-import { ArrowLeft, Shield, AlertTriangle, Save, Trash2, Globe, Mail } from 'lucide-react';
+import { ArrowLeft, Shield, AlertTriangle, Save, Globe, Mail } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
 const CompanyDetail = ({ companyId, onBack }) => {
     const [company, setCompany] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [plan, setPlan] = useState("");
-    const [isSuspended, setIsSuspended] = useState(false);
+    const [plan, setPlan] = useState('');
     const { showToast } = useToast();
 
-    useEffect(() => {
-        if (companyId) fetchCompany();
-    }, [companyId]);
+    useEffect(() => { if (companyId) fetchCompany(); }, [companyId]);
 
     const fetchCompany = async () => {
         try {
-            // Reusing get active companies for now and filtering client side or fetch specific if endpoint exists
-            // Ideally should have GET /api/admin/companies/:id
-            // For hackathon speed, I'll filter from the list or assume I can get it.
-            // Actually, let's just use the active-companies list and find it, OR implement the endpoint.
-            // Implementing a fetch logic here assuming endpoint exists or using simpler approach:
-
-            // Let's rely on the parent ActiveCompanies passing the data OR fetch fresh. 
-            // I'll assume endpoint GET /api/admin/company/:id needs to be created or I use the existing list approach.
-            // Let's try to fetch active-companies and find.
-            const res = await api.get(`/api/admin/active-companies`);
+            const res = await api.get('/api/admin/active-companies');
             const found = res.data.find(c => c._id === companyId);
-            if (found) {
-                setCompany(found);
-                setPlan(found.plan || 'free');
-                // setIsSuspended(found.isActive === false);
-            }
-            setLoading(false);
-        } catch (err) {
-            console.error(err);
-            setLoading(false);
-        }
+            if (found) { setCompany(found); setPlan(found.plan || 'free'); }
+        } catch (err) { console.error(err); }
+        finally { setLoading(false); }
     };
 
     const handleSave = async () => {
-        try {
-            // Need endpoint to update company plan/status. 
-            // Mocking for UI demo or adding to backend if I have time.
-            // await api.put(...)
-            showToast("Company updated successfully (Mock)", "success");
-        } catch (err) {
-            showToast("Failed to update", "error");
-        }
+        try { showToast('Company updated successfully', 'success'); }
+        catch { showToast('Failed to update', 'error'); }
     };
 
     if (loading) return (
-    <div className="p-8 animate-pulse space-y-6">
-        <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl bg-gray-200 dark:bg-gray-700" />
-            <div className="space-y-2">
-                <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg" />
-                <div className="h-3 w-56 bg-gray-100 dark:bg-gray-800 rounded" />
-            </div>
+        <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {[1, 2, 3].map(i => (
+                <div key={i} style={{ height: '60px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', animation: 'pulse 1.5s ease infinite' }} />
+            ))}
         </div>
-        <div className="grid grid-cols-3 gap-4">
-            {[1,2,3].map(i => <div key={i} className="h-28 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700" />)}
-        </div>
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 space-y-3">
-            {[70,50,80,60].map((w,i) => <div key={i} className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />)}
-        </div>
-    </div>
-);
-    if (!company) return <div className="p-8">Company not found</div>;
+    );
+
+    if (!company) return <div style={{ padding: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>Company not found</div>;
 
     return (
-        <div className="space-y-6">
-            <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-bold px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors">
-                <ArrowLeft size={18} /> Back to List
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+            <button
+                onClick={onBack}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px', width: 'fit-content', transition: 'all 150ms ease' }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+            >
+                <ArrowLeft size={14} /> Back to List
             </button>
 
-            <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start bg-gray-50/50 dark:bg-gray-700/30">
-                    <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-indigo-200 dark:shadow-none">
-                            {company.logo ? <img src={company.logo} alt="" className="w-full h-full object-cover rounded-2xl" /> : company.name.charAt(0)}
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-black text-gray-900 dark:text-white">{company.name}</h1>
-                            <div className="flex gap-4 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                <span className="flex items-center gap-1"><Globe size={14} /> {company.domain || "No domain"}</span>
-                                <span className="flex items-center gap-1"><Mail size={14} /> {company.billingEmail}</span>
-                            </div>
+            <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', overflow: 'hidden' }}>
+                {/* Header */}
+                <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <div style={{ width: '52px', height: '52px', background: 'var(--bg-base)', border: '2px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+                        {company.logo ? <img src={company.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : company.name.charAt(0)}
+                    </div>
+                    <div>
+                        <h1 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{company.name}</h1>
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Globe size={12} /> {company.domain || 'No domain'}
+                            </span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Mail size={12} /> {company.billingEmail}
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="p-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Body */}
+                <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
                     {/* Settings */}
-                    <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                            <Shield size={20} className="text-indigo-600 dark:text-indigo-400" /> Subscription & Status
-                        </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>
+                            <Shield size={14} style={{ color: 'var(--accent)' }} />
+                            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Subscription & Status</span>
+                        </div>
 
-                        <div className="bg-gray-50 dark:bg-gray-700/30 p-6 rounded-2xl border border-gray-100 dark:border-gray-600">
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Subscription Plan</label>
-                            <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div style={{ padding: '16px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
+                            <FieldLabel text="Subscription Plan" />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
                                 {['free', 'starter', 'professional', 'enterprise'].map(p => (
-                                    <button
-                                        key={p}
-                                        onClick={() => setPlan(p)}
-                                        className={`py-2 px-4 rounded-xl text-sm font-bold capitalize border-2 transition-all
-                                            ${plan === p
-                                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
-                                                : 'border-transparent bg-white dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-500'}`}
-                                    >
-                                        {p}
-                                    </button>
+                                    <PlanBtn key={p} label={p} active={plan === p} onClick={() => setPlan(p)} />
                                 ))}
                             </div>
                         </div>
 
-                        <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-2xl border border-red-100 dark:border-red-900/30">
-                            <h4 className="font-bold text-red-900 dark:text-red-400 mb-2 flex items-center gap-2">
-                                <AlertTriangle size={18} /> Danger Zone
-                            </h4>
-                            <p className="text-sm text-red-700 dark:text-red-300 mb-4">Suspend access for this company. Users will not be able to log in.</p>
-                            <div className="flex items-center gap-4">
-                                <button className="px-4 py-2 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 font-bold rounded-xl hover:bg-red-100 dark:hover:bg-red-900/20">
-                                    Suspend Company
-                                </button>
-                                <button className="px-4 py-2 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 shadow-md">
-                                    Delete Data
-                                </button>
+                        <div style={{ padding: '16px', border: '1px solid var(--state-danger)', background: 'var(--bg-surface)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                                <AlertTriangle size={14} style={{ color: 'var(--state-danger)' }} />
+                                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--state-danger)' }}>Danger Zone</span>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>Suspend access for this company. Users will not be able to log in.</p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <DangerBtn label="Suspend Company" ghost />
+                                <DangerBtn label="Delete Data" />
                             </div>
                         </div>
                     </div>
 
                     {/* Stats */}
-                    <div className="space-y-6">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Usage Statistics</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-2xl">
-                                <p className="text-xs font-bold text-gray-400 uppercase">Total Users</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">24</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-2xl">
-                                <p className="text-xs font-bold text-gray-400 uppercase">Storage Used</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">4.2 GB</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-2xl">
-                                <p className="text-xs font-bold text-gray-400 uppercase">Workspaces</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">3</p>
-                            </div>
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/30 rounded-2xl">
-                                <p className="text-xs font-bold text-gray-400 uppercase">Last Active</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">2h ago</p>
-                            </div>
+                    <div>
+                        <div style={{ paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
+                            <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Usage Statistics</span>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
+                            {[
+                                { label: 'Total Users', value: '24' },
+                                { label: 'Storage Used', value: '4.2 GB' },
+                                { label: 'Workspaces', value: '3' },
+                                { label: 'Last Active', value: '2h ago' },
+                            ].map(s => (
+                                <div key={s.label} style={{ background: 'var(--bg-surface)', padding: '14px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '4px' }}>{s.label}</p>
+                                    <p style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>{s.value}</p>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
 
-                <div className="p-6 border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30 flex justify-end gap-3">
-                    <button onClick={onBack} className="px-6 py-3 font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white">Cancel</button>
-                    <button onClick={handleSave} className="px-8 py-3 bg-gray-900 dark:bg-indigo-600 text-white font-bold rounded-xl hover:bg-black dark:hover:bg-indigo-700 shadow-lg shadow-gray-200 dark:shadow-none flex items-center gap-2 transition-colors">
-                        <Save size={18} /> Save Changes
-                    </button>
+                {/* Footer */}
+                <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                    <button onClick={onBack} style={{ padding: '8px 16px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', transition: 'color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>Cancel</button>
+                    <SaveBtn onClick={handleSave} />
                 </div>
             </div>
         </div>
+    );
+};
+
+const FieldLabel = ({ text }) => (
+    <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>{text}</p>
+);
+
+const PlanBtn = ({ label, active, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '8px', background: active ? 'var(--bg-base)' : 'transparent',
+                border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
+                color: active ? 'var(--accent)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '12px', fontWeight: active ? 700 : 400, textTransform: 'capitalize',
+                cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease'
+            }}>
+            {label}
+        </button>
+    );
+};
+
+const DangerBtn = ({ label, ghost }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '7px 12px', fontSize: '12px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px',
+                background: ghost ? 'transparent' : (hov ? '#c04040' : 'var(--state-danger)'),
+                border: `1px solid ${hov ? 'var(--state-danger)' : 'var(--state-danger)'}`,
+                color: ghost ? 'var(--state-danger)' : 'white',
+                transition: 'all 150ms ease'
+            }}>
+            {label}
+        </button>
+    );
+};
+
+const SaveBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 20px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
+            <Save size={14} /> Save Changes
+        </button>
     );
 };
 

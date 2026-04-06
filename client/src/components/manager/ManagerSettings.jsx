@@ -1,154 +1,80 @@
-// client/src/components/manager/ManagerSettings.jsx
-// Personal profile page for manager users - Simplified version of AdminProfile
-
+// ManagerSettings — Monolith Flow Design System
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
-import {
-    User, Mail, Camera, X, Check, Building
-} from 'lucide-react';
+import { User, Mail, Building, Check, X, Settings } from 'lucide-react';
 
-const ManagerSettings = () => {
+const inpSt = (dis) => ({
+    background: dis ? 'var(--bg-active)' : 'var(--bg-input)',
+    border: '1px solid var(--border-default)', color: dis ? 'var(--text-muted)' : 'var(--text-primary)',
+    fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif',
+    padding: '8px 10px 8px 34px', width: '100%', boxSizing: 'border-box',
+    cursor: dis ? 'not-allowed' : 'text', opacity: dis ? 0.6 : 1,
+});
+
+export default function ManagerSettings() {
     const { user } = useAuth();
     const { company } = useCompany();
-    const [isEditing, setIsEditing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [profile, setProfile] = useState({ username: user?.username || '', email: user?.email || '' });
 
-    const [profileData, setProfileData] = useState({
-        username: user?.username || '',
-        email: user?.email || '',
-        phone: user?.phone || '',
-        address: user?.address || '',
-        profilePicture: user?.profilePicture || ''
-    });
-
-    const handleSave = async () => {
-        setIsSaving(true);
-        // TODO: Call backend API to update user profile (reuse existing user update endpoint)
-        setTimeout(() => {
-            setIsSaving(false);
-            setIsEditing(false);
-            // Show success toast (need to import toast context if we want to show it)
-        }, 1000);
-    };
-
-    const handleCancel = () => {
-        setProfileData({
-            username: user?.username || '',
-            email: user?.email || '',
-            phone: user?.phone || '',
-            address: user?.address || '',
-            profilePicture: user?.profilePicture || ''
-        });
-        setIsEditing(false);
-    };
+    const handleSave = () => { setSaving(true); setTimeout(() => { setSaving(false); setEditing(false); }, 800); };
+    const handleCancel = () => { setProfile({ username: user?.username || '', email: user?.email || '' }); setEditing(false); };
+    const initials = profile.username?.charAt(0)?.toUpperCase() || 'M';
 
     return (
-        <div className="h-full bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Settings</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your profile and preferences</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        {isEditing ? (
-                            <>
-                                <button
-                                    onClick={handleCancel}
-                                    className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 text-sm font-bold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-2"
-                                >
-                                    <X size={16} /> Cancel
-                                </button>
-                                <button
-                                    onClick={handleSave}
-                                    disabled={isSaving}
-                                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {isSaving ? 'Saving...' : <><Check size={16} /> Save Changes</>}
-                                </button>
-                            </>
-                        ) : (
-                            <button
-                                onClick={() => setIsEditing(true)}
-                                className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
-                            >
-                                Edit Profile
-                            </button>
-                        )}
-                    </div>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                <div>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <Settings size={16} style={{ color: 'var(--accent)' }} /> My Settings
+                    </h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Manage your profile and preferences</p>
                 </div>
-            </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                    {editing ? (
+                        <>
+                            <HBtn icon={X} label="Cancel" onClick={handleCancel} />
+                            <HBtn icon={Check} label={saving ? 'Saving…' : 'Save'} onClick={handleSave} primary disabled={saving} />
+                        </>
+                    ) : (
+                        <HBtn icon={User} label="Edit Profile" onClick={() => setEditing(true)} primary />
+                    )}
+                </div>
+            </header>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-8">
-                <div className="max-w-4xl mx-auto space-y-6">
-                    {/* Profile Card */}
-                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <User className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                Personal Information
-                            </h3>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                <div style={{ maxWidth: '600px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <User size={13} style={{ color: 'var(--accent)' }} />
+                        <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)' }}>Personal Information</p>
+                    </div>
+                    <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '24px', alignItems: 'start' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '70px', height: '70px', borderRadius: '50%', background: 'rgba(184,149,106,0.1)', border: '2px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: 700, color: 'var(--accent)' }}>{initials}</div>
+                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', textAlign: 'center' }}>{user?.companyRole || 'Manager'}</p>
+                            <p style={{ fontSize: '9px', color: 'var(--text-muted)', textAlign: 'center' }}>{company?.name}</p>
                         </div>
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-                            {/* Avatar Section */}
-                            <div className="flex flex-col items-center justify-center p-6 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-dashed border-gray-300 dark:border-gray-600">
-                                <div className="relative group">
-                                    <div className="w-32 h-32 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-4xl font-black text-indigo-600 dark:text-indigo-400 border-4 border-white dark:border-gray-800 shadow-md">
-                                        {profileData.username?.charAt(0)?.toUpperCase()}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                            {[
+                                { key: 'username', label: 'Full Name', Icon: User, dis: !editing, type: 'text' },
+                                { key: 'email', label: 'Email Address', Icon: Mail, dis: true, type: 'email' },
+                            ].map(f => (
+                                <div key={f.key}>
+                                    <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '5px' }}>{f.label}</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <f.Icon size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                                        <input type={f.type} value={profile[f.key]} disabled={f.dis} onChange={e => setProfile(p => ({ ...p, [f.key]: e.target.value }))} style={inpSt(f.dis)} />
                                     </div>
-                                    {isEditing && (
-                                        <button className="absolute bottom-0 right-0 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-transform hover:scale-110">
-                                            <Camera size={16} />
-                                        </button>
-                                    )}
+                                    {f.key === 'email' && <p style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '3px' }}>Email cannot be changed. Contact admin.</p>}
                                 </div>
-                                <div className="mt-4 text-center">
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white capitalize">{user?.companyRole || 'Manager'}</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">{company?.name}</p>
-                                </div>
-                            </div>
-
-                            {/* Form Fields */}
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Full Name</label>
-                                    <div className="relative">
-                                        <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                        <input
-                                            type="text"
-                                            value={profileData.username}
-                                            onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
-                                            disabled={!isEditing}
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Email Address</label>
-                                    <div className="relative">
-                                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                        <input
-                                            type="email"
-                                            value={profileData.email}
-                                            disabled={true} // Email usually not editable directly
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Department</label>
-                                    <div className="relative">
-                                        <Building className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                                        <input
-                                            type="text"
-                                            value="Design (Head)" // Placeholder - normally fetched dynamically
-                                            disabled={true}
-                                            className="w-full pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                                        />
-                                    </div>
+                            ))}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '5px' }}>Department</label>
+                                <div style={{ position: 'relative' }}>
+                                    <Building size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                                    <input type="text" value="Design" disabled style={inpSt(true)} />
                                 </div>
                             </div>
                         </div>
@@ -157,6 +83,14 @@ const ManagerSettings = () => {
             </div>
         </div>
     );
-};
+}
 
-export default ManagerSettings;
+function HBtn({ icon: Icon, label, onClick, primary, disabled }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick} disabled={disabled} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: primary ? (disabled ? 'var(--bg-active)' : hov ? 'var(--accent-hover)' : 'var(--accent)') : (hov ? 'var(--bg-hover)' : 'var(--bg-active)'), border: primary ? 'none' : '1px solid var(--border-default)', color: primary ? (disabled ? 'var(--text-muted)' : 'var(--bg-base)') : 'var(--text-secondary)', fontSize: '12px', fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer', borderRadius: '2px', transition: 'all 150ms ease', fontFamily: 'inherit' }}>
+            <Icon size={13} />{label}
+        </button>
+    );
+}

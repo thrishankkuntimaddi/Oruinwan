@@ -1,76 +1,136 @@
 import React from 'react';
-import { Settings, HelpCircle, LogOut, ChevronRight } from 'lucide-react';
+import { Settings, HelpCircle, LogOut, ChevronRight, Shield } from 'lucide-react';
 import { getAvatarUrl } from '../../../utils/avatarUtils';
 
-/**
- * MainMenuView Component
- * Main menu with profile header, status selector, and navigation options
- */
+const STATUS_CONFIG = {
+    active: { dot: '#22c55e', label: 'Active',  activeBg: 'rgba(34,197,94,0.1)',  activeColor: '#22c55e' },
+    away:   { dot: '#f59e0b', label: 'Away',    activeBg: 'rgba(245,158,11,0.1)', activeColor: '#f59e0b' },
+    dnd:    { dot: '#ef4444', label: 'DND',     activeBg: 'rgba(239,68,68,0.1)',  activeColor: '#ef4444' },
+};
+
 const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) => {
     return (
-        <div className="w-full md:w-72 max-w-xs bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
-            {/* Header */}
-            <div className="p-4 bg-gray-50/50 dark:bg-gray-800/50">
-                <div
-                    onClick={() => onNavigate("profile")}
-                    className="flex items-center gap-3 mb-3 cursor-pointer p-2 -mx-2 rounded-lg hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm transition-all group"
-                >
-                    <div className="w-12 h-12 rounded-full bg-gray-300 bg-cover bg-center shadow-sm border-2 border-white group-hover:border-blue-100 transition-colors flex-shrink-0" style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}></div>
-                    <div className="min-w-0 flex-1">
-                        <div className="font-bold text-gray-900 dark:text-white text-base truncate group-hover:text-blue-600 transition-colors">{user?.username}</div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</div>
+        <div style={{
+            width: '256px', background: '#111111',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
+            overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif',
+        }}>
+            {/* ── Profile Header ── */}
+            <div
+                onClick={() => onNavigate('profile')}
+                style={{
+                    display: 'flex', alignItems: 'center', gap: '12px',
+                    padding: '16px', cursor: 'pointer',
+                    borderBottom: '1px solid rgba(255,255,255,0.07)',
+                    background: 'rgba(255,255,255,0.02)',
+                    transition: 'background 150ms ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+            >
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)' }}>
+                    <img src={getAvatarUrl(user)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {user?.username}
                     </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400">
-                        <ChevronRight size={16} />
+                    <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px', fontFamily: 'monospace' }}>
+                        {user?.email}
                     </div>
                 </div>
+                <ChevronRight size={14} style={{ color: 'rgba(228,228,228,0.25)', flexShrink: 0 }} />
+            </div>
 
-                {/* Status Selector */}
-                <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 border border-gray-200 dark:border-gray-700 shadow-sm">
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onStatusChange("active"); }}
-                        className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "active" ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 shadow-sm" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                    >
-                        <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5"></div> Active
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onStatusChange("away"); }}
-                        className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "away" ? "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 shadow-sm" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                    >
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full mr-1.5"></div> Away
-                    </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onStatusChange("dnd"); }}
-                        className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-[10px] font-bold transition-all ${status === "dnd" ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 shadow-sm" : "text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                    >
-                        <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div> DND
-                    </button>
+            {/* ── Status Selector ── */}
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '3px', gap: '2px' }}>
+                    {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
+                        const active = status === key;
+                        return (
+                            <button
+                                key={key}
+                                onClick={e => { e.stopPropagation(); onStatusChange(key); }}
+                                style={{
+                                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    gap: '5px', padding: '5px 4px', fontSize: '10px', fontWeight: 700,
+                                    background: active ? cfg.activeBg : 'transparent',
+                                    color: active ? cfg.activeColor : 'rgba(228,228,228,0.4)',
+                                    border: `1px solid ${active ? cfg.dot + '40' : 'transparent'}`,
+                                    cursor: 'pointer', transition: 'all 150ms ease',
+                                    fontFamily: 'Inter, system-ui, sans-serif',
+                                }}
+                                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                            >
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: cfg.dot, flexShrink: 0 }} />
+                                {cfg.label}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
 
-            {/* Menu Items */}
-            <div className="p-2 space-y-1">
-                <button onClick={() => onNavigate("help")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-                    <HelpCircle size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    <span className="font-medium">Help & Support</span>
+            {/* ── Menu Items ── */}
+            <div style={{ padding: '6px' }}>
+                {/* Help & Support */}
+                <button
+                    onClick={() => onNavigate('help')}
+                    style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '9px 10px', fontSize: '13px', fontWeight: 500,
+                        color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none',
+                        cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
+                        textAlign: 'left',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e4e4e4'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(228,228,228,0.7)'; }}
+                >
+                    <HelpCircle size={15} style={{ color: 'rgba(228,228,228,0.35)', flexShrink: 0 }} />
+                    Help &amp; Support
                 </button>
 
-                <div className="border-t border-gray-100 my-2 mx-2"></div>
-
-                {/* Admin Dashboard Link (Admin/Owner Only) */}
+                {/* Admin Dashboard (admin/owner only) */}
                 {(user?.companyRole === 'admin' || user?.companyRole === 'owner') && (
-                    <button
-                        onClick={() => window.location.href = '/admin/company'}
-                        className="w-full text-left px-3 py-2.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg flex items-center transition-colors group font-semibold"
-                    >
-                        <Settings size={18} className="mr-3 group-hover:rotate-90 transition-transform duration-300" />
-                        <span>Admin Dashboard</span>
-                    </button>
+                    <>
+                        <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '4px 4px' }} />
+                        <button
+                            onClick={() => window.location.href = '/admin/company'}
+                            style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '9px 10px', fontSize: '13px', fontWeight: 600,
+                                color: '#b8956a', background: 'transparent', border: 'none',
+                                cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
+                                textAlign: 'left',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(184,149,106,0.08)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                            <Shield size={15} style={{ color: '#b8956a', flexShrink: 0 }} />
+                            Admin Dashboard
+                        </button>
+                    </>
                 )}
 
-                <button onClick={onLogout} className="w-full text-left px-3 py-2.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center transition-colors group">
-                    <LogOut size={18} className="mr-3 group-hover:scale-110 transition-transform" />
-                    <span className="font-medium">Sign Out</span>
+                {/* Divider */}
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '4px 4px' }} />
+
+                {/* Sign Out */}
+                <button
+                    onClick={onLogout}
+                    style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                        padding: '9px 10px', fontSize: '13px', fontWeight: 500,
+                        color: 'rgba(228,228,228,0.6)', background: 'transparent', border: 'none',
+                        cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
+                        textAlign: 'left',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; e.currentTarget.style.color = '#f87171'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
+                >
+                    <LogOut size={15} style={{ flexShrink: 0, color: 'inherit' }} />
+                    Sign Out
                 </button>
             </div>
         </div>

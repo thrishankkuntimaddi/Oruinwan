@@ -1,179 +1,145 @@
+// UnassignedMembers — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import {
-    UserPlus, Search, AlertTriangle, CheckCircle2, Briefcase
-} from 'lucide-react';
+import { UserPlus, Search, AlertTriangle, CheckCircle2, Briefcase } from 'lucide-react';
 import { getUnassignedEmployees } from '../../services/managerDashboardService';
 
-const UnassignedMembers = () => {
+const inputSt = { background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px', width: '100%', boxSizing: 'border-box' };
+const TH_ST = { padding: '10px 16px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', textAlign: 'left', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' };
+const TD_ST = { padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' };
+
+export default function UnassignedMembers() {
     const { selectedDepartment } = useOutletContext();
-    const [unassignedData, setUnassignedData] = useState([]);
+    const [unassigned, setUnassigned] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState('');
+    const [search, setSearch] = useState('');
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                // Note: The service might need arguments if we filter by department, but currently fetches generic unassigned
-                const response = await getUnassignedEmployees();
-                setUnassignedData(response.unassigned || []);
-            } catch (error) {
-                console.error("Error fetching unassigned members:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        setLoading(true);
+        getUnassignedEmployees()
+            .then(r => setUnassigned(r.unassigned || []))
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [selectedDepartment]);
 
-        fetchData();
-    }, [selectedDepartment]); // Re-fetch if department context changes, though unassigned might be global or valid for dept
-
-    const filteredMembers = unassignedData.filter(member =>
-        member.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email?.toLowerCase().includes(searchQuery.toLowerCase())
+    const filtered = unassigned.filter(m =>
+        m.username?.toLowerCase().includes(search.toLowerCase()) ||
+        m.email?.toLowerCase().includes(search.toLowerCase())
     );
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-900">
-                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+    // ── Loading skeleton ─────────────────────────────────────────
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '180px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '240px' }} /></div>
             </div>
-        );
-    }
+            <div style={{ flex: 1, padding: '20px 28px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
+                    <div className="sk" style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}><div className="sk" style={{ height: '10px', width: '100px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '340px' }} /></div>
+                </div>
+                <div className="sk" style={{ height: '32px', width: '320px', marginBottom: '16px' }} />
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '16px' }}>
+                        {[70, 100, 55, 65].map((w, i) => <div key={i} className="sk" style={{ height: '9px', width: `${w}px` }} />)}
+                    </div>
+                    {[1,2,3,4].map(i => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1fr 1fr', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div className="sk" style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0 }} />
+                                <div><div className="sk" style={{ height: '11px', width: '100px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '130px' }} /></div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px' }}><div className="sk" style={{ height: '18px', width: '60px' }} /><div className="sk" style={{ height: '18px', width: '70px' }} /></div>
+                            <div className="sk" style={{ height: '18px', width: '70px' }} />
+                            <div className="sk" style={{ height: '28px', width: '72px' }} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             {/* Header */}
-            <header className="h-20 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        Unassigned Members
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <UserPlus size={16} style={{ color: 'var(--accent)' }} /> Unassigned Members
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-0">
-                        Employees needing workspace assignment
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2">
-                        <UserPlus size={16} />
-                        Assign All
-                    </button>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Employees needing workspace assignment</p>
                 </div>
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-6 z-10 custom-scrollbar bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-
-                {/* Summary Card */}
-                <div className="mb-6">
-                    {unassignedData.length > 0 ? (
-                        <div className="bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-4 flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center shrink-0">
-                                <AlertTriangle className="text-yellow-600 dark:text-yellow-400" size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-yellow-800 dark:text-yellow-200">Action Required</h3>
-                                <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                                    There are {unassignedData.length} team members who are not assigned to any workspace. They cannot access project tools until assigned.
-                                </p>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="bg-green-50 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30 rounded-xl p-4 flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center shrink-0">
-                                <CheckCircle2 className="text-green-600 dark:text-green-400" size={20} />
-                            </div>
-                            <div>
-                                <h3 className="text-sm font-bold text-green-800 dark:text-green-200">All Clear</h3>
-                                <p className="text-xs text-green-700 dark:text-green-300">
-                                    All team members are currently assigned to workspaces.
-                                </p>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Search Bar */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-4 mb-6">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder="Search unassigned members..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-transparent text-slate-700 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none text-sm"
-                        />
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
+                {/* Alert banner */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: unassigned.length > 0 ? 'rgba(184,149,106,0.06)' : 'rgba(90,186,138,0.06)', border: `1px solid ${unassigned.length > 0 ? 'var(--accent)' : 'var(--state-success)'}`, marginBottom: '16px' }}>
+                    {unassigned.length > 0
+                        ? <AlertTriangle size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                        : <CheckCircle2 size={16} style={{ color: 'var(--state-success)', flexShrink: 0 }} />}
+                    <div>
+                        <p style={{ fontSize: '12px', fontWeight: 700, color: unassigned.length > 0 ? 'var(--accent)' : 'var(--state-success)', marginBottom: '1px' }}>
+                            {unassigned.length > 0 ? 'Action Required' : 'All Clear'}
+                        </p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            {unassigned.length > 0
+                                ? `${unassigned.length} team member${unassigned.length > 1 ? 's' : ''} not assigned to any workspace.`
+                                : 'All team members are currently assigned to workspaces.'}
+                        </p>
                     </div>
                 </div>
 
-                {/* Members Table */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-gray-700/50 border-b border-slate-200 dark:border-gray-700">
+                {/* Search */}
+                <div style={{ position: 'relative', maxWidth: '480px', marginBottom: '16px' }}>
+                    <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                    <input type="text" placeholder="Search unassigned members..." value={search} onChange={e => setSearch(e.target.value)}
+                        style={{ ...inputSt, paddingLeft: '30px' }} />
+                </div>
+
+                {/* Table */}
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Member
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Departments
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Actions
-                                </th>
+                                {['Member', 'Departments', 'Status', 'Actions'].map(h => <th key={h} style={TH_ST}>{h}</th>)}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-gray-700">
-                            {filteredMembers.map((member) => (
-                                <tr key={member._id} className="hover:bg-slate-50 dark:hover:bg-gray-700/30 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-gray-700 flex items-center justify-center text-slate-600 dark:text-gray-300 font-bold text-sm">
-                                                {member.username?.charAt(0).toUpperCase()}
+                        <tbody>
+                            {filtered.map(m => (
+                                <tr key={m._id} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <td style={TD_ST}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', flexShrink: 0 }}>
+                                                {m.username?.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                                <div className="text-sm font-bold text-slate-900 dark:text-white">
-                                                    {member.username}
-                                                </div>
-                                                <div className="text-xs text-slate-500 dark:text-gray-400">
-                                                    {member.email}
-                                                </div>
+                                                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>{m.username}</p>
+                                                <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{m.email}</p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex flex-wrap gap-1">
-                                            {member.departments?.map((dept, idx) => (
-                                                <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300">
-                                                    <Briefcase size={10} className="mr-1" />
-                                                    {dept.name}
+                                    <td style={TD_ST}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                            {m.departments?.map((d, i) => (
+                                                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 600, padding: '2px 7px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>
+                                                    <Briefcase size={9} />{d.name}
                                                 </span>
-                                            )) || <span className="text-xs text-slate-400 italic">No Department</span>}
+                                            )) || <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic' }}>No Department</span>}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400">
-                                            Unassigned
-                                        </span>
+                                    <td style={TD_ST}>
+                                        <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', border: '1px solid var(--accent)', color: 'var(--accent)' }}>Unassigned</span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-lg transition-colors text-xs font-bold">
-                                            <UserPlus size={14} />
-                                            Assign to Workspace
-                                        </button>
+                                    <td style={TD_ST}>
+                                        <AssignBtn />
                                     </td>
                                 </tr>
                             ))}
-
-                            {filteredMembers.length === 0 && (
-                                <tr>
-                                    <td colSpan="4" className="px-6 py-12 text-center text-slate-500 dark:text-gray-400">
-                                        {searchQuery ? 'No members found matching your search.' : 'No unassigned members found.'}
-                                    </td>
-                                </tr>
+                            {filtered.length === 0 && (
+                                <tr><td colSpan={4} style={{ padding: '48px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                    {search ? `No members matching "${search}".` : 'No unassigned members found.'}
+                                </td></tr>
                             )}
                         </tbody>
                     </table>
@@ -181,6 +147,14 @@ const UnassignedMembers = () => {
             </div>
         </div>
     );
-};
+}
 
-export default UnassignedMembers;
+const AssignBtn = () => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: hov ? 'var(--accent)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--bg-base)' : 'var(--text-secondary)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', transition: 'all 150ms ease' }}>
+            <UserPlus size={11} /> Assign
+        </button>
+    );
+};

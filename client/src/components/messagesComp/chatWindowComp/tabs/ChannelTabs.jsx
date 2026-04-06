@@ -15,13 +15,7 @@ export default function ChannelTabs({
     const [editingName, setEditingName] = useState("");
 
     const handleAddClick = () => {
-        // Check tab limit
-        if (tabs.length >= 5) {
-            return; // Silently prevent, button will be disabled
-        }
-
-        // Auto-generate name: Untitled 1, Untitled 2, etc.
-        // Look at ALL existing tabs (including temp ones) to find the highest number
+        if (tabs.length >= 5) return;
         const untitledPattern = /^Untitled (\d+)$/;
         const existingNumbers = tabs
             .map(t => {
@@ -29,10 +23,8 @@ export default function ChannelTabs({
                 return match ? parseInt(match[1], 10) : 0;
             })
             .filter(n => n > 0);
-
         const nextNumber = existingNumbers.length > 0 ? Math.max(...existingNumbers) + 1 : 1;
         const name = `Untitled ${nextNumber}`;
-
         onAddTab(name);
     };
 
@@ -49,113 +41,154 @@ export default function ChannelTabs({
         setEditingName("");
     };
 
+    const tabStyle = (isActive) => ({
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px',
+        padding: '8px 8px',
+        fontSize: '13px',
+        fontWeight: 400,
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+        background: 'none',
+        border: 'none',
+        borderBottom: isActive ? '1px solid var(--accent)' : '1px solid transparent',
+        cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transition: 'color 150ms ease, border-color 150ms ease',
+        flexShrink: 0,
+    });
+
     return (
-        <div className="flex flex-col bg-gray-50 dark:bg-gray-900/60 border-b border-gray-100 dark:border-gray-800">
-            {/* Tabs Bar - Modern Underline Layout */}
-            <div className="flex items-center gap-1 px-3 overflow-x-auto no-scrollbar">
-                {/* Main Chat Tab */}
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            backgroundColor: 'var(--bg-surface)',
+            borderBottom: '1px solid var(--border-default)',
+        }}>
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '0 12px',
+                overflowX: 'auto',
+            }}>
+                {/* Chat Tab */}
                 <button
                     onClick={() => onTabChange("chat")}
-                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "chat"
-                        ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                        : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
-                        }`}
+                    style={tabStyle(activeTab === "chat")}
+                    onMouseEnter={e => { if (activeTab !== "chat") e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    onMouseLeave={e => { if (activeTab !== "chat") e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
-                    <MessageSquare size={16} />
+                    <MessageSquare size={14} />
                     <span>Chat</span>
                 </button>
 
                 {/* Threads Tab */}
                 <button
                     onClick={() => onTabChange("threads")}
-                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "threads"
-                        ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                        : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
-                        }`}
+                    style={tabStyle(activeTab === "threads")}
+                    onMouseEnter={e => { if (activeTab !== "threads") e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    onMouseLeave={e => { if (activeTab !== "threads") e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
-                    <List size={16} />
+                    <List size={14} />
                     <span>Threads</span>
                 </button>
 
                 {/* Tasks Tab */}
                 <button
                     onClick={() => onTabChange("tasks")}
-                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "tasks"
-                        ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                        : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
-                        }`}
+                    style={tabStyle(activeTab === "tasks")}
+                    onMouseEnter={e => { if (activeTab !== "tasks") e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    onMouseLeave={e => { if (activeTab !== "tasks") e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
-                    <CheckSquare size={16} />
+                    <CheckSquare size={14} />
                     <span>Tasks</span>
                 </button>
 
                 {/* Canvas Tab */}
                 <button
                     onClick={() => onTabChange("canvas")}
-                    className={`flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 ${activeTab === "canvas"
-                        ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                        : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
-                        }`}
+                    style={tabStyle(activeTab === "canvas")}
+                    onMouseEnter={e => { if (activeTab !== "canvas") e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    onMouseLeave={e => { if (activeTab !== "canvas") e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
-                    <Palette size={16} />
+                    <Palette size={14} />
                     <span>Canvas</span>
                 </button>
 
                 {/* Dynamic Canvas Tabs */}
-                {tabs.map((tab) => (
-                    <div
-                        key={tab._id}
-                        className={`group flex items-center gap-1.5 px-2 py-2 text-xs font-medium transition-all whitespace-nowrap border-b-2 cursor-pointer ${activeTab === tab._id
-                            ? "text-blue-600 dark:text-blue-400 border-blue-600 dark:border-blue-400"
-                            : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-200"
-                            }`}
-                        onClick={() => onTabChange(tab._id)}
-                    >
-                        {editingTabId === tab._id ? (
-                            <input
-                                autoFocus
-                                type="text"
-                                value={editingName}
-                                onChange={(e) => setEditingName(e.target.value)}
-                                onBlur={() => handleRename(tab._id)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleRename(tab._id);
-                                    if (e.key === 'Escape') {
-                                        setEditingTabId(null);
-                                        setEditingName("");
-                                    }
-                                }}
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-sm px-1 py-0.5 rounded border-b border-blue-400 focus:outline-none bg-transparent min-w-[100px]"
-                            />
-                        ) : (
-                            <div
-                                onDoubleClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDoubleClick(tab);
-                                }}
-                                className="flex items-center gap-2"
-                            >
-                                <FileText size={16} className="shrink-0" />
-                                <span>{tab.name}</span>
-                            </div>
-                        )}
-
-                        {/* Delete Tab Button - Removed per user request */}
-                    </div>
-                ))}
+                {tabs.map((tab) => {
+                    const isActive = activeTab === tab._id;
+                    return (
+                        <div
+                            key={tab._id}
+                            style={{
+                                ...tabStyle(isActive),
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                cursor: 'pointer',
+                            }}
+                            onClick={() => onTabChange(tab._id)}
+                        >
+                            {editingTabId === tab._id ? (
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={editingName}
+                                    onChange={(e) => setEditingName(e.target.value)}
+                                    onBlur={() => handleRename(tab._id)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleRename(tab._id);
+                                        if (e.key === 'Escape') {
+                                            setEditingTabId(null);
+                                            setEditingName("");
+                                        }
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                    style={{
+                                        fontSize: '13px', padding: '2px 4px',
+                                        background: 'transparent', color: 'var(--text-primary)',
+                                        outline: 'none', border: 'none',
+                                        borderBottom: '1px solid var(--accent)',
+                                        minWidth: '80px',
+                                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                    }}
+                                />
+                            ) : (
+                                <div
+                                    onDoubleClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDoubleClick(tab);
+                                    }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                                >
+                                    <FileText size={14} style={{ flexShrink: 0 }} />
+                                    <span>{tab.name}</span>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
 
                 {/* Add Tab Button */}
                 <button
                     onClick={handleAddClick}
                     disabled={tabs.length >= 5}
-                    className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-all ml-2 ${tabs.length >= 5
-                        ? 'text-gray-300 dark:text-gray-700 cursor-not-allowed'
-                        : 'text-gray-400 hover:text-blue-600 dark:text-gray-500 dark:hover:text-blue-400'
-                        }`}
+                    style={{
+                        padding: '6px', borderRadius: '2px',
+                        background: 'none', border: 'none', cursor: tabs.length >= 5 ? 'not-allowed' : 'pointer',
+                        color: tabs.length >= 5 ? 'var(--text-muted)' : 'var(--text-muted)',
+                        display: 'flex', alignItems: 'center',
+                        marginLeft: '4px', opacity: tabs.length >= 5 ? 0.3 : 1,
+                        transition: 'color 150ms ease',
+                    }}
+                    onMouseEnter={e => { if (tabs.length < 5) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { if (tabs.length < 5) e.currentTarget.style.color = 'var(--text-muted)'; }}
                     title={tabs.length >= 5 ? "Maximum 5 canvases reached" : "Add Canvas"}
                 >
-                    <Plus size={16} />
+                    <Plus size={14} />
                 </button>
             </div>
         </div>

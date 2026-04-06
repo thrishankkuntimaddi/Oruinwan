@@ -1,192 +1,126 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Cookie, ToggleLeft, ToggleRight, RotateCcw, Check } from 'lucide-react';
+// CookieSettings.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import PublicPageShell from '../../components/layout/PublicPageShell';
+import { Cookie, Shield, BarChart2, Settings, CheckCircle2 } from 'lucide-react';
 
-const CookieSettings = () => {
-    const navigate = useNavigate();
-    const [settings, setSettings] = useState({
-        essential: true,
-        analytics: true,
-        marketing: false,
-        preferences: true
-    });
-    const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState('');
+const COOKIE_TYPES = [
+    {
+        id: 'essential',
+        icon: Shield,
+        color: '#5aba8a',
+        title: 'Essential Cookies',
+        desc: 'Required for the platform to function. These cannot be disabled. They handle authentication, session management, and core security features.',
+        examples: ['Session token', 'CSRF protection', 'Auth state persistence'],
+        required: true,
+    },
+    {
+        id: 'analytics',
+        icon: BarChart2,
+        color: '#6ea8fe',
+        title: 'Analytics Cookies',
+        desc: 'Help us understand how users interact with Chttrix so we can improve the product. All data is anonymized and aggregated.',
+        examples: ['Page view counts', 'Feature usage heatmaps', 'Error frequency tracking'],
+        required: false,
+    },
+    {
+        id: 'preferences',
+        icon: Settings,
+        color: '#b8956a',
+        title: 'Preference Cookies',
+        desc: 'Remember your UI preferences across sessions — like sidebar state, notification settings, and display density.',
+        examples: ['Sidebar collapsed state', 'Notification preferences', 'Last visited workspace'],
+        required: false,
+    },
+];
 
-    // Load saved preferences from localStorage on mount
-    useEffect(() => {
-        const saved = localStorage.getItem('chttrix_cookie_preferences');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setSettings({
-                    essential: true, // Always true
-                    analytics: parsed.analytics ?? true,
-                    marketing: parsed.marketing ?? false,
-                    preferences: parsed.preferences ?? true
-                });
-            } catch (error) {
-                console.error('Failed to parse saved preferences:', error);
-            }
-        }
-    }, []);
+export default function CookieSettings() {
+    const [prefs, setPrefs] = useState({ analytics: true, preferences: true });
+    const [saved, setSaved] = useState(false);
 
-    const toggleSetting = (key) => {
-        if (key === 'essential') return; // Cannot toggle essential
-        setSettings(prev => ({ ...prev, [key]: !prev[key] }));
+    const toggle = (id) => {
+        setPrefs(p => ({ ...p, [id]: !p[id] }));
+        setSaved(false);
     };
 
-    const setCookie = (name, value, days = 365) => {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        const expires = `expires=${date.toUTCString()}`;
-        document.cookie = `${name}=${value};${expires};path=/;SameSite=Lax`;
-    };
-
-    const savePreferences = () => {
-        // Save to localStorage
-        localStorage.setItem('chttrix_cookie_preferences', JSON.stringify(settings));
-
-        // Set actual cookies
-        setCookie('chttrix_essential', 'true'); // Always set
-        setCookie('chttrix_analytics', settings.analytics ? 'true' : 'false');
-        setCookie('chttrix_marketing', settings.marketing ? 'true' : 'false');
-        setCookie('chttrix_preferences', settings.preferences ? 'true' : 'false');
-
-        // Show success toast
-        showToastNotification('✅ Preferences saved successfully!');
-
-        // Navigate after a short delay
-        setTimeout(() => navigate('/'), 1500);
-    };
-
-    const resetToDefaults = () => {
-        const defaults = {
-            essential: true,
-            analytics: true,
-            marketing: false,
-            preferences: true
-        };
-        setSettings(defaults);
-        showToastNotification('🔄 Reset to default settings');
-    };
-
-    const showToastNotification = (message) => {
-        setToastMessage(message);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 3000);
+    const save = () => {
+        // Persist to localStorage
+        localStorage.setItem('chttrix_cookie_prefs', JSON.stringify(prefs));
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
     };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
-            {/* Toast Notification */}
-            {showToast && (
-                <div className="fixed top-24 right-6 z-50 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce">
-                    <Check size={20} />
-                    <span className="font-bold">{toastMessage}</span>
-                </div>
-            )}
-
-            <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
-                        <span className="font-black text-2xl tracking-tighter">Chttrix</span>
+        <PublicPageShell title="Cookie Settings">
+            <div style={{ maxWidth: '760px', margin: '0 auto', padding: '64px 24px' }}>
+                {/* Header */}
+                <div style={{ marginBottom: '48px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
+                        <Cookie size={11} style={{ color: '#b8956a' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Cookie Settings</span>
                     </div>
-                    <button onClick={() => navigate("/")} className="text-sm font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-white transition-colors flex items-center gap-2">
-                        <ArrowLeft size={16} /> Back to Home
-                    </button>
+                    <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Manage your cookie preferences.</h1>
+                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75' }}>
+                        We use cookies to keep you signed in and to understand how you use Chttrix. You're in control of everything except essential, security-required cookies.
+                    </p>
                 </div>
-            </nav>
 
-            <header className="pt-32 pb-12 container mx-auto px-6 max-w-3xl text-center">
-                <Cookie className="w-16 h-16 text-yellow-500 mx-auto mb-6" />
-                <h1 className="text-4xl font-black mb-4">Cookie Preferences</h1>
-                <p className="text-slate-500 dark:text-slate-400">
-                    We use cookies to ensure you get the best experience on our website. You can manage your preferences below.
+                {/* Cookie Cards */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '32px' }}>
+                    {COOKIE_TYPES.map(c => {
+                        const Icon = c.icon;
+                        const isOn = c.required || prefs[c.id];
+                        return (
+                            <div key={c.id} style={{ background: '#111', padding: '28px 24px', position: 'relative' }}>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px' }}>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                                            <div style={{ width: '34px', height: '34px', background: `${c.color}14`, border: `1px solid ${c.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                <Icon size={16} style={{ color: c.color }} />
+                                            </div>
+                                            <div>
+                                                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.01em' }}>{c.title}</h3>
+                                                {c.required && <span style={{ fontSize: '10px', fontWeight: 700, color: '#5aba8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Always Active</span>}
+                                            </div>
+                                        </div>
+                                        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', marginBottom: '14px' }}>{c.desc}</p>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                            {c.examples.map(e => (
+                                                <span key={e} style={{ padding: '3px 8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'monospace' }}>{e}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Toggle */}
+                                    <button onClick={() => !c.required && toggle(c.id)}
+                                        disabled={c.required}
+                                        style={{ width: '44px', height: '24px', borderRadius: '12px', background: isOn ? c.color : 'rgba(255,255,255,0.1)', border: 'none', cursor: c.required ? 'default' : 'pointer', position: 'relative', transition: 'background 200ms ease', flexShrink: 0, marginTop: '4px' }}>
+                                        <span style={{ position: 'absolute', top: '3px', left: isOn ? '22px' : '3px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left 200ms ease', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
+                                    </button>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* Save button */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    <button onClick={save}
+                        style={{ padding: '10px 28px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                        Save Preferences
+                    </button>
+                    {saved && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#5aba8a', fontWeight: 600 }}>
+                            <CheckCircle2 size={14} /> Saved successfully
+                        </div>
+                    )}
+                </div>
+
+                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', marginTop: '28px', lineHeight: '1.7' }}>
+                    For more details on how we use cookies and process your data, see our <button onClick={() => (window.location.href = '/privacy')} style={{ background: 'none', border: 'none', color: '#b8956a', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', padding: 0 }}>Privacy Policy</button>. Cookie preferences are stored locally and will be remembered across sessions on this device.
                 </p>
-                <a href="/privacy" className="text-indigo-600 dark:text-indigo-400 text-sm font-bold hover:underline mt-2 inline-block">
-                    Read our Privacy Policy →
-                </a>
-            </header>
-
-            <section className="pb-20 container mx-auto px-6 max-w-3xl">
-                <div className="bg-slate-50 dark:bg-[#0B0F19] rounded-3xl p-8 space-y-8 border border-slate-200 dark:border-white/5">
-
-                    {/* Essential */}
-                    <div className="flex justify-between items-start gap-6">
-                        <div>
-                            <h3 className="text-lg font-bold mb-1">Essential Cookies</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Necessary for the website to function properly. Cannot be disabled.</p>
-                        </div>
-                        <div className="opacity-50 cursor-not-allowed text-indigo-500">
-                            <ToggleRight size={32} />
-                        </div>
-                    </div>
-
-                    {/* Analytics */}
-                    <div className="flex justify-between items-start gap-6">
-                        <div>
-                            <h3 className="text-lg font-bold mb-1">Analytics</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Help us understand how visitors interact with our website.</p>
-                        </div>
-                        <button onClick={() => toggleSetting('analytics')} className={`transition-colors ${settings.analytics ? 'text-indigo-500' : 'text-slate-400'}`}>
-                            {settings.analytics ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                        </button>
-                    </div>
-
-                    {/* Marketing */}
-                    <div className="flex justify-between items-start gap-6">
-                        <div>
-                            <h3 className="text-lg font-bold mb-1">Marketing</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Used to deliver relevant advertisements and track ad performance.</p>
-                        </div>
-                        <button onClick={() => toggleSetting('marketing')} className={`transition-colors ${settings.marketing ? 'text-indigo-500' : 'text-slate-400'}`}>
-                            {settings.marketing ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                        </button>
-                    </div>
-
-                    {/* Preferences */}
-                    <div className="flex justify-between items-start gap-6">
-                        <div>
-                            <h3 className="text-lg font-bold mb-1">Preferences</h3>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Allow the site to remember choices you make (like language).</p>
-                        </div>
-                        <button onClick={() => toggleSetting('preferences')} className={`transition-colors ${settings.preferences ? 'text-indigo-500' : 'text-slate-400'}`}>
-                            {settings.preferences ? <ToggleRight size={32} /> : <ToggleLeft size={32} />}
-                        </button>
-                    </div>
-                </div>
-
-                <div className="mt-8 flex justify-between items-center gap-4">
-                    <button
-                        className="px-6 py-3 font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-2"
-                        onClick={resetToDefaults}
-                    >
-                        <RotateCcw size={16} />
-                        Reset to Defaults
-                    </button>
-                    <div className="flex gap-4">
-                        <button
-                            className="px-6 py-3 font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-                            onClick={() => navigate('/')}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-lg shadow-indigo-500/20"
-                            onClick={savePreferences}
-                        >
-                            Save Preferences
-                        </button>
-                    </div>
-                </div>
-            </section>
-            <footer className="py-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-400">
-                <p>© 2026 Chttrix Inc.</p>
-            </footer>
-        </div>
+            </div>
+        </PublicPageShell>
     );
-};
-
-export default CookieSettings;
+}

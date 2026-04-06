@@ -122,138 +122,135 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
 
   /* ─── render ─────────────────────────────────────────────── */
   const panel = (
-    <div className={`
-      flex flex-col h-full relative overflow-hidden
-      bg-white dark:bg-[#0f1117]
-      text-gray-900 dark:text-white
-      transition-all duration-300 ease-out
-      ${isSidebar
-        ? (visible ? "opacity-100 translate-x-0" : "opacity-0 translate-x-8")
-        : (visible ? "opacity-100 scale-100" : "opacity-0 scale-95")}
-      ${!isSidebar && "rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10"}
-    `}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'var(--font)', transition: 'opacity 300ms ease, transform 300ms ease', opacity: isSidebar ? (visible ? 1 : 0) : (visible ? 1 : 0), transform: isSidebar ? (visible ? 'translateX(0)' : 'translateX(32px)') : (visible ? 'scale(1)' : 'scale(0.95)') }}
+      className={!isSidebar ? 'border border-[var(--border-default)]' : ''}>
 
-      {/* gradient top accent — looks great in both modes */}
-      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-violet-600 via-indigo-500 to-cyan-500" />
 
       {/* ── Info modal ── */}
       {showInfoModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-black/70 backdrop-blur-md">
-          <div className="bg-white dark:bg-[#1a1d27] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl w-[85%] max-w-sm p-6 relative">
-            <button onClick={() => setShowInfoModal(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors">
-              <X size={18} />
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)' }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '85%', maxWidth: '320px', padding: '20px', position: 'relative' }}>
+            <button onClick={() => setShowInfoModal(false)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+              <X size={16} />
             </button>
-            <div className="flex flex-col items-center mb-5 text-center">
-              <div className="w-12 h-12 rounded-2xl bg-violet-100 dark:bg-violet-600/20 border border-violet-200 dark:border-violet-500/30 flex items-center justify-center mb-3">
-                <Sparkles size={22} className="text-violet-600 dark:text-violet-400" />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '16px', textAlign: 'center' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
+                <Sparkles size={18} style={{ color: 'var(--accent)' }} />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white text-base">About Chttrix Intelligence</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Powered by Gemini · Workspace-aware</p>
+              <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', margin: '0 0 4px' }}>About Chttrix Intelligence</h3>
+              <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Powered by Gemini · Workspace-aware</p>
             </div>
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">What I can do</p>
-                <ul className="text-xs text-gray-600 dark:text-gray-300 space-y-1.5">
-                  {["Answer questions & summarize chats", "Help debug code & write snippets", "Draft emails & organize tasks", "Analyze screen content (Vision)"].map(c => (
-                    <li key={c} className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-violet-500 flex-shrink-0" />{c}</li>
+                <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>What I can do</p>
+                <ul style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '5px', paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+                  {['Answer questions & summarize chats', 'Help debug code & write snippets', 'Draft emails & organize tasks', 'Analyze screen content (Vision)'].map(c => (
+                    <li key={c} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--accent)', flexShrink: 0, display: 'inline-block' }} />{c}</li>
                   ))}
                 </ul>
               </div>
               <div>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Limitations</p>
-                <ul className="text-xs text-gray-400 dark:text-gray-400 space-y-1.5">
-                  {["May occasionally generate incorrect info", "Verify important data manually", "Don't share sensitive personal info"].map(c => (
-                    <li key={c} className="flex items-center gap-2"><span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />{c}</li>
+                <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>Limitations</p>
+                <ul style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '5px', paddingLeft: 0, listStyle: 'none', margin: 0 }}>
+                  {['May occasionally generate incorrect info', 'Verify important data manually', "Don't share sensitive personal info"].map(c => (
+                    <li key={c} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><span style={{ width: '4px', height: '4px', borderRadius: '50%', background: 'var(--border-accent)', flexShrink: 0, display: 'inline-block' }} />{c}</li>
                   ))}
                 </ul>
               </div>
             </div>
-            <button onClick={() => setShowInfoModal(false)} className="w-full mt-5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold rounded-xl transition-colors">Got it</button>
+            <button onClick={() => setShowInfoModal(false)}
+              style={{ width: '100%', marginTop: '16px', padding: '8px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+            >Got it</button>
           </div>
         </div>
       )}
 
       {/* ── History panel ── */}
       {showHistory && (
-        <div className="absolute inset-0 z-20 flex">
-          <div className="w-64 bg-white dark:bg-[#13151e] border-r border-gray-200 dark:border-white/8 flex flex-col shadow-xl">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-white/8">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">History</span>
-              <div className="flex items-center gap-2">
+        <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex' }}>
+          <div style={{ width: '220px', background: 'var(--bg-surface)', borderRight: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>History</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {chatHistory.length > 0 && (
-                  <button onClick={() => { if (window.confirm("Clear all history?")) { setChatHistory([]); localStorage.removeItem("chttrixai_chat_history"); } }}
-                    className="text-[10px] text-red-500 hover:text-red-400 transition-colors">Clear</button>
+                  <button onClick={() => { if (window.confirm('Clear all history?')) { setChatHistory([]); localStorage.removeItem('chttrixai_chat_history'); } }}
+                    style={{ fontSize: '10px', color: 'var(--state-danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>Clear</button>
                 )}
-                <button onClick={() => setShowHistory(false)} className="text-gray-400 hover:text-gray-700 dark:hover:text-white transition-colors"><X size={15} /></button>
+                <button onClick={() => setShowHistory(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><X size={14} /></button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '6px' }}>
               {chatHistory.length === 0 ? (
-                <div className="p-8 text-center text-xs text-gray-400">No history yet</div>
+                <div style={{ padding: '32px 12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No history yet</div>
               ) : chatHistory.map(chat => (
                 <button key={chat.id} onClick={() => loadChat(chat)}
-                  className="w-full text-left px-3 py-2.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 rounded-lg transition-all group flex items-center gap-2">
-                  <MessageSquare size={12} className="flex-shrink-0 text-gray-400 group-hover:text-violet-500 transition-colors" />
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate font-medium">{chat.title}</div>
-                    <div className="text-[9px] text-gray-400 mt-0.5">{chat.date}</div>
+                  style={{ width: '100%', textAlign: 'left', padding: '8px 10px', fontSize: '12px', color: 'var(--text-secondary)', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: '150ms ease', fontFamily: 'var(--font)' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                >
+                  <MessageSquare size={12} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{chat.title}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>{chat.date}</div>
                   </div>
-                  <ChevronRight size={12} className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <ChevronRight size={11} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex-1 bg-black/20 dark:bg-black/40" onClick={() => setShowHistory(false)} />
+          <div style={{ flex: 1, background: 'rgba(0,0,0,0.4)' }} onClick={() => setShowHistory(false)} />
         </div>
       )}
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-4 h-14 border-b border-gray-100 dark:border-white/8 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <img
-              src="/assets/ChttrixAI-logo.png"
-              alt="Chttrix AI"
-              className="w-8 h-8 rounded-xl object-cover shadow-md"
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', height: '48px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ position: 'relative' }}>
+            <img src="/assets/ChttrixAI-logo.png" alt="Chttrix AI"
+              style={{ width: '28px', height: '28px', borderRadius: '2px', objectFit: 'cover' }}
               onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
             />
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 items-center justify-center shadow-lg hidden">
-              <Sparkles size={16} className="text-white" />
+            <div style={{ width: '28px', height: '28px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', alignItems: 'center', justifyContent: 'center', display: 'none' }}>
+              <Sparkles size={14} style={{ color: 'var(--accent)' }} />
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-400 border-2 border-white dark:border-[#0f1117] rounded-full" />
+            <span style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '8px', height: '8px', background: 'var(--state-success)', border: '2px solid var(--bg-base)', borderRadius: '50%' }} />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white leading-none">{chatTitle}</h3>
-            <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 block">Chttrix Intelligence · ⌘⇧A</span>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0 }}>{chatTitle}</h3>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginTop: '1px' }}>Chttrix Intelligence · ⌘⇧A</span>
           </div>
         </div>
-        <div className="flex items-center gap-0.5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
           {[
-            { icon: Info,    title: "About",    fn: () => setShowInfoModal(true) },
-            { icon: History, title: "History",  fn: () => setShowHistory(v => !v) },
-            { icon: Plus,    title: "New chat", fn: handleNewChat },
-            { icon: X,       title: "Close",    fn: handleClose },
+            { icon: Info, title: 'About', fn: () => setShowInfoModal(true) },
+            { icon: History, title: 'History', fn: () => setShowHistory(v => !v) },
+            { icon: Plus, title: 'New chat', fn: handleNewChat },
+            { icon: X, title: 'Close', fn: handleClose },
           ].map(({ icon: Icon, title, fn }) => (
             <button key={title} onClick={fn} title={title}
-              className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/8 rounded-lg transition-all">
-              <Icon size={16} />
+              style={{ padding: '6px', color: 'var(--text-muted)', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', display: 'flex', transition: '150ms ease' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+            >
+              <Icon size={15} />
             </button>
           ))}
         </div>
       </div>
 
       {/* ── Messages ── */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 custom-scrollbar bg-gray-50/50 dark:bg-transparent">
-        {/* Welcome empty state */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }} className="custom-scrollbar">
         {messages.length === 1 && (
-          <div className="flex flex-col items-center justify-center h-full text-center py-12 select-none">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-indigo-500/10 dark:from-violet-600/30 dark:to-indigo-600/20 border border-violet-200 dark:border-violet-500/20 flex items-center justify-center mb-4">
-              <Sparkles size={28} className="text-violet-500 dark:text-violet-400" />
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '32px 16px', userSelect: 'none' }}>
+            <div style={{ width: '52px', height: '52px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
+              <Sparkles size={22} style={{ color: 'var(--accent)' }} />
             </div>
-            <h4 className="text-gray-900 dark:text-white font-semibold text-base mb-1">Chttrix Intelligence</h4>
-            <p className="text-gray-500 dark:text-gray-400 text-xs max-w-[200px] leading-relaxed">Your AI assistant for messages, tasks, and workspace intelligence</p>
-            <div className="flex items-center gap-1.5 mt-4 text-[10px] text-gray-400">
-              <Zap size={10} className="text-violet-500" />
+            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Chttrix Intelligence</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '180px', lineHeight: 1.6, margin: '0 0 14px' }}>Your AI assistant for messages, tasks, and workspace intelligence</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-muted)' }}>
+              <Zap size={10} style={{ color: 'var(--accent)' }} />
               Powered by Gemini AI
             </div>
           </div>
@@ -274,29 +271,28 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
 
               {/* Bubble */}
               {editingId === msg.id ? (
-                <div className="bg-gray-100 dark:bg-white/8 rounded-xl p-3 w-full min-w-[180px]">
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '10px', minWidth: '180px' }}>
                   <textarea
-                    className="w-full bg-transparent text-sm text-gray-900 dark:text-white border-none outline-none resize-none placeholder-gray-400"
+                    style={{ width: '100%', background: 'transparent', fontSize: '13px', color: 'var(--text-primary)', border: 'none', outline: 'none', resize: 'none', fontFamily: 'var(--font)' }}
                     defaultValue={msg.text} autoFocus
                     rows={Math.max(2, Math.ceil(msg.text.length / 35))}
                     onKeyDown={e => {
-                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSaveEdit(msg.id, e.target.value); }
-                      if (e.key === "Escape") setEditingId(null);
+                      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(msg.id, e.target.value); }
+                      if (e.key === 'Escape') setEditingId(null);
                     }}
                   />
-                  <div className="flex justify-end gap-2 mt-2">
-                    <button onClick={() => setEditingId(null)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors">Cancel</button>
-                    <button onClick={e => handleSaveEdit(msg.id, e.target.closest(".flex").previousSibling.value)}
-                      className="text-xs bg-violet-600 hover:bg-violet-500 text-white px-3 py-0.5 rounded-lg transition-colors font-medium">Save</button>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '6px' }}>
+                    <button onClick={() => setEditingId(null)} style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>Cancel</button>
+                    <button onClick={e => handleSaveEdit(msg.id, e.target.closest('div').previousSibling.value)}
+                      style={{ fontSize: '11px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: 'var(--text-primary)', padding: '2px 10px', cursor: 'pointer', fontFamily: 'var(--font)', fontWeight: 600 }}>Save</button>
                   </div>
                 </div>
               ) : (
-                <div className={`px-3.5 py-2.5 text-sm leading-relaxed rounded-2xl
-                  ${msg.sender === "ai"
-                    ? "bg-white dark:bg-white/6 text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-transparent shadow-sm dark:shadow-none rounded-tl-sm"
-                    : "bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-tr-sm shadow-md shadow-violet-500/20"
-                  } ${msg.isError ? "!bg-red-50 dark:!bg-red-900/20 !text-red-600 dark:!text-red-400 border !border-red-200 dark:!border-red-800/30" : ""}`}
-                >
+                <div style={{ padding: '10px 12px', fontSize: '13px', lineHeight: 1.6, borderRadius: '2px',
+                  background: msg.sender === 'ai' ? 'var(--bg-surface)' : 'var(--bg-active)',
+                  color: msg.sender === 'ai' ? 'var(--text-primary)' : 'var(--text-primary)',
+                  border: `1px solid ${msg.isError ? 'var(--state-danger)' : msg.sender === 'ai' ? 'var(--border-default)' : 'var(--border-accent)'}`,
+                }}>
                   {msg.text}
                 </div>
               )}
@@ -331,11 +327,10 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
 
         {/* Typing dots */}
         {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-white dark:bg-white/6 border border-gray-100 dark:border-transparent rounded-2xl rounded-tl-sm px-4 py-3 flex items-center gap-1.5 shadow-sm dark:shadow-none">
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
               {[0, 1, 2].map(i => (
-                <span key={i} className="w-1.5 h-1.5 rounded-full bg-violet-500 opacity-60 animate-bounce"
-                  style={{ animationDelay: `${i * 120}ms` }} />
+                <span key={i} style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', opacity: 0.7, animation: 'bounce 1s infinite', animationDelay: `${i * 120}ms`, display: 'inline-block' }} />
               ))}
             </div>
           </div>
@@ -345,11 +340,14 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
 
       {/* ── Quick actions ── */}
       {messages.length < 3 && (
-        <div className="px-3 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0 bg-gray-50/50 dark:bg-transparent">
+        <div style={{ padding: '0 10px 8px', display: 'flex', gap: '6px', overflowX: 'auto', flexShrink: 0 }} className="no-scrollbar">
           {QUICK_ACTIONS.map(({ icon: Icon, label, prompt }) => (
             <button key={label} onClick={() => handleSend(prompt)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-white/5 hover:bg-violet-50 dark:hover:bg-white/10 border border-gray-200 dark:border-white/8 hover:border-violet-300 dark:hover:border-violet-500/40 rounded-lg text-xs text-gray-600 dark:text-gray-400 hover:text-violet-700 dark:hover:text-white transition-all whitespace-nowrap flex-shrink-0 shadow-sm dark:shadow-none">
-              <Icon size={12} className="text-violet-500 flex-shrink-0" />
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, fontFamily: 'var(--font)', transition: '150ms ease' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >
+              <Icon size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
               {label}
             </button>
           ))}
@@ -357,51 +355,60 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       )}
 
       {/* ── Input area ── */}
-      <div className="px-3 pb-3 flex-shrink-0 bg-white dark:bg-transparent border-t border-gray-100 dark:border-white/8 pt-2">
-        {/* Reply banner */}
+      <div style={{ padding: '8px 12px 12px', flexShrink: 0, background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)' }}>
         {replyingTo && (
-          <div className="flex items-center justify-between bg-violet-50 dark:bg-white/5 border-l-2 border-violet-500 px-3 py-2 mb-2 rounded-r-lg">
-            <div className="overflow-hidden">
-              <span className="text-[10px] font-bold text-violet-600 dark:text-violet-400 block">{replyingTo.sender === "user" ? "You" : "Chttrix AI"}</span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 truncate block">{replyingTo.text.slice(0, 60)}</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-active)', borderLeft: '2px solid var(--accent)', padding: '6px 10px', marginBottom: '8px', borderRadius: '0 2px 2px 0' }}>
+            <div style={{ overflow: 'hidden' }}>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', display: 'block' }}>{replyingTo.sender === 'user' ? 'You' : 'Chttrix AI'}</span>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{replyingTo.text.slice(0, 60)}</span>
             </div>
-            <button onClick={() => setReplyingTo(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors ml-2"><X size={13} /></button>
+            <button onClick={() => setReplyingTo(null)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: '8px', display: 'flex' }}><X size={12} /></button>
           </div>
         )}
 
-        {/* Attach menu */}
         {showAttach && (
-          <div ref={attachRef} className="absolute bottom-16 left-3 bg-white dark:bg-[#1a1d27] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl overflow-hidden z-20 w-32">
-            {[{ icon: Image, label: "Photo" }, { icon: FileText, label: "File" }].map(({ icon: Icon, label }) => (
+          <div ref={attachRef} style={{ position: 'absolute', bottom: '60px', left: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden', zIndex: 20, width: '110px' }}>
+            {[{ icon: Image, label: 'Photo' }, { icon: FileText, label: 'File' }].map(({ icon: Icon, label }) => (
               <button key={label} onClick={() => setShowAttach(false)}
-                className="flex items-center gap-2 w-full px-3 py-2.5 hover:bg-gray-50 dark:hover:bg-white/6 text-xs text-gray-700 dark:text-gray-300 transition-colors">
-                <Icon size={13} className="text-gray-400" />{label}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 12px', background: 'none', border: 'none', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+              >
+                <Icon size={12} style={{ color: 'var(--text-muted)' }} />{label}
               </button>
             ))}
           </div>
         )}
 
-        <div className="flex items-end gap-2 bg-gray-100 dark:bg-white/6 border border-gray-200 dark:border-white/10 rounded-2xl px-3 py-2.5 focus-within:border-violet-400 dark:focus-within:border-violet-500/50 focus-within:bg-white dark:focus-within:bg-white/8 transition-all">
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '8px 10px', transition: '150ms ease' }}
+          onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+          onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+        >
           <button ref={attachBtnRef} onClick={() => setShowAttach(v => !v)}
-            className={`p-1 rounded-lg transition-all ${showAttach ? "text-violet-600 bg-violet-100 dark:text-violet-400 dark:bg-violet-500/20" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}>
-            <Plus size={17} />
+            style={{ padding: '3px', borderRadius: '2px', color: showAttach ? 'var(--accent)' : 'var(--text-muted)', background: showAttach ? 'var(--accent-dim)' : 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: '150ms ease' }}
+            onMouseEnter={e => { if (!showAttach) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (!showAttach) e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            <Plus size={16} />
           </button>
           <textarea ref={textRef} rows={1} value={input} onChange={e => setInput(e.target.value)}
             placeholder="Message Chttrix AI…"
-            className="flex-1 bg-transparent border-none outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400 resize-none py-0.5 max-h-28"
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', resize: 'none', padding: '1px 0', maxHeight: '112px', fontFamily: 'var(--font)' }}
+            onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           />
-          <div className="flex items-center gap-1">
-            <button className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg transition-all"><Mic size={17} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button style={{ padding: '4px', color: 'var(--text-muted)', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', display: 'flex', transition: '150ms ease' }}
+              onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+            ><Mic size={15} /></button>
             <button onClick={() => handleSend()} disabled={!input.trim()}
-              className={`p-1.5 rounded-xl transition-all ${input.trim()
-                ? "bg-violet-600 hover:bg-violet-500 text-white shadow-md shadow-violet-500/30"
-                : "text-gray-300 dark:text-gray-600 cursor-not-allowed"}`}>
-              <Send size={15} />
+              style={{ padding: '5px', background: input.trim() ? 'var(--accent-dim)' : 'none', border: `1px solid ${input.trim() ? 'var(--accent)' : 'transparent'}`, borderRadius: '2px', color: input.trim() ? 'var(--accent)' : 'var(--text-muted)', cursor: input.trim() ? 'pointer' : 'not-allowed', display: 'flex', transition: '150ms ease' }}
+            >
+              <Send size={14} />
             </button>
           </div>
         </div>
-        <p className="text-center text-[9px] text-gray-400 mt-1.5">AI can make mistakes. Check important info.</p>
+        <p style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' }}>AI can make mistakes. Check important info.</p>
       </div>
     </div>
   );

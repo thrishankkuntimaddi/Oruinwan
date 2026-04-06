@@ -155,27 +155,27 @@ function DMMessageItem({
         }
     };
 
-    // System Message Rendering — reads from systemEvent + systemData
+    // System Message Rendering
     if (msg.type === 'system' || msg.backend?.type === 'system') {
         const sd = msg.systemData || msg.backend?.systemData || {};
         const ev = msg.systemEvent || msg.backend?.systemEvent || '';
-        const isMe = (id) => String(id) === String(currentUserId);
-        const name = (id, fallback) => isMe(id) ? 'You' : (fallback || 'Someone');
+        const isMeFn = (id) => String(id) === String(currentUserId);
+        const name = (id, fallback) => isMeFn(id) ? 'You' : (fallback || 'Someone');
         const textMap = {
             member_joined: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}`,
             member_left: () => `${name(sd.userId, sd.userName)} left #${sd.channelName || 'this channel'}`,
-            member_invited: () => `${name(sd.inviterId, sd.inviterName)} invited ${isMe(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}`,
-            member_removed: () => `${name(sd.removedById, sd.removedByName)} removed ${isMe(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
+            member_invited: () => `${name(sd.inviterId, sd.inviterName)} invited ${isMeFn(sd.invitedUserId) ? 'you' : (sd.invitedUserName || 'someone')} to #${sd.channelName || 'this channel'}`,
+            member_removed: () => `${name(sd.removedById, sd.removedByName)} removed ${isMeFn(sd.removedUserId) ? 'you' : (sd.removedUserName || 'someone')}`,
             channel_created: () => `${name(sd.userId, sd.userName)} created this channel`,
             channel_renamed: () => `${name(sd.userId, sd.userName)} renamed the channel from #${sd.oldName} to #${sd.newName}`,
-            admin_assigned: () => `${name(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin`,
-            admin_demoted: () => `${name(sd.demoterId, sd.demoterName)} removed ${isMe(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || 'someone'}'s`} admin role`,
+            admin_assigned: () => `${name(sd.assignerId, sd.assignerName)} made ${isMeFn(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin`,
+            admin_demoted: () => `${name(sd.demoterId, sd.demoterName)} removed ${isMeFn(sd.demotedUserId) ? 'your' : `${sd.demotedUserName || 'someone'}'s`} admin role`,
             messages_cleared: () => `${name(sd.userId, sd.userName)} cleared the message history`,
         };
         const displayText = textMap[ev]?.() || msg.payload?.text || msg.text || 'System event';
         return (
-            <div className="flex justify-center my-3">
-                <div className="bg-gray-100/80 dark:bg-gray-800/80 px-4 py-1.5 rounded-full text-xs text-gray-600 dark:text-gray-300 font-medium shadow-sm">
+            <div style={{ display: 'flex', justifyContent: 'center', margin: '10px 0' }}>
+                <div style={{ backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', padding: '3px 12px', borderRadius: '99px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                     {displayText}
                 </div>
             </div>
@@ -185,105 +185,105 @@ function DMMessageItem({
     // Deleted Message Rendering
     if (msg.isDeletedUniversally) {
         return (
-            <div className="group flex items-start gap-2 px-4 py-2 opacity-60 hover:opacity-100 relative">
-                <div className="flex-shrink-0 pt-1">
-                    <div className="w-7 h-7 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
-                        <Trash2 size={12} className="text-gray-500 dark:text-gray-400" />
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '6px 16px', opacity: 0.55, position: 'relative' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '0.55'}
+            >
+                <div style={{ flexShrink: 0, paddingTop: '2px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Trash2 size={12} style={{ color: 'var(--text-muted)' }} />
                     </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                    <div className="text-gray-400 text-xs italic py-1">
-                        Message deleted by {
-                            String(msg.deletedBy) === String(currentUserId)
-                                ? "You"
-                                : (msg.deletedByName || "Unknown")
-                        }
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '12px', fontStyle: 'italic', padding: '4px 0' }}>
+                        Message deleted by {String(msg.deletedBy) === String(currentUserId) ? 'You' : (msg.deletedByName || 'Unknown')}
                     </div>
                 </div>
-                <button
-                    onClick={() => deleteMessage(msg._id || msg.id, 'me')}
-                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-gray-100 rounded transition-opacity"
-                    title="Remove from view"
-                >
-                    <Trash2 size={12} className="text-gray-400" />
-                </button>
             </div>
         );
     }
 
+    // Shared style helpers
+    const toolbarBtn = (active = false) => ({
+        padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
+        borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: active ? 'var(--accent)' : 'var(--text-muted)', transition: '100ms ease',
+    });
+    const menuItem = (label, icon, onClick, accent = false, danger = false) => {
+        const color = danger ? 'var(--state-danger)' : accent ? 'var(--accent)' : 'var(--text-secondary)';
+        const hoverBg = danger ? 'rgba(192,57,43,0.08)' : 'var(--bg-hover)';
+        return (
+            <button
+                key={label}
+                onClick={onClick}
+                style={{ width: '100%', textAlign: 'left', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color, fontSize: '13px', fontFamily: 'var(--font)', transition: '100ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = hoverBg}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+            >
+                {icon}{label}
+            </button>
+        );
+    };
+
     return (
         <div
-            className={`group flex items-start gap-3 px-4 py-0.5 hover:bg-gray-50/50 dark:hover:bg-gray-800/50 relative ${isSelected ? "bg-blue-50/30 dark:bg-blue-900/20" : ""} ${msg.isPinned ? "bg-blue-50/30 dark:bg-blue-900/10 border-l-2 border-blue-400 dark:border-blue-500" : "border-l-2 border-transparent"}`}
-            onMouseEnter={() => setShowToolbar(true)}
-            onMouseLeave={() => setShowToolbar(false)}
+            style={{
+                display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '2px 16px', position: 'relative',
+                backgroundColor: isSelected ? 'rgba(184,149,106,0.06)' : msg.isPinned ? 'rgba(184,149,106,0.04)' : 'transparent',
+                borderLeft: msg.isPinned ? '2px solid var(--accent)' : '2px solid transparent',
+                transition: 'background-color 80ms ease',
+            }}
+            onMouseEnter={e => { setShowToolbar(true); if (!isSelected && !msg.isPinned) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+            onMouseLeave={e => { setShowToolbar(false); if (!isSelected && !msg.isPinned) e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
             {/* Selection Checkbox */}
             {selectMode && (
-                <div className="flex items-center justify-center pt-1 pr-1">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '4px', paddingRight: '4px' }}>
                     <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(msg.id)}
-                        className="w-3.5 h-3.5 rounded-sm border-gray-300 text-blue-600 focus:ring-1 focus:ring-blue-500"
+                        style={{ width: '14px', height: '14px', accentColor: 'var(--accent)', cursor: 'pointer' }}
                     />
                 </div>
             )}
 
-            {/* Avatar - with blue ring for current user */}
-            <div className="flex-shrink-0 pt-0.5">
+            {/* Avatar */}
+            <div style={{ flexShrink: 0, paddingTop: '2px' }}>
                 <Avatar
                     src={avatarUrl}
                     username={msg.senderName}
                     fallback={initial}
                     alt={msg.senderName}
                     size="sm"
-                    className={isMe ? "ring-2 ring-blue-500" : ""}
+                    style={isMe ? { outline: '2px solid var(--accent)', outlineOffset: '1px' } : {}}
                 />
             </div>
 
-            {/* Content — always has right padding so toolbar never overlaps text */}
-            <div className="flex-1 min-w-0 pr-24 relative">
-                {/* Header: Name + Pin Info */}
-                <div className="flex flex-col gap-0.5 mb-0">
-                    <div className="flex items-center gap-2">
-                        <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-tight">{msg.senderName || "Unknown"}</span>
-                        {msg.isPinned && (
-                            <span className="relative inline-flex group/pin">
-                                <Pin size={10} className="text-blue-500 rotate-45" />
-                                {msg.pinnedByName && (
-                                    <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 invisible group-hover/pin:opacity-100 group-hover/pin:visible transition-opacity z-50">
-                                        Pinned by {msg.pinnedByName}
-                                    </span>
-                                )}
-                            </span>
-                        )}
-                    </div>
-                    {msg.isPinned && msg.pinnedByName && (
-                        <div className="flex items-center gap-1 text-[10px] text-blue-600">
-                            <Pin size={8} className="rotate-45" />
-                            <span>Pinned by {msg.pinnedByName}</span>
-                        </div>
-                    )}
+            {/* Content */}
+            <div style={{ flex: 1, minWidth: 0, paddingRight: '96px', position: 'relative' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: 0 }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', lineHeight: 1.4 }}>{msg.senderName || 'Unknown'}</span>
+                    {msg.isPinned && <Pin size={10} style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} title={msg.pinnedByName ? `Pinned by ${msg.pinnedByName}` : 'Pinned'} />}
                 </div>
 
-                {/* Timestamp - Positioned at the far right edge */}
-                <span className="absolute top-1 right-4 text-[10px] text-gray-400 dark:text-gray-500 select-none">
+                {/* Timestamp */}
+                <span style={{ position: 'absolute', top: '2px', right: '16px', fontSize: '10px', color: 'var(--text-muted)', userSelect: 'none' }}>
                     {formatTime(msg.ts)}
                 </span>
 
                 {/* Reply Preview */}
                 {msg.repliedTo && (
-                    <div className="flex items-start gap-2 mb-2 px-1">
-                        <div className="w-1 bg-blue-500 rounded-full flex-shrink-0 self-stretch"></div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                                <MessageSquare size={11} className="text-blue-500 flex-shrink-0" />
-                                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                    {msg.repliedTo.senderName}
-                                </span>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px', padding: '0 4px' }}>
+                        <div style={{ width: '2px', backgroundColor: 'var(--accent)', borderRadius: '1px', flexShrink: 0, alignSelf: 'stretch', opacity: 0.6 }}></div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                                <MessageSquare size={10} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>{msg.repliedTo.senderName}</span>
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                                {msg.repliedTo.payload?.text || "🔒 Encrypted message"}
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
+                                {msg.repliedTo.payload?.text || '🔒 Encrypted message'}
                             </div>
                         </div>
                     </div>
@@ -314,13 +314,13 @@ function DMMessageItem({
 
                 {/* Message Text */}
                 {(!msg.attachment || msg.text) && (
-                    <div className="text-gray-800 dark:text-gray-200 text-[14px] leading-relaxed break-all whitespace-pre-wrap max-w-[60%] message-content" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>
+                    <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '60%' }} className="message-content">
                         {msg.isDeleted ? (
-                            <span className="text-gray-400 italic">Message deleted</span>
+                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Message deleted</span>
                         ) : isEditing ? (
-                            <div className="flex flex-col gap-2 w-full max-w-[70%]">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', maxWidth: '480px' }}>
                                 <textarea
-                                    className="w-full bg-gray-50 dark:bg-gray-700/60 border border-blue-400 dark:border-blue-500 rounded-md px-3 py-2 text-[14px] text-gray-800 dark:text-gray-200 outline-none resize-none focus:ring-2 focus:ring-blue-400/50 min-h-[60px]"
+                                    style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: '2px', padding: '8px 12px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'none', minHeight: '60px', fontFamily: 'var(--font)', boxSizing: 'border-box', lineHeight: 1.6 }}
                                     value={editText}
                                     onChange={(e) => setEditText(e.target.value)}
                                     onKeyDown={(e) => {
@@ -330,20 +330,14 @@ function DMMessageItem({
                                     autoFocus
                                     rows={Math.min(6, (editText.match(/\n/g) || []).length + 2)}
                                 />
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={handleSaveEdit}
-                                        className="flex items-center gap-1.5 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-md transition-colors"
-                                    >
-                                        <Check size={12} /> Save
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <button onClick={handleSaveEdit} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--accent)', color: '#0c0c0c', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
+                                        <Check size={11} /> Save
                                     </button>
-                                    <button
-                                        onClick={handleCancelEdit}
-                                        className="flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-medium rounded-md transition-colors"
-                                    >
-                                        <X size={12} /> Cancel
+                                    <button onClick={handleCancelEdit} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
+                                        <X size={11} /> Cancel
                                     </button>
-                                    <span className="text-[10px] text-gray-400">Enter to save · Esc to cancel</span>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Enter to save · Esc to cancel</span>
                                 </div>
                             </div>
                         ) : msg.text ? (
@@ -353,7 +347,9 @@ function DMMessageItem({
                                     a: ({ node, children, ...props }) => (
                                         <a
                                             {...props}
-                                            className="text-blue-600 dark:text-blue-400 hover:underline"
+                                            style={{ color: 'var(--accent)' }}
+                                            onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                                            onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                         >
@@ -376,61 +372,50 @@ function DMMessageItem({
                                 parentMessageId={msg.parentId || null}
                             />
                         ) : (
-                            <span className="text-gray-400 italic">No message content</span>
+                            <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>No message content</span>
                         )}
                     </div>
                 )}
 
-                {/* Translation Display Block */}
-                {translationState?.status === 'done' && translationState.translatedText && (
-                    <div className="mt-1.5 max-w-[60%]">
-                        <div className="px-3 py-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 text-[13px] leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre-wrap break-words">
-                            {translationState.translatedText}
-                        </div>
-                        <div className="flex items-center gap-2 mt-1">
-                            {translationState.detectedLang && (
-                                <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                                    Detected: {translationState.detectedLang.toUpperCase()}
-                                </span>
-                            )}
-                            <button
-                                onClick={() => onClearTranslation?.(msg._id || msg.id)}
-                                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                                Show original
-                            </button>
-                        </div>
-                    </div>
-                )}
-                {translationState?.status === 'error' && (
-                    <div className="mt-1 text-[11px] text-red-500 dark:text-red-400">
-                        Translation failed.
-                        <button
-                            onClick={() => onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode)}
-                            className="ml-1 underline"
-                        >
-                            Retry
-                        </button>
-                    </div>
-                )}
 
-                {/* (edited) badge */}
-                {msg.editedAt && !msg.isDeleted && (
-                    <span className="text-xs text-gray-400 italic"> (edited)</span>
-                )}
 
                 {/* Phase 7.5 — Link preview card */}
                 {!msg.isDeleted && msg.linkPreview?.url && (
                     <LinkPreviewMessage preview={msg.linkPreview} />
                 )}
 
-                {/* Sending/Failed States */}
-                {msg.sending && <div className="text-xs text-gray-400 italic mt-1">Sending...</div>}
-                {msg.failed && <div className="text-xs text-red-500 font-medium mt-1">Failed to send</div>}
+                {/* Edited + translation display + status */}
+                {msg.editedAt && !msg.isDeleted && (
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}> (edited)</span>
+                )}
+
+                {/* Translation Display Block */}
+                {translationState?.status === 'done' && translationState.translatedText && (
+                    <div style={{ marginTop: '6px', maxWidth: '60%' }}>
+                        <div style={{ padding: '8px 12px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                            {translationState.translatedText}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                            {translationState.detectedLang && (
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Detected: {translationState.detectedLang.toUpperCase()}</span>
+                            )}
+                            <button onClick={() => onClearTranslation?.(msg._id || msg.id)} style={{ fontSize: '11px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, outline: 'none' }}>Show original</button>
+                        </div>
+                    </div>
+                )}
+                {translationState?.status === 'error' && (
+                    <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--state-danger)' }}>
+                        Translation failed.
+                        <button onClick={() => onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode)} style={{ marginLeft: '4px', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', outline: 'none' }}>Retry</button>
+                    </div>
+                )}
+
+                {msg.sending && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>Sending...</div>}
+                {msg.failed && <div style={{ fontSize: '11px', color: 'var(--state-danger)', fontWeight: 500, marginTop: '2px' }}>Failed to send</div>}
 
                 {/* Reactions */}
                 {msg.reactions && msg.reactions.length > 0 && (
-                    <div className="flex gap-2 mt-1 flex-wrap">
+                    <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                         {Object.entries(
                             msg.reactions.reduce((acc, r) => {
                                 acc[r.emoji] = acc[r.emoji] || [];
@@ -438,167 +423,107 @@ function DMMessageItem({
                                 acc[r.emoji].push(uid);
                                 return acc;
                             }, {})
-                        ).map(([emoji, users]) => (
-                            <button
-                                key={emoji}
-                                onClick={() => toggleReaction(emoji)}
-                                className={`px-2 py-0.5 rounded text-sm transition-colors ${users.includes(currentUserId?.toString())
-                                    ? 'bg-blue-600/30 dark:bg-blue-500/30 text-blue-700 dark:text-blue-300 border border-blue-400'
-                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                                    }`}
-                            >
-                                {emoji} {users.length}
-                            </button>
-                        ))}
+                        ).map(([emoji, users]) => {
+                            const myReaction = users.includes(currentUserId?.toString());
+                            return (
+                                <button
+                                    key={emoji}
+                                    onClick={() => toggleReaction(emoji)}
+                                    style={{
+                                        padding: '1px 7px', borderRadius: '99px', fontSize: '13px', fontFamily: 'var(--font)',
+                                        backgroundColor: myReaction ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)',
+                                        border: `1px solid ${myReaction ? 'var(--accent)' : 'var(--border-default)'}`,
+                                        color: myReaction ? 'var(--accent)' : 'var(--text-secondary)',
+                                        cursor: 'pointer', transition: '120ms ease', outline: 'none',
+                                    }}
+                                    onMouseEnter={e => { if (!myReaction) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                                    onMouseLeave={e => { if (!myReaction) e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+                                >
+                                    {emoji} {users.length}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
 
             {/* Hover Toolbar */}
-            <div className={`absolute top-0.5 right-24 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm rounded p-0.5 flex items-center z-10 ${showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover ? "opacity-100" : "opacity-0 invisible"}`}>
+            <div style={{
+                position: 'absolute', top: '2px', right: '96px',
+                backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
+                borderRadius: '2px', padding: '2px', display: 'flex', alignItems: 'center',
+                zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                opacity: (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover) ? 1 : 0,
+                pointerEvents: (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover) ? 'auto' : 'none',
+                transition: 'opacity 100ms ease',
+            }}>
                 {/* Reaction Picker */}
-                <div className="relative" ref={reactionPickerRef}>
+                <div style={{ position: 'relative' }} ref={reactionPickerRef}>
                     <button
                         onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
                             const spaceBelow = window.innerHeight - rect.bottom;
-                            setReactionPos({
-                                right: window.innerWidth - rect.right,
-                                openUp: spaceBelow < 320,
-                                top: rect.bottom + 4,
-                                bottom: window.innerHeight - rect.top + 4,
-                            });
+                            setReactionPos({ right: window.innerWidth - rect.right, openUp: spaceBelow < 320, top: rect.bottom + 4, bottom: window.innerHeight - rect.top + 4 });
                             setShowReactionPicker(v => !v);
                         }}
-                        className={`p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 ${showReactionPicker ? "text-blue-600 dark:text-blue-400" : "text-gray-400 dark:text-gray-500"}`}
-                        title="React"
+                        title="React" style={toolbarBtn(showReactionPicker)}
+                        onMouseEnter={e => { if (!showReactionPicker) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { if (!showReactionPicker) e.currentTarget.style.color = 'var(--text-muted)'; }}
                     >
                         <Smile size={14} />
                     </button>
                     {showReactionPicker && reactionPos && (
-                        <div
-                            className="fixed z-[999]"
-                            style={{
-                                right: reactionPos.right,
-                                ...(reactionPos.openUp
-                                    ? { bottom: reactionPos.bottom }
-                                    : { top: reactionPos.top })
-                            }}
-                        >
-                            <ReactionPicker
-                                onSelect={(emoji) => {
-                                    toggleReaction(emoji);
-                                    setShowReactionPicker(false);
-                                }}
-                            />
+                        <div style={{ position: 'fixed', zIndex: 999, right: reactionPos.right, ...(reactionPos.openUp ? { bottom: reactionPos.bottom } : { top: reactionPos.top }) }}>
+                            <ReactionPicker onSelect={(emoji) => { toggleReaction(emoji); setShowReactionPicker(false); }} />
                         </div>
                     )}
                 </div>
 
-                <button onClick={() => forwardMessage && forwardMessage(msg.id)} className="p-1 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" title="Forward"><Share size={14} /></button>
+                <button onClick={() => forwardMessage && forwardMessage(msg.id)} title="Forward" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><Share size={14} /></button>
 
-                <div className="relative">
+                <div style={{ position: 'relative' }}>
                     <button
                         onClick={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
                             const spaceBelow = window.innerHeight - rect.bottom;
-                            setMenuPos({
-                                right: window.innerWidth - rect.right,
-                                openUp: spaceBelow < 260,
-                                top: rect.bottom + 4,
-                                bottom: window.innerHeight - rect.top + 4,
-                            });
+                            setMenuPos({ right: window.innerWidth - rect.right, openUp: spaceBelow < 260, top: rect.bottom + 4, bottom: window.innerHeight - rect.top + 4 });
                             toggleMsgMenu(e, msg.id);
                         }}
-                        className={`p-1 rounded ${openMsgMenuId === msg.id ? "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100" : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
-                        title="More"
+                        title="More" style={toolbarBtn(openMsgMenuId === msg.id)}
+                        onMouseEnter={e => { if (openMsgMenuId !== msg.id) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { if (openMsgMenuId !== msg.id) e.currentTarget.style.color = 'var(--text-muted)'; }}
                     ><MoreHorizontal size={14} /></button>
                     {openMsgMenuId === msg.id && menuPos && (
-                        <div
-                            className="fixed z-[999] w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl py-1 text-sm animate-fade-in"
-                            style={{
-                                right: menuPos.right,
-                                ...(menuPos.openUp
-                                    ? { bottom: menuPos.bottom }
-                                    : { top: menuPos.top })
-                            }}
-                        >
-                            <button onClick={() => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Copy size={14} /> Copy text</button>
-                            <button onClick={() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><MessageSquare size={14} /> Reply</button>
-                            <button onClick={async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/pin`, { pin: !msg.isPinned }); } catch (err) { console.error('[DMMessageItem] Pin toggle failed:', err); } toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Pin size={14} /> {msg.isPinned ? "Unpin message" : "Pin message"}</button>
-                            <button onClick={() => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"><Info size={14} /> Message info</button>
-
-                            {/* Edit — own messages only */}
-                            {isMe && !msg.isDeleted && (
-                                <button
-                                    onClick={() => {
-                                        setIsEditing(true);
-                                        setEditText(msg.text || '');
-                                        toggleMsgMenu({ stopPropagation: () => { } }, null);
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
-                                >
-                                    <Pencil size={14} /> Edit message
-                                </button>
-                            )}
-
-                            {/* Translate */}
-                            {msg.text && (
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (translationState?.status === 'done') {
-                                            onClearTranslation?.(msg._id || msg.id);
-                                            toggleMsgMenu({ stopPropagation: () => {} }, null);
-                                            return;
-                                        }
-                                        const rect = e.currentTarget.getBoundingClientRect();
-                                        const spaceBelow = window.innerHeight - rect.bottom;
-                                        setTranslatePopover({
-                                            pos: {
-                                                right: window.innerWidth - rect.right,
-                                                ...(spaceBelow < 240
-                                                    ? { bottom: window.innerHeight - rect.top + 4 }
-                                                    : { top: rect.bottom + 4 }),
-                                            }
-                                        });
-                                        // Keep menu open — toolbar stays visible
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-gray-700 dark:text-gray-300"
-                                >
-                                    <Globe size={14} />
-                                    {translationState?.status === 'done' ? 'Show original' : 'Translate'}
-                                </button>
-                            )}
+                        <div style={{
+                            position: 'fixed', zIndex: 999, width: '200px',
+                            backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
+                            borderRadius: '2px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                            paddingTop: '4px', paddingBottom: '4px',
+                            right: menuPos.right, ...(menuPos.openUp ? { bottom: menuPos.bottom } : { top: menuPos.top })
+                        }}>
+                            {menuItem('Copy text',    <Copy size={13} />,         () => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {menuItem('Reply',        <MessageSquare size={13} />,() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {menuItem(msg.isPinned ? 'Unpin' : 'Pin', <Pin size={13} />, async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/pin`, { pin: !msg.isPinned }); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {menuItem('Message info',<Info size={13} />,          () => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {isMe && !msg.isDeleted && menuItem('Edit', <Pencil size={13} />, () => { setIsEditing(true); setEditText(msg.text || ''); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
+                            {msg.text && menuItem(translationState?.status === 'done' ? 'Show original' : 'Translate', <Globe size={13} />, (e) => {
+                                if (translationState?.status === 'done') { onClearTranslation?.(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); return; }
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                const spaceBelow = window.innerHeight - rect.bottom;
+                                setTranslatePopover({ pos: { right: window.innerWidth - rect.right, ...(spaceBelow < 240 ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }) } });
+                            })}
                             {translatePopover && (
                                 <TranslatePopover
                                     pos={translatePopover.pos}
                                     status={translationState?.status === 'loading' ? 'loading' : translationState?.status === 'error' ? 'error' : null}
-                                    onSelect={(langCode) => {
-                                        setLastLangCode(langCode);
-                                        onTranslate?.(msg._id || msg.id, msg.text || '', langCode);
-                                        setTranslatePopover(null);
-                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
-                                    }}
-                                    onClose={() => {
-                                        setTranslatePopover(null);
-                                        toggleMsgMenu({ stopPropagation: () => {} }, null);
-                                    }}
-                                    onRetry={() => {
-                                        if (lastLangCode) {
-                                            onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode);
-                                            setTranslatePopover(null);
-                                            toggleMsgMenu({ stopPropagation: () => {} }, null);
-                                        }
-                                    }}
+                                    onSelect={(langCode) => { setLastLangCode(langCode); onTranslate?.(msg._id || msg.id, msg.text || '', langCode); setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); }}
+                                    onClose={() => { setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); }}
+                                    onRetry={() => { if (lastLangCode) { onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode); setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); } }}
                                 />
                             )}
-
-                            <div className="border-t border-gray-100 dark:border-gray-700 my-1"></div>
-                            <button onClick={() => { deleteMessage(msg._id || msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-red-600 dark:text-red-400"><Trash2 size={14} /> Delete for me</button>
-                            {isMe && (
-                                <button onClick={() => { deleteMessage(msg._id || msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => { } }, null); }} className="w-full text-left px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2 text-orange-600 dark:text-orange-400"><Trash2 size={14} /> Delete for everyone</button>
-                            )}
+                            <div style={{ height: '1px', backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
+                            {menuItem('Delete for me',       <Trash2 size={13} />, () => { deleteMessage(msg._id || msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
+                            {isMe && menuItem('Delete for everyone', <Trash2 size={13} />, () => { deleteMessage(msg._id || msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
                         </div>
                     )}
                 </div>

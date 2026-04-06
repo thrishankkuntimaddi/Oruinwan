@@ -301,10 +301,10 @@ export default function MessageList({ onSelectChat }) {
      RENDER
   ------------------------------------------------- */
   return (
-    <div className="h-full flex flex-col">
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
       {/* Search */}
-      <div className="px-4 py-3">
+      <div style={{ padding: '10px 16px' }}>
         <Input
           placeholder="Search"
           value={searchQuery}
@@ -316,7 +316,7 @@ export default function MessageList({ onSelectChat }) {
       </div>
 
       {/* Channel Actions */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', padding: '6px 16px' }}>
         <Button
           size="xs"
           variant="secondary"
@@ -386,15 +386,27 @@ export default function MessageList({ onSelectChat }) {
       )}
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 px-4 gap-8">
+      <div style={{
+        display: 'flex',
+        borderBottom: '1px solid var(--border-default)',
+        padding: '0 16px', gap: '4px',
+      }}>
         {Tabs.map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
-            className={`pb-3 pt-3 text-sm font-semibold ${activeTab === t
-              ? "text-black border-b-2 border-black"
-              : "text-gray-500"
-              }`}
+            style={{
+              padding: '10px 10px',
+              fontSize: '12px', fontWeight: activeTab === t ? 600 : 400,
+              color: activeTab === t ? 'var(--text-primary)' : 'var(--text-muted)',
+              background: 'none', border: 'none', outline: 'none',
+              borderBottom: activeTab === t ? '1px solid var(--text-primary)' : '1px solid transparent',
+              cursor: 'pointer', whiteSpace: 'nowrap',
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+              transition: 'color 150ms ease, border-color 150ms ease',
+            }}
+            onMouseEnter={e => { if (activeTab !== t) e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            onMouseLeave={e => { if (activeTab !== t) e.currentTarget.style.color = 'var(--text-muted)'; }}
           >
             {t}
           </button>
@@ -402,7 +414,7 @@ export default function MessageList({ onSelectChat }) {
       </div>
 
       {/* List */}
-      <div className="flex-1 overflow-y-auto">
+      <div style={{ flex: 1, overflowY: 'auto' }}>
         {(() => {
           // Separate items into sections
           const channels = filtered.filter(item => item.type === "channel");
@@ -413,16 +425,30 @@ export default function MessageList({ onSelectChat }) {
               {/* Channels Section */}
               {channels.length > 0 && (
                 <>
-                  <div className="px-4 py-2 bg-gray-50 sticky top-0 z-10 flex justify-between items-center group">
-                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                  <div style={{
+                    padding: '6px 16px',
+                    backgroundColor: 'var(--bg-active)',
+                    position: 'sticky', top: 0, zIndex: 10,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    borderBottom: '1px solid var(--border-subtle)',
+                  }}>
+                    <p style={{
+                      fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em',
+                      textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0,
+                      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
                       Channels
                     </p>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowCreate(true);
+                      onClick={(e) => { e.stopPropagation(); setShowCreate(true); }}
+                      style={{
+                        background: 'none', border: 'none', outline: 'none',
+                        color: 'var(--text-muted)', cursor: 'pointer',
+                        fontSize: '16px', lineHeight: 1, padding: '2px 4px',
+                        borderRadius: '2px', transition: 'color 100ms ease',
                       }}
-                      className="text-gray-400 hover:text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                      onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                       title="Create Channel"
                     >
                       +
@@ -437,8 +463,17 @@ export default function MessageList({ onSelectChat }) {
               {/* Direct Messages Section */}
               {dms.length > 0 && (
                 <>
-                  <div className="px-4 py-2 bg-gray-50 sticky top-0 z-10 mt-2">
-                    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                  <div style={{
+                    padding: '6px 16px', marginTop: '4px',
+                    backgroundColor: 'var(--bg-active)',
+                    position: 'sticky', top: 0, zIndex: 10,
+                    borderBottom: '1px solid var(--border-subtle)',
+                  }}>
+                    <p style={{
+                      fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em',
+                      textTransform: 'uppercase', color: 'var(--text-muted)', margin: 0,
+                      fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
                       Direct Messages
                     </p>
                   </div>
@@ -450,8 +485,14 @@ export default function MessageList({ onSelectChat }) {
 
               {/* Empty State */}
               {filtered.length === 0 && (
-                <div className="flex items-center justify-center h-32">
-                  <p className="text-gray-500 text-sm">No results found</p>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  height: '128px',
+                }}>
+                  <p style={{
+                    color: 'var(--text-muted)', fontSize: '13px',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                  }}>No results found</p>
                 </div>
               )}
             </>
@@ -466,7 +507,12 @@ export default function MessageList({ onSelectChat }) {
   function ChatListItem({ item }) {
     return (
       <div
-        className="flex items-center gap-4 px-4 py-3 hover:bg-gray-100 cursor-pointer"
+        style={{
+          display: 'flex', alignItems: 'center', gap: '12px',
+          padding: '10px 16px', cursor: 'pointer', transition: '100ms ease',
+        }}
+        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
         onClick={async () => {
           onSelectChat(item);
 
@@ -503,22 +549,42 @@ export default function MessageList({ onSelectChat }) {
             size="md"
           />
         ) : (
-          <div className="h-10 w-10 bg-secondary-200 dark:bg-secondary-700 rounded-lg flex items-center justify-center text-secondary-600 dark:text-secondary-300">
-            <Hash size={20} />
+          <div style={{
+            width: '40px', height: '40px', borderRadius: '2px', flexShrink: 0,
+            backgroundColor: 'var(--bg-active)',
+            border: '1px solid var(--border-default)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--text-muted)',
+          }}>
+            <Hash size={18} />
           </div>
         )}
 
         {/* Text */}
-        <div className="flex-1">
-          <div className="flex justify-between">
-            <p className="font-medium">{item.name}</p>
-            <p className="text-sm text-gray-500">
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
+            <p style={{
+              fontWeight: 500, fontSize: '13px', margin: 0,
+              color: 'var(--text-primary)',
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            }}>
+              {item.name}
+            </p>
+            <p style={{
+              fontSize: '11px', color: 'var(--text-muted)', margin: 0, flexShrink: 0, marginLeft: '8px',
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            }}>
               {fmtShort(item.lastMessageAt)}
             </p>
           </div>
 
-          <div className="flex justify-between items-center">
-            <p className="text-gray-600 text-sm line-clamp-1">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{
+              fontSize: '12px', color: 'var(--text-muted)', margin: 0,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            }}>
               {item.lastMessage || (item.isUserEntry ? "Start a conversation" : "No messages yet")}
             </p>
 

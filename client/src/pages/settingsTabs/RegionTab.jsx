@@ -4,6 +4,33 @@ import api from '@services/api';
 import { Check, Globe2 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 
+const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
+
+const selectStyle = {
+    padding: '6px 10px',
+    backgroundColor: 'var(--bg-input)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 2,
+    fontSize: 13,
+    color: 'var(--text-primary)',
+    outline: 'none',
+    maxWidth: 280,
+    width: '100%',
+    transition: 'border-color 150ms ease',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+};
+
+const labelStyle = {
+    display: 'block',
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+    color: 'var(--text-muted)',
+    marginBottom: 8,
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+};
+
 const RegionTab = ({ region, setRegion }) => {
     const { showToast } = useToast();
     const [saving, setSaving] = useState(false);
@@ -45,14 +72,17 @@ const RegionTab = ({ region, setRegion }) => {
         }
     };
 
-    const selectClass = "w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[12.5px] text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all";
-    const labelClass = "block text-[10.5px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5";
-
     return (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Card title="Language" subtitle="Display language for the interface">
-                <label className={labelClass}>Display Language</label>
-                <select value={region.language} onChange={e => update('language', e.target.value)} className={`${selectClass} max-w-xs`}>
+                <label style={labelStyle}>Display Language</label>
+                <select
+                    value={region.language}
+                    onChange={e => update('language', e.target.value)}
+                    style={selectStyle}
+                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                >
                     <option value="en">English (US)</option>
                     <option value="en-gb">English (UK)</option>
                     <option value="es">Español</option>
@@ -66,18 +96,38 @@ const RegionTab = ({ region, setRegion }) => {
                     <option value="ko">한국어</option>
                     <option value="hi">हिन्दी</option>
                 </select>
-                <p className="text-[11px] text-gray-400 mt-2">Only English is fully supported. Others coming soon.</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, ...S.font }}>
+                    Only English is fully supported. Others coming soon.
+                </p>
             </Card>
 
             <Card title="Timezone" subtitle="Set your local timezone for accurate timestamps">
                 {detectedTimezone && (
-                    <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                        <Globe2 size={12} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                        <span className="text-[12px] text-blue-700 dark:text-blue-300 font-medium">Detected: {detectedTimezone}</span>
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        marginBottom: 12,
+                        padding: '8px 12px',
+                        backgroundColor: 'var(--bg-active)',
+                        border: '1px solid var(--border-default)',
+                        borderLeft: '2px solid var(--accent)',
+                        borderRadius: 2,
+                    }}>
+                        <Globe2 size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', ...S.font }}>
+                            Detected: <strong style={{ color: 'var(--text-primary)' }}>{detectedTimezone}</strong>
+                        </span>
                     </div>
                 )}
-                <label className={labelClass}>Timezone</label>
-                <select value={region.timezone} onChange={e => update('timezone', e.target.value)} className={`${selectClass} max-w-xs`}>
+                <label style={labelStyle}>Timezone</label>
+                <select
+                    value={region.timezone}
+                    onChange={e => update('timezone', e.target.value)}
+                    style={selectStyle}
+                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                >
                     <option value="auto">Auto-detect ({detectedTimezone || 'Unknown'})</option>
                     <option value="America/New_York">Eastern Time (ET)</option>
                     <option value="America/Chicago">Central Time (CT)</option>
@@ -95,25 +145,62 @@ const RegionTab = ({ region, setRegion }) => {
             </Card>
 
             <Card title="Date Format" subtitle="Customize timestamps across the app">
-                <label className={labelClass}>Format</label>
-                <select value={region.dateFormat} onChange={e => update('dateFormat', e.target.value)} className={`${selectClass} max-w-xs`}>
+                <label style={labelStyle}>Format</label>
+                <select
+                    value={region.dateFormat}
+                    onChange={e => update('dateFormat', e.target.value)}
+                    style={selectStyle}
+                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                >
                     <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                     <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                     <option value="YYYY-MM-DD">YYYY-MM-DD (ISO 8601)</option>
                     <option value="DD MMM YYYY">DD MMM YYYY</option>
                 </select>
-                <div className="flex items-center gap-2 mt-3 px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg inline-flex">
-                    <span className="text-[11px] text-gray-400">Preview:</span>
-                    <span className="text-[12.5px] font-bold text-gray-800 dark:text-gray-100 font-mono">{previewDate()}</span>
+                <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 12,
+                    padding: '6px 12px',
+                    backgroundColor: 'var(--bg-active)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 2,
+                }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)', ...S.font }}>Preview:</span>
+                    <span style={{
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        fontFamily: 'monospace',
+                    }}>{previewDate()}</span>
                 </div>
             </Card>
 
             {hasChanges && (
-                <div className="flex justify-end">
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '7px 16px',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: '#0c0c0c',
+                            backgroundColor: 'var(--accent)',
+                            border: 'none',
+                            borderRadius: 2,
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            opacity: saving ? 0.5 : 1,
+                            transition: 'background-color 150ms ease',
+                            ...S.font,
+                        }}
+                        onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                        onMouseLeave={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                     >
                         <Check size={13} />
                         {saving ? 'Saving…' : 'Save Settings'}

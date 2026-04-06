@@ -1,361 +1,132 @@
+// Terms.jsx — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-    ScrollText, Scale, Gavel, AlertTriangle, FileText,
-    Fingerprint, Globe, ChevronRight, Menu, X, ArrowLeft,
-    XCircle, Mail, AlertOctagon
-} from 'lucide-react';
+import PublicPageShell from '../../components/layout/PublicPageShell';
+import { ScrollText, Scale, AlertOctagon, FileText, AlertTriangle, Mail } from 'lucide-react';
 
-const tabs = [
-    { id: 'general', label: 'General Terms', icon: Scale },
-    { id: 'usage', label: 'Acceptable Use', icon: AlertOctagon },
-    { id: 'content', label: 'Content & IP', icon: FileText },
-    { id: 'liability', label: 'Liability & Disclaimer', icon: AlertTriangle },
-    { id: 'contact', label: 'Contact', icon: Mail },
+const SECTIONS = [
+    { id: 'general',    icon: Scale,        label: 'General Terms' },
+    { id: 'usage',      icon: AlertOctagon, label: 'Acceptable Use' },
+    { id: 'content',    icon: FileText,     label: 'Content & IP' },
+    { id: 'liability',  icon: AlertTriangle,label: 'Liability' },
+    { id: 'changes',    icon: ScrollText,   label: 'Changes' },
+    { id: 'contact',    icon: Mail,         label: 'Contact' },
 ];
 
-const Terms = () => {
-    const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('general');
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const S = {
+    h2: { fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
+    p:  { fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.85', marginBottom: '16px' },
+    ul: { paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '18px' },
+    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.7' },
+    dot: { width: '5px', height: '5px', background: '#b8956a', flexShrink: 0, marginTop: '9px' },
+};
 
-    // Scroll to section handler
-    const scrollToSection = (id) => {
-        const element = document.getElementById(id);
-        if (element) {
-            const yOffset = -24;
-            const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-            window.scrollTo({ top: y, behavior: 'smooth' });
-            setActiveTab(id);
-            setIsMobileMenuOpen(false);
-        }
-    };
+function DocSection({ id, title, children }) {
+    return (
+        <section id={id} style={{ paddingBottom: '48px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '48px' }}>
+            <h2 style={S.h2}>{title}</h2>
+            {children}
+        </section>
+    );
+}
 
-    // Scroll Spy Effect
+export default function Terms() {
+    const [active, setActive] = useState('general');
+
     useEffect(() => {
-        const handleScroll = () => {
-            const scrollPosition = window.scrollY + 200; // Offset
-
-            for (const tab of tabs) {
-                const element = document.getElementById(tab.id);
-                if (element) {
-                    const { offsetTop, offsetHeight } = element;
-                    if (
-                        scrollPosition >= offsetTop &&
-                        scrollPosition < offsetTop + offsetHeight
-                    ) {
-                        setActiveTab(tab.id);
-                    }
-                }
+        const onScroll = () => {
+            const pos = window.scrollY + 120;
+            for (const s of SECTIONS) {
+                const el = document.getElementById(s.id);
+                if (el && pos >= el.offsetTop && pos < el.offsetTop + el.offsetHeight) setActive(s.id);
             }
         };
-
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
+    const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#0b1121] font-sans text-slate-900 dark:text-white flex flex-col md:flex-row transition-colors duration-300">
-
-            {/* --- Mobile Header --- */}
-            <div className="md:hidden flex items-center justify-between p-4 bg-white dark:bg-[#111827] border-b border-slate-200 dark:border-slate-800 sticky top-0 z-50">
-                <div className="flex items-center gap-2 font-bold text-lg">
-                    <ScrollText className="text-indigo-600" size={24} />
-                    <span>Terms Center</span>
-                </div>
-                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-2">
-                    {isMobileMenuOpen ? <X /> : <Menu />}
-                </button>
-            </div>
-
-            {/* --- Sidebar Navigation --- */}
-            <aside className={`fixed md:sticky top-0 h-[calc(100vh)] z-40 w-full md:w-80 bg-white dark:bg-[#111827] border-r border-slate-200 dark:border-slate-800 flex flex-col transition-transform duration-300 transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-                <div className="p-8 border-b border-slate-100 dark:border-slate-800 hidden md:block">
-                    <div
-                        onClick={() => navigate('/')}
-                        className="flex items-center gap-4 cursor-pointer group"
-                    >
-                        <img src="/chttrix-logo.jpg" alt="Chttrix" className="w-10 h-10 rounded-xl shadow-sm group-hover:scale-105 transition-transform" />
-                        <div>
-                            <span className="block font-extrabold text-xl tracking-tight leading-none text-slate-900 dark:text-white">Terms Center</span>
-                            <span className="block text-xs text-slate-500 font-medium mt-1 group-hover:text-indigo-500 transition-colors">by Chttrix</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="p-4 flex-1 overflow-y-auto">
-                    <nav className="space-y-1">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = activeTab === tab.id;
+        <PublicPageShell title="Terms of Service">
+            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px', display: 'flex', gap: '64px', alignItems: 'flex-start' }}>
+                {/* Sidebar */}
+                <aside style={{ width: '220px', flexShrink: 0, position: 'sticky', top: '88px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '16px' }}>Contents</p>
+                    <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {SECTIONS.map(s => {
+                            const Icon = s.icon; const isAct = active === s.id;
                             return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => scrollToSection(tab.id)}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all ${isActive
-                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800'
-                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                        }`}
-                                >
-                                    <Icon size={18} className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'} />
-                                    {tab.label}
-                                    {isActive && <ChevronRight size={16} className="ml-auto opacity-50" />}
+                                <button key={s.id} onClick={() => scrollTo(s.id)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '8px 10px', background: isAct ? 'rgba(184,149,106,0.1)' : 'transparent', border: isAct ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: isAct ? '#b8956a' : 'rgba(228,228,228,0.4)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 150ms ease', width: '100%' }}>
+                                    <Icon size={12} />{s.label}
                                 </button>
                             );
                         })}
                     </nav>
-                </div>
+                    <div style={{ marginTop: '32px', padding: '14px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.2)' }}>
+                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', lineHeight: '1.7' }}>Last updated:<br /><strong style={{ color: '#b8956a' }}>January 1, 2026</strong></p>
+                    </div>
+                </aside>
 
-                <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#0f172a]/50">
-                    <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                        Last Updated: <span className="font-bold text-slate-600 dark:text-slate-300">Jan 2026</span>
-                    </p>
-                    <button onClick={() => navigate('/privacy')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline block mb-1">
-                        Privacy Policy
-                    </button>
-                    <button onClick={() => navigate('/security')} className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline block">
-                        Security Center
-                    </button>
-                </div>
-            </aside>
-
-            {/* --- Main Content Area --- */}
-            <main className="flex-1 min-w-0 bg-slate-50 dark:bg-[#0b1121] min-h-screen">
-                <div className="max-w-4xl mx-auto px-6 py-12 md:py-16 animate-fade-in relative">
-                    <div className="absolute top-6 right-6 z-10 hidden md:block">
-                        <button onClick={() => navigate("/")} className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm">
-                            <ArrowLeft size={16} /> Back to Home
-                        </button>
+                {/* Content */}
+                <main style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ marginBottom: '48px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
+                            <Scale size={11} style={{ color: '#b8956a' }} />
+                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Terms of Service</span>
+                        </div>
+                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Clear, fair terms.</h1>
+                        <p style={{ ...S.p, fontSize: '16px' }}>These Terms govern your use of Chttrix. We've written them to be readable, not a legal maze. If you have questions, email us at legal@chttrix.io.</p>
                     </div>
 
-                    {/* Render ALL sections with IDs for scroll targeting */}
-                    <div className="space-y-32 pb-32">
-                        <section id="general" className="scroll-mt-24">
-                            <GeneralSection scrollToSection={scrollToSection} />
-                        </section>
-                        <section id="usage" className="scroll-mt-24">
-                            <UsageSection />
-                        </section>
-                        <section id="content" className="scroll-mt-24">
-                            <ContentSection />
-                        </section>
-                        <section id="liability" className="scroll-mt-24">
-                            <LiabilitySection />
-                        </section>
-                        <section id="contact" className="scroll-mt-24">
-                            <ContactSection />
-                        </section>
-                    </div>
+                    <DocSection id="general" title="General Terms">
+                        <p style={S.p}>By creating an account or using Chttrix, you agree to these Terms of Service and our Privacy Policy. These Terms form a binding agreement between you and Chttrix Inc.</p>
+                        <p style={S.p}>You must be at least 16 years old to use Chttrix. If you're using Chttrix on behalf of a company, you represent that you have authority to bind that company to these Terms.</p>
+                        <ul style={S.ul}>
+                            {['One account per person — do not share credentials', 'Keep your account password secure and confidential', 'You are responsible for all activity under your account', 'Notify us immediately at security@chttrix.io of any unauthorized access'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                    </DocSection>
 
-                </div>
-            </main>
-        </div>
+                    <DocSection id="usage" title="Acceptable Use">
+                        <p style={S.p}>Chttrix is a professional collaboration platform. You agree not to use it in any way that violates laws, harms others, or disrupts the platform's integrity.</p>
+                        <p style={{ ...S.p, fontWeight: 600, color: 'rgba(228,228,228,0.7)' }}>You may not use Chttrix to:</p>
+                        <ul style={S.ul}>
+                            {['Transmit spam, malware, or phishing content', 'Harass, threaten, or impersonate other users', 'Scrape, reverse-engineer, or attempt to access non-public APIs', 'Use the platform for illegal activities or to facilitate fraud', 'Upload content that violates third-party intellectual property rights', 'Circumvent access controls, rate limits, or security measures'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <p style={S.p}>We reserve the right to suspend or terminate accounts that violate these standards without prior notice.</p>
+                    </DocSection>
+
+                    <DocSection id="content" title="Content & Intellectual Property">
+                        <p style={S.p}>You retain all ownership rights to content you create on Chttrix — messages, files, notes, and tasks. You grant us a limited license to store, process, and display your content solely to provide the service.</p>
+                        <p style={S.p}>Chttrix does not claim ownership of your content. We will never sell, license, or use it for advertising purposes.</p>
+                        <ul style={S.ul}>
+                            {['Chttrix owns the platform, UI, codebase, and brand assets', 'You own all content uploaded or created in your workspace', 'By posting, you grant us a license to serve that content to authorized members', 'Content in deleted workspaces is purged within 30 days of deletion'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                    </DocSection>
+
+                    <DocSection id="liability" title="Liability & Disclaimer">
+                        <p style={S.p}>Chttrix is provided "as is" and "as available." While we strive for 99.9% uptime, we cannot guarantee uninterrupted service. We are not liable for data loss caused by user error, third-party services, or force majeure events.</p>
+                        <p style={S.p}>To the maximum extent permitted by law, Chttrix's total liability for any claim arising from use of the platform is limited to the greater of: (1) amounts paid by you to Chttrix in the past 12 months, or (2) USD $100.</p>
+                        <p style={S.p}>We are not responsible for the content, actions, or policies of third-party integrations or external services linked from Chttrix.</p>
+                    </DocSection>
+
+                    <DocSection id="changes" title="Changes to These Terms">
+                        <p style={S.p}>We may revise these Terms from time to time. When we make material changes, we will notify you by email and/or an in-app notice at least 14 days before the changes take effect.</p>
+                        <p style={S.p}>Your continued use of Chttrix after the effective date constitutes acceptance of the revised Terms. If you disagree, you may terminate your account before the changes take effect.</p>
+                    </DocSection>
+
+                    <DocSection id="contact" title="Contact">
+                        <p style={S.p}>For legal inquiries, disputes, or Terms-related questions:</p>
+                        <div style={{ padding: '20px 24px', background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}>
+                            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.6)', lineHeight: '2' }}>
+                                <strong style={{ color: '#e4e4e4' }}>Email:</strong> legal@chttrix.io<br />
+                                <strong style={{ color: '#e4e4e4' }}>Response time:</strong> Within 5 business days<br />
+                                <strong style={{ color: '#e4e4e4' }}>Governing law:</strong> Laws of Delaware, USA
+                            </p>
+                        </div>
+                    </DocSection>
+                </main>
+            </div>
+        </PublicPageShell>
     );
-};
-
-// --- Sub-Sections ---
-
-const GeneralSection = ({ scrollToSection }) => (
-    <div className="space-y-12 animate-fade-in">
-        <div className="space-y-6">
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight text-slate-900 dark:text-white">
-                Terms of Service.
-            </h1>
-            <p className="text-xl text-slate-600 dark:text-slate-400 leading-relaxed max-w-2xl">
-                Please read these terms carefully before using Chttrix. They define the rules and regulations for the use of our service, ensuring a safe environment for everyone.
-            </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-6">
-            <div onClick={() => scrollToSection('usage')} className="cursor-pointer group p-8 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all duration-300 hover:border-orange-500/20">
-                <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center text-orange-600 dark:text-orange-400 mb-6 group-hover:scale-110 transition-transform">
-                    <AlertOctagon size={24} />
-                </div>
-                <h3 className="text-xl font-bold mb-3 flex items-center gap-2 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
-                    Acceptable Use <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity -ml-2 group-hover:ml-0" />
-                </h3>
-                <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Rules about illegal activities, harassment, and security interference.
-                </p>
-            </div>
-            <div onClick={() => scrollToSection('content')} className="cursor-pointer group p-8 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all duration-300 hover:border-blue-500/20">
-                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center text-blue-600 dark:text-blue-400 mb-6 group-hover:scale-110 transition-transform">
-                    <FileText size={24} />
-                </div>
-                <h3 className="text-xl font-bold mb-3 flex items-center gap-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    Content & IP <ChevronRight size={16} className="opacity-0 group-hover:opacity-100 transition-opacity -ml-2 group-hover:ml-0" />
-                </h3>
-                <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
-                    You own your content. We own the platform.
-                </p>
-            </div>
-        </div>
-
-        <div className="space-y-8 bg-slate-50 dark:bg-[#111827] p-8 rounded-3xl border border-slate-100 dark:border-slate-800">
-            <div>
-                <h3 className="text-lg font-bold mb-2">1. Acceptance of Terms</h3>
-                <p className="text-slate-600 dark:text-slate-400">
-                    By accessing or using Chttrix, you agree to be bound by these Terms of Service. If you disagree with any part of the terms, you may not access the Service.
-                </p>
-            </div>
-            <div>
-                <h3 className="text-lg font-bold mb-2">2. Eligibility</h3>
-                <ul className="list-disc pl-5 text-slate-600 dark:text-slate-400 space-y-1">
-                    <li>Must be of minimum legal age in your jurisdiction.</li>
-                    <li>If representing an organization, you must have authority to bind it.</li>
-                </ul>
-            </div>
-            <div>
-                <h3 className="text-lg font-bold mb-2">3. Accounts & Security</h3>
-                <p className="text-slate-600 dark:text-slate-400">
-                    You are responsible for maintaining the confidentiality of your account credentials. Notify us immediately of any unauthorized use.
-                </p>
-            </div>
-        </div>
-    </div>
-);
-
-const UsageSection = () => (
-    <div className="space-y-10 animate-fade-in">
-        <header className="border-b border-slate-200 dark:border-slate-800 pb-8">
-            <h2 className="text-3xl font-bold mb-4">Acceptable Use Policy</h2>
-            <p className="text-lg text-slate-600 dark:text-slate-400">
-                We foster a safe, secure, and respectful collaboration environment.
-            </p>
-        </header>
-
-        <div className="bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-3xl p-8">
-            <h3 className="text-xl font-bold text-red-900 dark:text-red-300 mb-6 flex items-center gap-2">
-                <AlertOctagon size={22} /> Prohibited Activities
-            </h3>
-            <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4">
-                <ForbiddenItem text="Illegal activities of any kind" />
-                <ForbiddenItem text="Harassment, abuse, or threats" />
-                <ForbiddenItem text="Malware/Virus distribution" />
-                <ForbiddenItem text="Bypassing encryption/security" />
-                <ForbiddenItem text="Spamming or automated abuse" />
-                <ForbiddenItem text="Reverse engineering the platform" />
-            </div>
-        </div>
-    </div>
-);
-
-const ContentSection = () => (
-    <div className="space-y-10 animate-fade-in">
-        <header className="border-b border-slate-200 dark:border-slate-800 pb-8">
-            <h2 className="text-3xl font-bold mb-4">Content & Intellectual Property</h2>
-        </header>
-
-        <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-[#111827] p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <Fingerprint size={20} className="text-indigo-500" /> Your Content
-                </h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-4">
-                    <strong>You retain full ownership</strong> of all content you submit, post, or display.
-                </p>
-                <p className="text-sm text-slate-500">
-                    You grant Chttrix a limited license strictly to process encrypted content for the purpose of operating the service (e.g., routing messages).
-                </p>
-            </div>
-
-            <div className="bg-white dark:bg-[#111827] p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-                <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                    <Globe size={20} className="text-blue-500" /> Our IP
-                </h3>
-                <p className="text-slate-600 dark:text-slate-400 mb-4">
-                    <strong>9. Intellectual Property</strong>
-                </p>
-                <p className="text-sm text-slate-500">
-                    All Chttrix software, branding, design, and original content remain the exclusive property of Chttrix Inc.
-                </p>
-            </div>
-        </div>
-    </div>
-);
-
-const LiabilitySection = () => (
-    <div className="space-y-10 animate-fade-in">
-        <header className="border-b border-slate-200 dark:border-slate-800 pb-8">
-            <h2 className="text-3xl font-bold mb-4">Liability, Disclaimers & Termination</h2>
-        </header>
-
-        <div className="space-y-8">
-            <div className="bg-orange-50 dark:bg-orange-900/10 p-8 rounded-3xl border border-orange-100 dark:border-orange-900/30">
-                <h3 className="text-xl font-bold mb-4 flex items-center gap-2 text-orange-800 dark:text-orange-300">
-                    <AlertTriangle size={20} /> 6. Encryption Disclaimer
-                </h3>
-                <p className="text-slate-700 dark:text-slate-300 font-medium">
-                    Important: We cannot recover encrypted messages if your keys are lost.
-                </p>
-                <p className="text-slate-600 dark:text-slate-400 text-sm mt-2">
-                    Because we use end-to-end encryption with client-side keys, we do not have a "master key". You are solely responsible for your device security and recovery codes.
-                </p>
-            </div>
-
-            <div className="bg-white dark:bg-[#111827] p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-                <div className="grid gap-6">
-                    <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white mb-2">7. Service Availability</h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Provided "as is" and "as available". We do not warrant uninterrupted uptime.</p>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white mb-2">8. Termination</h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">We may suspend accounts for TOS violations. You may terminate your account at any time.</p>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white mb-2">10. Limitation of Liability</h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">We are not liable for indirect damages, lost profits, or data loss to the extent permitted by law.</p>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-slate-900 dark:text-white mb-2">11. Indemnification</h4>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">You agree to indemnify Chttrix against claims arising from your use of the service.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-);
-
-const ContactSection = () => (
-    <div className="space-y-10 animate-fade-in">
-        <header className="border-b border-slate-200 dark:border-slate-800 pb-8">
-            <h2 className="text-3xl font-bold mb-4">Contact & Updates</h2>
-        </header>
-
-        <div className="grid md:grid-cols-2 gap-6">
-            <div className="bg-white dark:bg-[#111827] p-8 rounded-3xl border border-slate-200 dark:border-slate-800">
-                <h3 className="text-lg font-bold mb-4">13. Changes to Terms</h3>
-                <p className="text-slate-600 dark:text-slate-400">
-                    We reserve the right to modify these terms. Continued use of the Service constitutes acceptance.
-                </p>
-                <h3 className="text-lg font-bold mt-8 mb-4">12. Governing Law</h3>
-                <p className="text-slate-600 dark:text-slate-400">
-                    Governed by applicable laws without regard to conflict of law principles.
-                </p>
-            </div>
-
-            <div className="bg-slate-900 dark:bg-indigo-900 text-white p-8 rounded-3xl shadow-xl flex flex-col justify-between">
-                <div>
-                    <Gavel size={32} className="mb-4 opacity-80" />
-                    <h3 className="text-2xl font-bold mb-2">Legal Questions?</h3>
-                    <p className="opacity-90 mb-6">Contact our Legal Team.</p>
-                </div>
-                <a href="mailto:chttrixchat@gmail.com" className="bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-center hover:bg-slate-100 transition-colors">
-                    chttrixchat@gmail.com
-                </a>
-            </div>
-        </div>
-    </div>
-);
-
-// --- Helpers ---
-
-const ForbiddenItem = ({ text }) => (
-    <div className="flex items-center gap-3 bg-white dark:bg-black/20 p-3 rounded-xl">
-        <XCircle size={18} className="text-red-500 shrink-0" />
-        <span className="font-bold text-slate-700 dark:text-slate-200 text-sm">{text}</span>
-    </div>
-);
-
-export default Terms;
+}

@@ -56,9 +56,20 @@ export default function SystemEventItem({ event, currentUserId, creatorName }) {
     };
 
     return (
-        <div className="flex justify-center my-6 px-4">
-            <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gray-100/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50 shadow-sm">
-                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '20px 0', padding: '0 16px' }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '3px 14px',
+                backgroundColor: 'var(--bg-active)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '99px',
+            }}>
+                <span style={{
+                    fontSize: '11px', fontWeight: 500,
+                    color: 'var(--text-muted)',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    whiteSpace: 'nowrap',
+                }}>
                     {getEventText()}
                 </span>
             </div>

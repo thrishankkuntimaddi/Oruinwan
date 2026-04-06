@@ -182,17 +182,17 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
 
     const getStatusBadge = (status) => {
         const badges = {
-            pending: { text: 'Pending', color: 'bg-yellow-100 text-yellow-700', icon: Clock },
-            accepted: { text: 'Accepted', color: 'bg-green-100 text-green-700', icon: CheckCircle },
-            expired: { text: 'Expired', color: 'bg-gray-100 text-gray-700', icon: XCircle },
-            revoked: { text: 'Revoked', color: 'bg-red-100 text-red-700', icon: XCircle }
+            pending:  { text: 'Pending',  bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.3)',  color: '#fbbf24', Icon: Clock       },
+            accepted: { text: 'Accepted', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.3)', color: '#34d399', Icon: CheckCircle },
+            expired:  { text: 'Expired',  bg: 'rgba(255,255,255,0.05)',border: 'rgba(255,255,255,0.1)',color: 'rgba(228,228,228,0.4)', Icon: XCircle },
+            revoked:  { text: 'Revoked',  bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)',color: '#f87171', Icon: XCircle    },
         };
-        const badge = badges[status] || badges.pending;
-        const Icon = badge.icon;
+        const b = badges[status] || badges.expired;
+        const Icon = b.Icon;
         return (
-            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badge.color}`}>
-                <Icon className="w-3 h-3" />
-                {badge.text}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', fontSize: '10px', fontWeight: 700, background: b.bg, border: `1px solid ${b.border}`, color: b.color, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                <Icon style={{ width: '10px', height: '10px' }} />
+                {b.text}
             </span>
         );
     };
@@ -237,262 +237,246 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
         <div className="h-full flex flex-col">
             {/* Bulk Actions Bar - Modern Design */}
             {selectedInvites.size > 0 && (
-                <div className="mx-8 mt-2 mb-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg border border-blue-400/20">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                                <CheckCircle className="w-5 h-5 text-white" />
+                <div style={{ margin: '8px 32px', padding: '12px 16px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(184,149,106,0.15)', border: '1px solid rgba(184,149,106,0.3)', color: '#b8956a', flexShrink: 0 }}>
+                            <CheckCircle style={{ width: '15px', height: '15px' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                {selectedInvites.size} {selectedInvites.size === 1 ? 'Invitation' : 'Invitations'} Selected
                             </div>
-                            <div>
-                                <div className="text-base font-bold text-white">
-                                    {selectedInvites.size} {selectedInvites.size === 1 ? 'Invitation' : 'Invitations'} Selected
-                                </div>
-                                <div className="text-xs text-blue-100 dark:text-blue-200">
-                                    {selectedPending > 0 && `${selectedPending} pending`}
-                                    {selectedPending > 0 && selectedDeletable > 0 && ', '}
-                                    {selectedDeletable > 0 && `${selectedDeletable} deletable`}
-                                </div>
+                            <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                {selectedPending > 0 && `${selectedPending} pending`}
+                                {selectedPending > 0 && selectedDeletable > 0 && ', '}
+                                {selectedDeletable > 0 && `${selectedDeletable} deletable`}
                             </div>
                         </div>
-                        <div className="flex gap-2">
-                            {selectedPending > 0 && (
-                                <button
-                                    onClick={handleBulkRevoke}
-                                    disabled={bulkActionLoading}
-                                    className="px-4 py-2 bg-white/90 hover:bg-white text-orange-600 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center gap-2 shadow-md hover:shadow-lg"
-                                >
-                                    <XCircle className="w-4 h-4" />
-                                    Revoke ({selectedPending})
-                                </button>
-                            )}
-                            {selectedDeletable > 0 && (
-                                <button
-                                    onClick={handleBulkDelete}
-                                    disabled={bulkActionLoading}
-                                    className="px-4 py-2 bg-white/90 hover:bg-white text-red-600 text-sm font-semibold rounded-lg transition-all disabled:opacity-50 flex items-center gap-2 shadow-md hover:shadow-lg"
-                                >
-                                    <Trash className="w-4 h-4" />
-                                    Delete ({selectedDeletable})
-                                </button>
-                            )}
-                            {/* Show info message if selected invitations have no available actions */}
-                            {selectedPending === 0 && selectedDeletable === 0 && (
-                                <div className="px-4 py-2 bg-white/90 text-gray-600 text-sm font-medium rounded-lg flex items-center gap-2">
-                                    <AlertTriangle className="w-4 h-4" />
-                                    No actions available for selected invitations
-                                </div>
-                            )}
-                            <button
-                                onClick={() => setSelectedInvites(new Set())}
-                                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-sm font-medium rounded-lg transition-all backdrop-blur-sm border border-white/20"
-                            >
-                                Clear
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        {selectedPending > 0 && (
+                            <button onClick={handleBulkRevoke} disabled={bulkActionLoading}
+                                style={{ padding: '6px 12px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', gap: '5px', opacity: bulkActionLoading ? 0.5 : 1 }}>
+                                <XCircle style={{ width: '13px', height: '13px' }} />
+                                Revoke ({selectedPending})
                             </button>
-                        </div>
+                        )}
+                        {selectedDeletable > 0 && (
+                            <button onClick={handleBulkDelete} disabled={bulkActionLoading}
+                                style={{ padding: '6px 12px', background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.2)', color: '#f87171', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', gap: '5px', opacity: bulkActionLoading ? 0.5 : 1 }}>
+                                <Trash style={{ width: '13px', height: '13px' }} />
+                                Delete ({selectedDeletable})
+                            </button>
+                        )}
+                        {selectedPending === 0 && selectedDeletable === 0 && (
+                            <div style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.05)', color: 'rgba(228,228,228,0.4)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <AlertTriangle style={{ width: '13px', height: '13px' }} />
+                                No actions available
+                            </div>
+                        )}
+                        <button onClick={() => setSelectedInvites(new Set())}
+                            style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(228,228,228,0.5)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            Clear
+                        </button>
                     </div>
                 </div>
             )}
 
             {/* Search and Filters Container */}
-            <div className="px-8 pt-8 pb-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 space-y-5">
-                {/* Top Row: Search and Actions */}
-                <div className="flex items-center gap-4">
-                    <div className="relative flex-1">
-                        <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <div style={{ padding: '20px 32px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                {/* Search + Clean button */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', width: '15px', height: '15px' }} />
                         <input
                             type="text"
                             placeholder="Search invitations by email, role, or inviter..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm text-gray-900 dark:text-white placeholder-gray-400"
+                            onChange={e => setSearchQuery(e.target.value)}
+                            style={{ width: '100%', paddingLeft: '34px', paddingRight: '12px', paddingTop: '9px', paddingBottom: '9px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '13px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', transition: 'border-color 150ms ease' }}
+                            onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.4)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                         />
                     </div>
                     {invitations.expired.length > 0 && (
-                        <button
-                            onClick={handleCleanupExpired}
-                            disabled={bulkActionLoading}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl transition-colors whitespace-nowrap"
+                        <button onClick={handleCleanupExpired} disabled={bulkActionLoading}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(228,228,228,0.5)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', whiteSpace: 'nowrap', transition: '150ms ease', opacity: bulkActionLoading ? 0.5 : 1 }}
+                            onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
                         >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 style={{ width: '13px', height: '13px' }} />
                             Clean Expired
                         </button>
                     )}
                 </div>
 
-                {/* Bottom Row: Filter Tabs */}
-                <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar mask-gradient-right">
+                {/* Filter pills */}
+                <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
                     {[
-                        { value: 'all', label: 'All', count: uniqueInvites.length },
-                        { value: 'pending', label: 'Pending', count: uniqueInvites.filter(inv => inv.filterStatus === 'pending').length },
-                        { value: 'accepted', label: 'Accepted', count: uniqueInvites.filter(inv => inv.filterStatus === 'accepted').length },
-                        { value: 'expired', label: 'Expired', count: uniqueInvites.filter(inv => inv.filterStatus === 'expired').length },
-                        { value: 'revoked', label: 'Revoked', count: uniqueInvites.filter(inv => inv.filterStatus === 'revoked').length },
-                        { value: 'duplicates', label: '⚠️ Duplicates', count: uniqueInvites.filter(inv => inv.isDuplicate).length }
-                    ].map(({ value, label, count }) => (
-                        <button
-                            key={value}
-                            onClick={() => { setFilter(value); setSelectedInvites(new Set()); }}
-                            className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${filter === value
-                                ? value === 'duplicates'
-                                    ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 ring-1 ring-orange-200 dark:ring-orange-800 shadow-sm'
-                                    : 'bg-blue-600 text-white shadow-md shadow-blue-200 dark:shadow-none'
-                                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-200'
-                                }`}
-                        >
-                            <span>{label}</span>
-                            <span className={`px-1.5 py-0.5 rounded-full text-xs ${filter === value
-                                ? value === 'duplicates'
-                                    ? 'bg-orange-200/50 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200'
-                                    : 'bg-white/20 text-white'
-                                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-                                }`}>
-                                {count}
-                            </span>
-                        </button>
-                    ))}
+                        { value: 'all',        label: 'All',         count: uniqueInvites.length },
+                        { value: 'pending',    label: 'Pending',     count: uniqueInvites.filter(inv => inv.filterStatus === 'pending').length },
+                        { value: 'accepted',   label: 'Accepted',    count: uniqueInvites.filter(inv => inv.filterStatus === 'accepted').length },
+                        { value: 'expired',    label: 'Expired',     count: uniqueInvites.filter(inv => inv.filterStatus === 'expired').length },
+                        { value: 'revoked',    label: 'Revoked',     count: uniqueInvites.filter(inv => inv.filterStatus === 'revoked').length },
+                        { value: 'duplicates', label: '⚠️ Duplicates', count: uniqueInvites.filter(inv => inv.isDuplicate).length },
+                    ].map(({ value, label, count }) => {
+                        const isActive = filter === value;
+                        const isDup = value === 'duplicates';
+                        return (
+                            <button
+                                key={value}
+                                onClick={() => { setFilter(value); setSelectedInvites(new Set()); }}
+                                style={{
+                                    flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px',
+                                    padding: '5px 10px', fontSize: '12px', fontWeight: isActive ? 700 : 400,
+                                    background: isActive ? (isDup ? 'rgba(251,191,36,0.1)' : 'rgba(184,149,106,0.12)') : 'rgba(255,255,255,0.04)',
+                                    border: `1px solid ${isActive ? (isDup ? 'rgba(251,191,36,0.3)' : 'rgba(184,149,106,0.35)') : 'rgba(255,255,255,0.08)'}`,
+                                    color: isActive ? (isDup ? '#fbbf24' : '#b8956a') : 'rgba(228,228,228,0.5)',
+                                    cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
+                                }}
+                                onMouseEnter={e => { if (!isActive) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; } }}
+                                onMouseLeave={e => { if (!isActive) { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; } }}
+                            >
+                                <span>{label}</span>
+                                <span style={{ padding: '1px 5px', fontSize: '10px', fontWeight: 700, background: isActive ? (isDup ? 'rgba(251,191,36,0.15)' : 'rgba(184,149,106,0.15)') : 'rgba(255,255,255,0.06)', color: isActive ? (isDup ? '#fbbf24' : '#b8956a') : 'rgba(228,228,228,0.3)' }}>{count}</span>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
             {/* Invitations List - Card Based Layout */}
             <div className="flex-1 overflow-auto px-8 py-6">
                 {loading ? (
-                    <div className="animate-pulse space-y-3 py-4">
-                        {[75,55,85,60,70].map((w,i) => (
-                            <div key={i} className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                                <div className="flex-1 space-y-1.5">
-                                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                    <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-25}%`}} />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 0' }}>
+                        {[75,55,85,60,70].map((w, i) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: '12px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ height: '10px', background: 'rgba(255,255,255,0.08)', width: `${w}%` }} />
+                                    <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', width: `${w - 25}%` }} />
                                 </div>
-                                <div className="h-7 w-20 bg-gray-100 dark:bg-gray-700 rounded-lg" />
+                                <div style={{ width: '64px', height: '24px', background: 'rgba(255,255,255,0.06)' }} />
                             </div>
                         ))}
-                        <p className="text-gray-600">Loading invitations...</p>
+                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>Loading invitations...</p>
                     </div>
                 ) : filteredInvites.length === 0 ? (
-                    <div className="text-center py-12">
-                        <Mail className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                        <p className="text-gray-600 dark:text-gray-400">No invitations found</p>
+                    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+                        <Mail style={{ width: '40px', height: '40px', color: 'rgba(255,255,255,0.1)', margin: '0 auto 12px', display: 'block' }} />
+                        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>No invitations found</p>
                         {filter !== 'all' && (
-                            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">Try changing the filter or search query</p>
+                            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.2)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Try changing the filter or search query</p>
                         )}
                     </div>
                 ) : (
-                    <div className="space-y-4">
-                        {filteredInvites.map((invite) => (
-                            <div
-                                key={invite.id}
-                                className={`bg-white dark:bg-gray-900 rounded-xl border-2 transition-all hover:shadow-md ${invite.isDuplicate
-                                    ? 'border-orange-200 dark:border-orange-900/50 bg-orange-50/20 dark:bg-orange-900/10'
-                                    : selectedInvites.has(invite.id)
-                                        ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 shadow-md'
-                                        : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                                    }`}
-                            >
-                                <div className="p-4">
-                                    <div className="flex items-start gap-4">
-                                        {/* Checkbox */}
-                                        <div className="pt-1">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedInvites.has(invite.id)}
-                                                onChange={() => toggleSelectInvite(invite.id)}
-                                                className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                            />
-                                        </div>
-
-                                        {/* Main Content */}
-                                        <div className="flex-1 min-w-0">
-                                            {/* Header Row */}
-                                            <div className="flex items-start justify-between gap-4 mb-1.5">
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        {invite.inviteType === 'email' ? (
-                                                            <>
-                                                                <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                                                                <span className="font-semibold text-gray-900 dark:text-white truncate">
-                                                                    {invite.email}
-                                                                </span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Link2 className="w-4 h-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-semibold text-gray-700 dark:text-gray-200">
-                                                                        Shareable Link
-                                                                    </span>
-                                                                    <span className="text-xs text-gray-500 dark:text-gray-400 italic">
-                                                                        Anyone with this link can join as {invite.role}
-                                                                    </span>
-                                                                </div>
-                                                            </>
-                                                        )}
-                                                        {invite.isDuplicate && (
-                                                            <span
-                                                                className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-xs font-medium rounded border border-orange-300 dark:border-orange-800"
-                                                                title={`${invite.duplicateCount} pending invitations for this email`}
-                                                            >
-                                                                <AlertTriangle className="w-3 h-3" />
-                                                                ×{invite.duplicateCount}
-                                                            </span>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Metadata Row */}
-                                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-600 dark:text-gray-400">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="px-2.5 py-0.5 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded-md border border-blue-200 dark:border-blue-800 capitalize">
-                                                                {invite.role}
-                                                            </span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Users className="w-3.5 h-3.5 text-gray-400" />
-                                                            <span>by {invite.invitedBy || 'System'}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                                            <span>{getTimeAgo(invite.createdAt)}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span className="text-gray-400">Expires:</span>
-                                                            <span>{getExpiresIn(invite.expiresAt)}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Status Badge */}
-                                                <div className="flex-shrink-0">
-                                                    {getStatusBadge(invite.filterStatus)}
-                                                </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {filteredInvites.map((invite) => {
+                            const isSelected = selectedInvites.has(invite.id);
+                            const isDup = invite.isDuplicate;
+                            return (
+                                <div
+                                    key={invite.id}
+                                    style={{
+                                        background: isDup ? 'rgba(251,191,36,0.04)' : isSelected ? 'rgba(184,149,106,0.06)' : 'rgba(255,255,255,0.02)',
+                                        border: `1px solid ${isDup ? 'rgba(251,191,36,0.2)' : isSelected ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                                        transition: 'all 150ms ease',
+                                    }}
+                                >
+                                    <div style={{ padding: '12px 14px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                            {/* Checkbox */}
+                                            <div style={{ paddingTop: '2px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleSelectInvite(invite.id)}
+                                                    style={{ width: '14px', height: '14px', accentColor: '#b8956a', cursor: 'pointer' }}
+                                                />
                                             </div>
 
-                                            {/* Actions Row */}
-                                            {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
-                                                <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
-                                                    <button
-                                                        onClick={() => handleResend(invite.id)}
-                                                        disabled={actionLoading[invite.id]}
-                                                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg transition-colors disabled:opacity-50"
-                                                    >
-                                                        <RotateCw className={`w-3.5 h-3.5 ${actionLoading[invite.id] === 'resending' ? 'animate-spin' : ''}`} />
-                                                        Resend
-                                                    </button>
-                                                    {invite.filterStatus === 'pending' && (
-                                                        <button
-                                                            onClick={() => handleRevoke(invite.id)}
-                                                            disabled={actionLoading[invite.id]}
-                                                            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors disabled:opacity-50"
-                                                        >
-                                                            <XCircle className="w-3.5 h-3.5" />
-                                                            Revoke
-                                                        </button>
-                                                    )}
+                                            {/* Main Content */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                {/* Identity row */}
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                                                            {invite.inviteType === 'email' ? (
+                                                                <>
+                                                                    <Mail style={{ width: '13px', height: '13px', color: '#38bdf8', flexShrink: 0 }} />
+                                                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                                                        {invite.email}
+                                                                    </span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <Link2 style={{ width: '13px', height: '13px', color: '#a78bfa', flexShrink: 0 }} />
+                                                                    <div>
+                                                                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#e4e4e4', display: 'block', fontFamily: 'Inter, system-ui, sans-serif' }}>Shareable Link</span>
+                                                                        <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>Anyone with this link can join as {invite.role}</span>
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                            {isDup && (
+                                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 6px', fontSize: '10px', fontWeight: 700, background: 'rgba(251,191,36,0.12)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                                                    title={`${invite.duplicateCount} pending invitations for this email`}>
+                                                                    <AlertTriangle style={{ width: '9px', height: '9px' }} />
+                                                                    ×{invite.duplicateCount}
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Metadata row */}
+                                                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                                            <span style={{ padding: '1px 6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '10px', fontWeight: 700, color: '#b8956a', textTransform: 'capitalize' }}>
+                                                                {invite.role}
+                                                            </span>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Users style={{ width: '11px', height: '11px' }} />
+                                                                by {invite.invitedBy || 'System'}
+                                                            </span>
+                                                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                <Clock style={{ width: '11px', height: '11px' }} />
+                                                                {getTimeAgo(invite.createdAt)}
+                                                            </span>
+                                                            <span>Expires: {getExpiresIn(invite.expiresAt)}</span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Status badge */}
+                                                    <div style={{ flexShrink: 0 }}>
+                                                        {getStatusBadge(invite.filterStatus)}
+                                                    </div>
                                                 </div>
-                                            )}
+
+                                                {/* Action buttons */}
+                                                {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
+                                                    <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                                        <button
+                                                            onClick={() => handleResend(invite.id)}
+                                                            disabled={actionLoading[invite.id]}
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: '#38bdf8', background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: '150ms ease', opacity: actionLoading[invite.id] ? 0.5 : 1 }}
+                                                        >
+                                                            <RotateCw style={{ width: '11px', height: '11px' }} className={actionLoading[invite.id] === 'resending' ? 'animate-spin' : ''} />
+                                                            Resend
+                                                        </button>
+                                                        {invite.filterStatus === 'pending' && (
+                                                            <button
+                                                                onClick={() => handleRevoke(invite.id)}
+                                                                disabled={actionLoading[invite.id]}
+                                                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: '150ms ease', opacity: actionLoading[invite.id] ? 0.5 : 1 }}
+                                                            >
+                                                                <XCircle style={{ width: '11px', height: '11px' }} />
+                                                                Revoke
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </div >

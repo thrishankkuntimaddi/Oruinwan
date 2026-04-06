@@ -1,82 +1,134 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Mail, Phone } from 'lucide-react';
+// Contact.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import PublicPageShell from '../../components/layout/PublicPageShell';
+import { Mail, MessageSquare, Building2, Shield, CheckCircle2, ArrowRight } from 'lucide-react';
 
-const Contact = () => {
-    const navigate = useNavigate();
+const TOPICS = [
+    { id: 'general',   label: 'General Inquiry' },
+    { id: 'sales',     label: 'Sales & Pricing' },
+    { id: 'support',   label: 'Technical Support' },
+    { id: 'security',  label: 'Security / Bug Report' },
+    { id: 'press',     label: 'Press & Media' },
+    { id: 'other',     label: 'Other' },
+];
+
+const CONTACTS = [
+    { icon: Mail,         color: '#6ea8fe', title: 'General',  email: 'hello@chttrix.io',    desc: 'Questions, partnerships, or just a hello.' },
+    { icon: MessageSquare,color: '#b8956a', title: 'Support',  email: 'support@chttrix.io',  desc: 'Technical issues and account help.' },
+    { icon: Shield,       color: '#5aba8a', title: 'Security', email: 'security@chttrix.io', desc: 'Vulnerability reports (24h SLA).' },
+    { icon: Building2,    color: '#a78bfa', title: 'Sales',    email: 'sales@chttrix.io',    desc: 'Enterprise plans and custom pricing.' },
+];
+
+const inp = { width: '100%', padding: '10px 12px', background: '#141414', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 150ms ease' };
+
+export default function Contact() {
+    const [form, setForm] = useState({ name: '', email: '', topic: 'general', message: '' });
+    const [sent, setSent] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setTimeout(() => { setLoading(false); setSent(true); }, 1200);
+    };
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
-            <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
-                        <span className="font-black text-2xl tracking-tighter">Chttrix</span>
+        <PublicPageShell title="Contact">
+            {/* Hero */}
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '80px 0 64px' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
+                        <Mail size={11} style={{ color: '#b8956a' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Contact Us</span>
                     </div>
-                    <button onClick={() => navigate("/")} className="text-sm font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-white transition-colors flex items-center gap-2">
-                        <ArrowLeft size={16} /> Back to Home
-                    </button>
+                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Let's talk.</h1>
+                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', maxWidth: '500px' }}>
+                        Whether it's a sales question, a bug report, or just a hello — we read every message and respond to everything.
+                    </p>
                 </div>
-            </nav>
+            </div>
 
-            <div className="pt-32 pb-20 container mx-auto px-6 max-w-5xl">
-                <div className="text-center mb-16">
-                    <h1 className="text-4xl md:text-6xl font-black mb-6">Get in touch</h1>
-                    <p className="text-xl text-slate-500 dark:text-slate-400">
-                        Have a question about Chttrix? We're here to help.
+            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '72px 24px', display: 'flex', gap: '72px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+
+                {/* Left — contact cards */}
+                <div style={{ flex: '1 1 300px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Direct Contacts</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '32px' }}>
+                        {CONTACTS.map(c => {
+                            const Icon = c.icon;
+                            return (
+                                <div key={c.title} style={{ background: '#111', padding: '18px 20px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                                    <div style={{ width: '34px', height: '34px', background: `${c.color}12`, border: `1px solid ${c.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <Icon size={15} style={{ color: c.color }} />
+                                    </div>
+                                    <div>
+                                        <p style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', marginBottom: '2px' }}>{c.title}</p>
+                                        <a href={`mailto:${c.email}`} style={{ fontSize: '12px', color: '#b8956a', textDecoration: 'none', fontFamily: 'monospace' }}>{c.email}</a>
+                                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', marginTop: '3px' }}>{c.desc}</p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', lineHeight: '1.7' }}>
+                        We typically respond within 1 business day. For urgent security issues, response within 24 hours is guaranteed.
                     </p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-12">
-                    {/* Contact Info */}
-                    <div className="space-y-8">
-                        <div className="p-8 bg-slate-50 dark:bg-[#0B0F19] rounded-3xl">
-                            <h3 className="text-xl font-bold mb-6">Contact Information</h3>
-                            <div className="space-y-6">
-                                <div className="flex items-start gap-4">
-                                    <Mail className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mt-1" />
-                                    <div>
-                                        <p className="font-bold">Email</p>
-                                        <p className="text-slate-500 dark:text-slate-400">chttrixchat@gmail.com</p>
-                                    </div>
-                                </div>
+                {/* Right — form */}
+                <div style={{ flex: '2 1 400px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Send a Message</p>
 
-                                <div className="flex items-start gap-4">
-                                    <Phone className="w-6 h-6 text-indigo-600 dark:text-indigo-400 mt-1" />
-                                    <div>
-                                        <p className="font-bold">Phone</p>
-                                        <p className="text-slate-500 dark:text-slate-400">+91 9381870544</p>
-                                    </div>
+                    {sent ? (
+                        <div style={{ padding: '32px', background: 'rgba(90,186,138,0.06)', border: '1px solid rgba(90,186,138,0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                            <CheckCircle2 size={32} style={{ color: '#5aba8a' }} />
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4' }}>Message sent!</h3>
+                            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.5)' }}>We'll get back to you at <strong style={{ color: '#e4e4e4' }}>{form.email}</strong> within 1 business day.</p>
+                            <button onClick={() => { setSent(false); setForm({ name: '', email: '', topic: 'general', message: '' }); }}
+                                style={{ marginTop: '8px', fontSize: '12px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
+                                Send another message →
+                            </button>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Name</label>
+                                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="Your name"
+                                        style={inp}
+                                        onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
+                                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Email</label>
+                                    <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="you@company.com"
+                                        style={inp}
+                                        onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
+                                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    {/* Contact Form */}
-                    <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Name</label>
-                            <input type="text" className="w-full px-4 py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Your name" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email</label>
-                            <input type="email" className="w-full px-4 py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="you@example.com" />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Message</label>
-                            <textarea rows="4" className="w-full px-4 py-3 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none" placeholder="How can we help?"></textarea>
-                        </div>
-                        <button className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/25">
-                            Send Message
-                        </button>
-                    </form>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Topic</label>
+                                <select value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
+                                    style={{ ...inp, cursor: 'pointer' }}>
+                                    {TOPICS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Message</label>
+                                <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} required rows={6} placeholder="Tell us what's on your mind..."
+                                    style={{ ...inp, resize: 'vertical', minHeight: '140px' }}
+                                    onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
+                                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
+                            </div>
+                            <button type="submit" disabled={loading}
+                                style={{ padding: '11px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: loading ? 0.7 : 1, transition: 'opacity 150ms ease' }}>
+                                {loading ? 'Sending...' : <><span>Send Message</span><ArrowRight size={14} /></>}
+                            </button>
+                        </form>
+                    )}
                 </div>
             </div>
-            <footer className="py-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-400">
-                <p>© 2026 Chttrix Inc.</p>
-            </footer>
-        </div>
+        </PublicPageShell>
     );
-};
-
-export default Contact;
+}

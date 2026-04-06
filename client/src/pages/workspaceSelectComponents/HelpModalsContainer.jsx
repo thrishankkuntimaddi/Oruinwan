@@ -2,136 +2,152 @@ import React from 'react';
 import { X, BookOpen, Command, Bug, Sparkles, MessageCircle, ArrowRight } from 'lucide-react';
 
 /**
- * HelpModalsContainer - Container for all help modal variants
- * Pure presentational component - no state or form submission logic
- * 
- * @param {string|null} activeModal - Identifier of which modal to show ('academy', 'shortcuts', 'bug', 'whatsnew', 'contact', or null)
- * @param {function} onClose - Callback to close modal
+ * HelpModalsContainer — All help modal variants.
+ * Pure presentational component — no state or form submission logic.
  */
+
+/* ── Shared style tokens ── */
+const inp = {
+    width: '100%', padding: '9px 11px', background: 'var(--bg-input)',
+    border: '1px solid var(--border-default)', borderRadius: '2px',
+    fontSize: '13px', color: 'var(--text-primary)', outline: 'none',
+    fontFamily: 'var(--font)', boxSizing: 'border-box', resize: 'vertical',
+};
+const lbl = {
+    display: 'block', fontSize: '11px', fontWeight: 700,
+    color: 'var(--text-muted)', letterSpacing: '0.12em',
+    textTransform: 'uppercase', marginBottom: '6px',
+};
+const primaryBtn = {
+    width: '100%', padding: '10px', background: 'var(--bg-active)',
+    border: '1px solid var(--border-accent)', borderRadius: '2px',
+    fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)',
+    cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease',
+};
+const modalHeader = (icon, label, sub) => (
+    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '32px', height: '32px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+            {icon}
+        </div>
+        <div>
+            <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>{label}</h2>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>{sub}</p>
+        </div>
+    </div>
+);
+
 const HelpModalsContainer = ({ activeModal, onClose }) => {
     if (!activeModal) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/40 z-[120] flex items-center justify-center animate-fade-in backdrop-blur-sm p-4">
-            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col relative animate-slideUp">
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 z-10"
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: 'var(--font)' }}>
+            <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '100%', maxWidth: '480px', overflow: 'hidden', position: 'relative' }}>
+                {/* Close */}
+                <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease', zIndex: 10 }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
-                    <X size={24} />
+                    <X size={16} />
                 </button>
 
-                {/* Academy Modal */}
-                {activeModal === "academy" && (
+                {/* ── Academy ── */}
+                {activeModal === 'academy' && (
                     <>
-                        <div className="p-6 bg-indigo-600 text-white">
-                            <h2 className="text-2xl font-bold flex items-center gap-2"><BookOpen size={28} /> Chttrix Academy</h2>
-                            <p className="text-indigo-100 mt-1">Master your workflow with these guides.</p>
-                        </div>
-                        <div className="p-6 overflow-y-auto max-h-[60vh] space-y-4">
-                            <a
-                                href="/chttrix-docs"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block p-4 border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:border-indigo-400 dark:hover:border-indigo-500 cursor-pointer transition-all group"
+                        {modalHeader(<BookOpen size={16} />, 'Chttrix Academy', 'Master your workflow with these guides')}
+                        <div style={{ padding: '16px 20px', overflowY: 'auto', maxHeight: '60vh', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <a href="/chttrix-docs" target="_blank" rel="noopener noreferrer"
+                                style={{ display: 'block', padding: '12px 14px', border: '1px solid var(--border-accent)', borderRadius: '2px', background: 'var(--bg-surface)', textDecoration: 'none', transition: '150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
                             >
-                                <h3 className="font-bold text-indigo-700 dark:text-indigo-300 group-hover:underline flex items-center justify-between">
-                                    <span>Full Documentation</span>
-                                    <ArrowRight size={16} />
-                                </h3>
-                                <p className="text-sm text-indigo-600/80 dark:text-indigo-300/80 mt-1">Explore all features, settings, and guides in detail.</p>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Full Documentation</span>
+                                    <ArrowRight size={13} style={{ color: 'var(--accent)' }} />
+                                </div>
+                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>Explore all features, settings, and guides in detail.</p>
                             </a>
-
-                            {["Getting Started Guide", "Advanced Search Techniques", "Managing Notifications", "Integrations 101"].map((guide, i) => (
-                                <div key={i} className="p-4 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-slate-50 dark:hover:bg-indigo-900/10 cursor-pointer transition-all group">
-                                    <h3 className="font-bold text-slate-800 dark:text-white group-hover:text-indigo-700 dark:group-hover:text-indigo-400">{guide}</h3>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Learn the basics and become a pro user in no time.</p>
+                            {['Getting Started Guide', 'Advanced Search Techniques', 'Managing Notifications', 'Integrations 101'].map((guide, i) => (
+                                <div key={i} style={{ padding: '12px 14px', border: '1px solid var(--border-default)', borderRadius: '2px', background: 'var(--bg-surface)', cursor: 'pointer', transition: '150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
+                                >
+                                    <h3 style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 3px' }}>{guide}</h3>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>Learn the basics and become a pro user in no time.</p>
                                 </div>
                             ))}
                         </div>
                     </>
                 )}
 
-                {/* Shortcuts Modal */}
-                {activeModal === "shortcuts" && (
+                {/* ── Shortcuts ── */}
+                {activeModal === 'shortcuts' && (
                     <>
-                        <div className="p-6 bg-slate-900 text-white">
-                            <h2 className="text-2xl font-bold flex items-center gap-2"><Command size={28} /> Keyboard Shortcuts</h2>
-                            <p className="text-slate-400 mt-1">Speed up your workflow.</p>
-                        </div>
-                        <div className="p-6 overflow-y-auto max-h-[60vh]">
-                            <div className="grid grid-cols-1 gap-4">
-                                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                                    <span className="text-slate-600 dark:text-slate-300 font-medium">Quick Search</span>
-                                    <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs font-mono text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shadow-sm">Cmd + K</kbd>
+                        {modalHeader(<Command size={16} />, 'Keyboard Shortcuts', 'Speed up your workflow')}
+                        <div style={{ padding: '16px 20px', overflowY: 'auto', maxHeight: '60vh', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {[
+                                { label: 'Quick Search', key: 'Cmd + K' },
+                                { label: 'New Message', key: 'Cmd + N' },
+                                { label: 'Toggle AI', key: 'Cmd + J' },
+                            ].map(({ label, key }) => (
+                                <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                                    <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</span>
+                                    <kbd style={{ padding: '3px 8px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', fontSize: '11px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{key}</kbd>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                                    <span className="text-slate-600 dark:text-slate-300 font-medium">New Message</span>
-                                    <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs font-mono text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shadow-sm">Cmd + N</kbd>
-                                </div>
-                                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                                    <span className="text-slate-600 dark:text-slate-300 font-medium">Toggle AI</span>
-                                    <kbd className="px-2 py-1 bg-white dark:bg-slate-800 rounded text-xs font-mono text-slate-500 dark:text-slate-400 border border-slate-300 dark:border-slate-600 shadow-sm">Cmd + J</kbd>
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </>
                 )}
 
-                {/* Bug Report Modal */}
-                {activeModal === "bug" && (
+                {/* ── Bug Report ── */}
+                {activeModal === 'bug' && (
                     <>
-                        <div className="p-6 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/30">
-                            <h2 className="text-2xl font-bold text-red-700 dark:text-red-400 flex items-center gap-2"><Bug size={28} /> Report a Bug</h2>
-                            <p className="text-red-600 dark:text-red-300 mt-1">Found something broken? Let us know.</p>
-                        </div>
-                        <div className="p-6 space-y-4">
+                        {modalHeader(<Bug size={16} />, 'Report a Bug', "Found something broken? Let us know")}
+                        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">What happened?</label>
-                                <textarea className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl focus:ring-red-500 focus:border-red-500 h-32 resize-none" placeholder="Describe the issue..."></textarea>
+                                <label style={lbl}>What happened?</label>
+                                <textarea style={{ ...inp, height: '120px', lineHeight: 1.6 }} placeholder="Describe the issue..." />
                             </div>
-                            <button className="w-full py-3 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 transition-colors shadow-lg shadow-red-200">
-                                Submit Report
-                            </button>
+                            <button style={{ ...primaryBtn, borderColor: 'var(--state-danger)', color: 'var(--state-danger)' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-active)'; }}
+                            >Submit Report</button>
                         </div>
                     </>
                 )}
 
-                {/* What's New Modal */}
-                {activeModal === "whatsnew" && (
+                {/* ── What's New ── */}
+                {activeModal === 'whatsnew' && (
                     <>
-                        <div className="p-6 bg-gradient-to-r from-pink-500 to-orange-500 text-white">
-                            <h2 className="text-2xl font-bold flex items-center gap-2"><Sparkles size={28} /> What's New</h2>
-                            <p className="text-white/90 mt-1">Latest updates and improvements.</p>
-                        </div>
-                        <div className="p-6 overflow-y-auto max-h-[60vh] space-y-6">
-                            <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-700">
-                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-pink-500"></div>
-                                <span className="text-xs font-bold text-pink-500 uppercase">Nov 2025</span>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">Chttrix AI 2.0</h3>
-                                <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">Smarter responses, faster generation, and context-aware suggestions.</p>
-                            </div>
-                            <div className="relative pl-4 border-l-2 border-slate-200 dark:border-slate-700">
-                                <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                                <span className="text-xs font-bold text-orange-500 uppercase">Oct 2025</span>
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white mt-1">Dark Mode Beta</h3>
-                                <p className="text-slate-600 dark:text-slate-400 text-sm mt-1">Easy on the eyes. Try it out in settings.</p>
-                            </div>
+                        {modalHeader(<Sparkles size={16} />, "What's New", 'Latest updates and improvements')}
+                        <div style={{ padding: '16px 20px', overflowY: 'auto', maxHeight: '60vh', display: 'flex', flexDirection: 'column', gap: '0' }}>
+                            {[
+                                { date: 'Nov 2025', title: 'Chttrix AI 2.0', body: 'Smarter responses, faster generation, and context-aware suggestions.' },
+                                { date: 'Oct 2025', title: 'Dark Mode Beta', body: 'Easy on the eyes. Try it out in settings.' },
+                            ].map(({ date, title, body }) => (
+                                <div key={date} style={{ display: 'flex', gap: '14px', paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+                                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent)', marginTop: '4px' }} />
+                                        <div style={{ width: '1px', flex: 1, background: 'var(--border-subtle)' }} />
+                                    </div>
+                                    <div>
+                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.12em', display: 'block', marginBottom: '4px' }}>{date}</span>
+                                        <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>{title}</h3>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>{body}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </>
                 )}
 
-                {/* Contact Modal */}
-                {activeModal === "contact" && (
+                {/* ── Contact ── */}
+                {activeModal === 'contact' && (
                     <>
-                        <div className="p-6 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/30">
-                            <h2 className="text-2xl font-bold text-blue-900 dark:text-blue-300 flex items-center gap-2"><MessageCircle size={28} /> Contact Support</h2>
-                            <p className="text-blue-700 dark:text-blue-400 mt-1">We're here to help with any questions.</p>
-                        </div>
-                        <div className="p-6 space-y-4">
+                        {modalHeader(<MessageCircle size={16} />, 'Contact Support', "We're here to help with any questions")}
+                        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Subject</label>
-                                <select className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl focus:ring-blue-500 focus:border-blue-500 font-medium">
+                                <label style={lbl}>Subject</label>
+                                <select style={{ ...inp, resize: 'none', cursor: 'pointer' }}>
                                     <option>General Inquiry</option>
                                     <option>Billing Issue</option>
                                     <option>Technical Support</option>
@@ -139,12 +155,13 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1">Message</label>
-                                <textarea className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-700 dark:text-white rounded-xl focus:ring-blue-500 focus:border-blue-500 h-32 resize-none" placeholder="How can we help you?"></textarea>
+                                <label style={lbl}>Message</label>
+                                <textarea style={{ ...inp, height: '120px', lineHeight: 1.6 }} placeholder="How can we help you?" />
                             </div>
-                            <button className="w-full py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-lg shadow-blue-200">
-                                Send Message
-                            </button>
+                            <button style={primaryBtn}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                            >Send Message</button>
                         </div>
                     </>
                 )}

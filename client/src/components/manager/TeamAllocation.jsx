@@ -1,13 +1,15 @@
+// TeamAllocation — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import {
-    MoreVertical,
-    Search, Briefcase, BarChart2,
-    CheckCircle2, Clock, ArrowRightLeft
-} from 'lucide-react';
+import { Search, Briefcase, CheckCircle2, Clock, Users } from 'lucide-react';
 import api from '@services/api';
 
-const TeamAllocation = () => {
+const inputSt = { background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px', width: '100%', boxSizing: 'border-box' };
+
+const utilizColor = (v) => { if (v > 90) return 'var(--state-danger)'; if (v > 75) return 'var(--accent)'; return 'var(--state-success)'; };
+const utilizLabel = (v) => { if (v > 90) return 'OVERLOAD'; if (v < 50) return 'AVAILABLE'; return 'OPTIMAL'; };
+
+export default function TeamAllocation() {
     const { selectedDepartment } = useOutletContext();
     const [teamData, setTeamData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -17,218 +19,149 @@ const TeamAllocation = () => {
         const fetchTeam = async () => {
             try {
                 setLoading(true);
-                const response = await api.get(`/api/manager-dashboard/team-load`);
-
-                // Enhance data with mock workload details if not present
-                const enhancedMembers = (response.data.teamMembers || []).map(member => ({
-                    ...member,
-                    project: member.project || 'Main Product',
-                    utilization: Math.floor(Math.random() * 40) + 60, // Mock 60-100% utilization
+                const res = await api.get('/api/manager-dashboard/team-load');
+                const members = (res.data.teamMembers || []).map(m => ({
+                    ...m, project: m.project || 'Main Product',
+                    utilization: Math.floor(Math.random() * 40) + 60,
                     tasksCompleted: Math.floor(Math.random() * 20),
                     tasksPending: Math.floor(Math.random() * 10)
                 }));
-
-                setTeamData({
-                    members: enhancedMembers,
-                    head: null,
-                    overloaded: response.data.overloaded || [],
-                    idle: response.data.idle || []
-                });
-            } catch (error) {
-                console.error('Error fetching team:', error);
-                // Fallback mock data
-                setTeamData({
-                    members: [
-                        { _id: '1', username: 'John Doe', email: 'john@example.com', companyRole: 'developer', accountStatus: 'active', createdAt: new Date(), activeTasks: 5, workload: 'medium', utilization: 85, project: 'Frontend Redesign', tasksCompleted: 12, tasksPending: 5 },
-                        { _id: '2', username: 'Jane Smith', email: 'jane@example.com', companyRole: 'designer', accountStatus: 'active', createdAt: new Date(), activeTasks: 3, workload: 'low', utilization: 45, project: 'Marketing Assets', tasksCompleted: 8, tasksPending: 3 },
-                        { _id: '3', username: 'Bob Wilson', email: 'bob@example.com', companyRole: 'qa', accountStatus: 'active', createdAt: new Date(), activeTasks: 12, workload: 'high', utilization: 95, project: 'Mobile App Testing', tasksCompleted: 24, tasksPending: 12 }
-                    ],
-                    head: null,
-                    overloaded: [],
-                    idle: []
-                });
-            } finally {
-                setLoading(false);
-            }
+                setTeamData({ members, overloaded: res.data.overloaded || [], idle: res.data.idle || [] });
+            } catch {
+                setTeamData({ members: [], overloaded: [], idle: [] });
+            } finally { setLoading(false); }
         };
-
         fetchTeam();
     }, [selectedDepartment]);
 
-    // Use demo data if teamData is null
-    const displayData = teamData || { members: [] };
+    const members = (teamData?.members || []).filter(m =>
+        m.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.project?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-    const filteredMembers = displayData.members?.filter(member =>
-        member.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        member.project?.toLowerCase().includes(searchQuery.toLowerCase())
-    ) || [];
-
-    const getUtilizationColor = (value) => {
-        if (value > 90) return 'bg-red-500';
-        if (value > 75) return 'bg-amber-500';
-        return 'bg-green-500';
-    };
-
-    if (loading) {
-        return (
-            <div className="h-full bg-gray-50 dark:bg-gray-900 p-6 animate-pulse">
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    {[1,2,3].map(i => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-                            <div className="h-10 w-16 bg-gray-300 dark:bg-gray-600 rounded-xl" />
-                            <div className="h-2 w-28 bg-gray-100 dark:bg-gray-700/50 rounded" />
-                        </div>
-                    ))}
-                </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                    {[70,50,85,55,75].map((w,i) => (
-                        <div key={i} className="flex items-center gap-4">
-                            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-20}%`}} />
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    }
+    const TH_ST = { padding: '10px 16px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', textAlign: 'left', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' };
+    const TD_ST = { padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', verticalAlign: 'middle' };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-            {/* Header - Fixed Height & Full Width */}
-            <header className="h-20 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {/* Header */}
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        Resource Allocation
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <Users size={16} style={{ color: 'var(--accent)' }} /> Resource Allocation
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-0">
-                        Manage project assignments and team workload
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2">
-                        <BarChart2 size={16} />
-                        View Report
-                    </button>
-                    <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2">
-                        <ArrowRightLeft size={16} />
-                        Reallocate
-                    </button>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Manage project assignments and team workload</p>
                 </div>
             </header>
 
-            {/* Content - Full Width */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-6 z-10 custom-scrollbar bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-
-                {/* Search Bar */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-4 mb-6">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                        <input
-                            type="text"
-                            placeholder="Search resources by name, email or project..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 bg-transparent text-slate-700 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none text-sm"
-                        />
-                    </div>
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
+                {/* Search */}
+                <div style={{ position: 'relative', maxWidth: '480px', marginBottom: '16px' }}>
+                    <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                    <input type="text" placeholder="Search by name, email or project..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                        style={{ ...inputSt, paddingLeft: '30px' }} />
                 </div>
 
-                {/* Team List Table */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-50 dark:bg-gray-700/50 border-b border-slate-200 dark:border-gray-700">
-                            <tr>
-                                <th className="px-6 py-3 text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Resource</th>
-                                <th className="px-6 py-3 text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Current Project</th>
-                                <th className="px-6 py-3 text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Utilization</th>
-                                <th className="px-6 py-3 text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">Task Status</th>
-                                <th className="px-6 py-3 text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-gray-700">
-                            {filteredMembers.map((member) => (
-                                <tr key={member._id} className="hover:bg-slate-50 dark:hover:bg-gray-700/30 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-gray-700 flex items-center justify-center text-slate-600 dark:text-gray-300 font-bold text-sm">
-                                                {member.username?.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <div className="text-sm font-bold text-slate-900 dark:text-white">
-                                                    {member.username}
-                                                </div>
-                                                <div className="text-xs text-slate-500 dark:text-gray-400 capitalize">
-                                                    {member.companyRole}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg">
-                                                <Briefcase size={14} className="text-indigo-600 dark:text-indigo-400" />
-                                            </div>
-                                            <span className="text-sm font-medium text-slate-700 dark:text-gray-200">
-                                                {member.project || 'Unassigned'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex flex-col gap-1 w-32">
-                                            <div className="flex justify-between text-xs mb-0.5">
-                                                <span className="font-medium text-slate-600 dark:text-gray-400">{member.utilization}%</span>
-                                                <span className={`${member.utilization > 90 ? 'text-red-500' :
-                                                    member.utilization < 50 ? 'text-green-500' : 'text-slate-400'
-                                                    } font-bold text-[10px]`}>
-                                                    {member.utilization > 90 ? 'OVERLOAD' : member.utilization < 50 ? 'AVAILABLE' : 'OPTIMAL'}
-                                                </span>
-                                            </div>
-                                            <div className="h-2 w-full bg-slate-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full ${getUtilizationColor(member.utilization)}`}
-                                                    style={{ width: `${member.utilization}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-4 text-xs text-slate-500 dark:text-gray-400">
-                                            <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                                                <CheckCircle2 size={14} />
-                                                <span className="font-bold">{member.tasksCompleted}</span> Done
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
-                                                <Clock size={14} />
-                                                <span className="font-bold">{member.tasksPending}</span> Pending
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <button className="text-slate-400 hover:text-slate-600 dark:hover:text-gray-200 p-1 rounded-md hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors">
-                                            <MoreVertical size={16} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-
-                            {filteredMembers.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" className="px-6 py-12 text-center text-slate-500 dark:text-gray-400">
-                                        No resources found matching "{searchQuery}"
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                {loading
+                    ? <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '180px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '280px' }} /></div>
+            </div>
+            <div style={{ flex: 1, padding: '20px 28px' }}>
+                {/* Search skeleton */}
+                <div className="sk" style={{ height: '32px', width: '320px', marginBottom: '16px' }} />
+                {/* Table */}
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    {/* thead */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1.5fr', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '16px' }}>
+                        {[90, 100, 70, 90].map((w,i) => <div key={i} className="sk" style={{ height: '9px', width: `${w}px` }} />)}
+                    </div>
+                    {/* rows */}
+                    {[1,2,3,4,5].map(i => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1.5fr', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div className="sk" style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0 }} />
+                                <div><div className="sk" style={{ height: '11px', width: '100px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '60px' }} /></div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <div className="sk" style={{ width: '12px', height: '12px' }} />
+                                <div className="sk" style={{ height: '11px', width: '120px' }} />
+                            </div>
+                            <div><div className="sk" style={{ height: '4px', width: '100%', marginBottom: '6px' }} /><div style={{ display: 'flex', justifyContent: 'space-between' }}><div className="sk" style={{ height: '9px', width: '30px' }} /><div className="sk" style={{ height: '9px', width: '55px' }} /></div></div>
+                            <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '9px', width: '50px' }} /><div className="sk" style={{ height: '9px', width: '60px' }} /></div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
+                    : (
+                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr>
+                                        {['Resource', 'Current Project', 'Utilization', 'Task Status'].map(h => (
+                                            <th key={h} style={TH_ST}>{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {members.map(m => {
+                                        const uColor = utilizColor(m.utilization);
+                                        return (
+                                            <tr key={m._id} onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                <td style={TD_ST}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(184,149,106,0.1)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+                                                            {m.username?.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>{m.username}</p>
+                                                            <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>{m.companyRole}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={TD_ST}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Briefcase size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{m.project || 'Unassigned'}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={TD_ST}>
+                                                    <div style={{ width: '120px' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                            <span style={{ fontSize: '11px', fontWeight: 600, color: uColor }}>{m.utilization}%</span>
+                                                            <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: uColor }}>{utilizLabel(m.utilization)}</span>
+                                                        </div>
+                                                        <div style={{ height: '4px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                                                            <div style={{ height: '100%', width: `${m.utilization}%`, background: uColor, transition: 'width 400ms ease' }} />
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style={TD_ST}>
+                                                    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--state-success)' }}>
+                                                            <CheckCircle2 size={12} /> {m.tasksCompleted} Done
+                                                        </span>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--accent)' }}>
+                                                            <Clock size={12} /> {m.tasksPending} Pending
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {members.length === 0 && (
+                                        <tr><td colSpan={4} style={{ padding: '48px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                                            No resources found{searchQuery ? ` matching "${searchQuery}"` : ''}
+                                        </td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+            </div>
+        </div>
     );
-};
-
-export default TeamAllocation;
+}

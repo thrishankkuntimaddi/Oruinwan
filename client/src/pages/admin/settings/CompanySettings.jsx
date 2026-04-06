@@ -29,50 +29,60 @@ const CompanySettings = () => {
     const ActiveComponent = sections.find(s => s.id === activeSection)?.component;
 
     return (
-        <div className="flex h-full bg-gray-50 dark:bg-gray-900">
+        <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             {/* Sidebar */}
-            <aside className="w-72 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-                <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-                    <h1 className="text-2xl font-black text-gray-900 dark:text-white">Settings</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your company preferences</p>
+            <aside style={{ width: '220px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '3px' }}>Settings</h1>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Manage your company preferences</p>
                 </div>
-
-                <nav className="flex-1 overflow-y-auto p-4">
-                    <div className="space-y-1">
-                        {sections.map((section) => {
-                            const Icon = section.icon;
-                            const isActive = activeSection === section.id;
-
-                            return (
-                                <button
-                                    key={section.id}
-                                    onClick={() => setActiveSection(section.id)}
-                                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all ${isActive
-                                        ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50'
-                                        }`}
-                                >
-                                    <Icon
-                                        size={20}
-                                        className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-500'}
-                                    />
-                                    <span className={`font-${isActive ? 'bold' : 'medium'} text-sm`}>
-                                        {section.label}
-                                    </span>
-                                </button>
-                            );
-                        })}
+                <nav style={{ flex: 1, overflowY: 'auto', padding: '10px 8px' }} className="custom-scrollbar">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        {sections.map(section => (
+                            <SidebarBtn
+                                key={section.id}
+                                section={section}
+                                active={activeSection === section.id}
+                                onClick={() => setActiveSection(section.id)}
+                            />
+                        ))}
                     </div>
                 </nav>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 overflow-y-auto">
-                <div className="max-w-4xl mx-auto p-8">
+            <main style={{ flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
+                <div style={{ maxWidth: '680px', padding: '28px 32px' }}>
                     {ActiveComponent && <ActiveComponent />}
                 </div>
             </main>
         </div>
+    );
+};
+
+const SidebarBtn = ({ section, active, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    const Icon = section.icon;
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '9px',
+                padding: '9px 12px',
+                background: active ? 'var(--bg-active)' : hov ? 'var(--bg-hover)' : 'transparent',
+                border: active ? '1px solid var(--border-accent)' : '1px solid transparent',
+                borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent',
+                color: active ? 'var(--accent)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '12px', fontWeight: active ? 600 : 400,
+                cursor: 'pointer', textAlign: 'left',
+                transition: 'all 150ms ease', borderRadius: '2px'
+            }}
+        >
+            <Icon size={14} style={{ flexShrink: 0 }} />
+            {section.label}
+        </button>
     );
 };
 

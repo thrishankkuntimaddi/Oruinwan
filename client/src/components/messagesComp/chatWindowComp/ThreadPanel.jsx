@@ -404,17 +404,33 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         return () => window.removeEventListener("keydown", handleEsc);
     }, [onClose]);
 
+    const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+
     return (
-        <div className={`h-full bg-white dark:bg-gray-900 border-l dark:border-gray-800 shadow-xl flex flex-col animate-slide-in-right flex-shrink-0 ${className || 'w-[400px]'}`}>
+        <div style={{
+            height: '100%',
+            backgroundColor: 'var(--bg-surface)',
+            borderLeft: '1px solid var(--border-accent)',
+            boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+            display: 'flex', flexDirection: 'column',
+            flexShrink: 0,
+            width: className || '380px',
+            fontFamily: FONT,
+        }}>
             {/* Critical Error: Missing channelId */}
             {!channelId ? (
-                <div className="flex-1 flex items-center justify-center p-4">
-                    <div className="text-center">
-                        <p className="text-red-600 font-bold mb-2">Thread Error</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Unable to load thread: missing channel context</p>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                    <div style={{ textAlign: 'center' }}>
+                        <p style={{ color: 'var(--state-danger)', fontWeight: 600, marginBottom: '6px', fontSize: '13px', fontFamily: FONT }}>Thread Error</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: FONT }}>Unable to load thread: missing channel context</p>
                         <button
                             onClick={onClose}
-                            className="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                            style={{
+                                marginTop: '12px', padding: '6px 16px',
+                                backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)',
+                                border: '1px solid var(--border-default)', borderRadius: '2px',
+                                cursor: 'pointer', fontSize: '12px', fontFamily: FONT, outline: 'none',
+                            }}
                         >
                             Close
                         </button>
@@ -422,52 +438,71 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 </div>
             ) : (
                 <>
-                    {/* Header (Optional) */}
+                    {/* Header */}
                     {showHeader && (
-                        <div className="flex items-center justify-between px-4 py-1.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-                            <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm">Thread</h3>
-                                <span className="text-xs text-gray-400">#{parentMessageState?.channelId?.name || "discussion"}</span>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '11px 16px',
+                            borderBottom: '1px solid var(--border-default)',
+                            backgroundColor: 'var(--bg-surface)',
+                            flexShrink: 0,
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>Thread</h3>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>#{parentMessageState?.channelId?.name || 'discussion'}</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 {/* Follow / Unfollow toggle */}
                                 <button
                                     onClick={toggleFollow}
                                     disabled={followLoading}
                                     title={following ? `Unfollow thread (${followerCount} follower${followerCount !== 1 ? 's' : ''})` : 'Follow thread to get reply notifications'}
-                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
-                                        following
-                                            ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800/60'
-                                            : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                                    } ${followLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '5px',
+                                        padding: '4px 10px', borderRadius: '2px', outline: 'none',
+                                        fontSize: '11px', fontWeight: 500, cursor: followLoading ? 'not-allowed' : 'pointer',
+                                        transition: '100ms ease', fontFamily: FONT,
+                                        backgroundColor: following ? 'rgba(184,149,106,0.12)' : 'transparent',
+                                        color: following ? 'var(--accent)' : 'var(--text-muted)',
+                                        border: following ? '1px solid var(--border-accent)' : '1px solid transparent',
+                                        opacity: followLoading ? 0.5 : 1,
+                                    }}
+                                    onMouseEnter={e => { if (!followLoading && !following) { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                                    onMouseLeave={e => { if (!followLoading && !following) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; } }}
                                 >
                                     {following
-                                        ? <><BellOff size={13} /> <span>Following{followerCount > 0 ? ` (${followerCount})` : ''}</span></>
-                                        : <><Bell size={13} /> <span>Follow</span></>}
+                                        ? <><BellOff size={12} /> <span>Following{followerCount > 0 ? ` (${followerCount})` : ''}</span></>
+                                        : <><Bell size={12} /> <span>Follow</span></>}
                                 </button>
                                 <button
                                     onClick={onClose}
-                                    className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                                    style={{
+                                        padding: '5px', borderRadius: '2px', outline: 'none', border: 'none',
+                                        background: 'none', color: 'var(--text-muted)', cursor: 'pointer',
+                                        display: 'flex', transition: '100ms ease',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                     title="Close"
                                 >
-                                    <X size={18} />
+                                    <X size={16} />
                                 </button>
                             </div>
                         </div>
                     )}
 
                     {loading ? (
-                        <div className="flex-1 px-4 py-4 animate-pulse space-y-5 overflow-hidden">
+                        <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px', overflow: 'hidden' }}>
                             {[{ n: 20, l1: 62, l2: 0 }, { n: 16, l1: 78, l2: 45 }, { n: 22, l1: 50, l2: 0 }, { n: 18, l1: 85, l2: 55 }, { n: 24, l1: 60, l2: 0 }].map((b, i) => (
-                                <div key={i} className="flex items-start gap-2.5">
-                                    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
-                                    <div className="flex-1 space-y-1.5" style={{ maxWidth: '75%' }}>
-                                        <div className="flex gap-2 items-baseline">
-                                            <div className="h-2.5 bg-gray-300 dark:bg-gray-600 rounded" style={{ width: `${b.n * 4}px` }} />
-                                            <div className="h-2 w-8 bg-gray-100 dark:bg-gray-700/50 rounded" />
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '75%' }}>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
+                                            <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${b.n * 4}px` }} />
+                                            <div style={{ height: '8px', width: '32px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
                                         </div>
-                                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{ width: `${b.l1}%` }} />
-                                        {b.l2 > 0 && <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{ width: `${b.l2}%` }} />}
+                                        <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${b.l1}%` }} />
+                                        {b.l2 > 0 && <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${b.l2}%`, opacity: 0.7 }} />}
                                     </div>
                                 </div>
                             ))}
@@ -475,13 +510,18 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     ) : (
                         <>
                             {/* Content Area */}
-                            <div className="flex-1 overflow-y-auto custom-scrollbar bg-white dark:bg-gray-900 flex flex-col">
+                            <div style={{ flex: 1, overflowY: 'auto', backgroundColor: 'var(--bg-surface)', display: 'flex', flexDirection: 'column' }}>
 
-                                {/* Parent Message (Highlighted & Compact) */}
+                                {/* Parent Message */}
                                 {parentMessageState && (
-                                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-blue-50/20 dark:bg-blue-900/10">
-                                        <div className="flex items-start gap-2">
-                                            <div className="h-7 w-7 rounded-full flex-shrink-0 overflow-hidden shadow-sm">
+                                    <div style={{
+                                        padding: '12px 16px',
+                                        borderBottom: '1px solid var(--border-default)',
+                                        backgroundColor: 'rgba(184,149,106,0.05)',
+                                        borderLeft: '3px solid var(--accent)',
+                                    }}>
+                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                            <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <img
                                                     src={getAvatarUrl(
                                                         parentMessageState.sender
@@ -489,38 +529,48 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                         || { username: parentMessageState.senderName || 'user' }
                                                     )}
                                                     alt={parentMessageState.sender?.username || parentMessageState.senderName || 'User'}
-                                                    className="w-full h-full object-cover rounded-full"
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                                                     onError={(e) => {
                                                         const name = parentMessageState.sender?.username || parentMessageState.senderName || 'U';
                                                         e.target.style.display = 'none';
-                                                        e.target.parentNode.style.backgroundColor = '#6366f1';
+                                                        e.target.parentNode.style.backgroundColor = 'var(--accent)';
                                                         e.target.parentNode.style.display = 'flex';
                                                         e.target.parentNode.style.alignItems = 'center';
                                                         e.target.parentNode.style.justifyContent = 'center';
-                                                        e.target.parentNode.innerHTML = `<span style="color:white;font-weight:700;font-size:11px">${name.charAt(0).toUpperCase()}</span>`;
+                                                        e.target.parentNode.innerHTML = `<span style="color:#0c0c0c;font-weight:700;font-size:11px">${name.charAt(0).toUpperCase()}</span>`;
                                                     }}
                                                 />
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-baseline gap-2">
-                                                    <span className="font-bold text-xs text-gray-900 dark:text-gray-100">
-                                                        {parentMessageState.sender?.username || parentMessageState.senderName || parentMessageState.senderId?.username || "Unknown"}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '3px' }}>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--accent)', fontFamily: FONT }}>
+                                                        {parentMessageState.sender?.username || parentMessageState.senderName || parentMessageState.senderId?.username || 'Unknown'}
                                                     </span>
-                                                    <span className="text-[10px] text-gray-400">
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>
                                                         {formatTime(parentMessageState.ts || parentMessageState.createdAt)}
                                                     </span>
                                                 </div>
-                                                {/* Clamped message with Show more/less toggle */}
-                                                <p className={`text-xs text-gray-800 dark:text-gray-200 mt-0.5 leading-relaxed whitespace-pre-wrap break-words overflow-hidden transition-all duration-200 ${parentExpanded ? '' : 'line-clamp-4'}`}>
+                                                <p style={{
+                                                    fontSize: '12px', color: 'var(--text-primary)', margin: 0,
+                                                    lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+                                                    overflow: 'hidden', fontFamily: FONT,
+                                                    display: parentExpanded ? 'block' : '-webkit-box',
+                                                    WebkitLineClamp: parentExpanded ? undefined : 4,
+                                                    WebkitBoxOrient: 'vertical',
+                                                }}>
                                                     {parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text}
                                                 </p>
-                                                {/* Show more / less button — only renders when text is long enough to clamp */}
                                                 {(() => {
                                                     const txt = parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text || '';
                                                     return txt.length > 200 || txt.split('\n').length > 4 ? (
                                                         <button
                                                             onClick={() => setParentExpanded(v => !v)}
-                                                            className="mt-1 text-[10px] font-semibold text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                                                            style={{
+                                                                marginTop: '4px', background: 'none', border: 'none', outline: 'none',
+                                                                padding: 0, fontSize: '10px', fontWeight: 600,
+                                                                color: 'var(--accent)', cursor: 'pointer', fontFamily: FONT,
+                                                                transition: '100ms ease',
+                                                            }}
                                                         >
                                                             {parentExpanded ? 'Show less ↑' : 'Show more ↓'}
                                                         </button>
@@ -532,48 +582,47 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 )}
 
                                 {/* Replies List */}
-                                <div className="flex-1 px-4 py-2 space-y-5 mt-2">
+                                <div style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '6px' }}>
                                     {replies.length === 0 ? (
-                                        <div className="text-center py-12">
-                                            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                                <Smile size={32} className="text-gray-400" />
+                                        <div style={{ textAlign: 'center', padding: '40px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{
+                                                width: '48px', height: '48px', borderRadius: '2px',
+                                                backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            }}>
+                                                <Smile size={24} style={{ color: 'var(--text-muted)' }} />
                                             </div>
-                                            <p className="text-gray-500 text-sm font-medium">No replies yet</p>
-                                            <p className="text-xs text-gray-400 mt-1">Be the first to reply to this thread!</p>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, margin: 0, fontFamily: FONT }}>No replies yet</p>
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0, fontFamily: FONT }}>Be the first to reply to this thread!</p>
                                         </div>
                                     ) : (
                                         replies.map((reply) => {
-                                            // Handle different sender structures (backend vs flattened)
-                                            const senderName = reply.sender?.username || reply.senderName || reply.senderId?.username || "Unknown";
+                                            const senderName = reply.sender?.username || reply.senderName || reply.senderId?.username || 'Unknown';
                                             const senderObj = reply.sender || reply.senderId || { username: senderName };
                                             const senderPic = getAvatarUrl(senderObj);
                                             const initials = (senderName || 'U').charAt(0).toUpperCase();
 
                                             return (
-                                                <div key={reply._id} className="flex items-start gap-3 group">
-                                                    {/* Avatar: real pic → DiceBear fallback */}
-                                                    <div className="h-8 w-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center shadow-sm">
+                                                <div key={reply._id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                                    {/* Avatar */}
+                                                    <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                         <img
                                                             src={senderPic}
                                                             alt={senderName}
-                                                            className="w-full h-full object-cover rounded-full"
+                                                            style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
                                                             onError={(e) => {
                                                                 e.target.style.display = 'none';
-                                                                e.target.parentNode.style.backgroundColor = '#6366f1';
-                                                                e.target.parentNode.innerHTML = `<span style="color:white;font-weight:700;font-size:13px">${initials}</span>`;
+                                                                e.target.parentNode.style.backgroundColor = 'var(--accent)';
+                                                                e.target.parentNode.innerHTML = `<span style="color:#0c0c0c;font-weight:700;font-size:12px">${initials}</span>`;
                                                             }}
                                                         />
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-baseline gap-2">
-                                                            <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
-                                                                {senderName}
-                                                            </span>
-                                                            <span className="text-xs text-gray-400">
-                                                                {formatTime(reply.createdAt)}
-                                                            </span>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
+                                                            <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>{senderName}</span>
+                                                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>{formatTime(reply.createdAt)}</span>
                                                         </div>
-                                                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-0.5 leading-relaxed whitespace-pre-wrap break-words">
+                                                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: FONT }}>
                                                             {reply.decryptedContent || reply.payload?.text || reply.text}
                                                         </p>
                                                     </div>
@@ -585,19 +634,19 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 </div>
                             </div>
 
-                            {/* Input Area (New FooterInput) */}
+                            {/* Input Area */}
                             <FooterInput
                                 newMessage={newReply}
                                 setNewMessage={setNewReply}
                                 onSend={handleSendReply}
                                 onChange={(e) => setNewReply(e.target.value)}
-                                showAI={true} // Enable AI button for thread replies
-                                showVoice={false} // Disable Voice button
+                                showAI={true}
+                                showVoice={false}
                                 blocked={false}
-                                recording={false} // Simplified for thread for now, or hoist state if needed
+                                recording={false}
                                 setRecording={() => { }}
-                                showAttach={false} // Default state
-                                setShowAttach={() => { }} // Simple handlers or useState if attachment needed
+                                showAttach={false}
+                                setShowAttach={() => { }}
                                 showEmoji={false}
                                 setShowEmoji={() => { }}
                                 onPickEmoji={(emoji) => setNewReply(prev => prev + emoji.native)}

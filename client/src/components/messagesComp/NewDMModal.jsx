@@ -2,9 +2,21 @@ import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import api from '@services/api';
 import { AuthContext } from "../../contexts/AuthContext";
-import { API_BASE } from '@services/api';
 import { getErrorMessage } from "../../utils/apiHelpers";
 import { getAvatarUrl } from "../../utils/avatarUtils";
+import { Search, X } from "lucide-react";
+
+const T = {
+  bg:       '#111111',
+  base:     '#0c0c0c',
+  surface:  'rgba(255,255,255,0.04)',
+  border:   'rgba(255,255,255,0.08)',
+  accent:   '#b8956a',
+  accentBg: 'rgba(184,149,106,0.1)',
+  text:     '#e4e4e4',
+  muted:    'rgba(228,228,228,0.4)',
+  font:     'Inter, system-ui, sans-serif',
+};
 
 export default function NewDMModal({ onClose, onStart }) {
   const [users, setUsers] = useState([]);
@@ -15,7 +27,6 @@ export default function NewDMModal({ onClose, onStart }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQuery(searchQuery), 300);
     return () => clearTimeout(timer);
@@ -26,42 +37,27 @@ export default function NewDMModal({ onClose, onStart }) {
       try {
         setLoading(true);
         setError(null);
-
         const token = accessToken || localStorage.getItem("accessToken");
-
-        if (!token && !user) {
-          setLoading(false);
-          return;
-        }
-
+        if (!token && !user) { setLoading(false); return; }
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         let res;
-
         if (debouncedQuery.trim()) {
-          res = await api.get(`/api/search/contacts`, {
-            params: { workspaceId, query: debouncedQuery },
-            headers});
+          res = await api.get(`/api/search/contacts`, { params: { workspaceId, query: debouncedQuery }, headers });
           setUsers(res.data.contacts || []);
         } else if (workspaceId) {
-          res = await api.get(`/api/workspaces/${workspaceId}/members`, {
-            headers});
+          res = await api.get(`/api/workspaces/${workspaceId}/members`, { headers });
           const membersList = res.data.members || [];
           const mapped = membersList.map(m => ({
-            _id: m._id,
-            username: m.username || m.email,
-            email: m.email || "",
-            about: m.profile?.about || m.about || "",
-            profilePicture: m.profilePicture || null,
-            status: m.status || "offline",
-            userStatus: m.userStatus || null,
-            role: m.role || "member" }));
+            _id: m._id, username: m.username || m.email, email: m.email || "",
+            about: m.profile?.about || m.about || "", profilePicture: m.profilePicture || null,
+            status: m.status || "offline", userStatus: m.userStatus || null, role: m.role || "member",
+          }));
           setUsers(mapped);
         } else {
           setUsers([]);
         }
         setLoading(false);
       } catch (err) {
-        console.error("❌ Failed to load users:", err);
         setError(getErrorMessage(err));
         setLoading(false);
       }
@@ -70,132 +66,127 @@ export default function NewDMModal({ onClose, onStart }) {
   }, [accessToken, user, workspaceId, debouncedQuery]);
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center animate-fade-in backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-[520px] max-h-[640px] flex flex-col overflow-hidden border border-gray-100 dark:border-gray-700/50">
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '480px', maxHeight: '600px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-white dark:bg-slate-900">
+        <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">New Message</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Start a direct conversation</p>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: T.text, fontFamily: T.font, margin: 0 }}>New Message</h3>
+            <p style={{ fontSize: '12px', color: T.muted, fontFamily: T.font, marginTop: '2px' }}>Start a direct conversation</p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-all"
+            style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: `1px solid ${T.border}`, color: T.muted, cursor: 'pointer', transition: 'all 150ms ease', flexShrink: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
           >
-            ✕
+            <X size={13} />
           </button>
         </div>
 
         {/* Search */}
-        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-          <div className="relative">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+        <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+          <div style={{ position: 'relative' }}>
+            <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: T.muted }} />
             <input
               type="text"
               placeholder="Search people across workspace..."
-              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-gray-900 dark:text-white placeholder-gray-400"
               autoFocus
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ width: '100%', paddingLeft: '30px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', background: T.surface, border: `1px solid ${T.border}`, color: T.text, fontSize: '13px', outline: 'none', fontFamily: T.font, boxSizing: 'border-box', transition: 'border-color 150ms ease' }}
+              onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.4)'}
+              onBlur={e => e.currentTarget.style.borderColor = T.border}
             />
           </div>
         </div>
 
         {/* User List */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading && (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-              <div className="animate-spin w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-3" />
-              <span className="text-sm">Loading members...</span>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: '10px' }}>
+              <div style={{ width: '22px', height: '22px', border: `2px solid ${T.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+              <span style={{ fontSize: '12px', color: T.muted, fontFamily: T.font }}>Loading members...</span>
             </div>
           )}
 
           {error && (
-            <div className="text-center text-red-500 py-8 px-4 text-sm">{error}</div>
+            <div style={{ textAlign: 'center', color: '#f87171', padding: '32px 16px', fontSize: '13px', fontFamily: T.font }}>{error}</div>
           )}
 
           {!loading && !error && users.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-              <div className="text-3xl mb-2">👥</div>
-              <p className="text-sm font-medium">No members found</p>
-              {searchQuery && <p className="text-xs mt-1 text-gray-300">Try a different search term</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: '8px' }}>
+              <span style={{ fontSize: '28px' }}>👥</span>
+              <p style={{ fontSize: '13px', fontWeight: 600, color: T.muted, fontFamily: T.font }}>No members found</p>
+              {searchQuery && <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', fontFamily: T.font }}>Try a different search term</p>}
             </div>
           )}
 
           {!loading && !error && users.length > 0 && (
-            <div className="p-3">
-              <div className="px-2 py-1.5 mb-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+            <div style={{ padding: '8px' }}>
+              <div style={{ padding: '4px 10px 6px', fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font }}>
                 {searchQuery ? "Results" : "Workspace Members"}
               </div>
-              <div className="space-y-1">
-                {users.map((u) => (
-                  <div
-                    key={u._id}
-                    onClick={() => onStart(u)}
-                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl cursor-pointer transition-all group"
-                  >
-                    {/* Avatar */}
-                    <div className="relative flex-shrink-0">
-                      <img
-                        src={getAvatarUrl(u)}
-                        alt={u.username}
-                        className="w-11 h-11 rounded-full object-cover shadow-sm ring-2 ring-white dark:ring-slate-900"
-                        onError={(e) => {
-                          e.target.src = getAvatarUrl({ username: u.username });
-                        }}
-                      />
-                      {/* Online indicator */}
-                      <span
-                        className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white dark:border-slate-900 ${
-                          u.status === "online" ? "bg-green-500" : "bg-gray-300 dark:bg-gray-600"
-                        }`}
-                      />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-gray-900 dark:text-white truncate">
-                          {u.username}
-                        </span>
-                        {u.role === "owner" && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex-shrink-0">
-                            Owner
-                          </span>
-                        )}
-                        {u.role === "admin" && (
-                          <span className="text-[10px] font-bold px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full flex-shrink-0">
-                            Admin
-                          </span>
-                        )}
-                      </div>
-                      {u.email && (
-                        <div className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">
-                          {u.email}
-                        </div>
-                      )}
-                      {u.about && (
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5 italic">
-                          {u.about}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); onStart(u); }}
-                      className="flex-shrink-0 opacity-0 group-hover:opacity-100 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg shadow-sm transition-all transform active:scale-95"
-                    >
-                      Message
-                    </button>
+              {users.map((u) => (
+                <div
+                  key={u._id}
+                  onClick={() => onStart(u)}
+                  className="dm-row"
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', cursor: 'pointer', transition: 'background 150ms ease' }}
+                  onMouseEnter={e => e.currentTarget.style.background = T.accentBg}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  {/* Avatar */}
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <img
+                      src={getAvatarUrl(u)}
+                      alt={u.username}
+                      style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${T.border}` }}
+                      onError={(e) => { e.target.src = getAvatarUrl({ username: u.username }); }}
+                    />
+                    <span style={{
+                      position: 'absolute', bottom: '0', right: '0', width: '9px', height: '9px', borderRadius: '50%',
+                      border: `2px solid ${T.bg}`,
+                      background: u.status === 'online' ? '#34d399' : 'rgba(255,255,255,0.2)',
+                    }} />
                   </div>
-                ))}
-              </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: T.font }}>
+                        {u.username}
+                      </span>
+                      {u.role === 'owner' && (
+                        <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 5px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', color: T.accent, fontFamily: T.font, flexShrink: 0 }}>Owner</span>
+                      )}
+                      {u.role === 'admin' && (
+                        <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 5px', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)', color: '#38bdf8', fontFamily: T.font, flexShrink: 0 }}>Admin</span>
+                      )}
+                    </div>
+                    {u.email && (
+                      <div style={{ fontSize: '11px', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: T.font, marginTop: '1px' }}>{u.email}</div>
+                    )}
+                  </div>
+
+                  {/* Action */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onStart(u); }}
+                    style={{ flexShrink: 0, padding: '4px 10px', background: T.accent, border: 'none', color: '#0c0c0c', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: 0 }}
+                    className="dm-msg-btn"
+                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+                  >
+                    Message
+                  </button>
+                </div>
+              ))}
             </div>
           )}
         </div>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } } .dm-row:hover .dm-msg-btn { opacity: 1 !important; }`}</style>
     </div>
   );
 }

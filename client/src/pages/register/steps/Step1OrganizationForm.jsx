@@ -1,82 +1,66 @@
-import React from 'react';
-import { Building, Globe, CheckCircle2, AlertCircle } from 'lucide-react';
+// Step1OrganizationForm.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import { Building, Globe, CheckCircle2, AlertCircle, Loader } from 'lucide-react';
 
-/**
- * Step1OrganizationForm Component
- * Company name and domain input with real-time availability validation
- */
-const Step1OrganizationForm = ({
-    formData,
-    onChange,
-    errors,
-    validationStatus,
-    theme
-}) => {
+const inp = (err, success) => ({
+    width: '100%', boxSizing: 'border-box', padding: '10px 36px 10px 40px',
+    background: '#141414',
+    border: `1px solid ${err ? '#e05252' : success ? '#5aba8a' : 'rgba(255,255,255,0.08)'}`,
+    color: '#e4e4e4', fontSize: '13px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', transition: 'border-color 150ms ease',
+});
+
+const Label = ({ children }) => (
+    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.4)', display: 'block', marginBottom: '6px' }}>
+        {children}
+    </label>
+);
+
+const StatusIcon = ({ s }) => {
+    if (s === 'checking') return <Loader size={13} style={{ color: '#b8956a', animation: 'spin 0.8s linear infinite' }} />;
+    if (s === 'available') return <CheckCircle2 size={13} style={{ color: '#5aba8a' }} />;
+    if (s === 'taken') return <AlertCircle size={13} style={{ color: '#e05252' }} />;
+    return null;
+};
+
+// Ignore legacy theme prop — always dark
+const Step1OrganizationForm = ({ formData, onChange, errors, validationStatus, theme }) => {
+    const [focused, setFocused] = useState(null);
     return (
-        <div className="max-w-2xl mx-auto space-y-8 animate-fadeIn">
-            <div className="text-center mb-6">
-                <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Tell us about the entity you are registering.
-                </p>
-            </div>
-
-            <div className="space-y-4">
+        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+            <style>{`@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}`}</style>
+            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', textAlign: 'center', marginBottom: '32px' }}>
+                Tell us about the entity you are registering.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {/* Company Name */}
-                <div className="space-y-2">
-                    <label className={`text-sm font-bold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} ml-1`}>
-                        Company Name
-                    </label>
-                    <div className="relative group">
-                        <Building className={`absolute left-4 top-3.5 ${theme === 'dark' ? 'text-gray-400 group-focus-within:text-indigo-400' : 'text-gray-400 group-focus-within:text-indigo-500'} transition-colors`} size={20} />
-                        <input
-                            name="companyName"
-                            value={formData.companyName}
-                            onChange={onChange}
-                            placeholder="e.g. Acme Innovations Inc."
-                            className={`w-full pl-12 pr-12 py-3.5 ${theme === 'dark' ? 'bg-slate-800 text-white placeholder:text-gray-400 border-gray-700' : 'bg-white text-gray-900 placeholder:text-gray-400 border-gray-200'} border ${errors.companyName ? 'border-red-500 ring-2 ring-red-50' : ''} rounded-2xl outline-none shadow-sm`}
-                        />
-                        {validationStatus.companyName === 'checking' && (
-                            <div className="absolute right-4 top-3.5">
-                                <div className={`w-5 h-5 border-2 ${theme === 'dark' ? 'border-indigo-400' : 'border-indigo-600'} border-t-transparent rounded-full animate-spin`} />
-                            </div>
-                        )}
-                        {validationStatus.companyName === 'available' && (
-                            <CheckCircle2 className="absolute right-4 top-3.5 text-green-500" size={20} />
-                        )}
-                        {validationStatus.companyName === 'taken' && (
-                            <AlertCircle className="absolute right-4 top-3.5 text-red-500" size={20} />
-                        )}
+                <div>
+                    <Label>Company Name</Label>
+                    <div style={{ position: 'relative' }}>
+                        <Building size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                        <input name="companyName" value={formData.companyName} onChange={onChange} placeholder="e.g. Acme Innovations Inc."
+                            onFocus={() => setFocused('companyName')} onBlur={() => setFocused(null)}
+                            style={{ ...inp(!!errors.companyName, validationStatus.companyName === 'available'), paddingRight: '36px', borderColor: errors.companyName ? '#e05252' : validationStatus.companyName === 'available' ? '#5aba8a' : focused === 'companyName' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
+                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <StatusIcon s={validationStatus.companyName} />
+                        </div>
                     </div>
-                    {errors.companyName && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyName}</p>}
+                    {errors.companyName && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{errors.companyName}</p>}
                 </div>
 
                 {/* Company Domain */}
-                <div className="space-y-2">
-                    <label className={`text-sm font-bold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} ml-1`}>
-                        Company Domain
-                    </label>
-                    <div className="relative group">
-                        <Globe className={`absolute left-4 top-3.5 ${theme === 'dark' ? 'text-gray-400 group-focus-within:text-indigo-400' : 'text-gray-400 group-focus-within:text-indigo-500'} transition-colors`} size={20} />
-                        <input
-                            name="companyDomain"
-                            value={formData.companyDomain}
-                            onChange={onChange}
-                            placeholder="e.g. acme.com (Must match email domain)"
-                            className={`w-full pl-12 pr-12 py-3.5 ${theme === 'dark' ? 'bg-slate-800 text-white placeholder:text-gray-400 border-gray-700' : 'bg-white text-gray-900 placeholder:text-gray-400 border-gray-200'} border ${errors.companyDomain ? 'border-red-500 ring-2 ring-red-50' : ''} rounded-2xl outline-none shadow-sm`}
-                        />
-                        {validationStatus.companyDomain === 'checking' && (
-                            <div className="absolute right-4 top-3.5">
-                                <div className={`w-5 h-5 border-2 ${theme === 'dark' ? 'border-indigo-400' : 'border-indigo-600'} border-t-transparent rounded-full animate-spin`} />
-                            </div>
-                        )}
-                        {validationStatus.companyDomain === 'available' && (
-                            <CheckCircle2 className="absolute right-4 top-3.5 text-green-500" size={20} />
-                        )}
-                        {validationStatus.companyDomain === 'taken' && (
-                            <AlertCircle className="absolute right-4 top-3.5 text-red-500" size={20} />
-                        )}
+                <div>
+                    <Label>Company Domain</Label>
+                    <div style={{ position: 'relative' }}>
+                        <Globe size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                        <input name="companyDomain" value={formData.companyDomain} onChange={onChange} placeholder="e.g. acme.com (must match email domain)"
+                            onFocus={() => setFocused('companyDomain')} onBlur={() => setFocused(null)}
+                            style={{ ...inp(!!errors.companyDomain, validationStatus.companyDomain === 'available'), paddingRight: '36px', borderColor: errors.companyDomain ? '#e05252' : validationStatus.companyDomain === 'available' ? '#5aba8a' : focused === 'companyDomain' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
+                        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <StatusIcon s={validationStatus.companyDomain} />
+                        </div>
                     </div>
-                    {errors.companyDomain && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyDomain}</p>}
+                    {errors.companyDomain && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{errors.companyDomain}</p>}
                 </div>
             </div>
         </div>

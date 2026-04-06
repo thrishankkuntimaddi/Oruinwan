@@ -1,210 +1,158 @@
 import React, { useEffect } from 'react';
-import {
-    Rocket, X, CheckCircle2, ArrowRight, AlertCircle,
-    Zap, Shield, Check
-} from 'lucide-react';
+import { Rocket, X, CheckCircle2, ArrowRight, AlertCircle, Zap, Shield, Check } from 'lucide-react';
 
-/**
- * CreateWorkspaceModal - Multi-step workspace creation wizard
- * Pure presentational component - entirely controlled by props, no API calls or business logic
- * 
- * @param {boolean} isOpen - Whether modal is visible
- * @param {function} onClose - Callback to close modal and reset state
- * @param {number} createStep - Current step (1-4)
- * @param {function} setCreateStep - Setter for current step
- * @param {Object} createData - Form data {name, adminName, icon, color, rules, invites}
- * @param {function} setCreateData - Setter for form data
- * @param {string} nameError - Validation error for name field
- * @param {function} setNameError - Setter for name error
- * @param {boolean} termsAccepted - Whether terms checkbox is checked
- * @param {function} setTermsAccepted - Setter for terms checkbox
- * @param {function} onSubmit - Callback for final submission (e parameter)
- * @param {function} getIconComponent - Helper to get icon component from icon name
- * @param {Object} user - User object for profile display
- */
+const s = {
+    // Shared style helpers
+    label: { display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' },
+    input: { width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box', transition: '150ms ease' },
+    inputErr: { width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--state-danger)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' },
+    h2: { fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px', letterSpacing: '-0.015em', lineHeight: 1.25 },
+    sub: { fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 },
+};
+
 const CreateWorkspaceModal = ({
-    isOpen,
-    onClose,
-    createStep,
-    setCreateStep,
-    createData,
-    setCreateData,
-    nameError,
-    setNameError,
-    termsAccepted,
-    setTermsAccepted,
-    onSubmit,
-    getIconComponent,
-    user
+    isOpen, onClose, createStep, setCreateStep, createData, setCreateData,
+    nameError, setNameError, termsAccepted, setTermsAccepted, onSubmit, getIconComponent, user
 }) => {
     useEffect(() => {
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
+        if (isOpen) { document.body.style.overflow = 'hidden'; }
+        else { document.body.style.overflow = 'unset'; }
+        return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-4 bg-slate-900/60 backdrop-blur-md animate-fadeIn">
-            <div className="bg-white dark:bg-slate-900 w-full fixed inset-0 md:relative md:inset-auto h-full md:h-[80vh] md:max-w-5xl md:min-h-[600px] md:rounded-3xl shadow-2xl overflow-hidden animate-scaleIn flex flex-col md:flex-row border-0 md:border md:border-slate-200 dark:border-slate-800 z-50">
+    const steps = [
+        { step: 1, label: 'Basics', desc: 'Name & Icon' },
+        { step: 2, label: 'Branding', desc: 'Colors & Theme' },
+        { step: 3, label: 'Admin', desc: 'Review Owner' },
+        { step: 4, label: 'Members', desc: 'Invite Team' },
+    ];
 
-                {/* Sidebar Steps (Left) - Hidden on Mobile, Visible on Desktop */}
-                <div className="hidden md:flex w-64 bg-slate-50/80 dark:bg-slate-950/50 border-r border-slate-200 dark:border-slate-800 p-6 flex-col justify-between backdrop-blur-sm">
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center md:p-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
+            <div className="fixed inset-0 flex flex-col md:relative md:inset-auto md:flex-row md:max-w-5xl md:min-h-[580px] md:h-[80vh]" style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden', fontFamily: 'var(--font)', width: '100%' }}>
+
+                {/* Sidebar — desktop only */}
+                <div className="hidden md:flex" style={{ width: '220px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', padding: '24px', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
-                        <h3 className="font-bold text-xl text-slate-800 dark:text-white mb-8 px-2 flex items-center gap-2">
-                            <Rocket className="text-indigo-600" />
-                            <span>New Workspace</span>
+                        <h3 style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)', marginBottom: '24px', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Rocket size={16} style={{ color: 'var(--accent)' }} />
+                            New Workspace
                         </h3>
 
-                        <div className="space-y-2">
-                            {[
-                                { step: 1, label: "Basics", desc: "Name & Icon" },
-                                { step: 2, label: "Branding", desc: "Colors & Theme" },
-                                { step: 3, label: "Admin", desc: "Review Owner" },
-                                { step: 4, label: "Members", desc: "Invite Team" }
-                            ].map((s) => (
-                                <button
-                                    key={s.step}
-                                    onClick={() => createStep > s.step && setCreateStep(s.step)}
-                                    disabled={createStep < s.step}
-                                    className={`w-full flex items-center gap-3 p-3 rounded-xl text-left transition-all ${createStep === s.step
-                                        ? 'bg-white dark:bg-slate-800 shadow-lg shadow-indigo-500/5 border border-indigo-100 dark:border-indigo-900'
-                                        : createStep > s.step
-                                            ? 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
-                                            : 'opacity-50 cursor-not-allowed text-slate-400'
-                                        }`}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {steps.map(st => (
+                                <button key={st.step}
+                                    onClick={() => createStep > st.step && setCreateStep(st.step)}
+                                    disabled={createStep < st.step}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px',
+                                        borderRadius: '2px', textAlign: 'left', border: 'none', cursor: createStep > st.step ? 'pointer' : 'default',
+                                        background: createStep === st.step ? 'var(--bg-active)' : 'transparent',
+                                        outline: createStep === st.step ? '1px solid var(--border-accent)' : 'none',
+                                        opacity: createStep < st.step ? 0.4 : 1,
+                                        transition: '150ms ease', fontFamily: 'var(--font)',
+                                    }}
+                                    onMouseEnter={e => { if (createStep > st.step) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                    onMouseLeave={e => { if (createStep > st.step) e.currentTarget.style.background = createStep === st.step ? 'var(--bg-active)' : 'transparent'; }}
                                 >
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${createStep === s.step
-                                        ? 'bg-indigo-600 text-white'
-                                        : createStep > s.step
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-slate-200 dark:bg-slate-800 text-slate-500'
-                                        }`}>
-                                        {createStep > s.step ? <CheckCircle2 size={16} /> : s.step}
+                                    <div style={{
+                                        width: '24px', height: '24px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, flexShrink: 0,
+                                        background: createStep === st.step ? 'var(--accent)' : createStep > st.step ? 'var(--state-success)' : 'var(--bg-active)',
+                                        color: (createStep === st.step || createStep > st.step) ? '#0c0c0c' : 'var(--text-muted)',
+                                    }}>
+                                        {createStep > st.step ? <CheckCircle2 size={13} /> : st.step}
                                     </div>
                                     <div>
-                                        <div className={`text-sm font-bold ${createStep === s.step ? 'text-indigo-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'}`}>
-                                            {s.label}
-                                        </div>
-                                        <div className="text-xs text-slate-500 dark:text-slate-500">
-                                            {s.desc}
-                                        </div>
+                                        <div style={{ fontSize: '12px', fontWeight: 500, color: createStep === st.step ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{st.label}</div>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{st.desc}</div>
                                     </div>
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    <div className="pt-6 border-t border-slate-200 dark:border-slate-800 hidden md:block">
-                        <button
-                            onClick={onClose}
-                            className="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors px-2"
-                        >
-                            <X size={16} /> Cancel Creation
-                        </button>
+                    <div style={{ paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <button onClick={onClose} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 0', fontFamily: 'var(--font)' }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                        ><X size={14} /> Cancel Creation</button>
                     </div>
                 </div>
 
-                {/* Content Area (Right) */}
-                <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 relative h-full">
-                    {/* Mobile Header (Visible only on Mobile) */}
-                    <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 z-10">
-                        <div className="flex items-center gap-3">
+                {/* Content area */}
+                <div className="min-h-0" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
+
+                    {/* Mobile header */}
+                    <div className="flex md:hidden" style={{ alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {createStep > 1 && (
-                                <button
-                                    onClick={() => setCreateStep(s => s - 1)}
-                                    className="p-1 -ml-1 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-slate-300"
-                                >
-                                    <ArrowRight className="rotate-180" size={20} />
+                                <button onClick={() => setCreateStep(s => s - 1)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', display: 'flex' }}>
+                                    <ArrowRight style={{ transform: 'rotate(180deg)' }} size={18} />
                                 </button>
                             )}
                             <div>
-                                <h3 className="font-bold text-slate-900 dark:text-white text-lg leading-tight">
-                                    Step {createStep} of 4
-                                </h3>
-                                <p className="text-xs text-slate-500 dark:text-slate-400">
-                                    {[
-                                        "Name & Icon",
-                                        "Branding & Theme",
-                                        "Confirm Admin",
-                                        "Invite Members"
-                                    ][createStep - 1]}
-                                </p>
+                                <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', margin: 0, lineHeight: 1.2 }}>Step {createStep} of 4</h3>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>{['Name & Icon', 'Branding & Theme', 'Confirm Admin', 'Invite Members'][createStep - 1]}</p>
                             </div>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-                        >
-                            <X size={18} />
+                        <button onClick={onClose} style={{ padding: '6px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex' }}>
+                            <X size={15} />
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 lg:p-10 touch-auto overscroll-contain pb-32 md:pb-6">
-                        <form id="create-workspace-form" onSubmit={onSubmit} className="max-w-3xl mx-auto min-h-0 md:h-full flex flex-col justify-start md:justify-center">
+                    {/* Scrollable form */}
+                    <div className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ padding: '24px 32px', minHeight: 0 }}>
+                        <form id="create-workspace-form" onSubmit={onSubmit} style={{ maxWidth: '640px', margin: '0 auto' }}>
 
-                            {/* Step 1: Basics */}
+                            {/* Step 1 */}
                             {createStep === 1 && (
-                                <div className="space-y-6 md:space-y-8 animate-fadeIn">
-                                    <div className="mb-4 md:mb-6">
-                                        <h2 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">Let's build your HQ</h2>
-                                        <p className="text-slate-500 dark:text-slate-400 text-sm md:text-lg">Give your workspace a distinct identity.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <div>
+                                        <h2 style={s.h2}>Let's build your HQ</h2>
+                                        <p style={s.sub}>Give your workspace a distinct identity.</p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                                        <div className="space-y-6">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                             <div>
-                                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Workspace Name</label>
-                                                <input
-                                                    type="text"
-                                                    autoFocus
-                                                    placeholder="e.g. Acme Corp, Engineering Team"
+                                                <label style={s.label}>Workspace Name</label>
+                                                <input type="text" autoFocus placeholder="e.g. Acme Corp, Engineering Team"
                                                     value={createData.name}
-                                                    onChange={(e) => {
-                                                        setCreateData({ ...createData, name: e.target.value });
-                                                        setNameError("");
-                                                    }}
-                                                    className={`w-full px-4 py-3 md:px-5 md:py-4 bg-slate-50 dark:bg-slate-950/50 border ${nameError
-                                                        ? 'border-red-300 focus:border-red-500 ring-4 ring-red-500/10'
-                                                        : 'border-slate-200 dark:border-slate-800 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10'
-                                                        } rounded-xl md:rounded-2xl focus:outline-none transition-all text-base md:text-lg font-medium text-slate-900 dark:text-white placeholder:text-slate-400`}
+                                                    onChange={e => { setCreateData({ ...createData, name: e.target.value }); setNameError(''); }}
+                                                    style={nameError ? s.inputErr : s.input}
+                                                    onFocus={e => { if (!nameError) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                                                    onBlur={e => { if (!nameError) e.currentTarget.style.borderColor = 'var(--border-default)'; }}
                                                 />
-                                                {nameError && <p className="mt-2 text-xs font-bold text-red-500 animate-pulse flex items-center gap-1"><AlertCircle size={12} /> {nameError}</p>}
+                                                {nameError && <p style={{ marginTop: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--state-danger)', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{nameError}</p>}
                                             </div>
-
                                             <div>
-                                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Description (Optional)</label>
-                                                <textarea
-                                                    placeholder="What's this workspace for? Share your mission or guidelines."
-                                                    value={createData.rules || ""}
-                                                    onChange={(e) => setCreateData({ ...createData, rules: e.target.value })}
-                                                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium h-32 resize-none text-slate-700 dark:text-slate-200 text-base"
-                                                ></textarea>
+                                                <label style={s.label}>Description (Optional)</label>
+                                                <textarea placeholder="What's this workspace for? Share your mission or guidelines."
+                                                    value={createData.rules || ''}
+                                                    onChange={e => setCreateData({ ...createData, rules: e.target.value })}
+                                                    style={{ ...s.input, height: '110px', resize: 'vertical', lineHeight: 1.6 }}
+                                                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                                                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                                                />
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Choose an Icon</label>
-                                            <div className="grid grid-cols-4 gap-3 md:gap-3">
-                                                {['rocket', 'briefcase', 'zap', 'palette', 'globe', 'trophy', 'target', 'flame', 'microscope', 'shield', 'lightbulb', 'sparkles'].map((iconName) => {
+                                            <label style={s.label}>Choose an Icon</label>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                                {['rocket', 'briefcase', 'zap', 'palette', 'globe', 'trophy', 'target', 'flame', 'microscope', 'shield', 'lightbulb', 'sparkles'].map(iconName => {
                                                     const IconCmp = getIconComponent(iconName);
+                                                    const active = createData.icon === iconName;
                                                     return (
-                                                        <button
-                                                            key={iconName}
-                                                            type="button"
+                                                        <button key={iconName} type="button"
                                                             onClick={() => setCreateData({ ...createData, icon: iconName })}
-                                                            className={`aspect-square rounded-xl md:rounded-2xl border-2 transition-all flex items-center justify-center ${createData.icon === iconName
-                                                                ? 'border-indigo-600 bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400 shadow-md ring-4 ring-indigo-500/10'
-                                                                : 'border-slate-100 dark:border-slate-800 text-slate-400 hover:border-indigo-200 hover:bg-slate-50 dark:hover:bg-slate-800'
-                                                                }`}
+                                                            style={{ aspectRatio: '1', borderRadius: '2px', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, background: active ? 'var(--accent-dim)' : 'var(--bg-surface)', color: active ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: '150ms ease' }}
+                                                            onMouseEnter={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
+                                                            onMouseLeave={e => { if (!active) { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-muted)'; } }}
                                                         >
-                                                            <IconCmp size={24} className="md:w-6 md:h-6 w-5 h-5" />
+                                                            <IconCmp size={18} />
                                                         </button>
                                                     );
                                                 })}
@@ -214,79 +162,68 @@ const CreateWorkspaceModal = ({
                                 </div>
                             )}
 
-                            {/* Step 2: Branding */}
+                            {/* Step 2 */}
                             {createStep === 2 && (
-                                <div className="space-y-8 animate-fadeIn">
-                                    <div className="mb-6">
-                                        <h2 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">Brand your Space</h2>
-                                        <p className="text-slate-500 dark:text-slate-400 text-base md:text-lg">Pick a color that matches your team's vibe.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <div>
+                                        <h2 style={s.h2}>Brand your Space</h2>
+                                        <p style={s.sub}>Pick a color that matches your team's vibe.</p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 items-start">
-                                        <div className="space-y-6">
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                             <div>
-                                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Preset Colors</label>
-                                                <div className="grid grid-cols-5 gap-3 md:gap-3">
-                                                    {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e'].map((color) => (
-                                                        <button
-                                                            key={color}
-                                                            type="button"
+                                                <label style={s.label}>Preset Colors</label>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }}>
+                                                    {['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6', '#f43f5e'].map(color => (
+                                                        <button key={color} type="button"
                                                             onClick={() => setCreateData({ ...createData, color })}
-                                                            className={`aspect-square rounded-xl flex items-center justify-center transition-all duration-300 group relative overflow-hidden ${createData.color === color ? 'ring-4 ring-offset-2 ring-indigo-500 scale-95 shadow-md' : 'hover:scale-110'
-                                                                }`}
-                                                            style={{ backgroundColor: color }}
+                                                            style={{ aspectRatio: '1', borderRadius: '2px', backgroundColor: color, display: 'flex', alignItems: 'center', justifyContent: 'center', border: createData.color === color ? '2px solid var(--text-primary)' : '2px solid transparent', cursor: 'pointer', transition: '150ms ease', opacity: createData.color === color ? 1 : 0.75 }}
+                                                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                                                            onMouseLeave={e => e.currentTarget.style.opacity = createData.color === color ? '1' : '0.75'}
                                                         >
-                                                            {createData.color === color && <Check className="text-white drop-shadow-md" size={16} strokeWidth={4} />}
+                                                            {createData.color === color && <Check style={{ color: '#fff' }} size={14} strokeWidth={3} />}
                                                         </button>
                                                     ))}
                                                 </div>
                                             </div>
 
-                                            <div className="pt-4 border-t border-slate-200 dark:border-slate-800">
-                                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-4">Custom Color</label>
-                                                <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800">
-                                                    <div className="relative w-12 h-12 rounded-full overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
-                                                        <input
-                                                            type="color"
-                                                            value={createData.color}
-                                                            onChange={(e) => setCreateData({ ...createData, color: e.target.value })}
-                                                            className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] p-0 m-0 cursor-pointer"
+                                            <div style={{ paddingTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                                                <label style={s.label}>Custom Color</label>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                                                    <div style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '2px', overflow: 'hidden', border: '1px solid var(--border-default)', flexShrink: 0 }}>
+                                                        <input type="color" value={createData.color}
+                                                            onChange={e => setCreateData({ ...createData, color: e.target.value })}
+                                                            style={{ position: 'absolute', top: '-50%', left: '-50%', width: '200%', height: '200%', padding: 0, margin: 0, cursor: 'pointer', border: 'none' }}
                                                         />
                                                     </div>
-                                                    <div className="flex-1">
-                                                        <div className="text-sm font-bold text-slate-900 dark:text-white mb-1.5">Pick a custom hex</div>
-                                                        <input
-                                                            type="text"
-                                                            value={createData.color}
-                                                            onChange={(e) => setCreateData({ ...createData, color: e.target.value })}
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '6px' }}>Pick a custom hex</div>
+                                                        <input type="text" value={createData.color}
+                                                            onChange={e => setCreateData({ ...createData, color: e.target.value })}
                                                             placeholder="#000000"
-                                                            className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono text-slate-600 dark:text-slate-300 uppercase focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                                            style={{ ...s.input, fontSize: '11px', fontFamily: 'monospace', textTransform: 'uppercase' }}
+                                                            onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                                                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                                                         />
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="hidden md:flex bg-slate-100 dark:bg-slate-950/50 p-4 md:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 flex-col items-center justify-center text-center">
-                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Live Preview</span>
-
-                                            {/* Workspace Card Preview */}
-                                            <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-2xl p-4 md:p-6 shadow-xl border border-slate-100 dark:border-slate-800 transform transition-all duration-500 hover:scale-105">
-                                                <div
-                                                    className="w-16 h-16 rounded-2xl flex items-center justify-center text-white shadow-lg mb-4 mx-auto transition-colors duration-300"
-                                                    style={{ backgroundColor: createData.color }}
-                                                >
-                                                    {React.createElement(getIconComponent(createData.icon), { size: 32 })}
+                                        <div className="hidden md:flex" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '24px', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '20px', display: 'block' }}>Live Preview</span>
+                                            <div style={{ width: '100%', maxWidth: '240px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '20px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', marginBottom: '12px', backgroundColor: createData.color, transition: 'background-color 300ms ease' }}>
+                                                    {React.createElement(getIconComponent(createData.icon), { size: 20 })}
                                                 </div>
-                                                <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-1">{createData.name || "Workspace Name"}</h3>
-                                                <p className="text-sm text-slate-500 mb-4">Your awesome new workspace</p>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <div className="flex -space-x-2">
-                                                        {[1, 2, 3].map(i => (
-                                                            <div key={i} className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-900 bg-slate-200 dark:bg-slate-800"></div>
-                                                        ))}
+                                                <h3 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 4px' }}>{createData.name || 'Workspace Name'}</h3>
+                                                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 12px' }}>Your new workspace</p>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                                                    <div style={{ display: 'flex' }}>
+                                                        {[1, 2, 3].map(i => <div key={i} style={{ width: '22px', height: '22px', borderRadius: '50%', border: '1px solid var(--border-default)', background: 'var(--bg-hover)', marginLeft: i > 1 ? '-6px' : 0 }} />)}
                                                     </div>
-                                                    <span className="text-xs font-bold text-slate-400">+5 members</span>
+                                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>+5 members</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -294,73 +231,51 @@ const CreateWorkspaceModal = ({
                                 </div>
                             )}
 
-                            {/* Step 3: Admin */}
+                            {/* Step 3 */}
                             {createStep === 3 && (
-                                <div className="space-y-6 animate-fadeIn max-w-4xl mx-auto">
-                                    <div className="mb-4 md:mb-6 text-center md:text-left">
-                                        <h2 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">You're in charge</h2>
-                                        <p className="text-slate-500 dark:text-slate-400 text-base md:text-lg">Confirming you as the Workspace Owner.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <div>
+                                        <h2 style={s.h2}>You're in charge</h2>
+                                        <p style={s.sub}>Confirming you as the Workspace Owner.</p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                                        {/* Left Column: Profile Card */}
-                                        <div className="relative group h-auto md:h-full">
-                                            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-3xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                                            <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl h-full flex flex-col justify-center items-center text-center">
-                                                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full mx-auto mb-4 p-1 bg-gradient-to-br from-indigo-500 to-purple-600">
-                                                    <div className="w-full h-full rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center overflow-hidden">
-                                                        {user?.profilePicture ? (
-                                                            <img src={user.profilePicture} alt="User" className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <span className="text-3xl font-black text-slate-700 dark:text-slate-300">
-                                                                {user?.username?.charAt(0).toUpperCase()}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <h3 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-1">{user?.username}</h3>
-                                                <p className="text-slate-500 dark:text-slate-400 mb-6">{user?.email}</p>
-
-                                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded-full font-bold text-sm border border-indigo-100 dark:border-indigo-800">
-                                                    <Shield size={16} /> Workspace Owner
-                                                </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                                            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px', overflow: 'hidden' }}>
+                                                {user?.profilePicture
+                                                    ? <img src={user.profilePicture} alt="User" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    : <span style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>{user?.username?.charAt(0).toUpperCase()}</span>
+                                                }
+                                            </div>
+                                            <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>{user?.username}</h3>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 16px' }}>{user?.email}</p>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '5px 12px', background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: '2px', fontSize: '12px', fontWeight: 600, border: '1px solid var(--border-accent)' }}>
+                                                <Shield size={13} /> Workspace Owner
                                             </div>
                                         </div>
 
-                                        {/* Right Column: Superpowers & Terms */}
-                                        <div className="flex flex-col gap-6 h-full">
-                                            <div className="p-6 bg-slate-50 dark:bg-slate-950/50 rounded-2xl border border-slate-200 dark:border-slate-800 text-left flex-1">
-                                                <h4 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                                    <Zap size={18} className="text-amber-500" /> Owner Superpowers
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <div style={{ padding: '16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', flex: 1 }}>
+                                                <h4 style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <Zap size={14} style={{ color: 'var(--accent)' }} /> Owner Superpowers
                                                 </h4>
-                                                <div className="grid grid-cols-1 gap-3 mb-6">
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                     {['Manage Billings & Plans', 'Delete or Archive Workspace', 'Invite/Remove Team Members', 'Configure Integrations & API'].map((p, i) => (
-                                                        <div key={i} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                                            <CheckCircle2 size={14} className="text-green-500 shrink-0" /> {p}
+                                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                            <CheckCircle2 size={13} style={{ color: 'var(--state-success)', flexShrink: 0 }} /> {p}
                                                         </div>
                                                     ))}
                                                 </div>
 
-                                                <div className="pt-6 border-t border-slate-200 dark:border-slate-800 mt-auto">
-                                                    <label className="flex items-start gap-3 cursor-pointer group">
-                                                        <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-all shrink-0 ${termsAccepted
-                                                            ? 'bg-indigo-600 border-indigo-600 text-white'
-                                                            : 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 group-hover:border-indigo-400'
-                                                            }`}>
-                                                            {termsAccepted && <Check size={14} strokeWidth={3} />}
+                                                <div style={{ paddingTop: '16px', marginTop: '16px', borderTop: '1px solid var(--border-subtle)' }}>
+                                                    <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+                                                        <div style={{ marginTop: '1px', width: '16px', height: '16px', borderRadius: '2px', border: `1px solid ${termsAccepted ? 'var(--accent)' : 'var(--border-accent)'}`, background: termsAccepted ? 'var(--accent)' : 'var(--bg-input)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: '150ms ease' }}>
+                                                            {termsAccepted && <Check size={11} strokeWidth={3} style={{ color: '#0c0c0c' }} />}
                                                         </div>
-                                                        <input
-                                                            type="checkbox"
-                                                            className="hidden"
-                                                            checked={termsAccepted}
-                                                            onChange={(e) => setTermsAccepted(e.target.checked)}
-                                                        />
-                                                        <div className="text-sm">
-                                                            <span className="font-bold text-slate-700 dark:text-slate-300">I accept the responsibilities of a Workspace Owner.</span>
-                                                            <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
-                                                                By continuing, you acknowledge that you are the primary administrator for this workspace.
-                                                            </p>
+                                                        <input type="checkbox" style={{ display: 'none' }} checked={termsAccepted} onChange={e => setTermsAccepted(e.target.checked)} />
+                                                        <div style={{ fontSize: '12px' }}>
+                                                            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>I accept the responsibilities of a Workspace Owner.</span>
+                                                            <p style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '3px', lineHeight: 1.6 }}>By continuing, you acknowledge that you are the primary administrator for this workspace.</p>
                                                         </div>
                                                     </label>
                                                 </div>
@@ -370,107 +285,88 @@ const CreateWorkspaceModal = ({
                                 </div>
                             )}
 
-                            {/* Step 4: Members */}
+                            {/* Step 4 */}
                             {createStep === 4 && (
-                                <div className="space-y-8 animate-fadeIn">
-                                    <div className="mb-4 md:mb-6">
-                                        <h2 className="text-xl md:text-3xl font-bold text-slate-900 dark:text-white mb-2">Gather your team</h2>
-                                        <p className="text-slate-500 dark:text-slate-400 text-base md:text-lg">Work is better together. Invite them now.</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                    <div>
+                                        <h2 style={s.h2}>Gather your team</h2>
+                                        <p style={s.sub}>Work is better together. Invite them now.</p>
                                     </div>
 
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                                        {/* Left Column: Email Input */}
-                                        <div className="lg:col-span-2 flex flex-col h-full">
-                                            <div className="flex-1 flex flex-col h-full">
-                                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">Email Addresses</label>
-                                                <textarea
-                                                    placeholder="sarah@example.com, alex@design.co..."
-                                                    value={createData.invites || ""}
-                                                    onChange={(e) => setCreateData({ ...createData, invites: e.target.value })}
-                                                    className="w-full px-5 py-4 bg-slate-50 dark:bg-slate-950/50 border border-slate-200 dark:border-slate-800 rounded-xl md:rounded-2xl focus:outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all font-medium flex-1 resize-none text-slate-700 dark:text-slate-200 font-mono text-sm min-h-[220px]"
-                                                ></textarea>
-                                                <p className="text-xs text-slate-400 mt-2">Separate multiple emails with commas.</p>
-                                            </div>
+                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                        <div style={{ display: 'flex', flexDirection: 'column' }} className="lg:col-span-2">
+                                            <label style={s.label}>Email Addresses</label>
+                                            <textarea placeholder="sarah@example.com, alex@design.co..."
+                                                value={createData.invites || ''}
+                                                onChange={e => setCreateData({ ...createData, invites: e.target.value })}
+                                                style={{ ...s.input, minHeight: '200px', resize: 'vertical', lineHeight: 1.6, fontFamily: 'monospace' }}
+                                                onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                                                onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                                            />
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Separate multiple emails with commas.</p>
                                         </div>
 
-                                        {/* Right Column: Skip Card */}
-                                        <div className="h-full hidden md:block">
-                                            <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-3xl border border-blue-100 dark:border-blue-900/30 h-full flex flex-col justify-center">
-                                                <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4">
-                                                    <Rocket size={24} />
-                                                </div>
-                                                <h4 className="font-bold text-blue-900 dark:text-blue-200 mb-2">Skip for now?</h4>
-                                                <p className="text-sm text-blue-700 dark:text-blue-300/80 mb-6">You can always invite members later from workspace settings.</p>
-                                                <button
-                                                    type="button"
-                                                    onClick={onSubmit}
-                                                    className="w-full py-3 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 font-bold rounded-xl shadow-sm border border-blue-100 dark:border-blue-900/50 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors mt-auto"
-                                                >
-                                                    Skip & Launch
-                                                </button>
+                                        <div className="hidden md:flex" style={{ flexDirection: 'column', justifyContent: 'center', padding: '20px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                                            <div style={{ width: '32px', height: '32px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', color: 'var(--text-muted)' }}>
+                                                <Rocket size={16} />
                                             </div>
+                                            <h4 style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', margin: '0 0 6px' }}>Skip for now?</h4>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: 1.6 }}>You can always invite members later from workspace settings.</p>
+                                            <button type="button" onClick={onSubmit}
+                                                style={{ padding: '8px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                            >Skip &amp; Launch</button>
                                         </div>
                                     </div>
                                 </div>
                             )}
-
                         </form>
                     </div>
 
-                    {/* Footer Actions */}
-                    <div className="p-4 md:p-6 border-t border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-between items-center shrink-0 safe-pb absolute md:relative bottom-0 left-0 right-0 z-20">
-                        {createStep > 1 ? (
-                            <button
-                                onClick={() => setCreateStep(s => s - 1)}
-                                className="hidden md:flex h-12 md:h-auto px-6 py-0 md:py-3 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors items-center justify-center"
-                            >
-                                Back
-                            </button>
-                        ) : (
-                            <div className="w-4 md:w-20"></div> // Spacer
-                        )}
+                    {/* Footer */}
+                    <div className="absolute bottom-0 left-0 right-0 md:relative md:bottom-auto" style={{ padding: '12px 24px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
 
-                        {/* Mobile specific back button space preservation */}
+                        {createStep > 1 ? (
+                            <button onClick={() => setCreateStep(s => s - 1)}
+                                className="hidden md:flex"
+                                style={{ height: '36px', padding: '0 16px', color: 'var(--text-secondary)', fontWeight: 500, fontSize: '13px', background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease', alignItems: 'center' }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+                            >Back</button>
+                        ) : <div style={{ width: '60px' }} />}
+
                         <div className="md:hidden">
                             {createStep === 4 && (
-                                <button
-                                    type="button"
-                                    onClick={onSubmit}
-                                    className="text-blue-600 dark:text-blue-400 font-bold text-sm px-2"
-                                >
-                                    Skip
-                                </button>
+                                <button type="button" onClick={onSubmit} style={{ color: 'var(--accent)', fontWeight: 600, fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>Skip</button>
                             )}
                         </div>
 
                         {createStep < 4 ? (
                             <button
                                 onClick={() => {
-                                    if (createStep === 1 && !createData.name.trim()) {
-                                        setNameError("Workspace name is required");
-                                        return;
-                                    }
+                                    if (createStep === 1 && !createData.name.trim()) { setNameError('Workspace name is required'); return; }
                                     setCreateStep(s => s + 1);
                                 }}
                                 disabled={createStep === 3 && !termsAccepted}
-                                className={`h-12 md:h-auto w-full md:w-auto px-6 md:px-8 py-0 md:py-3 bg-indigo-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2 ${createStep === 3 && !termsAccepted
-                                    ? 'opacity-50 cursor-not-allowed bg-slate-400 shadow-none'
-                                    : 'hover:bg-indigo-700 hover:shadow-indigo-500/30 hover:-translate-y-0.5'
-                                    }`}
+                                style={{ height: '36px', padding: '0 20px', background: (createStep === 3 && !termsAccepted) ? 'var(--bg-active)' : 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', color: (createStep === 3 && !termsAccepted) ? 'var(--text-muted)' : 'var(--text-primary)', fontWeight: 500, fontSize: '13px', cursor: (createStep === 3 && !termsAccepted) ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font)', transition: '150ms ease', opacity: (createStep === 3 && !termsAccepted) ? 0.45 : 1 }}
+                                className="w-full md:w-auto"
+                                onMouseEnter={e => { if (!(createStep === 3 && !termsAccepted)) e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                             >
-                                Next <span className="hidden md:inline">Step</span> <ArrowRight size={18} />
+                                Next <span className="hidden md:inline">Step</span> <ArrowRight size={15} />
                             </button>
                         ) : (
-                            <button
-                                onClick={onSubmit}
-                                className="h-12 md:h-auto px-6 md:px-10 py-0 md:py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-0.5 transition-all flex items-center gap-2"
+                            <button onClick={onSubmit}
+                                style={{ height: '36px', padding: '0 20px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', borderRadius: '2px', color: 'var(--accent)', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-active)'; e.currentTarget.style.color = 'var(--accent-hover)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent-dim)'; e.currentTarget.style.color = 'var(--accent)'; }}
                             >
-                                <Rocket size={18} /> Launch <span className="hidden md:inline">Workspace</span>
+                                <Rocket size={15} /> Launch <span className="hidden md:inline">Workspace</span>
                             </button>
                         )}
                     </div>
                 </div>
-
             </div>
         </div>
     );

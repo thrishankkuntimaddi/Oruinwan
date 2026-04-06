@@ -1,555 +1,307 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useTheme } from "../contexts/ThemeContext";
+// ChttrixDocs.jsx — Monolith Flow Design System
+import React, { useState, useEffect } from 'react';
+// Standalone docs page — manages its own scroll via useEffect
 import {
-  BookOpen, MessageSquare, Hash, GitBranch, Users, CheckSquare, FileText,
-  Shield, Search, Sparkles, BellRing, Settings, Sun, Moon, Building2,
-  Lock, UserCheck, AlertTriangle, Check, Menu, X, ArrowRight,
-  Key, Video, Globe, Zap, Layers, Command
-} from "lucide-react";
+    BookOpen, MessageSquare, Hash, GitBranch, Users, CheckSquare, FileText,
+    Shield, Sparkles, BellRing, Settings, Building2, Lock, UserCheck,
+    Key, Video, Globe, Zap, Layers, Command, Search, ChevronRight, AlertTriangle
+} from 'lucide-react';
 
-const ChttrixDocs = () => {
-  const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState("intro");
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+const SECTIONS = [
+    { id: 'intro',           icon: BookOpen,     label: 'Introduction' },
+    { id: 'getting-started', icon: Zap,          label: 'Getting Started' },
+    { id: 'workspaces',      icon: Building2,    label: 'Workspaces' },
+    { id: 'channels',        icon: Hash,         label: 'Channels' },
+    { id: 'messaging',       icon: MessageSquare,label: 'Messaging & DMs' },
+    { id: 'threads',         icon: GitBranch,    label: 'Threads' },
+    { id: 'tasks',           icon: CheckSquare,  label: 'Tasks' },
+    { id: 'notes',           icon: FileText,     label: 'Notes' },
+    { id: 'ai',              icon: Sparkles,     label: 'Chttrix AI' },
+    { id: 'search',          icon: Search,       label: 'Search' },
+    { id: 'notifications',   icon: BellRing,     label: 'Notifications' },
+    { id: 'security',        icon: Shield,       label: 'Security & Roles' },
+    { id: 'settings',        icon: Settings,     label: 'Settings' },
+];
 
-  // Manual Scroll Spy Logic with Auto-Scroll Sidebar
-  useEffect(() => {
-    const handleScroll = () => {
-      // Offset (200px) ensures we highlight the section *before* it hits the very top
-      const scrollPosition = window.scrollY + 200;
-
-      const sections = ['intro', 'getting-started', 'workspaces', 'channels', 'messaging',
-        'tasks', 'notes', 'ai', 'search', 'updates', 'security', 'roles', 'settings'];
-
-      for (const id of sections) {
-        const element = document.getElementById(id);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
-            if (activeTab !== id) {
-              setActiveTab(id);
-              // Auto-scroll sidebar to active item if needed
-              const sidebarItem = document.getElementById(`nav-${id}`);
-              if (sidebarItem) {
-                sidebarItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-              }
-            }
-          }
-        }
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [activeTab]);
-
-  const scrollToSection = (id) => {
-    setActiveTab(id);
-    const element = document.getElementById(id);
-    if (element) {
-      const yOffset = -24;
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
-    }
-    setMobileMenuOpen(false);
-  };
-
-  const NavItem = ({ id, label, icon: Icon }) => (
-    <button
-      id={`nav-${id}`}
-      onClick={() => scrollToSection(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 group ${activeTab === id
-        ? "bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-500/20 ring-1 ring-indigo-500/50"
-        : "text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-white"
-        }`}
-    >
-      {Icon && <Icon size={18} className={`transition-colors ${activeTab === id ? "text-indigo-200" : "text-slate-400 group-hover:text-indigo-500"}`} />}
-      <span className="text-sm font-medium">{label}</span>
-      {activeTab === id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-    </button>
-  );
-
-  return (
-    <div className="min-h-screen w-full bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white flex flex-col md:flex-row font-sans transition-colors duration-500 selection:bg-indigo-500/30 selection:text-indigo-200">
-
-      {/* Mobile Header */}
-      <div className="md:hidden flex items-center justify-between p-4 bg-white/80 dark:bg-[#0B0F19]/80 backdrop-blur-md border-b border-slate-200 dark:border-white/5 sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          <img src="/chttrix-logo.jpg" alt="Logo" className="w-8 h-8 rounded-lg shadow-sm" />
-          <span className="font-bold text-lg tracking-tight">Docs</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button onClick={toggleTheme} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
-            {mobileMenuOpen ? <X /> : <Menu />}
-          </button>
-        </div>
-      </div>
-
-      {/* Sidebar - GENUINELY FIXED POSITION */}
-      <aside className={`fixed top-0 left-0 h-screen z-40 bg-white dark:bg-[#0B0F19] border-r border-slate-200 dark:border-white/5 w-80 transform transition-transform duration-300 ${mobileMenuOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"}`}>
-        <div className="h-full flex flex-col overflow-y-auto custom-scrollbar p-6">
-          <div className="mb-8 px-2 flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-3 group">
-              <div className="relative">
-                <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md group-hover:scale-105 transition-transform duration-300" />
-              </div>
-              <div>
-                <h1 className="font-extrabold text-xl leading-none tracking-tight text-slate-900 dark:text-white">Chttrix</h1>
-                <p className="text-xs text-slate-500 font-medium mt-1">Collaboration OS</p>
-              </div>
-            </Link>
-            <button onClick={toggleTheme} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-amber-400 transition-colors">
-              {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-            </button>
-          </div>
-
-          <div className="space-y-10 flex-1">
-            <SectionGroup title="Start Here">
-              <NavItem id="intro" label="Introduction" icon={BookOpen} />
-              <NavItem id="getting-started" label="Installation & Setup" icon={Zap} />
-            </SectionGroup>
-
-            <SectionGroup title="Core Platform">
-              <NavItem id="workspaces" label="Workspaces & Teams" icon={Building2} />
-              <NavItem id="channels" label="Channels & Organization" icon={Hash} />
-              <NavItem id="messaging" label="Messaging & Threads" icon={MessageSquare} />
-            </SectionGroup>
-
-            <SectionGroup title="Productivity Suite">
-              <NavItem id="tasks" label="Tasks & Workflows" icon={CheckSquare} />
-              <NavItem id="notes" label="Notes & Docs" icon={FileText} />
-              <NavItem id="ai" label="Chttrix Intelligence" icon={Sparkles} />
-              <NavItem id="search" label="Universal Search" icon={Search} />
-              <NavItem id="updates" label="Company Updates" icon={BellRing} />
-            </SectionGroup>
-
-            <SectionGroup title="Admin & Security">
-              <NavItem id="security" label="Security & E2EE" icon={Shield} />
-              <NavItem id="roles" label="Roles & Governance" icon={UserCheck} />
-              <NavItem id="settings" label="Settings" icon={Settings} />
-            </SectionGroup>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-slate-100 dark:border-white/5">
-            <div className="flex justify-center items-center px-2">
-              <p className="text-xs font-medium text-slate-400">© 2026 Chttrix</p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main Content Area - OFFSET FOR FIXED SIDEBAR */}
-      <main className="flex-1 min-w-0 md:pl-80 relative">
-        {/* Top Right Back Button - Sticky or Fixed? Fixed is better for persistent access */}
-        <div className="fixed top-6 right-8 z-30 hidden md:block">
-          <Link to="/" className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-black/50 backdrop-blur-md border border-slate-200 dark:border-white/10 rounded-full text-sm font-bold text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-white/10 hover:border-indigo-200 dark:hover:border-white/20 transition-all shadow-sm">
-            <ArrowRight size={16} className="rotate-180" /> Back to Home
-          </Link>
-        </div>
-
-        <div className="max-w-5xl mx-auto px-8 md:px-12 py-20 pb-40">
-
-          {/* Hero Section */}
-          <section id="intro" className="mb-32 pt-10 scroll-mt-32 relative">
-            {/* Decorative background blur */}
-            <div className="absolute -top-20 -left-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div className="absolute top-40 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-            <div className="relative">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900/5 dark:bg-white/10 border border-slate-900/10 dark:border-white/10 backdrop-blur-sm text-slate-600 dark:text-slate-300 text-xs font-bold uppercase tracking-wider mb-8">
-                <FileText size={14} className="text-indigo-500" /> Official Documentation
-              </div>
-              <h1 className="text-6xl md:text-7xl font-black mb-8 leading-tight tracking-tight text-slate-900 dark:text-white">
-                The Chttrix <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 animate-gradient-x">
-                  Collaboration OS
-                </span>
-              </h1>
-              <p className="text-2xl text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl font-medium">
-                The complete guide to the secure, AI-powered platform that unifies messaging, project management, and knowledge sharing.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6 mt-16">
-              <HeroCard icon={Lock} title="End-to-End Encrypted" desc="Zero-knowledge architecture means we can't read your data." />
-              <HeroCard icon={Sparkles} title="AI Native" desc="Gemini integration with strict privacy controls built-in." />
-              <HeroCard icon={Layers} title="Unified Workflow" desc="Chat, Tasks, and Docs in a single fluid interface." />
-            </div>
-          </section>
-
-          {/* Getting Started */}
-          <section id="getting-started" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Getting Started" subtitle="Set up your environment in minutes." />
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <BentoCard icon={Video} title="Installation" className="bg-gradient-to-br from-indigo-50 to-white dark:from-[#0F1623] dark:to-[#111827]">
-                <ul className="space-y-4 mt-4">
-                  <InstallOption platform="Web Browser" desc="Access via chttrix.app — no install needed." />
-                  <InstallOption platform="Desktop (Mac/Win/Linux)" desc="Native notifications and offline support." />
-                  <InstallOption platform="Mobile (iOS/Android)" desc="Stay connected on the go." />
-                </ul>
-              </BentoCard>
-
-              <div className="space-y-6">
-                <StepCard num="01" title="Create Account" desc="Sign up with your work email. We'll automatically verify your domain." />
-                <StepCard num="02" title="Setup MFA" desc="Enable Multi-Factor Authentication for enhanced account security." />
-                <StepCard num="03" title="Join Workspace" desc="Accept an invite or request to join your team's workspace." />
-              </div>
-            </div>
-          </section>
-
-          {/* Workspaces */}
-          <section id="workspaces" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Workspaces & Teams" subtitle="How Chttrix organizes your company." />
-
-            <div className="p-8 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-white/5 shadow-xl relative overflow-hidden mb-8">
-              <div className="relative z-10 grid md:grid-cols-3 gap-8 text-center">
-                <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl">
-                  <Building2 size={32} className="mx-auto text-indigo-500 mb-4" />
-                  <h3 className="font-bold text-lg mb-2">1. The Company</h3>
-                  <p className="text-sm text-slate-500">The top-level container for all users, billing, and policies.</p>
-                </div>
-                <div className="flex items-center justify-center">
-                  <ArrowRight size={32} className="text-slate-300 dark:text-slate-600 rotate-90 md:rotate-0" />
-                </div>
-                <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl">
-                  <Layers size={32} className="mx-auto text-purple-500 mb-4" />
-                  <h3 className="font-bold text-lg mb-2">2. Workspaces</h3>
-                  <p className="text-sm text-slate-500">Project or team-specific environments (e.g., "Designing", "Dev Ops").</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <BentoCard title="Personal Workspace" icon={Users}>
-                <p className="text-slate-600 dark:text-slate-400 mt-2">
-                  Every user gets a private sandbox. Use it for personal tasks, notes, and drafting content before sharing.
-                </p>
-              </BentoCard>
-              <BentoCard title="Creation Policy" icon={AlertTriangle} accent="amber">
-                <p className="text-slate-600 dark:text-slate-400 mt-2">
-                  To prevent fragmentation, <strong>Employees cannot create workspaces</strong> freely. They must request approval from a Manager.
-                </p>
-              </BentoCard>
-            </div>
-          </section>
-
-          {/* Channels */}
-          <section id="channels" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Channels" subtitle="The heartbeat of your communication." />
-
-            <div className="grid lg:grid-cols-3 gap-6 mb-8">
-              <div className="lg:col-span-2 p-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl text-white shadow-2xl">
-                <Hash size={48} className="mb-6 opacity-80" />
-                <h3 className="text-2xl font-bold mb-4">Core Principles</h3>
-                <div className="grid sm:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-bold mb-2 opacity-90">#general & #announcements</h4>
-                    <p className="text-sm opacity-75">Mandatory default channels in every workspace. Members cannot leave these.</p>
-                  </div>
-                  <div>
-                    <h4 className="font-bold mb-2 opacity-90">Smart Tabs</h4>
-                    <p className="text-sm opacity-75">Every channel can have custom tabs (Files, Canvas, Links) to organize resources.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <FeatureRow icon={Globe} title="Public Channels" desc="Open to all workspace members." />
-                <FeatureRow icon={Lock} title="Private Channels" desc="Invite-only. Hidden from search." />
-                <FeatureRow icon={Search} title="Recall" desc="Search history instantly." />
-              </div>
-            </div>
-          </section>
-
-          {/* Messaging & Threads */}
-          <section id="messaging" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Messaging & Threads" subtitle="Structured conversations that flow." />
-
-            <div className="grid md:grid-cols-2 gap-8">
-              <BentoCard title="Contextual Threads" icon={GitBranch}>
-                <div className="my-4 p-4 bg-slate-100 dark:bg-black/20 rounded-xl border-l-4 border-indigo-500">
-                  <div className="flex gap-2 items-center mb-2">
-                    <div className="w-6 h-6 rounded-full bg-slate-300 dark:bg-slate-700" />
-                    <div className="h-2 w-24 bg-slate-200 dark:bg-slate-700 rounded" />
-                  </div>
-                  <div className="h-2 w-full bg-slate-200 dark:bg-slate-700 rounded mb-2" />
-                  <div className="mt-3 pl-4 border-l border-slate-300 dark:border-slate-600">
-                    <span className="text-xs font-bold text-indigo-500">Reply in thread...</span>
-                  </div>
-                </div>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
-                  Don't clutter the main feed. Click bubble icon on any message to start a side-discussion.
-                </p>
-              </BentoCard>
-
-              <BentoCard title="Secure DMs" icon={MessageSquare}>
-                <div className="my-4 grid gap-2">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-lg">
-                    <Lock size={16} className="text-emerald-500" />
-                    <span className="text-sm font-medium">End-to-End Encrypted</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-lg">
-                    <Users size={16} className="text-blue-500" />
-                    <span className="text-sm font-medium">Group DMs (up to 9)</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-lg">
-                    <Search size={16} className="text-purple-500" />
-                    <span className="text-sm font-medium">Full History Search</span>
-                  </div>
-                </div>
-              </BentoCard>
-            </div>
-          </section>
-
-          {/* Tasks */}
-          <section id="tasks" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Tasks & Workflows" subtitle="Built-in project management." />
-
-            <div className="bg-[#1e1e2e] rounded-3xl p-8 border border-white/10 text-white overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-8 opacity-20"><CheckSquare size={120} /></div>
-
-              <div className="relative z-10 grid md:grid-cols-2 gap-12">
-                <div>
-                  <h3 className="text-2xl font-bold mb-6">Native Kanban Power</h3>
-                  <ul className="space-y-4">
-                    <li className="flex gap-3">
-                      <div className="mt-1 w-5 h-5 rounded-full border-2 border-indigo-500 bg-indigo-500/20 flex items-center justify-center text-[10px] font-bold">1</div>
-                      <span><strong>Assign & Track:</strong> Assign tasks to teammates with due dates and priority labels.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <div className="mt-1 w-5 h-5 rounded-full border-2 border-indigo-500 bg-indigo-500/20 flex items-center justify-center text-[10px] font-bold">2</div>
-                      <span><strong>Workflows:</strong> Request task transfers or approvals directly in the chat.</span>
-                    </li>
-                    <li className="flex gap-3">
-                      <div className="mt-1 w-5 h-5 rounded-full border-2 border-indigo-500 bg-indigo-500/20 flex items-center justify-center text-[10px] font-bold">3</div>
-                      <span><strong>Subtasks:</strong> Break down complex work into manageable steps.</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="bg-white/5 rounded-xl p-4 backdrop-blur-sm border border-white/10">
-                  <div className="flex justify-between mb-4">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">To Do</span>
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">In Progress</span>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="p-3 bg-white/10 rounded-lg text-sm border-l-4 border-red-500">Q4 Reports</div>
-                    <div className="p-3 bg-white/10 rounded-lg text-sm border-l-4 border-yellow-500">Update API Docs</div>
-                    <div className="ml-auto w-1/2 p-3 bg-indigo-600 rounded-lg text-sm shadow-lg">Deploy v2.1</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Notes */}
-          <section id="notes" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Notes & Docs" subtitle="Multi-player document collaboration." />
-            <div className="grid md:grid-cols-3 gap-6">
-              <BentoCard icon={Zap} title="Real-Time" desc="See others' cursors as they type. Zero latency." />
-              <BentoCard icon={Command} title="Markdown" desc="Use slash commands and markdown shortcuts for speed." />
-              <BentoCard icon={Layers} title="Embedded" desc="Attach notes directly to channels or tasks." />
-            </div>
-          </section>
-
-          {/* AI */}
-          <section id="ai" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Chttrix Intelligence" subtitle="Powered by Gemini. Protected by Privacy." />
-
-            <div className="grid gap-6">
-              <div className="p-8 rounded-3xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10 border border-purple-200 dark:border-purple-500/20">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2 bg-purple-600 text-white rounded-lg"><Sparkles size={24} /></div>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white">Privacy-First Design</h3>
-                </div>
-                <p className="text-lg text-slate-700 dark:text-slate-300 mb-6">
-                  Chttrix AI provides powerful assistance without compromising your data security.
-                </p>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3 p-4 bg-white dark:bg-[#0B0F19] rounded-xl border border-purple-100 dark:border-white/5">
-                    <Check size={20} className="text-green-500" />
-                    <span className="font-medium text-sm">Explicit Opt-In Only (@ChttrixAI)</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-4 bg-white dark:bg-[#0B0F19] rounded-xl border border-purple-100 dark:border-white/5">
-                    <Check size={20} className="text-green-500" />
-                    <span className="font-medium text-sm">No Background Training</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-3 gap-6">
-                <AICapabilityCard title="Summarize" desc="Catch up on long threads instantly." />
-                <AICapabilityCard title="Generate Tasks" desc="Turn chat discussions into actionable items." />
-                <AICapabilityCard title="Answer Queries" desc="Ask questions about your workspace data." />
-              </div>
-            </div>
-          </section>
-
-          {/* Updates */}
-          <section id="updates" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Company Updates" subtitle="A private social feed for your organization." />
-            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl">
-              Share wins, weekly goals, or major announcements in a feed visible to everyone. Breaks down silos between departments.
-            </p>
-          </section>
-
-          {/* Search */}
-          <section id="search" className="mb-32 scroll-mt-24">
-            <div className="p-8 bg-slate-900 text-white rounded-3xl flex flex-col md:flex-row items-center justify-between gap-8">
-              <div>
-                <h3 className="text-2xl font-bold mb-2">Universal Search</h3>
-                <p className="text-slate-400 mb-6">Find anything. Files, messages, people, or tasks.</p>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg border border-white/10 font-mono text-sm">
-                  <Command size={14} /> K
-                </div>
-              </div>
-              <div className="w-full md:w-1/2 p-4 bg-black/30 rounded-xl border border-white/10 backdrop-blur-sm">
-                <div className="flex items-center gap-3 text-slate-400 border-b border-white/10 pb-3 mb-3">
-                  <Search size={18} /> <span className="text-sm">Search for "Q3 Design"...</span>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-8 bg-white/5 rounded w-3/4"></div>
-                  <div className="h-8 bg-white/5 rounded w-1/2"></div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Security */}
-          <section id="security" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Security & Compliance" subtitle="Your data, your keys." />
-
-            <div className="grid md:grid-cols-2 gap-8 mb-8">
-              <BentoCard title="Zero Knowledge" icon={Key}>
-                <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm">
-                  We use client-side key management. We literally <strong>cannot</strong> read your encrypted messages, even if subpoenaed.
-                </p>
-              </BentoCard>
-              <BentoCard title="Enterprise Controls" icon={Shield}>
-                <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm">
-                  Admins get full audit logs, device management, and domain verification tools.
-                </p>
-              </BentoCard>
-            </div>
-            <Link to="/security" className="inline-flex items-center gap-2 font-bold text-indigo-600 dark:text-indigo-400 hover:gap-3 transition-all">
-              Visit Security Center <ArrowRight size={16} />
-            </Link>
-          </section>
-
-          {/* Settings */}
-          <section id="settings" className="mb-32 scroll-mt-24">
-            <SectionHeader title="Settings" subtitle="Customize your experience." />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <SettingCard icon={UserCheck} label="Profile" />
-              <SettingCard icon={BellRing} label="Notifications" />
-              <SettingCard icon={Lock} label="Privacy" />
-              <SettingCard icon={Globe} label="Language" />
-            </div>
-          </section>
-
-          <footer className="mt-20 border-t border-slate-200 dark:border-white/10 pt-12 text-center text-slate-500 text-sm">
-            <p className="mb-4">© 2026 Chttrix Inc.</p>
-            <div className="flex justify-center gap-6 font-medium">
-              <Link to="/privacy" className="hover:text-indigo-500 transition-colors">Privacy</Link>
-              <Link to="/terms" className="hover:text-indigo-500 transition-colors">Terms</Link>
-              <Link to="/security" className="hover:text-indigo-500 transition-colors">Security</Link>
-            </div>
-          </footer>
-
-        </div>
-      </main>
-    </div>
-  );
+const S = {
+    h2: { fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
+    h3: { fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '8px', marginTop: '20px' },
+    p:  { fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.85', marginBottom: '16px' },
+    ul: { paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '18px' },
+    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.7' },
+    dot: { width: '5px', height: '5px', background: '#b8956a', flexShrink: 0, marginTop: '9px' },
+    code: { fontFamily: '"JetBrains Mono", "Fira Code", monospace', fontSize: '12px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', padding: '2px 6px', color: '#b8956a', borderRadius: '2px' },
 };
 
-// --- Premium Components ---
-
-const SectionGroup = ({ title, children }) => (
-  <div className="mb-2">
-    <p className="px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">{title}</p>
-    <div className="space-y-0.5">{children}</div>
-  </div>
-);
-
-const SectionHeader = ({ title, subtitle }) => (
-  <div className="mb-8">
-    <h2 className="text-4xl font-bold text-slate-900 dark:text-white mb-2 tracking-tight">{title}</h2>
-    <p className="text-xl text-slate-500 dark:text-slate-400">{subtitle}</p>
-  </div>
-);
-
-const HeroCard = ({ icon: Icon, title, desc }) => (
-  <div className="p-6 rounded-2xl bg-white dark:bg-[#0B0F19] border border-slate-200 dark:border-white/5 shadow-xl hover:-translate-y-1 transition-transform duration-300">
-    <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-white/5 flex items-center justify-center text-indigo-600 dark:text-indigo-400 mb-4">
-      <Icon size={24} />
-    </div>
-    <h3 className="font-bold text-lg mb-2 text-slate-900 dark:text-white">{title}</h3>
-    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{desc}</p>
-  </div>
-);
-
-const BentoCard = ({ icon: Icon, title, children, className, accent }) => (
-  <div className={`p-6 rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm hover:shadow-xl transition-all duration-300 group bg-white dark:bg-[#0B0F19] ${className}`}>
-    <div className="flex items-center gap-3 mb-4">
-      {Icon && (
-        <div className={`p-2 rounded-lg ${accent === 'amber' ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-indigo-50 dark:bg-white/5 text-indigo-600 dark:text-indigo-400'}`}>
-          <Icon size={20} />
+const TipBox = ({ children, type = 'note' }) => {
+    const colors = { note: '#6ea8fe', tip: '#5aba8a', warning: '#c9a87c', danger: '#e05252' };
+    const icons  = { note: '◆', tip: '✔', warning: '⚠', danger: '✕' };
+    const c = colors[type];
+    return (
+        <div style={{ padding: '14px 16px', background: `${c}0d`, border: `1px solid ${c}25`, borderLeft: `3px solid ${c}`, marginBottom: '18px', display: 'flex', gap: '10px' }}>
+            <span style={{ color: c, fontSize: '12px', flexShrink: 0, marginTop: '1px' }}>{icons[type]}</span>
+            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.6)', lineHeight: '1.7', margin: 0 }}>{children}</p>
         </div>
-      )}
-      <h3 className="font-bold text-lg text-slate-900 dark:text-white">{title}</h3>
-    </div>
-    <div>{children}</div>
-  </div>
-);
+    );
+};
 
-const InstallOption = ({ platform, desc }) => (
-  <div className="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-colors cursor-default">
-    <div className="mt-1 w-2 h-2 rounded-full bg-green-500 shrink-0" />
-    <div>
-      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{platform}</h4>
-      <p className="text-xs text-slate-500">{desc}</p>
-    </div>
-  </div>
-);
+function DocSection({ id, title, icon: Icon, children }) {
+    return (
+        <section id={id} style={{ paddingBottom: '48px', borderBottom: '1px solid rgba(255,255,255,0.05)', marginBottom: '48px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Icon size={15} style={{ color: '#b8956a' }} />
+                </div>
+                <h2 style={S.h2}>{title}</h2>
+            </div>
+            {children}
+        </section>
+    );
+}
 
-const StepCard = ({ num, title, desc }) => (
-  <div className="flex gap-4">
-    <div className="font-black text-3xl text-slate-200 dark:text-slate-800">{num}</div>
-    <div>
-      <h4 className="font-bold text-lg text-slate-900 dark:text-white">{title}</h4>
-      <p className="text-sm text-slate-600 dark:text-slate-400">{desc}</p>
-    </div>
-  </div>
-);
+// Fix the import path - this component imports from its own directory
+const ChttrixDocs = () => {
+    const [active, setActive] = useState('intro');
+    const [search, setSearch] = useState('');
 
-const FeatureRow = ({ icon: Icon, title, desc }) => (
-  <div className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5">
-    <Icon size={20} className="text-slate-400" />
-    <div>
-      <h4 className="font-bold text-sm text-slate-900 dark:text-white">{title}</h4>
-      <p className="text-xs text-slate-500">{desc}</p>
-    </div>
-  </div>
-);
+    useEffect(() => {
+        document.documentElement.classList.add('public-scroll');
+        window.scrollTo(0, 0);
+        return () => document.documentElement.classList.remove('public-scroll');
+    }, []);
 
-const AICapabilityCard = ({ title, desc }) => (
-  <div className="p-4 bg-white dark:bg-[#0B0F19] rounded-xl border border-slate-200 dark:border-white/5 text-center hover:border-purple-300 dark:hover:border-purple-500/50 transition-colors">
-    <Sparkles size={20} className="mx-auto text-purple-500 mb-2" />
-    <h4 className="font-bold text-sm mb-1">{title}</h4>
-    <p className="text-xs text-slate-500">{desc}</p>
-  </div>
-);
+    useEffect(() => {
+        const onScroll = () => {
+            const pos = window.scrollY + 120;
+            for (const s of SECTIONS) {
+                const el = document.getElementById(s.id);
+                if (el && pos >= el.offsetTop && pos < el.offsetTop + el.offsetHeight) setActive(s.id);
+            }
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, []);
 
-const SettingCard = ({ icon: Icon, label }) => (
-  <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/5 flex flex-col items-center justify-center gap-3 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-white">
-    <Icon size={24} />
-    <span className="font-bold text-sm">{label}</span>
-  </div>
-);
+    const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+
+    return (
+        <div style={{ minHeight: '100vh', background: '#0c0c0c', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <style>{`* { box-sizing: border-box; margin: 0; padding: 0; } ::selection { background: rgba(184,149,106,0.3); }`}</style>
+
+            {/* Inline header for docs (already has public-scroll applied) */}
+            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px', display: 'flex', gap: '56px', alignItems: 'flex-start' }}>
+
+                {/* Sidebar */}
+                <aside style={{ width: '220px', flexShrink: 0, position: 'sticky', top: '24px' }}>
+                    {/* Back to home */}
+                    <button onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px', background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease', padding: 0 }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7 10L3 6l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
+                        Back to Chttrix
+                    </button>
+
+                    {/* Logo */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+                        <img src="/chttrix-logo.jpg" alt="" style={{ width: '24px', height: '24px', objectFit: 'cover' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Docs</span>
+                    </div>
+
+                    {/* Search */}
+                    <div style={{ position: 'relative', marginBottom: '20px' }}>
+                        <Search size={11} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search docs..."
+                            style={{ width: '100%', padding: '7px 10px 7px 28px', background: '#141414', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '12px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '10px' }}>Sections</p>
+                    <nav style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
+                        {SECTIONS.filter(s => !search || s.label.toLowerCase().includes(search.toLowerCase())).map(s => {
+                            const Icon = s.icon; const isAct = active === s.id;
+                            return (
+                                <button key={s.id} onClick={() => scrollTo(s.id)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '9px', padding: '7px 10px', background: isAct ? 'rgba(184,149,106,0.1)' : 'transparent', border: isAct ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: isAct ? '#b8956a' : 'rgba(228,228,228,0.4)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', transition: 'all 150ms ease', width: '100%' }}>
+                                    <Icon size={11} />{s.label}
+                                </button>
+                            );
+                        })}
+                    </nav>
+
+                    <div style={{ marginTop: '28px', padding: '12px 14px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
+                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', lineHeight: '1.7' }}>
+                            Platform v1.0<br />
+                            <span style={{ color: '#b8956a' }}>Workspace OS</span>
+                        </p>
+                    </div>
+                </aside>
+
+                {/* Main docs content */}
+                <main style={{ flex: 1, minWidth: 0, paddingTop: '0' }}>
+                    {/* Doc header */}
+                    <div style={{ marginBottom: '48px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '16px' }}>
+                            <BookOpen size={11} style={{ color: '#b8956a' }} />
+                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Documentation</span>
+                        </div>
+                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Chttrix Docs</h1>
+                        <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', maxWidth: '600px' }}>
+                            Everything you need to get the most out of Chttrix — from setting up your first workspace to mastering Chttrix AI and enterprise security.
+                        </p>
+                    </div>
+
+                    <DocSection id="intro" icon={BookOpen} title="Introduction">
+                        <p style={S.p}>Chttrix is an all-in-one workspace OS designed for modern teams. It combines real-time messaging, video huddles, task management, collaborative notes, and an AI layer into a single unified platform.</p>
+                        <p style={S.p}>Unlike traditional tools that require switching between Slack, Notion, Jira, and Zoom, Chttrix keeps everything in context — conversations next to tasks, notes next to channels, and AI woven throughout.</p>
+                        <TipBox type="tip">New to Chttrix? Start with <strong>Getting Started</strong> below to create your first workspace and invite your team.</TipBox>
+                        <h3 style={S.h3}>Core concepts</h3>
+                        <ul style={S.ul}>
+                            {[
+                                'Workspace — your company\'s root environment, managed by an Owner and Admins',
+                                'Channels — topic-based rooms for structured team conversations',
+                                'Threads — replies to specific messages that keep discussions organized',
+                                'Huddles — instant voice and video calls, no scheduling required',
+                                'Tasks — native project management with Kanban and assignment',
+                                'Notes — collaborative documents that live alongside channels',
+                                'Chttrix AI — the intelligence layer that understands your workspace context',
+                            ].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                    </DocSection>
+
+                    <DocSection id="getting-started" icon={Zap} title="Getting Started">
+                        <p style={S.p}>Getting your team onto Chttrix takes less than 5 minutes. Here's the fastest path from sign-up to full team collaboration.</p>
+                        <h3 style={S.h3}>Option A — Personal Workspace</h3>
+                        <ul style={S.ul}>
+                            {['Visit chttrix.io and click "Log In → Sign Up"', 'Enter your email and create a password', 'Verify your email address', 'Your personal workspace is ready immediately'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <h3 style={S.h3}>Option B — Company HQ</h3>
+                        <ul style={S.ul}>
+                            {['Go to chttrix.io and click "Register Company HQ"', 'Fill in your organization details (name, domain, size)', 'Create the Owner account — this is your superadmin', 'Invite Admins and configure departments', 'Admins then onboard team members via invite links'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <TipBox type="note">Company HQ includes the full Admin dashboard with org chart, department management, permission matrix, and audit logs. Personal workspaces are single-user by default.</TipBox>
+                    </DocSection>
+
+                    <DocSection id="workspaces" icon={Building2} title="Workspaces">
+                        <p style={S.p}>A Workspace is the root container for your organization on Chttrix. Every channel, member, file, and conversation lives inside a workspace.</p>
+                        <h3 style={S.h3}>Workspace Roles</h3>
+                        <ul style={S.ul}>
+                            {[
+                                'Owner — full platform control, billing, and security settings',
+                                'Admin — manage members, departments, channels, and integrations',
+                                'Manager — oversee teams, projects, and direct reports',
+                                'Employee — standard workspace member',
+                            ].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <h3 style={S.h3}>Workspace Settings</h3>
+                        <p style={S.p}>Access workspace settings from <span style={S.code}>Admin Dashboard → Settings</span>. Here you can configure: company profile, branding, billing plan, SSO/domain, notification defaults, security policies, and data privacy settings.</p>
+                    </DocSection>
+
+                    <DocSection id="channels" icon={Hash} title="Channels">
+                        <p style={S.p}>Channels are the backbone of Chttrix — topic-based spaces for team communication. Every message in a channel is persistent, searchable, and threaded.</p>
+                        <h3 style={S.h3}>Channel Types</h3>
+                        <ul style={S.ul}>
+                            {[
+                                'Public — anyone in the workspace can join and browse',
+                                'Private — invite-only, content hidden from non-members',
+                                'Announcement — only admins can post, everyone can read',
+                                'Project — linked to a task board for project-specific work',
+                            ].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <h3 style={S.h3}>Creating a Channel</h3>
+                        <p style={S.p}>Click the <span style={S.code}>+</span> button next to "Channels" in the sidebar. Give it a name, choose public or private, add a purpose, and select initial members. Channel names should be lowercase, hyphenated, and descriptive (e.g., <span style={S.code}>#engineering-backend</span>, <span style={S.code}>#design-reviews</span>).</p>
+                        <TipBox type="tip">Use the <span style={S.code}>#general</span> channel for company-wide announcements and the <span style={S.code}>#random</span> channel for casual conversations. Keep project channels focused.</TipBox>
+                    </DocSection>
+
+                    <DocSection id="messaging" icon={MessageSquare} title="Messaging & DMs">
+                        <p style={S.p}>Chttrix supports real-time messaging in channels, 1:1 DMs, and group DMs. All messages support rich formatting, reactions, file sharing, and inline tasks.</p>
+                        <h3 style={S.h3}>Message Formatting</h3>
+                        <ul style={S.ul}>
+                            {['**bold** and *italic* markdown', '`inline code` and ```code blocks```', '@mention a user or @channel to notify everyone', '#channel-link to reference another channel', ':emoji: shortcodes for reactions'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <h3 style={S.h3}>Direct Messages</h3>
+                        <p style={S.p}>Start a DM from the sidebar by clicking "Direct Messages → New DM." You can DM individuals or create group DMs with up to 8 people. DMs are private and not visible to admins unless a legal hold is active.</p>
+                    </DocSection>
+
+                    <DocSection id="threads" icon={GitBranch} title="Threads">
+                        <p style={S.p}>Threads let you reply to a specific message without cluttering the main channel. Hover any message and click the <span style={S.code}>Reply in thread</span> icon.</p>
+                        <p style={S.p}>Threads appear in the right-side panel. Members who are part of the thread or @mentioned receive notifications. Thread activity is tracked in your Threads inbox.</p>
+                        <TipBox type="tip">Use threads for decisions, code reviews, and in-depth discussions. Keep the main channel for high-level updates and quick questions.</TipBox>
+                    </DocSection>
+
+                    <DocSection id="tasks" icon={CheckSquare} title="Tasks">
+                        <p style={S.p}>Chttrix Tasks is a native project management system that lives alongside your conversations. No separate tool needed.</p>
+                        <h3 style={S.h3}>Key Features</h3>
+                        <ul style={S.ul}>
+                            {['Kanban boards with customizable columns', 'Task assignment, due dates, and priority levels', 'Subtasks and checklists', 'Convert any message into a task in one click', 'Task comments sync back to the linked channel thread'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <h3 style={S.h3}>Creating Tasks</h3>
+                        <p style={S.p}>Access Tasks from the left sidebar. Create a task board per project or per team. You can also ask <span style={S.code}>@ChttrixAI</span> to "create tasks from the last 10 messages" and it'll auto-generate a structured task list.</p>
+                    </DocSection>
+
+                    <DocSection id="notes" icon={FileText} title="Notes">
+                        <p style={S.p}>Notes are collaborative, rich-text documents that live inside channels. Think of them as wikis, specs, meeting minutes, and runbooks — all in the same context as your conversations.</p>
+                        <ul style={S.ul}>
+                            {['Rich text editing with headings, bullet lists, tables, and code blocks', 'Real-time co-editing with user presence cursors', 'Link notes to tasks, channels, or other notes', 'Version history and change tracking', 'Export to PDF or Markdown'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                    </DocSection>
+
+                    <DocSection id="ai" icon={Sparkles} title="Chttrix AI">
+                        <p style={S.p}>Chttrix AI (Chttrix Intelligence™) is the workspace-aware AI assistant built into every part of the platform. It understands your channel history, tasks, and notes to provide relevant, contextual assistance.</p>
+                        <h3 style={S.h3}>How to Use Chttrix AI</h3>
+                        <ul style={S.ul}>
+                            {['Mention @ChttrixAI in any channel or DM', 'Use the AI panel in the right sidebar for deeper queries', 'Highlight any text and click "Ask AI" for inline assistance', 'AI automatically summarizes long threads if you\'ve been inactive'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <h3 style={S.h3}>Capabilities</h3>
+                        <ul style={S.ul}>
+                            {['Summarize threads, channels, and meeting notes', 'Generate tasks from conversations', 'Draft messages, reports, and documentation', 'Answer questions using workspace context', 'Identify blockers and suggest next actions'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <TipBox type="warning">Chttrix AI processes data within your isolated tenant environment. It does not share your data across tenants or use it to train shared models without explicit opt-in.</TipBox>
+                    </DocSection>
+
+                    <DocSection id="search" icon={Search} title="Search">
+                        <p style={S.p}>Global search covers all channels, DMs, messages, files, tasks, and notes you have access to. Press <span style={S.code}>⌘K</span> (Mac) or <span style={S.code}>Ctrl+K</span> (Windows) to open the command palette.</p>
+                        <h3 style={S.h3}>Search Filters</h3>
+                        <ul style={S.ul}>
+                            {['Filter by channel, user, date range, or content type', 'Use "in:#channel" to limit search to a specific channel', 'Use "from:@user" to filter by who sent the message', 'Use "has:file" to find messages with attachments', 'AI-powered semantic search available in Company plan'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                    </DocSection>
+
+                    <DocSection id="notifications" icon={BellRing} title="Notifications">
+                        <p style={S.p}>Chttrix has granular notification controls at the channel, workspace, and keyword level.</p>
+                        <ul style={S.ul}>
+                            {['Desktop notifications for @mentions and DMs', 'Per-channel notification preferences (All / Mentions / Nothing)', 'Mute channels or conversations temporarily or permanently', 'Set Do Not Disturb schedules by timezone', 'Custom keyword notifications for alerts on specific terms'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <p style={S.p}>Access notification settings via your avatar → <span style={S.code}>Settings → Notifications</span>.</p>
+                    </DocSection>
+
+                    <DocSection id="security" icon={Shield} title="Security & Roles">
+                        <p style={S.p}>Chttrix uses a role-based access control (RBAC) model at the workspace, department, and channel level.</p>
+                        <h3 style={S.h3}>Permission Hierarchy</h3>
+                        <ul style={S.ul}>
+                            {['Owner — workspace superadmin, billing, security policy', 'Admin — member management, channel creation, integrations', 'Manager — team oversight, report access', 'Employee — standard member access per channel permissions'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <TipBox type="note">Security settings are managed in <span style={S.code}>Owner Dashboard → Security</span>. Enterprise plans support SAML 2.0 SSO and custom IP allowlists.</TipBox>
+                    </DocSection>
+
+                    <DocSection id="settings" icon={Settings} title="Settings">
+                        <p style={S.p}>Personal settings are accessible via your avatar in the bottom-left corner. Workspace settings are in the Admin Dashboard.</p>
+                        <h3 style={S.h3}>Personal Settings</h3>
+                        <ul style={S.ul}>
+                            {['Profile — name, avatar, status, bio', 'Notifications — all notification preferences', 'Security — password, 2FA, active sessions', 'Appearance — theme, density, font size', 'Privacy — data controls and AI preferences'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                        <h3 style={S.h3}>Admin Settings</h3>
+                        <ul style={S.ul}>
+                            {['Company Profile — name, logo, website', 'Branding — colors and custom logo', 'Billing Plan — subscription and usage', 'Domain & SSO — SAML integration', 'Security — password policy, 2FA enforcement', 'Data & Privacy — retention, exports, compliance'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
+                        </ul>
+                    </DocSection>
+                </main>
+            </div>
+
+            {/* Simple footer */}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '24px', textAlign: 'center' }}>
+                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.2)' }}>© 2026 Chttrix Inc. · <button onClick={() => window.location.href = '/privacy'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Privacy</button> · <button onClick={() => window.location.href = '/terms'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Terms</button></p>
+            </div>
+        </div>
+    );
+};
 
 export default ChttrixDocs;

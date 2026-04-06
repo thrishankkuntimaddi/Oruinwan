@@ -1,41 +1,68 @@
 import React from 'react';
 import { ChevronLeft, BookOpen, Command, Bug, Sparkles, MessageCircle } from 'lucide-react';
 
-/**
- * HelpMenuView Component
- * Help & Support menu with navigation to sub-views
- */
+const ITEMS = [
+    { key: 'help_academy',   label: 'Academy',            Icon: BookOpen       },
+    { key: 'help_shortcuts', label: 'Keyboard Shortcuts', Icon: Command        },
+    { key: 'help_bug',       label: 'Report a Bug',       Icon: Bug            },
+    { key: 'help_whatsnew',  label: "What's New",         Icon: Sparkles       },
+    { key: 'help_contact',   label: 'Contact Support',    Icon: MessageCircle  },
+];
+
 const HelpMenuView = ({ onBack, onNavigate }) => {
     return (
-        <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
-            <div className="p-4 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
-                <button onClick={onBack} className="text-gray-500 hover:text-gray-900 flex items-center text-xs font-bold transition-colors">
-                    <ChevronLeft size={14} className="mr-1" /> Back
+        <div style={{
+            width: '256px', background: '#111111',
+            border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
+            overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif',
+        }}>
+            {/* Header */}
+            <div style={{
+                padding: '12px 16px', display: 'flex', alignItems: 'center',
+                justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)',
+                background: 'rgba(255,255,255,0.02)',
+            }}>
+                <button
+                    onClick={onBack}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+                >
+                    <ChevronLeft size={13} /> Back
                 </button>
-                <span className="font-bold text-gray-900 text-sm">Help & Support</span>
-                <div className="w-8"></div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Help &amp; Support</span>
+                <div style={{ width: '40px' }} />
             </div>
-            <div className="p-2 space-y-1">
-                <button onClick={() => onNavigate("help_academy")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-                    <BookOpen size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    <span className="font-medium">Academy</span>
-                </button>
-                <button onClick={() => onNavigate("help_shortcuts")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-                    <Command size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    <span className="font-medium">Keyboard Shortcuts</span>
-                </button>
-                <button onClick={() => onNavigate("help_bug")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-                    <Bug size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    <span className="font-medium">Report a Bug</span>
-                </button>
-                <button onClick={() => onNavigate("help_whatsnew")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-                    <Sparkles size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    <span className="font-medium">What's New</span>
-                </button>
-                <button onClick={() => onNavigate("help_contact")} className="w-full text-left px-3 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg flex items-center transition-colors group">
-                    <MessageCircle size={18} className="mr-3 text-gray-400 group-hover:text-blue-600 transition-colors" />
-                    <span className="font-medium">Contact Support</span>
-                </button>
+
+            {/* Menu Items */}
+            <div style={{ padding: '6px' }}>
+                {ITEMS.map(({ key, label, Icon }) => (
+                    <button
+                        key={key}
+                        onClick={() => onNavigate(key)}
+                        style={{
+                            width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
+                            padding: '10px 12px', fontSize: '13px', fontWeight: 500,
+                            color: 'rgba(228,228,228,0.7)', background: 'transparent',
+                            border: 'none', cursor: 'pointer', textAlign: 'left',
+                            fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                            e.currentTarget.style.color = '#e4e4e4';
+                            e.currentTarget.querySelector('svg').style.color = '#b8956a';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = 'rgba(228,228,228,0.7)';
+                            e.currentTarget.querySelector('svg').style.color = 'rgba(228,228,228,0.3)';
+                        }}
+                    >
+                        <Icon size={16} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0, transition: '150ms ease' }} />
+                        {label}
+                    </button>
+                ))}
             </div>
         </div>
     );

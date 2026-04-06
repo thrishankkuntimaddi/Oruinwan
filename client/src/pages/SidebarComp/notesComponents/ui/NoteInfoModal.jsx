@@ -1,10 +1,9 @@
 import React from 'react';
-import { X, FileText, Clock, Tag, Hash, AlignLeft } from 'lucide-react';
+import { X, FileText, Clock } from 'lucide-react';
 
 const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
     if (!showInfoModal || !note) return null;
 
-    // Word count — strip HTML tags from text/heading blocks, parse checklist
     const wordCount = blocks.reduce((acc, b) => {
         if (b.type === 'text' || b.type === 'heading') {
             const plain = (b.content || '').replace(/<[^>]*>/g, '').trim();
@@ -13,9 +12,8 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
         if (b.type === 'checklist') {
             try {
                 const items = JSON.parse(b.content);
-                if (Array.isArray(items)) {
+                if (Array.isArray(items))
                     return acc + items.reduce((s, it) => s + (it.text?.split(/\s+/).length || 0), 0);
-                }
             } catch { }
         }
         return acc;
@@ -42,62 +40,57 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
 
     return (
         <div
-            className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center backdrop-blur-sm"
-            onClick={(e) => e.target === e.currentTarget && setShowInfoModal(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}
+            onClick={e => e.target === e.currentTarget && setShowInfoModal(false)}
         >
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-96 overflow-hidden border border-gray-200 dark:border-gray-800">
+            <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.1)', width: '384px', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}>
                 {/* Header */}
-                <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                    <div className="flex items-center gap-2.5">
-                        <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center">
-                            <FileText size={16} className="text-blue-600 dark:text-blue-400" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <FileText size={15} style={{ color: '#b8956a' }} />
                         </div>
                         <div>
-                            <h3 className="text-sm font-bold text-gray-900 dark:text-white">Note Info</h3>
-                            <p className="text-[10px] text-gray-400 truncate max-w-[200px]">{note.title || 'Untitled Note'}</p>
+                            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>Note Info</h3>
+                            <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                                {note.title || 'Untitled Note'}
+                            </p>
                         </div>
                     </div>
-                    <button
-                        onClick={() => setShowInfoModal(false)}
-                        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    <button onClick={() => setShowInfoModal(false)}
+                        style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
                     >
-                        <X size={15} />
+                        <X size={14} />
                     </button>
                 </div>
 
-                {/* Stats grid */}
-                <div className="p-5 space-y-4">
-                    <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">{wordCount}</p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">Words</p>
-                        </div>
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">{blocks.length}</p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">Blocks</p>
-                        </div>
-                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
-                            <p className="text-xl font-bold text-gray-900 dark:text-white">{sizeKb}</p>
-                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium mt-0.5">KB</p>
-                        </div>
+                {/* Stats */}
+                <div style={{ padding: '18px' }}>
+                    {/* Stats grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '18px' }}>
+                        {[{ val: wordCount, label: 'Words' }, { val: blocks.length, label: 'Blocks' }, { val: sizeKb, label: 'KB' }].map(({ val, label }) => (
+                            <div key={label} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: '12px 10px', textAlign: 'center' }}>
+                                <p style={{ fontSize: '20px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'monospace', marginBottom: '3px' }}>{val}</p>
+                                <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+                            </div>
+                        ))}
                     </div>
 
                     {/* Block breakdown */}
                     {blockSummary.length > 0 && (
-                        <div>
-                            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Block breakdown</p>
-                            <div className="space-y-1.5">
+                        <div style={{ marginBottom: '18px' }}>
+                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(228,228,228,0.3)', marginBottom: '10px', fontFamily: 'monospace' }}>Block breakdown</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {blockSummary.map(({ type, count }) => (
-                                    <div key={type} className="flex items-center justify-between">
-                                        <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">{type}</span>
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-1.5 bg-blue-100 dark:bg-blue-900/30 rounded-full overflow-hidden w-20">
-                                                <div
-                                                    className="h-full bg-blue-500 rounded-full"
-                                                    style={{ width: `${Math.round((count / blocks.length) * 100)}%` }}
-                                                />
+                                    <div key={type} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.5)', textTransform: 'capitalize', fontFamily: 'Inter, system-ui, sans-serif' }}>{type}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div style={{ height: '4px', width: '80px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', background: '#b8956a', width: `${Math.round((count / blocks.length) * 100)}%`, transition: 'width 400ms ease' }} />
                                             </div>
-                                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 w-4 text-right">{count}</span>
+                                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(228,228,228,0.45)', width: '16px', textAlign: 'right', fontFamily: 'monospace' }}>{count}</span>
                                         </div>
                                     </div>
                                 ))}
@@ -107,11 +100,11 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
 
                     {/* Tags */}
                     {note.tags && note.tags.length > 0 && (
-                        <div>
-                            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">Tags</p>
-                            <div className="flex flex-wrap gap-1.5">
+                        <div style={{ marginBottom: '18px' }}>
+                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(228,228,228,0.3)', marginBottom: '8px', fontFamily: 'monospace' }}>Tags</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                 {note.tags.map(tag => (
-                                    <span key={tag} className="px-2.5 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-[11px] font-medium">
+                                    <span key={tag} style={{ padding: '3px 10px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', color: '#b8956a', fontSize: '11px', fontWeight: 600, fontFamily: 'monospace' }}>
                                         #{tag}
                                     </span>
                                 ))}
@@ -120,26 +113,22 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     )}
 
                     {/* Dates */}
-                    <div className="space-y-2 border-t border-gray-100 dark:border-gray-800 pt-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                                <Clock size={11} /> Created
-                            </span>
-                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{createdFull}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                                <Clock size={11} /> Last edited
-                            </span>
-                            <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{editedFull}</span>
-                        </div>
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
+                        {[{ label: 'Created', val: createdFull }, { label: 'Last edited', val: editedFull }].map(({ label, val }) => (
+                            <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <Clock size={11} /> {label}
+                                </span>
+                                <span style={{ fontSize: '11px', fontWeight: 500, color: 'rgba(228,228,228,0.6)', fontFamily: 'monospace' }}>{val}</span>
+                            </div>
+                        ))}
                     </div>
-                </div>
 
-                <div className="px-5 pb-5">
-                    <button
-                        onClick={() => setShowInfoModal(false)}
-                        className="w-full py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-sm font-semibold rounded-xl transition-colors"
+                    {/* Close */}
+                    <button onClick={() => setShowInfoModal(false)}
+                        style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                     >
                         Close
                     </button>

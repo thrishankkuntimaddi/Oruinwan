@@ -14,7 +14,6 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
     })();
 
     const save = (newItems) => onBlockChange(block.id, JSON.stringify(newItems), block.meta);
-
     const toggleItem = (id) => save(items.map(it => it.id === id ? { ...it, done: !it.done } : it));
     const updateText = (id, text) => save(items.map(it => it.id === id ? { ...it, text } : it));
     const removeItem = (id) => {
@@ -42,61 +41,75 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-3">
-            <div className="rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
+            <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#111', overflow: 'hidden' }}>
 
                 {/* Progress header */}
-                <div className="flex items-center gap-3 px-4 pt-3 pb-2">
-                    <div className="flex-1 h-1 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
-                        <div
-                            className={`h-full rounded-full transition-all duration-500 ease-out ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                            style={{ width: `${pct}%` }}
-                        />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px 8px' }}>
+                    <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', background: pct === 100 ? '#34d399' : '#b8956a', width: `${pct}%`, transition: 'width 500ms ease' }} />
                     </div>
-                    <span className={`text-xs font-semibold tabular-nums min-w-[2rem] text-right ${pct === 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: pct === 100 ? '#34d399' : 'rgba(228,228,228,0.35)', minWidth: '32px', textAlign: 'right' }}>
                         {done}/{total}
                     </span>
                     <button
                         onClick={() => onRemoveBlock(block.id)}
-                        className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded"
+                        style={{ padding: '3px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                        className="group-hover:!opacity-100"
+                        onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
                     >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
                     </button>
                 </div>
 
                 {/* Items */}
-                <div className="px-3 pb-1 space-y-0.5" ref={listRef}>
+                <div style={{ padding: '0 10px 6px' }} ref={listRef}>
                     {items.map((item, idx) => (
-                        <div key={item.id} className="flex items-center gap-2.5 py-1.5 px-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/60 group/item transition-colors">
-                            {/* Custom checkbox */}
+                        <div key={item.id} className="group/item"
+                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 4px', transition: 'background 100ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                            {/* Checkbox */}
                             <button
                                 onClick={() => toggleItem(item.id)}
-                                className={`flex-shrink-0 w-4.5 h-4.5 w-[18px] h-[18px] rounded-[5px] border-2 flex items-center justify-center transition-all ${item.done
-                                        ? 'bg-emerald-500 border-emerald-500 shadow-sm'
-                                        : 'border-gray-300 dark:border-gray-600 hover:border-emerald-400 dark:hover:border-emerald-500'
-                                    }`}
+                                style={{
+                                    flexShrink: 0, width: '16px', height: '16px', border: item.done ? '2px solid #34d399' : '2px solid rgba(255,255,255,0.2)',
+                                    background: item.done ? '#34d399' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer', transition: 'all 150ms ease',
+                                }}
+                                onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = '#34d399'; }}
+                                onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
                             >
                                 {item.done && (
-                                    <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                                        <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                    <svg width="8" height="6" viewBox="0 0 10 8" fill="none">
+                                        <path d="M1 4L3.5 6.5L9 1" stroke="#0c0c0c" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 )}
                             </button>
+
                             <input
                                 type="text"
                                 value={item.text}
                                 onChange={e => updateText(item.id, e.target.value)}
                                 onKeyDown={e => handleKeyDown(e, item.id, idx)}
                                 placeholder="To-do item..."
-                                className={`flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm transition-all ${item.done
-                                        ? 'line-through text-gray-400 dark:text-gray-600'
-                                        : 'text-gray-700 dark:text-gray-200'
-                                    } placeholder-gray-300 dark:placeholder-gray-700`}
+                                style={{
+                                    flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px',
+                                    color: item.done ? 'rgba(228,228,228,0.3)' : '#e4e4e4',
+                                    textDecoration: item.done ? 'line-through' : 'none',
+                                    transition: 'all 200ms ease', fontFamily: 'Inter, system-ui, sans-serif',
+                                }}
                             />
+
                             <button
                                 onClick={() => removeItem(item.id)}
-                                className="p-1 text-gray-300 hover:text-red-400 opacity-0 group-hover/item:opacity-100 transition-all rounded"
+                                style={{ padding: '3px', color: 'rgba(228,228,228,0.15)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                                className="group-hover/item:!opacity-100"
+                                onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.15)'}
                             >
-                                <Trash2 size={11} />
+                                <Trash2 size={10} />
                             </button>
                         </div>
                     ))}
@@ -105,9 +118,16 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 {/* Add item footer */}
                 <button
                     onClick={addItem}
-                    className="flex items-center gap-2 px-4 py-2.5 w-full text-left text-xs font-medium text-gray-400 dark:text-gray-600 hover:text-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 border-t border-gray-100 dark:border-gray-800 transition-colors"
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', width: '100%',
+                        textAlign: 'left', fontSize: '11px', fontWeight: 500, color: 'rgba(228,228,228,0.3)',
+                        background: 'transparent', border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)',
+                        cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; e.currentTarget.style.background = 'rgba(184,149,106,0.04)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.3)'; e.currentTarget.style.background = 'transparent'; }}
                 >
-                    <Plus size={13} /> Add item
+                    <Plus size={12} /> Add item
                 </button>
             </div>
         </div>

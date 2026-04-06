@@ -1,70 +1,66 @@
-import React from 'react';
-import Button from './Button';
+// Modal.jsx — Monolith Flow Design System
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
 
-// Note: Requires @headlessui/react. If not installed, basic modal logic works but transitions might need manual CSS.
-// Assuming headlessui is standard or we can use a simple custom implementation if strictly vanilla.
-// Given "Standardize ALL UI Components", a robust Modal is key. I'll implement a custom one to be safe on dependencies,
-// or check package.json. I'll stick to a custom implementation using standard React Portals or just CSS modules to trigger visibility
-// to avoid introducing new large dependencies if not present. Tailwinds make it easy.
+/**
+ * Monolith Flow base modal shell.
+ * Props: isOpen, onClose, title, children, footer,
+ *        size (sm|md|lg|xl), dismissable (default true)
+ */
+const WIDTHS = { sm: '420px', md: '560px', lg: '760px', xl: '960px' };
 
-// Actually, existing package.json wasn't fully checked for headlessui. I'll assume standard React state control.
-// This is a controlled component.
+const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', dismissable = true }) => {
+    useEffect(() => {
+        if (!isOpen || !dismissable) return;
+        const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [isOpen, onClose, dismissable]);
 
-const Modal = ({ isOpen, onClose, title, children, footer, size = "md", className = "" }) => {
     if (!isOpen) return null;
 
-    const maxWidths = {
-        sm: "max-w-md",
-        md: "max-w-lg",
-        lg: "max-w-2xl",
-        xl: "max-w-4xl",
-        full: "max-w-full mx-4",
-    };
-
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-            <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                {/* Overlay */}
-                <div
-                    className="fixed inset-0 bg-secondary-900 bg-opacity-75 transition-opacity"
-                    aria-hidden="true"
-                    onClick={onClose}
-                ></div>
-
-                <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-                {/* Modal Panel */}
-                <div className={`
-            inline-block align-bottom bg-white dark:bg-dark-card rounded-lg text-left overflow-hidden shadow-xl 
-            transform transition-all sm:my-8 sm:align-middle w-full ${maxWidths[size]} ${className}
-        `}>
-                    <div className="bg-white dark:bg-dark-card px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <div className="sm:flex sm:items-start">
-                            <div className="mt-3 text-center sm:mt-0 sm:ml-0 sm:text-left w-full">
-                                {title && (
-                                    <h3 className="text-lg leading-6 font-medium text-secondary-900 dark:text-white mb-4" id="modal-title">
-                                        {title}
-                                    </h3>
-                                )}
-                                <div className="mt-2 text-secondary-600 dark:text-secondary-300">
-                                    {children}
-                                </div>
-                            </div>
-                        </div>
+        <div
+            onClick={dismissable ? onClose : undefined}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 8000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}
+        >
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: WIDTHS[size] || WIDTHS.md, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'slideUp 220ms cubic-bezier(0.16,1,0.3,1)' }}
+            >
+                {/* Header */}
+                {title && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>{title}</h3>
+                        {dismissable && (
+                            <CloseBtn onClick={onClose} />
+                        )}
                     </div>
+                )}
 
-                    {(footer || onClose) && (
-                        <div className="bg-secondary-50 dark:bg-secondary-800/50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                            {footer ? footer : (
-                                <Button variant="secondary" onClick={onClose}>
-                                    Close
-                                </Button>
-                            )}
-                        </div>
-                    )}
+                {/* Body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '18px' }} className="custom-scrollbar">
+                    {children}
                 </div>
+
+                {/* Footer */}
+                {footer && (
+                    <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)', flexShrink: 0 }}>
+                        {footer}
+                    </div>
+                )}
             </div>
         </div>
+    );
+};
+
+const CloseBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: hov ? 'var(--bg-hover)' : 'none', border: 'none', color: hov ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', padding: '4px', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease' }}>
+            <X size={15} />
+        </button>
     );
 };
 

@@ -1,36 +1,46 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 
-/**
- * HelpWhatsNewView Component
- * Release notes and feature updates timeline
- */
-const HelpWhatsNewView = ({ onBack }) => {
-    return (
-        <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
-                <button onClick={onBack} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
-                    <ChevronLeft size={14} className="mr-1" /> Back
-                </button>
-                <span className="font-bold text-gray-900 dark:text-white text-sm">What's New</span>
-                <div className="w-8"></div>
-            </div>
-            <div className="p-4 space-y-4">
-                <div className="pl-4 border-l-2 border-pink-500 relative">
-                    <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-pink-500"></div>
-                    <div className="text-[10px] font-bold text-pink-500">NOV 2025</div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">Chttrix AI 2.0</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1">Smarter responses & context awareness.</div>
-                </div>
-                <div className="pl-4 border-l-2 border-orange-500 relative">
-                    <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                    <div className="text-[10px] font-bold text-orange-500">OCT 2025</div>
-                    <div className="text-sm font-bold text-gray-900 dark:text-white">Dark Mode</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed mt-1">Easy on the eyes.</div>
-                </div>
-            </div>
-        </div>
-    );
+const panelStyle = {
+    width: '256px', background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden',
+    fontFamily: 'Inter, system-ui, sans-serif',
 };
+const headerStyle = {
+    padding: '12px 16px', display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)',
+    background: 'rgba(255,255,255,0.02)',
+};
+
+const TIMELINE = [
+    { date: 'NOV 2025', color: '#b8956a', title: 'Chttrix AI 2.0',  body: 'Smarter responses & context awareness.' },
+    { date: 'OCT 2025', color: '#a78bfa', title: 'Dark Mode',        body: 'Pure dark surfaces across all views.' },
+];
+
+const HelpWhatsNewView = ({ onBack }) => (
+    <div style={panelStyle}>
+        <div style={headerStyle}>
+            <button onClick={onBack}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+            >
+                <ChevronLeft size={13} /> Back
+            </button>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>What's New</span>
+            <div style={{ width: '40px' }} />
+        </div>
+        <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {TIMELINE.map(({ date, color, title, body }, i) => (
+                <div key={i} style={{ paddingLeft: '14px', borderLeft: `2px solid ${color}`, position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '-5px', top: '2px', width: '8px', height: '8px', borderRadius: '50%', background: color }} />
+                    <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', color, marginBottom: '3px' }}>{date}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', marginBottom: '3px' }}>{title}</div>
+                    <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.45)', lineHeight: 1.5 }}>{body}</div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default HelpWhatsNewView;

@@ -197,7 +197,7 @@ const WorkspaceSelect = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 font-sans selection:bg-indigo-100 dark:selection:bg-indigo-900 selection:text-indigo-700 dark:selection:text-indigo-300">
+    <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'var(--font)' }}>
             {/* Header */}
             <Header
                 showHelp={showHelp}
@@ -217,16 +217,23 @@ const WorkspaceSelect = () => {
             {/* Main Content */}
             <main className="pt-24 md:pt-32 pb-20 px-4 md:px-6 max-w-7xl mx-auto">
                 <div className="mb-12 text-center max-w-2xl mx-auto">
-                    <h1 className="text-4xl font-black text-slate-900 dark:text-slate-100 mb-4 tracking-tight">
+                    <h1 style={{
+                        fontSize: '26px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        letterSpacing: '-0.02em',
+                        marginBottom: '8px',
+                        lineHeight: 1.15
+                    }}>
                         Welcome back, {user?.username?.split(' ')[0]}
                     </h1>
-                    <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 400, lineHeight: 1.5, margin: 0 }}>
                         Select a workspace to jump back in, or create a new one to get started.
                     </p>
                 </div>
 
                 {isLoadingWorkspaces ? (
-                    <LoadingState />
+                    <LoadingState count={workspaces.length || 1} />
                 ) : loadError ? (
                     <ErrorState error={loadError} onRetry={loadWorkspaces} />
                 ) : (
@@ -266,9 +273,9 @@ const WorkspaceSelect = () => {
             {/* Profile Quick Settings Modal */}
             {showProfile && <ProfileQuickSettings onClose={() => setShowProfile(false)} />}
 
-            {/* ChttrixAI Panel */}
+            {/* ChttrixAI Panel — starts below the 48px fixed header */}
             {showAI && (
-                <div className="fixed top-0 right-0 h-full w-[380px] z-[200] shadow-2xl">
+                <div style={{ position: 'fixed', top: '48px', right: 0, width: '320px', height: 'calc(100vh - 48px)', zIndex: 40, borderLeft: '1px solid var(--border-subtle)' }}>
                     <WorkspaceProvider>
                         <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
                     </WorkspaceProvider>

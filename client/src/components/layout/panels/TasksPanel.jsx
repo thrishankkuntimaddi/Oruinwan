@@ -1,76 +1,73 @@
 import React from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
+import { User, Inbox, Send, CheckCircle2, Trash2, Eye, Circle } from "lucide-react";
 
-import { User, Inbox, Send, CheckCircle2, Trash2 } from "lucide-react";
+const S = {
+  panel:     { display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' },
+  header:    { height: '56px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, background: '#0c0c0c' },
+  label:     { fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.35)', fontFamily: 'Inter, system-ui, sans-serif' },
+  title:     { fontSize: '15px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' },
+  nav:       { padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 },
+  divider:   { height: '1px', background: 'rgba(255,255,255,0.06)', margin: '8px 12px' },
+};
+
+const navBtn = (active, danger) => ({
+  width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+  padding: '8px 12px', background: active ? 'rgba(184,149,106,0.1)' : 'transparent',
+  border: active ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent',
+  color: active ? '#b8956a' : 'rgba(228,228,228,0.5)',
+  fontSize: '13px', fontWeight: active ? 600 : 400, cursor: 'pointer',
+  fontFamily: 'Inter, system-ui, sans-serif', textAlign: 'left',
+  transition: 'all 150ms ease',
+});
+
+const VIEWS = [
+  { key: 'my-tasks',        label: 'My Issues',   Icon: Circle },
+  { key: 'shared-tasks',    label: 'Incoming',     Icon: Inbox },
+  { key: 'assigned-tasks',  label: 'Given',        Icon: Send },
+  { key: 'all-tasks',       label: 'All Issues',   Icon: Eye },
+  null,
+  { key: 'completed-tasks', label: 'Completed',    Icon: CheckCircle2 },
+  { key: 'deleted-tasks',   label: 'Trash',        Icon: Trash2, danger: true },
+];
 
 const TasksPanel = () => {
-    const navigate = useNavigate();
-    const location = useLocation();
-    const { workspaceId } = useParams();
-    const activeTab = new URLSearchParams(location.search).get("tab") || "my-tasks";
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { workspaceId } = useParams();
+  const activeTab = new URLSearchParams(location.search).get("tab") || "my-tasks";
 
-    const handleNav = (tab) => {
-        navigate(`/workspace/${workspaceId}/tasks?tab=${tab}`);
-    };
+  const handleNav = (tab) => {
+    navigate(`/workspace/${workspaceId}/tasks?tab=${tab}`);
+  };
 
-    return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
-            <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center px-5 font-bold text-xl text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-900 shrink-0">
-                Tasks
-            </div>
+  return (
+    <div style={S.panel}>
+      <div style={S.header}>
+        <span style={S.title}>Tasks</span>
+      </div>
 
-            <div className="p-4 space-y-2">
-                <button
-                    onClick={() => handleNav("my-tasks")}
-                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "my-tasks"
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                        : "text-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800"
-                        }`}
-                >
-                    <User size={18} /> Personal
-                </button>
-                <button
-                    onClick={() => handleNav("shared-tasks")}
-                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "shared-tasks"
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                        : "text-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800"
-                        }`}
-                >
-                    <Inbox size={18} /> Incoming
-                </button>
-                <button
-                    onClick={() => handleNav("assigned-tasks")}
-                    className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "assigned-tasks"
-                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400"
-                        : "text-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800"
-                        }`}
-                >
-                    <Send size={18} /> Delegated
-                </button>
-
-                <div className="pt-4 mt-2 border-t border-gray-200 dark:border-gray-800 space-y-2">
-                    <button
-                        onClick={() => handleNav("completed-tasks")}
-                        className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "completed-tasks"
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            }`}
-                    >
-                        <CheckCircle2 size={18} /> Completed
-                    </button>
-                    <button
-                        onClick={() => handleNav("deleted-tasks")}
-                        className={`w-full text-left px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-3 ${activeTab === "deleted-tasks"
-                            ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
-                            : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            }`}
-                    >
-                        <Trash2 size={18} /> Deleted
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
+      <div style={{ padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <p style={{ ...S.label, padding: '4px 12px 8px' }}>Views</p>
+        {VIEWS.map((v, i) =>
+          v === null
+            ? <div key={i} style={S.divider} />
+            : (
+              <button
+                key={v.key}
+                onClick={() => handleNav(v.key)}
+                style={navBtn(activeTab === v.key, v.danger)}
+                onMouseEnter={e => { if (activeTab !== v.key) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (activeTab !== v.key) e.currentTarget.style.background = 'transparent'; }}
+              >
+                <v.Icon size={14} style={{ flexShrink: 0 }} />
+                {v.label}
+              </button>
+            )
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default TasksPanel;

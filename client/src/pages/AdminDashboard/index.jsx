@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
-import { RefreshCw, Shield, LayoutGrid } from 'lucide-react';
+import { RefreshCw, Shield, LayoutGrid, UserPlus } from 'lucide-react';
 
 import UsersAccess from './UsersAccess';
 import DepartmentsView from './DepartmentsView';
@@ -17,16 +17,11 @@ import {
 } from '../../services/adminDashboardService';
 
 const AdminDashboard = () => {
-    const { isCompanyAdmin } = useCompany(); // Assuming useCompany exposes isOwner or we check user role
+    const { isCompanyAdmin } = useCompany();
     const { showToast } = useToast();
     const navigate = useNavigate();
 
-    // 👑 Explicit Owner Redirect
     useEffect(() => {
-        // If the context doesn't expose isOwner directly, we can check it via user object or role
-        // For now, assuming useCompany or AuthContext provides this info.
-        // Let's use a safer approach getting user from AuthContext if strictly needed, 
-        // but let's see if we can just redirect if companyRole is owner.
         const userStr = localStorage.getItem('user');
         if (userStr) {
             try {
@@ -34,9 +29,7 @@ const AdminDashboard = () => {
                 if (user.companyRole === 'owner') {
                     navigate('/owner/dashboard', { replace: true });
                 }
-            } catch (e) {
-                // ignore
-            }
+            } catch (e) {}
         }
     }, [navigate]);
 
@@ -56,7 +49,6 @@ const AdminDashboard = () => {
                 getWorkspacesAccess(),
                 getAuditSecurity()
             ]);
-
             setUsersData(users);
             setDeptData(depts);
             setWorkspaceData(workspaces);
@@ -69,13 +61,11 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         if (!isCompanyAdmin()) return;
-
         const loadInitialData = async () => {
             setLoading(true);
             await fetchData();
             setLoading(false);
         };
-
         loadInitialData();
     }, [isCompanyAdmin, fetchData]);
 
@@ -89,14 +79,47 @@ const AdminDashboard = () => {
 
     if (!isCompanyAdmin()) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-                <div className="text-center">
-                    <Shield className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">You need admin privileges to access this page.</p>
+            <div style={{
+                minHeight: '100vh',
+                background: 'var(--bg-base)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 16px',
+                fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <Shield size={40} style={{ color: 'var(--text-muted)', margin: '0 auto 16px' }} />
+                    <h2 style={{
+                        fontSize: '22px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        marginBottom: '8px',
+                        letterSpacing: '-0.015em'
+                    }}>Access Denied</h2>
+                    <p style={{
+                        fontSize: '14px',
+                        color: 'var(--text-secondary)',
+                        marginBottom: '24px',
+                        lineHeight: '1.6'
+                    }}>
+                        You need admin privileges to access this page.
+                    </p>
                     <button
                         onClick={() => navigate('/workspaces')}
-                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                        style={{
+                            padding: '8px 20px',
+                            background: 'var(--bg-active)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '2px',
+                            fontSize: '14px',
+                            fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'background 150ms ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-active)'}
                     >
                         Go to Workspaces
                     </button>
@@ -106,59 +129,78 @@ const AdminDashboard = () => {
     }
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
+            background: 'var(--bg-base)',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+        }}>
             {/* Header */}
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
+            <header style={{
+                height: '64px',
+                padding: '0 32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: 'var(--bg-surface)',
+                borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0,
+                zIndex: 10
+            }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        <Shield className="text-indigo-600 dark:text-indigo-400" size={24} />
+                    <h2 style={{
+                        fontSize: '18px',
+                        fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        letterSpacing: '-0.015em',
+                        margin: 0
+                    }}>
+                        <Shield size={18} style={{ color: 'var(--accent)' }} />
                         Admin Console
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
+                    <p style={{
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                        marginTop: '2px',
+                        marginLeft: '26px'
+                    }}>
                         People, Structure & Compliance · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('/admin/onboard')}
-                        className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg flex items-center gap-2"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                            <circle cx="9" cy="7" r="4" />
-                            <line x1="19" y1="8" x2="19" y2="14" />
-                            <line x1="22" y1="11" x2="16" y2="11" />
-                        </svg>
-                        Onboard Employee
-                    </button>
-                    <button
-                        onClick={() => navigate('/manager/dashboard')}
-                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2"
-                    >
-                        <LayoutGrid size={16} />
-                        Manager Console
-                    </button>
-                    <button
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <HeaderBtn icon={UserPlus} label="Onboard Employee" onClick={() => navigate('/admin/onboard')} accent />
+                    <HeaderBtn icon={LayoutGrid} label="Manager Console" onClick={() => navigate('/manager/dashboard')} />
+                    <HeaderBtn
+                        icon={RefreshCw}
+                        label={refreshing ? 'Refreshing...' : 'Refresh'}
                         onClick={handleRefresh}
                         disabled={refreshing || loading}
-                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                        {refreshing ? 'Refreshing...' : 'Refresh'}
-                    </button>
+                        spinning={refreshing}
+                    />
                 </div>
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }} className="custom-scrollbar">
                 {loading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
+                        <div style={{
+                            width: '24px',
+                            height: '24px',
+                            border: '2px solid var(--border-accent)',
+                            borderTopColor: 'var(--accent)',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite'
+                        }} />
                     </div>
                 ) : (
-                    <div className="space-y-8 max-w-7xl mx-auto">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1280px', margin: '0 auto' }}>
                         <UsersAccess data={usersData} />
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
                             <DepartmentsView data={deptData} />
                             <WorkspacesAccess data={workspaceData} />
                         </div>
@@ -167,6 +209,38 @@ const AdminDashboard = () => {
                 )}
             </div>
         </div>
+    );
+};
+
+const HeaderBtn = ({ icon: Icon, label, onClick, disabled, spinning, accent }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '7px 14px',
+                background: accent
+                    ? (hov ? 'var(--accent-hover)' : 'var(--accent)')
+                    : (hov ? 'var(--bg-hover)' : 'var(--bg-active)'),
+                border: accent ? 'none' : '1px solid var(--border-default)',
+                color: accent ? 'var(--bg-base)' : (hov ? 'var(--text-primary)' : 'var(--text-secondary)'),
+                fontSize: '13px',
+                fontWeight: 500,
+                borderRadius: '2px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                opacity: disabled ? 0.5 : 1,
+                transition: 'color 150ms ease, background 150ms ease'
+            }}
+        >
+            <Icon size={14} style={{ animation: spinning ? 'spin 1s linear infinite' : 'none' }} />
+            {label}
+        </button>
     );
 };
 

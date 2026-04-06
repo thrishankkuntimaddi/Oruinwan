@@ -1,74 +1,66 @@
 // client/src/pages/SidebarComp/states/EmptyState.jsx
 
 // ⚠️ UI-ONLY COMPONENT
-// This component is pure presentational.
-// DO NOT add navigation logic, API calls, or state management here.
+// Pure presentational — no navigation logic, API calls, or state management.
 
 /**
- * EmptyState - Welcome screen for Home route
- * 
- * Displays when no chat is selected. Shows branding, welcome message,
- * and navigation cards to channels and DMs.
- * 
- * @param {function} onNavigateChannels - Callback for "Channels" card click
- * @param {function} onNavigateDMs - Callback for "Direct Messages" card click
+ * EmptyState — Welcome screen for Home route.
+ * Displays when no chat is selected.
+ * Monolith Flow: dark base bg, amber accents, no gradients or indigo/purple.
  */
+
+import { Hash, Users } from 'lucide-react';
+
 function EmptyState({ onNavigateChannels, onNavigateDMs }) {
     return (
-        <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-gray-900 relative overflow-hidden">
-            {/* Background Decor */}
-            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', height: '100%',
+            background: 'var(--bg-base)', position: 'relative', overflow: 'hidden',
+            fontFamily: 'var(--font)',
+        }}>
+            {/* Subtle ambient blob — single, low opacity, no indigo/purple */}
+            <div style={{ position: 'absolute', top: '25%', left: '30%', width: '360px', height: '360px', background: 'var(--accent)', opacity: 0.03, borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
-            <div className="relative z-10 flex flex-col items-center max-w-lg text-center p-8">
-                <div className="w-24 h-24 mb-8 relative group">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
-                    <div className="relative w-full h-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex items-center justify-center border border-indigo-50 dark:border-gray-700 group-hover:-translate-y-1 transition-transform duration-300 overflow-hidden">
-                        <video
-                            src="/hover-animation.mp4"
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full h-full object-cover"
-                        />
-                    </div>
+            <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '400px', textAlign: 'center', padding: '32px 24px' }}>
+
+                {/* Logo / Animation container */}
+                <div style={{ width: '80px', height: '80px', borderRadius: '2px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '28px', overflow: 'hidden', flexShrink: 0 }}>
+                    <video
+                        src="/hover-animation.mp4"
+                        autoPlay loop muted playsInline
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                 </div>
 
-                <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-3 tracking-tight">
-                    Welcome to <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">Chttrix</span>
+                <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+                    Welcome to Chttrix
                 </h1>
 
-                <p className="text-lg text-slate-500 dark:text-gray-400 mb-8 leading-relaxed">
-                    Your command center for collaboration. Select a channel or direct message to start the conversation.
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 28px', lineHeight: 1.7, maxWidth: '280px' }}>
+                    Your command centre for collaboration. Select a channel or direct message to start.
                 </p>
 
-                <div className="grid grid-cols-2 gap-4 w-full">
-                    <div
-                        onClick={onNavigateChannels}
-                        className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md hover:border-indigo-200 transition-all group"
-                    >
-                        <div className="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400 group-hover:bg-indigo-100 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                {/* Quick-nav cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', width: '100%' }}>
+                    {[
+                        { label: 'Channels', sub: 'Team discussions', Icon: Hash, onClick: onNavigateChannels },
+                        { label: 'Direct Messages', sub: 'Private chats', Icon: Users, onClick: onNavigateDMs },
+                    ].map(({ label, sub, Icon, onClick }) => (
+                        <div key={label} onClick={onClick}
+                            style={{ padding: '14px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', transition: 'background 150ms ease, border-color 150ms ease' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-surface)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+                        >
+                            <div style={{ width: '32px', height: '32px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: 'var(--text-muted)', transition: 'color 150ms ease' }}>
+                                <Icon size={16} />
+                            </div>
+                            <div style={{ textAlign: 'left' }}>
+                                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</div>
+                                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub}</div>
+                            </div>
                         </div>
-                        <div className="text-left">
-                            <div className="font-bold text-slate-800 dark:text-gray-200 text-sm group-hover:text-indigo-600 transition-colors">Channels</div>
-                            <div className="text-xs text-slate-400 dark:text-gray-500">Team discussions</div>
-                        </div>
-                    </div>
-
-                    <div
-                        onClick={onNavigateDMs}
-                        className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex items-center gap-3 cursor-pointer hover:shadow-md hover:border-purple-200 transition-all group"
-                    >
-                        <div className="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400 group-hover:bg-purple-100 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="22" y1="21" x2="22" y2="21"></line><path d="M20 8v6"></path><path d="M23 11h-6"></path></svg>
-                        </div>
-                        <div className="text-left">
-                            <div className="font-bold text-slate-800 dark:text-gray-200 text-sm group-hover:text-purple-600 transition-colors">Direct Messages</div>
-                            <div className="text-xs text-slate-400 dark:text-gray-500">Private chats</div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
             </div>
         </div>

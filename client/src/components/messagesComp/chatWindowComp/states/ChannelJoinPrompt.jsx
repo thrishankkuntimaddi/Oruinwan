@@ -4,7 +4,9 @@
 // Do NOT add business logic, socket handlers, or state management here.
 // This component must remain props-only.
 
-import { Lock } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
+
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 /**
  * ChannelJoinPrompt - Gate screen for non-members viewing discoverable public channels
@@ -23,89 +25,80 @@ function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
             justifyContent: 'center',
             padding: '3rem',
             textAlign: 'center',
-            backgroundColor: 'var(--bg-primary)'
+            backgroundColor: 'var(--bg-primary)',
+            fontFamily: FONT,
         }}>
             {/* Lock Icon */}
             <div style={{
-                width: '120px',
-                height: '120px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)',
+                width: '80px',
+                height: '80px',
+                borderRadius: '2px',
+                backgroundColor: 'rgba(184,149,106,0.08)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '2.5rem',
-                border: '1px solid rgba(59, 130, 246, 0.2)',
-                boxShadow: '0 8px 32px rgba(59, 130, 246, 0.1)',
-                animation: 'pulse 3s infinite'
+                marginBottom: '2rem',
+                border: '1px solid var(--border-accent)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
             }}>
-                <Lock size={48} style={{ color: '#3B82F6', filter: 'drop-shadow(0 2px 4px rgba(59, 130, 246, 0.2))' }} />
+                <Lock size={36} style={{ color: 'var(--accent)' }} />
             </div>
 
             {/* Message */}
             <h2 style={{
                 color: 'var(--text-primary)',
-                fontSize: '2rem',
-                fontWeight: '700',
-                marginBottom: '1rem',
+                fontSize: '1.25rem',
+                fontWeight: 700,
+                marginBottom: '0.75rem',
                 textAlign: 'center',
-                letterSpacing: '-0.025em'
+                letterSpacing: '-0.02em',
+                fontFamily: FONT,
             }}>
                 You're not a member of this channel
             </h2>
 
             <p style={{
-                color: 'var(--text-secondary)',
-                fontSize: '1.1rem',
-                marginBottom: '3rem',
-                maxWidth: '500px',
+                color: 'var(--text-muted)',
+                fontSize: '13px',
+                marginBottom: '2.5rem',
+                maxWidth: '420px',
                 textAlign: 'center',
-                lineHeight: '1.6'
+                lineHeight: 1.65,
+                fontFamily: FONT,
             }}>
-                Would you like to join <strong>{chatName}</strong> to start viewing and sending messages?
+                Would you like to join <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{chatName}</strong> to start viewing and sending messages?
             </p>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%', maxWidth: '340px' }}>
                 <button
                     onClick={onJoinChannel}
                     disabled={isJoining}
                     style={{
                         flex: 1,
-                        padding: '1rem 0',
-                        backgroundColor: isJoining ? '#9CA3AF' : '#3B82F6',
-                        color: '#FFFFFF',
+                        padding: '9px 0',
+                        backgroundColor: isJoining ? 'var(--bg-active)' : 'var(--accent)',
+                        color: isJoining ? 'var(--text-muted)' : '#0c0c0c',
                         border: 'none',
-                        borderRadius: '12px',
-                        fontSize: '1rem',
-                        fontWeight: '600',
+                        borderRadius: '2px',
+                        fontSize: '13px',
+                        fontWeight: 600,
                         cursor: isJoining ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        opacity: isJoining ? 0.7 : 1,
-                        boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+                        transition: '150ms ease',
+                        opacity: isJoining ? 0.65 : 1,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '8px'
+                        gap: '7px',
+                        fontFamily: FONT,
+                        outline: 'none',
                     }}
-                    onMouseOver={(e) => {
-                        if (!isJoining) {
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.backgroundColor = '#2563EB';
-                            e.currentTarget.style.boxShadow = '0 6px 16px rgba(59, 130, 246, 0.4)';
-                        }
-                    }}
-                    onMouseOut={(e) => {
-                        if (!isJoining) {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.backgroundColor = '#3B82F6';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.3)';
-                        }
-                    }}
+                    onMouseEnter={e => { if (!isJoining) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                    onMouseLeave={e => { if (!isJoining) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                 >
                     {isJoining ? (
                         <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
                             <span>Joining...</span>
                         </>
                     ) : 'Join Channel'}
@@ -116,26 +109,30 @@ function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
                     disabled={isJoining}
                     style={{
                         flex: 1,
-                        padding: '1rem 0',
+                        padding: '9px 0',
                         backgroundColor: 'transparent',
                         color: 'var(--text-secondary)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '12px',
-                        fontSize: '1rem',
-                        fontWeight: '500',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: '2px',
+                        fontSize: '13px',
+                        fontWeight: 500,
                         cursor: isJoining ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s ease'
+                        transition: '150ms ease',
+                        fontFamily: FONT,
+                        outline: 'none',
                     }}
-                    onMouseOver={(e) => {
+                    onMouseEnter={e => {
                         if (!isJoining) {
-                            e.currentTarget.style.backgroundColor = 'var(--bg-secondary)';
-                            e.currentTarget.style.borderColor = 'var(--text-secondary)';
+                            e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                            e.currentTarget.style.borderColor = 'var(--border-accent)';
+                            e.currentTarget.style.color = 'var(--text-primary)';
                         }
                     }}
-                    onMouseOut={(e) => {
+                    onMouseLeave={e => {
                         if (!isJoining) {
                             e.currentTarget.style.backgroundColor = 'transparent';
-                            e.currentTarget.style.borderColor = 'var(--border-color)';
+                            e.currentTarget.style.borderColor = 'var(--border-default)';
+                            e.currentTarget.style.color = 'var(--text-secondary)';
                         }
                     }}
                 >

@@ -5,7 +5,7 @@ import { RefreshCw, BarChart3, TrendingUp, TrendingDown, Users, MessageSquare, A
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { getOwnerAnalytics } from '../../services/ownerDashboardService';
 
-const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#f59e0b'];
+const COLORS = ['#b8956a', '#c9a87c', '#5aba8a', '#e05252', '#7a7a7a', '#404040'];
 
 const OwnerAnalytics = () => {
     const { isCompanyOwner } = useCompany();
@@ -20,8 +20,7 @@ const OwnerAnalytics = () => {
         try {
             const data = await getOwnerAnalytics(range);
             setAnalyticsData(data);
-        } catch (error) {
-            console.error('Error fetching owner analytics data:', error);
+        } catch {
             showToast('Failed to load analytics data', 'error');
         }
     }, [showToast]);
@@ -44,301 +43,270 @@ const OwnerAnalytics = () => {
         showToast('Analytics refreshed', 'success');
     };
 
-    const handleTimeRangeChange = (range) => {
-        if (range === timeRange) return;
-        setTimeRange(range);
-    };
-
-    // Derived chart data with safe fallbacks
     const userGrowthData = analyticsData?.userGrowth || [];
     const messageVolumeData = analyticsData?.dailyMessages || [];
     const workspaceActivityData = analyticsData?.workspaceActivity || [];
     const departmentDistribution = analyticsData?.departmentDistribution || [];
     const summary = analyticsData?.summary || {};
 
-    if (loading) {
-        return (
-            <div className="h-full animate-pulse p-6 space-y-6 bg-gray-50 dark:bg-gray-900">
-                <div className="grid grid-cols-4 gap-4">
+    const tooltipStyle = { backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '0px', color: 'var(--text-primary)', fontSize: '12px' };
+
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '200px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '300px' }} /></div>
+                <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '30px', width: '120px' }} /><div className="sk" style={{ height: '30px', width: '80px' }} /></div>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+                {/* 4 KPI tiles */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
                     {[1,2,3,4].map(i => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-                            <div className="h-9 w-14 bg-gray-300 dark:bg-gray-600 rounded-lg" />
+                        <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div className="sk" style={{ width: '14px', height: '14px' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                            <div className="sk" style={{ height: '32px', width: '70px', marginBottom: '6px' }} />
+                            <div className="sk" style={{ height: '9px', width: '100px' }} />
                         </div>
                     ))}
                 </div>
-                <div className="grid grid-cols-2 gap-6">
+                {/* 2 chart cards */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                     {[1,2].map(i => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 h-52">
-                            <div className="h-4 w-28 bg-gray-200 dark:bg-gray-700 rounded mb-4" />
-                            <div className="flex items-end gap-2 h-32">
-                                {[60,80,45,90,70,55,85].map((h,j) => (
-                                    <div key={j} className="flex-1 bg-indigo-100 dark:bg-indigo-900/30 rounded-t" style={{height:`${h}%`}} />
-                                ))}
+                        <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                <div><div className="sk" style={{ height: '12px', width: '140px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '100px' }} /></div>
                             </div>
+                            <div className="sk" style={{ height: '160px', width: '100%' }} />
                         </div>
                     ))}
+                </div>
+                {/* Bottom row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                        <div className="sk" style={{ height: '12px', width: '160px', marginBottom: '16px' }} />
+                        <div className="sk" style={{ height: '160px', width: '100%' }} />
+                    </div>
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                        <div className="sk" style={{ height: '12px', width: '140px', marginBottom: '16px' }} />
+                        {[1,2,3,4,5].map(i => <div key={i} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}><div className="sk" style={{ height: '10px', width: '80px' }} /><div className="sk" style={{ height: '10px', width: '30px' }} /></div>)}
+                    </div>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div style={{
+            display: 'flex', flexDirection: 'column', height: '100%',
+            background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif',
+        }}>
             {/* Header */}
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
+            <header style={{
+                height: '56px', padding: '0 28px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0, zIndex: 5,
+            }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        <BarChart3 className="text-indigo-500" size={24} />
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <BarChart3 size={16} style={{ color: 'var(--accent)' }} />
                         Analytics &amp; Insights
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
-                        Historical trends, growth metrics &amp; detailed performance analysis
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>
+                        Historical trends, growth metrics &amp; detailed performance
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    {/* Time Range Selector */}
-                    <div className="flex items-center gap-2 bg-white dark:bg-gray-700 border border-slate-200 dark:border-gray-600 rounded-lg p-1">
-                        {['7d', '30d', '90d'].map((range) => (
-                            <button
-                                key={range}
-                                onClick={() => handleTimeRangeChange(range)}
-                                className={`px-3 py-1 text-xs font-bold rounded transition-all ${timeRange === range
-                                    ? 'bg-indigo-600 text-white'
-                                    : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-600'
-                                    }`}
-                            >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* Time range selector */}
+                    <div style={{ display: 'flex', background: 'var(--bg-active)', border: '1px solid var(--border-default)' }}>
+                        {['7d', '30d', '90d'].map(range => (
+                            <button key={range} onClick={() => { if (range !== timeRange) setTimeRange(range); }}
+                                style={{
+                                    padding: '5px 12px', border: 'none', cursor: 'pointer',
+                                    background: timeRange === range ? 'var(--accent)' : 'transparent',
+                                    color: timeRange === range ? 'var(--bg-base)' : 'var(--text-secondary)',
+                                    fontSize: '11px', fontWeight: timeRange === range ? 700 : 400,
+                                    transition: 'all 150ms ease', borderRadius: '0',
+                                }}>
                                 {range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : '90 Days'}
                             </button>
                         ))}
                     </div>
-                    <button
-                        onClick={handleRefresh}
-                        disabled={refreshing}
-                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                        {refreshing ? 'Refreshing...' : 'Refresh'}
-                    </button>
+                    <RBtn onClick={handleRefresh} disabled={refreshing} label={refreshing ? 'Refreshing...' : 'Refresh'} icon={<RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />} />
                 </div>
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
-                <div className="space-y-8 max-w-7xl mx-auto">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                    {/* Growth Metrics Summary */}
+                    {/* Growth Metrics */}
                     <section>
-                        <div className="mb-4">
-                            <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Growth Metrics</h3>
-                            <p className="text-xs text-slate-500 dark:text-gray-500">{timeRange === '7d' ? '7-day' : timeRange === '30d' ? '30-day' : '90-day'} performance overview</p>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <MetricCard
-                                icon={Users}
-                                label="New Users"
-                                value={summary.newUsers ?? 0}
-                                subtitle={`Joined in last ${timeRange}`}
-                                trend={summary.newUsers > 0 ? Math.min(Math.round((summary.newUsers / Math.max(summary.totalUsers - summary.newUsers, 1)) * 100), 999) : 0}
-                                color="indigo"
-                            />
-                            <MetricCard
-                                icon={MessageSquare}
-                                label="Message Volume"
-                                value={(summary.totalMessages ?? 0).toLocaleString()}
-                                subtitle={`Messages sent (${timeRange})`}
-                                trend={summary.totalMessages > 0 ? 12 : 0}
-                                color="blue"
-                            />
-                            <MetricCard
-                                icon={Activity}
-                                label="Engagement Rate"
-                                value={`${summary.engagementRate ?? 0}%`}
-                                subtitle="Active participation"
-                                trend={summary.engagementRate > 50 ? 8 : summary.engagementRate > 0 ? -5 : 0}
-                                color="green"
-                            />
-                            <MetricCard
-                                icon={Calendar}
-                                label="Workspace Activity"
-                                value={`${summary.activeWorkspaces ?? 0}/${summary.totalWorkspaces ?? 0}`}
-                                subtitle="Active workspaces"
-                                trend={0}
-                                color="purple"
-                            />
+                        <SectionLabel label="Growth Metrics" sub={`${timeRange === '7d' ? '7-day' : timeRange === '30d' ? '30-day' : '90-day'} performance overview`} />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
+                            <MetricCard icon={Users} label="New Users" value={summary.newUsers ?? 0}
+                                sub={`Joined in last ${timeRange}`} trend={summary.newUsers > 0 ? Math.min(Math.round((summary.newUsers / Math.max(summary.totalUsers - summary.newUsers, 1)) * 100), 999) : 0} />
+                            <MetricCard icon={MessageSquare} label="Message Volume" value={(summary.totalMessages ?? 0).toLocaleString()}
+                                sub={`Messages sent (${timeRange})`} trend={summary.totalMessages > 0 ? 12 : 0} />
+                            <MetricCard icon={Activity} label="Engagement Rate" value={`${summary.engagementRate ?? 0}%`}
+                                sub="Active participation" trend={summary.engagementRate > 50 ? 8 : summary.engagementRate > 0 ? -5 : 0} />
+                            <MetricCard icon={Calendar} label="Workspace Activity" value={`${summary.activeWorkspaces ?? 0}/${summary.totalWorkspaces ?? 0}`}
+                                sub="Active workspaces" trend={0} />
                         </div>
                     </section>
 
                     {/* User Growth Trend */}
-                    <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
-                        <div className="mb-6">
-                            <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">User Growth Trend</h3>
-                            <p className="text-xs text-slate-500 dark:text-gray-500">Total users vs active users over time</p>
-                        </div>
+                    <ChartCard title="User Growth Trend" sub="Total users vs active users over time">
                         {userGrowthData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <AreaChart data={userGrowthData}>
-                                    <defs>
-                                        <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
-                                    <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                    <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                        itemStyle={{ color: '#f3f4f6' }}
-                                    />
-                                    <Area type="monotone" dataKey="users" stroke="#6366f1" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={2} />
-                                    <Area type="monotone" dataKey="active" stroke="#10b981" fillOpacity={1} fill="url(#colorActive)" strokeWidth={2} />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No user data available for this period</div>
-                        )}
-                        <div className="flex items-center justify-center gap-6 mt-4">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-indigo-600"></div>
-                                <span className="text-xs font-medium text-slate-600 dark:text-gray-400">Total Users</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-green-600"></div>
-                                <span className="text-xs font-medium text-slate-600 dark:text-gray-400">Active Users</span>
-                            </div>
-                        </div>
-                    </section>
+                            <>
+                                <ResponsiveContainer width="100%" height={260}>
+                                    <AreaChart data={userGrowthData}>
+                                        <defs>
+                                            <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#b8956a" stopOpacity={0.25} />
+                                                <stop offset="95%" stopColor="#b8956a" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="colorActive" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#5aba8a" stopOpacity={0.25} />
+                                                <stop offset="95%" stopColor="#5aba8a" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#222222" strokeOpacity={0.5} />
+                                        <XAxis dataKey="date" stroke="#404040" style={{ fontSize: '11px' }} />
+                                        <YAxis stroke="#404040" style={{ fontSize: '11px' }} />
+                                        <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-secondary)' }} />
+                                        <Area type="monotone" dataKey="users" stroke="#b8956a" fillOpacity={1} fill="url(#colorUsers)" strokeWidth={1.5} />
+                                        <Area type="monotone" dataKey="active" stroke="#5aba8a" fillOpacity={1} fill="url(#colorActive)" strokeWidth={1.5} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '8px' }}>
+                                    <Legend color="#b8956a" label="Total Users" />
+                                    <Legend color="#5aba8a" label="Active Users" />
+                                </div>
+                            </>
+                        ) : <EmptyState msg="No user data available for this period" />}
+                    </ChartCard>
 
-                    {/* Message Volume & Workspace Activity */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Message Volume */}
-                        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
-                            <div className="mb-6">
-                                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">
-                                    {timeRange === '7d' ? 'Weekly' : 'Monthly'} Message Volume
-                                </h3>
-                                <p className="text-xs text-slate-500 dark:text-gray-500">Messages sent per day (last {timeRange === '7d' ? '7 days' : '30 days'})</p>
-                            </div>
+                    {/* Message Volume + Workspace Activity */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
+                        <ChartCard title={`${timeRange === '7d' ? 'Weekly' : 'Monthly'} Message Volume`} sub={`Messages sent per day (last ${timeRange === '7d' ? '7' : '30'} days)`}>
                             {messageVolumeData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={250}>
+                                <ResponsiveContainer width="100%" height={220}>
                                     <BarChart data={messageVolumeData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
-                                        <XAxis dataKey="day" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                        <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                            itemStyle={{ color: '#f3f4f6' }}
-                                        />
-                                        <Bar dataKey="messages" fill="#6366f1" radius={[8, 8, 0, 0]} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#222222" strokeOpacity={0.5} />
+                                        <XAxis dataKey="day" stroke="#404040" style={{ fontSize: '11px' }} />
+                                        <YAxis stroke="#404040" style={{ fontSize: '11px' }} />
+                                        <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-secondary)' }} />
+                                        <Bar dataKey="messages" fill="#b8956a" radius={[1, 1, 0, 0]} />
                                     </BarChart>
                                 </ResponsiveContainer>
-                            ) : (
-                                <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No messages in this period</div>
-                            )}
-                        </section>
+                            ) : <EmptyState msg="No messages in this period" />}
+                        </ChartCard>
 
-                        {/* Workspace Activity */}
-                        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
-                            <div className="mb-6">
-                                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Top Active Workspaces</h3>
-                                <p className="text-xs text-slate-500 dark:text-gray-500">Message count by workspace</p>
-                            </div>
+                        <ChartCard title="Top Active Workspaces" sub="Message count by workspace">
                             {workspaceActivityData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={250}>
+                                <ResponsiveContainer width="100%" height={220}>
                                     <BarChart data={workspaceActivityData} layout="vertical">
-                                        <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} horizontal={false} />
-                                        <XAxis type="number" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                        <YAxis dataKey="name" type="category" width={120} stroke="#9ca3af" style={{ fontSize: '11px' }} />
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                            itemStyle={{ color: '#f3f4f6' }}
-                                        />
-                                        <Bar dataKey="activity" fill="#10b981" radius={[0, 8, 8, 0]}>
-                                            {workspaceActivityData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#222222" strokeOpacity={0.5} horizontal={false} />
+                                        <XAxis type="number" stroke="#404040" style={{ fontSize: '11px' }} />
+                                        <YAxis dataKey="name" type="category" width={110} stroke="#404040" style={{ fontSize: '10px' }} />
+                                        <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-secondary)' }} />
+                                        <Bar dataKey="activity" radius={[0, 1, 1, 0]}>
+                                            {workspaceActivityData.map((_, idx) => (
+                                                <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
                                             ))}
                                         </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
-                            ) : (
-                                <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No workspace activity in this period</div>
-                            )}
-                        </section>
+                            ) : <EmptyState msg="No workspace activity in this period" />}
+                        </ChartCard>
                     </div>
 
                     {/* Department Distribution */}
-                    <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
-                        <div className="mb-6">
-                            <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Team Distribution</h3>
-                            <p className="text-xs text-slate-500 dark:text-gray-500">Employees by department</p>
-                        </div>
+                    <ChartCard title="Team Distribution" sub="Employees by department">
                         {departmentDistribution.length > 0 ? (
-                            <div className="flex items-center justify-center">
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <PieChart>
-                                        <Pie
-                                            data={departmentDistribution}
-                                            cx="50%"
-                                            cy="50%"
-                                            labelLine={false}
-                                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                                            outerRadius={100}
-                                            fill="#8884d8"
-                                            dataKey="value"
-                                        >
-                                            {departmentDistribution.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                            itemStyle={{ color: '#f3f4f6' }}
-                                        />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-48 text-slate-400 dark:text-gray-500 text-sm">No departments configured</div>
-                        )}
-                    </section>
+                            <ResponsiveContainer width="100%" height={280}>
+                                <PieChart>
+                                    <Pie data={departmentDistribution} cx="50%" cy="50%"
+                                        labelLine={false} outerRadius={100} dataKey="value"
+                                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                        style={{ fontSize: '11px' }}>
+                                        {departmentDistribution.map((_, idx) => (
+                                            <Cell key={idx} fill={COLORS[idx % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip contentStyle={tooltipStyle} itemStyle={{ color: 'var(--text-secondary)' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : <EmptyState msg="No departments configured" />}
+                    </ChartCard>
                 </div>
             </div>
         </div>
     );
 };
 
-// Metric Card Component
-const MetricCard = ({ icon: Icon, label, value, subtitle, trend, color }) => {
-    const colorClasses = {
-        indigo: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20',
-        blue: 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20',
-        green: 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20',
-        purple: 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20'
-    };
+// ─ Sub-components ─────────────────────────────────────────────────────────────
 
-    return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-all hover:shadow-md">
-            <div className="flex items-center justify-between mb-3">
-                <div className={`p-2 rounded-lg ${colorClasses[color]}`}>
-                    <Icon className={`w-5 h-5`} />
+const SectionLabel = ({ label, sub }) => (
+    <div style={{ marginBottom: '12px' }}>
+        <h3 style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.13em', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</h3>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{sub}</p>
+    </div>
+);
+
+const MetricCard = ({ icon: Icon, label, value, sub, trend }) => (
+    <div style={{ background: 'var(--bg-surface)', padding: '20px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <Icon size={16} style={{ color: 'var(--text-muted)' }} />
+            {trend !== 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: 700, color: trend > 0 ? 'var(--state-success)' : 'var(--state-danger)' }}>
+                    {trend > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+                    {Math.abs(trend)}%
                 </div>
-                {trend !== 0 && (
-                    <div className={`flex items-center gap-1 text-xs font-bold ${trend > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
-                        }`}>
-                        {trend > 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-                        {Math.abs(trend)}%
-                    </div>
-                )}
-            </div>
-            <div className="text-2xl font-black text-slate-900 dark:text-white">{value}</div>
-            <div className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
-            <div className="text-xs text-slate-400 dark:text-gray-500 mt-2">{subtitle}</div>
+            )}
         </div>
+        <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>{value}</div>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '2px' }}>{label}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>{sub}</div>
+    </div>
+);
+
+const ChartCard = ({ title, sub, children }) => (
+    <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px 22px' }}>
+        <div style={{ marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{title}</h3>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub}</p>
+        </div>
+        {children}
+    </section>
+);
+
+const EmptyState = ({ msg }) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '160px', fontSize: '12px', color: 'var(--text-muted)' }}>{msg}</div>
+);
+
+const Legend = ({ color, label }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ width: '10px', height: '10px', background: color, borderRadius: '1px', flexShrink: 0 }} />
+        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{label}</span>
+    </div>
+);
+
+const RBtn = ({ onClick, disabled, label, icon }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={disabled}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '5px',
+                background: hov && !disabled ? 'var(--bg-hover)' : 'var(--bg-active)',
+                border: '1px solid var(--border-default)',
+                color: disabled ? 'var(--text-muted)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '12px', fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.6 : 1, transition: 'all 150ms ease', borderRadius: '0',
+            }}>
+            {icon}{label}
+        </button>
     );
 };
 

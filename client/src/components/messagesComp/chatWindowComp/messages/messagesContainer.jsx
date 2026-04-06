@@ -29,44 +29,29 @@ export default function MessagesContainer({
   deleteMessage,
   infoMessage,
 
-  currentUserId, // ★ ADD THIS FOR READ RECEIPTS
-  onOpenThread, // ★ THREAD PANEL
-  threadCounts, // ★ THREAD COUNTS
+  currentUserId,
+  onOpenThread,
+  threadCounts,
   chatType,
-  userJoinedAt, // For channel join timeline marker
-  channelMembersWithJoinDates = [], // All members with join dates
-  isAdmin = false, // NEW: admin check for pin permissions
+  userJoinedAt,
+  channelMembersWithJoinDates = [],
+  isAdmin = false,
 
-  // Pagination props
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
-  conversationId, // ← used to reset scroll state when switching channels
+  conversationId,
 }) {
   const messagesRef = useRef(null);
-
-  // ── Translation — single hook instance for all messages in this conversation
   const { getTranslation, requestTranslation, clearTranslation } = useTranslation();
-
-  /* ---------------------------------------------------------
-     AUTO SCROLL TO BOTTOM ON NEW MESSAGES (even optimistic)
-  --------------------------------------------------------- */
   const prevMessagesInfoRef = useRef({ length: 0, lastId: null });
 
-  // Reset scroll tracking when conversation switches
   useEffect(() => {
     prevMessagesInfoRef.current = { length: 0, lastId: null };
-    // Immediately jump to bottom when switching channels
     const el = messagesRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [conversationId]);
 
-  /* ---------------------------------------------------------
-     AUTO SCROLL TO BOTTOM ON NEW MESSAGES
-     Only scroll if:
-     1. Initial load (length 0 → N)  — instant jump to bottom
-     2. New message added at the end — smooth scroll
-  --------------------------------------------------------- */
   useEffect(() => {
     const el = messagesRef.current;
     if (!el) return;
@@ -75,13 +60,10 @@ export default function MessagesContainer({
     const currentLastId = currentLen > 0 ? messages[currentLen - 1].id : null;
     const prevInfo = prevMessagesInfoRef.current;
 
-    const isNewMessageAtEnd =
-      currentLen > prevInfo.length &&
-      currentLastId !== prevInfo.lastId;
+    const isNewMessageAtEnd = currentLen > prevInfo.length && currentLastId !== prevInfo.lastId;
     const isInitialLoad = prevInfo.length === 0 && currentLen > 0;
 
     if (isInitialLoad || isNewMessageAtEnd) {
-      // Double rAF: wait for browser to paint the new DOM before measuring scrollHeight
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           const container = messagesRef.current;
@@ -91,21 +73,11 @@ export default function MessagesContainer({
       });
     }
 
-    prevMessagesInfoRef.current = {
-      length: currentLen,
-      lastId: currentLastId
-    };
+    prevMessagesInfoRef.current = { length: currentLen, lastId: currentLastId };
   }, [messages]);
 
-  /* ---------------------------------------------------------
-     FILTER & GROUP BY DATE
-  --------------------------------------------------------- */
   const filteredMessages = messages.filter((m) => {
-    // Only filter if searchQuery has actual content (not empty/whitespace)
-    if (!searchQuery || !searchQuery.trim()) {
-      return true; // Show all messages when no search
-    }
-    // Filter by search query when it exists
+    if (!searchQuery || !searchQuery.trim()) return true;
     return m.text?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -117,22 +89,34 @@ export default function MessagesContainer({
       className="flex-1 overflow-y-auto p-4 chat-scroll-smooth"
       style={{ overflowX: "hidden" }}
     >
-      {/* Load More Button */}
+      {/* Load More */}
       {hasMore && (
-        <div className="flex justify-center mb-4">
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <button
             onClick={onLoadMore}
             disabled={isLoadingMore}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '6px 16px', fontSize: '13px', fontWeight: 400,
+              color: 'var(--text-secondary)',
+              backgroundColor: 'var(--bg-active)',
+              border: '1px solid var(--border-default)',
+              borderRadius: '2px', cursor: isLoadingMore ? 'not-allowed' : 'pointer',
+              opacity: isLoadingMore ? 0.6 : 1,
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+              transition: 'background-color 150ms ease',
+            }}
+            onMouseEnter={e => { if (!isLoadingMore) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-active)'}
           >
             {isLoadingMore ? (
               <>
-                <Loader2 size={16} className="animate-spin" />
+                <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
                 Loading older messages...
               </>
             ) : (
               <>
-                <ChevronUp size={16} />
+                <ChevronUp size={14} />
                 Load more messages
               </>
             )}
@@ -141,84 +125,84 @@ export default function MessagesContainer({
       )}
 
       {grouped.map((grp) => (
-        <div key={grp.label} className="mb-4">
-          {/* --- Date Header --- */}
-          <div className="flex justify-center mb-3">
-            <div className="text-xs text-gray-500 dark:text-gray-400 px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full">
+        <div key={grp.label} style={{ marginBottom: '16px' }}>
+          {/* Date Header */}
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+            <div style={{
+              fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)',
+              padding: '3px 12px',
+              backgroundColor: 'var(--bg-active)',
+              border: '1px solid var(--border-subtle)',
+              borderRadius: '2px',
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+              letterSpacing: '0.02em',
+            }}>
               {grp.label}
             </div>
           </div>
 
-          {/* --- Messages in Group --- */}
+          {/* Messages */}
           <div className="space-y-3">
-            {grp.items
-              .map((msg, idx) => {
+            {grp.items.map((msg) => {
+              let memberWhoJoined = null;
 
-                // Determine if we should show a join marker before this message
-                // Show marker at the position of a member's FIRST message
-                let memberWhoJoined = null;
+              if (chatType === 'channel' && channelMembersWithJoinDates.length > 0 && messages.length > 0) {
+                const currentMsgSenderId = msg.senderId;
+                const isFirstMessageFromSender = messages.findIndex(m =>
+                  String(m.senderId) === String(currentMsgSenderId)
+                ) === messages.findIndex(m => m.id === msg.id);
 
-                if (chatType === 'channel' && channelMembersWithJoinDates.length > 0 && messages.length > 0) {
-                  const currentMsgSenderId = msg.senderId;
-
-                  // Check if this is the first message from this sender in the entire chat
-                  const isFirstMessageFromSender = messages.findIndex(m =>
-                    String(m.senderId) === String(currentMsgSenderId)
-                  ) === messages.findIndex(m => m.id === msg.id);
-
-                  if (isFirstMessageFromSender) {
-                    // Find the member info for this sender
-                    memberWhoJoined = channelMembersWithJoinDates.find(member =>
-                      String(member.userId) === String(currentMsgSenderId)
-                    );
-                  }
+                if (isFirstMessageFromSender) {
+                  memberWhoJoined = channelMembersWithJoinDates.find(member =>
+                    String(member.userId) === String(currentMsgSenderId)
+                  );
                 }
+              }
 
-                return (
-                  <React.Fragment key={msg.id}>
-                    {memberWhoJoined && (
-                      <JoinMarker
-                        date={memberWhoJoined.joinedAt}
-                        memberInfo={memberWhoJoined}
-                        currentUserId={currentUserId}
-                      />
-                    )}
-                    <MessageErrorBoundary>
-                      <MessageGroup
-                        msg={msg}
+              return (
+                <React.Fragment key={msg.id}>
+                  {memberWhoJoined && (
+                    <JoinMarker
+                      date={memberWhoJoined.joinedAt}
+                      memberInfo={memberWhoJoined}
+                      currentUserId={currentUserId}
+                    />
+                  )}
+                  <MessageErrorBoundary>
+                    <MessageGroup
+                      msg={msg}
 
-                        selectMode={selectMode}
-                        selectedIds={selectedIds}
-                        toggleSelect={toggleSelect}
+                      selectMode={selectMode}
+                      selectedIds={selectedIds}
+                      toggleSelect={toggleSelect}
 
-                        openMsgMenuId={openMsgMenuId}
-                        toggleMsgMenu={toggleMsgMenu}
-                        setOpenMsgMenuId={setOpenMsgMenuId}
+                      openMsgMenuId={openMsgMenuId}
+                      toggleMsgMenu={toggleMsgMenu}
+                      setOpenMsgMenuId={setOpenMsgMenuId}
 
-                        formatTime={formatTime}
-                        addReaction={addReaction}
-                        pinMessage={pinMessage}
-                        replyToMessage={replyToMessage}
-                        forwardMessage={forwardMessage}
-                        copyMessage={copyMessage}
-                        deleteMessage={deleteMessage}
-                        infoMessage={infoMessage}
+                      formatTime={formatTime}
+                      addReaction={addReaction}
+                      pinMessage={pinMessage}
+                      replyToMessage={replyToMessage}
+                      forwardMessage={forwardMessage}
+                      copyMessage={copyMessage}
+                      deleteMessage={deleteMessage}
+                      infoMessage={infoMessage}
 
-                        currentUserId={currentUserId} // ★ PASS DOWN FOR READ RECEIPTS
-                        onOpenThread={onOpenThread} // ★ THREAD PANEL
-                        threadCounts={threadCounts} // ★ THREAD COUNTS
-                        chatType={chatType}
-                        channelMembers={channelMembersWithJoinDates} // ★ PASS MEMBERS FOR REACTIONS
-                        isAdmin={isAdmin} // ★ PASS DOWN FOR PIN PERMISSIONS
-                        // Translation
-                        translationState={getTranslation(msg._id || msg.id)}
-                        onTranslate={requestTranslation}
-                        onClearTranslation={clearTranslation}
-                      />
-                    </MessageErrorBoundary>
-                  </React.Fragment>
-                );
-              })}
+                      currentUserId={currentUserId}
+                      onOpenThread={onOpenThread}
+                      threadCounts={threadCounts}
+                      chatType={chatType}
+                      channelMembers={channelMembersWithJoinDates}
+                      isAdmin={isAdmin}
+                      translationState={getTranslation(msg._id || msg.id)}
+                      onTranslate={requestTranslation}
+                      onClearTranslation={clearTranslation}
+                    />
+                  </MessageErrorBoundary>
+                </React.Fragment>
+              );
+            })}
           </div>
         </div>
       ))}

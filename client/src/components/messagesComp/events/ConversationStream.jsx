@@ -335,19 +335,11 @@ function ConversationStream({
             {/* Threads-only filter banner */}
             {showThreadsOnly && (
                 <div style={{
-                    position: 'sticky',
-                    top: 0,
-                    zIndex: 10,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '6px 12px',
-                    background: '#EFF6FF',
-                    borderBottom: '1px solid #BFDBFE',
-                    fontSize: '12px',
-                    color: '#2563EB',
-                    fontWeight: 500,
+                    position: 'sticky', top: 0, zIndex: 10,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    gap: '6px', padding: '6px 12px',
+                    backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-accent)',
+                    fontSize: '12px', color: 'var(--accent)', fontWeight: 500,
                 }}>
                     <span>🧵</span>
                     <span>Showing only threaded messages — click the thread icon to see all messages</span>
@@ -356,70 +348,62 @@ function ConversationStream({
 
             {/* Load More / Pagination Skeleton */}
             {hasMore && (
-                <div style={{ padding: '0.5rem 1rem' }}>
+                <div style={{ padding: '8px 16px', textAlign: 'center' }}>
                     {loading ? (
-                        <div className="animate-pulse space-y-3 py-2">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}>
                             {[65, 80, 50].map((w, i) => (
-                                <div key={i} className="flex items-start gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
-                                    <div className="flex-1 space-y-2">
-                                        <div className="flex gap-2">
-                                            <div className="h-2.5 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-                                            <div className="h-2.5 w-10 bg-gray-100 dark:bg-gray-700/50 rounded" />
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <div style={{ height: '10px', width: '80px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
+                                            <div style={{ height: '10px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
                                         </div>
-                                        <div className="h-3 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w}%` }} />
+                                        <div style={{ height: '12px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${w}%` }} />
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
-                        <div style={{ textAlign: 'center', padding: '0.5rem' }}>
-                            <button
+                        <button
                             onClick={() => onLoadMore?.()}
-                                className="text-blue-500 hover:underline"
-                                style={{
-                                    background: 'none',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    fontSize: '0.875rem'
-                                }}
-                            >
-                                Load older messages
-                            </button>
-                        </div>
+                            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: '4px 16px', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                        >
+                            Load older messages
+                        </button>
                     )}
                 </div>
             )}
 
             {/* ── Channel Creation Banner ──────────────────────────────── */}
             {conversationType === 'channel' && channelCreatedAt && (() => {
-                // Strip any leading # — Home.jsx prepends it to chat.name already
                 const cleanName = (channelName || 'this channel').replace(/^#+/, '');
                 return (
-                    <div style={{ padding: '2rem 1.5rem 1rem', borderBottom: '1px solid #e5e7eb' }}
-                        className="dark:border-gray-800"
-                    >
-                        {/* Channel icon: lock for private, # for public */}
+                    <div style={{ padding: '2rem 1.5rem 1.25rem', borderBottom: '1px solid var(--border-subtle)' }}>
+                        {/* Channel icon */}
                         <div style={{
-                            width: 56, height: 56, borderRadius: 12,
-                            background: isPrivate ? '#f3f0ff' : 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            width: 48, height: 48, borderRadius: '2px',
+                            backgroundColor: isPrivate ? 'rgba(184,149,106,0.08)' : 'var(--bg-active)',
+                            border: '1px solid var(--border-accent)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            marginBottom: '0.75rem',
+                            marginBottom: '12px',
                         }}>
                             {isPrivate
-                                ? <Lock size={26} strokeWidth={2} color="#7c3aed" />
-                                : <span style={{ fontSize: 28, fontWeight: 900, color: '#fff' }}>#</span>
+                                ? <Lock size={22} strokeWidth={2} style={{ color: 'var(--accent)' }} />
+                                : <span style={{ fontSize: 24, fontWeight: 900, color: 'var(--accent)' }}>#</span>
                             }
                         </div>
 
-                        <h2 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 0.25rem', color: 'inherit' }}>
+                        <h2 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)' }}>
                             Welcome to {isPrivate ? '' : '#'}{cleanName}!
                         </h2>
 
-                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>
-                            <span style={{ fontWeight: 600 }}>{isPrivate ? '' : '#'}{cleanName}</span>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: 0, lineHeight: 1.65 }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{isPrivate ? '' : '#'}{cleanName}</span>
                             {' '}was created by{' '}
-                            <span style={{ fontWeight: 600 }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>
                                 {String(currentUserId) === String(channelCreatedById)
                                     ? 'You'
                                     : (creatorName || 'Unknown')
@@ -430,7 +414,7 @@ function ConversationStream({
                                 month: 'long', day: 'numeric', year: 'numeric'
                             })}.
                             {' '}This is the very beginning of the{' '}
-                            <span style={{ fontWeight: 600 }}>{isPrivate ? '' : '#'}{cleanName}</span>
+                            <span style={{ fontWeight: 600, color: 'var(--accent)' }}>{isPrivate ? '' : '#'}{cleanName}</span>
                             {' '}channel.
                         </p>
                     </div>
@@ -471,7 +455,7 @@ function ConversationStream({
                             >
                                 <span
                                     style={{
-                                        background: 'var(--bg-secondary)',
+                                        background: 'var(--bg-active)',
                                         padding: '0.25rem 1rem',
                                         borderRadius: '1rem',
                                         fontSize: '0.75rem',
@@ -489,7 +473,7 @@ function ConversationStream({
                                         left: 0,
                                         right: 0,
                                         height: '1px',
-                                        background: 'var(--border-color)',
+                                        background: 'var(--border-default)',
                                         zIndex: 0
                                     }}
                                 />
@@ -527,67 +511,48 @@ function ConversationStream({
                 })}
             </div>
 
-            {/* Empty State */}
-            {/* Initial load skeleton - Slack-style: all left-aligned with avatar + name + message */}
-            {events.length === 0 && loading && (
-                <div className="flex-1 px-4 py-6 animate-pulse space-y-6">
-                    {[
-                        { name: 22, line1: 68, line2: 0 },
-                        { name: 18, line1: 50, line2: 35 },
-                        { name: 24, line1: 80, line2: 55 },
-                        { name: 20, line1: 45, line2: 0 },
-                        { name: 22, line1: 72, line2: 40 },
-                        { name: 16, line1: 58, line2: 0 },
-                        { name: 26, line1: 85, line2: 60 },
-                    ].map((row, i) => (
-                        <div key={i} className="flex items-start gap-3">
-                            {/* Avatar */}
-                            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
-                            {/* Content */}
-                            <div className="flex-1 space-y-2" style={{ maxWidth: '70%' }}>
-                                {/* Name + timestamp */}
-                                <div className="flex items-baseline gap-2">
-                                    <div className="h-3 bg-gray-300 dark:bg-gray-600 rounded" style={{ width: `${row.name * 4}px` }} />
-                                    <div className="h-2.5 w-10 bg-gray-100 dark:bg-gray-700/50 rounded" />
+            {/* Skeleton loader — only when truly no data and no creation banner to show */}
+            {events.length === 0 && loading && !channelCreatedAt && (
+                <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                    {[{ name: 22, line1: 68, line2: 0 }, { name: 18, line1: 50, line2: 35 }, { name: 24, line1: 80, line2: 55 }, { name: 20, line1: 45, line2: 0 }, { name: 22, line1: 72, line2: 40 }, { name: 16, line1: 58, line2: 0 }].map((row, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
+                            <div style={{ flex: 1, maxWidth: '70%', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                                    <div style={{ height: '10px', width: `${row.name * 4}px`, backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
+                                    <div style={{ height: '8px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
                                 </div>
-                                {/* Message line 1 */}
-                                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{ width: `${row.line1}%` }} />
-                                {/* Message line 2 (optional) */}
-                                {row.line2 > 0 && (
-                                    <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{ width: `${row.line2}%` }} />
-                                )}
+                                <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${row.line1}%` }} />
+                                {row.line2 > 0 && <div style={{ height: '14px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${row.line2}%`, opacity: 0.7 }} />}
                             </div>
                         </div>
                     ))}
                 </div>
             )}
 
-            {/* Empty state when no messages and not loading */}
-            {events.length === 0 && !loading && (
-                <div className="flex-1 flex flex-col items-center justify-center py-16 px-6 text-center select-none">
-                    {/* Icon badge */}
+            {/* Empty state — only show when no channel creation banner (channels) or for DMs */}
+            {events.length === 0 && !loading && !channelCreatedAt && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center', userSelect: 'none' }}>
                     <div style={{
-                        width: 64, height: 64, borderRadius: 18,
-                        background: conversationType === 'channel'
-                            ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-                            : 'linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)',
+                        width: 52, height: 52, borderRadius: '2px',
+                        backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        marginBottom: '1rem', boxShadow: '0 4px 16px rgba(99,102,241,0.25)',
+                        marginBottom: '16px',
                     }}>
                         {conversationType === 'channel'
-                            ? <Hash size={30} strokeWidth={2.5} color="#fff" />
-                            : <span style={{ fontSize: 28 }}>💬</span>
+                            ? <Hash size={24} strokeWidth={2} style={{ color: 'var(--accent)' }} />
+                            : <span style={{ fontSize: 24 }}>💬</span>
                         }
                     </div>
-                    <h3 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0 0 0.4rem', color: 'var(--text-primary, #111827)' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, margin: '0 0 6px', color: 'var(--text-primary)', fontFamily: 'var(--font)' }}>
                         {conversationType === 'channel'
                             ? (channelName ? `Start of #${channelName.replace(/^#+/, '')}` : 'No messages yet')
                             : 'No messages yet'
                         }
                     </h3>
-                    <p style={{ fontSize: '0.875rem', color: 'var(--text-muted, #6b7280)', maxWidth: 300, margin: '0 auto 1.25rem', lineHeight: 1.6 }}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: 280, margin: '0 auto', lineHeight: 1.65, fontFamily: 'var(--font)' }}>
                         {conversationType === 'channel'
-                            ? 'This is the very beginning of this channel. Be the first to say something!'
+                            ? 'Be the first to say something!'
                             : 'Send a message to start the conversation.'
                         }
                     </p>

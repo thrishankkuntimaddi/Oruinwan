@@ -25,7 +25,7 @@ function PollEvent({ event, currentUserId }) {
     };
 
     return (
-        <div className="my-1 px-4">
+        <div style={{ margin: '4px 0', padding: '0 16px' }}>
             <PollMessage msg={pollMsg} currentUserId={currentUserId} />
         </div>
     );

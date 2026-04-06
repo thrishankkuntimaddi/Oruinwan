@@ -1,6 +1,41 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, BarChart2 } from 'lucide-react';
 
+const inputStyle = {
+    width: '100%', padding: '8px 12px', boxSizing: 'border-box',
+    backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)',
+    outline: 'none', fontFamily: 'var(--font)', transition: 'border-color 150ms ease',
+};
+
+const labelStyle = {
+    display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)',
+    textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px',
+};
+
+function Checkbox({ checked, onChange, label, sub }) {
+    return (
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
+            <div
+                onClick={() => onChange(!checked)}
+                style={{
+                    width: '16px', height: '16px', borderRadius: '2px', flexShrink: 0, marginTop: '1px',
+                    backgroundColor: checked ? 'var(--accent)' : 'var(--bg-input)',
+                    border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-default)'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    cursor: 'pointer', transition: '150ms ease',
+                }}
+            >
+                {checked && <span style={{ color: '#0c0c0c', fontSize: '10px', fontWeight: 900, lineHeight: 1 }}>✓</span>}
+            </div>
+            <div>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{sub}</div>
+            </div>
+        </label>
+    );
+}
+
 export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channelName }) {
     const [question, setQuestion] = useState('');
     const [options, setOptions] = useState(['', '']);
@@ -8,205 +43,147 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
     const [anonymous, setAnonymous] = useState(false);
     const [endDate, setEndDate] = useState('');
 
-    const addOption = () => {
-        if (options.length < 10) {
-            setOptions([...options, '']);
-        }
-    };
-
-    const removeOption = (index) => {
-        if (options.length > 2) {
-            setOptions(options.filter((_, i) => i !== index));
-        }
-    };
-
-    const updateOption = (index, value) => {
-        const newOptions = [...options];
-        newOptions[index] = value;
-        setOptions(newOptions);
-    };
+    const addOption = () => { if (options.length < 10) setOptions([...options, '']); };
+    const removeOption = (i) => { if (options.length > 2) setOptions(options.filter((_, idx) => idx !== i)); };
+    const updateOption = (i, v) => { const n = [...options]; n[i] = v; setOptions(n); };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-
-        const validOptions = options.filter(opt => opt.trim() !== '');
-
-        if (!question.trim() || validOptions.length < 2) {
-            return;
-        }
-
-        const poll = {
+        const validOptions = options.filter(o => o.trim() !== '');
+        if (!question.trim() || validOptions.length < 2) return;
+        onCreatePoll({
             question: question.trim(),
-            options: validOptions.map(opt => ({
-                text: opt.trim(),
-                votes: [],
-                count: 0
-            })),
-            allowMultiple,
-            anonymous,
+            options: validOptions.map(o => ({ text: o.trim(), votes: [], count: 0 })),
+            allowMultiple, anonymous,
             endDate: endDate || null,
             createdAt: new Date().toISOString(),
-            votes: {},
-            totalVotes: 0,
-            status: 'active'
-        };
-
-        onCreatePoll(poll);
+            votes: {}, totalVotes: 0, status: 'active',
+        });
         handleClose();
     };
 
     const handleClose = () => {
-        setQuestion('');
-        setOptions(['', '']);
-        setAllowMultiple(false);
-        setAnonymous(false);
-        setEndDate('');
+        setQuestion(''); setOptions(['', '']);
+        setAllowMultiple(false); setAnonymous(false); setEndDate('');
         onClose();
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={handleClose}>
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+        <div
+            style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', backdropFilter: 'blur(4px)', fontFamily: 'var(--font)' }}
+            onClick={handleClose}
+        >
+            <div
+                style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
+                onClick={e => e.stopPropagation()}
+            >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center">
-                            <BarChart2 size={20} className="text-blue-600 dark:text-blue-400" />
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <BarChart2 size={16} style={{ color: 'var(--accent)' }} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Create Poll</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">#{channelName}</p>
+                            <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Create Poll</h2>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>#{channelName}</p>
                         </div>
                     </div>
-                    <button
-                        onClick={handleClose}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                    <button onClick={handleClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
-                        <X size={20} className="text-gray-500 dark:text-gray-400" />
+                        <X size={16} />
                     </button>
                 </div>
 
                 {/* Body */}
-                <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-140px)]">
-                    <div className="p-6 space-y-6">
+                <form onSubmit={handleSubmit} style={{ overflowY: 'auto', flex: 1 }}>
+                    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
                         {/* Question */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Question *
-                            </label>
+                            <label style={labelStyle}>Question *</label>
                             <input
-                                type="text"
-                                value={question}
-                                onChange={(e) => setQuestion(e.target.value)}
+                                type="text" value={question}
+                                onChange={e => setQuestion(e.target.value)}
                                 placeholder="What do you want to ask?"
-                                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                                required
+                                style={inputStyle} required
+                                onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                             />
                         </div>
 
                         {/* Options */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                Options * (minimum 2)
-                            </label>
-                            <div className="space-y-2">
-                                {options.map((option, index) => (
-                                    <div key={index} className="flex items-center gap-2">
+                            <label style={labelStyle}>Options * (minimum 2)</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {options.map((option, i) => (
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                         <input
-                                            type="text"
-                                            value={option}
-                                            onChange={(e) => updateOption(index, e.target.value)}
-                                            placeholder={`Option ${index + 1}`}
-                                            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
-                                            required
+                                            type="text" value={option}
+                                            onChange={e => updateOption(i, e.target.value)}
+                                            placeholder={`Option ${i + 1}`}
+                                            style={{ ...inputStyle, flex: 1 }} required
+                                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                                         />
                                         {options.length > 2 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => removeOption(index)}
-                                                className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                            <button type="button" onClick={() => removeOption(i)}
+                                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease' }}
+                                                onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                             >
-                                                <Trash2 size={18} />
+                                                <Trash2 size={15} />
                                             </button>
                                         )}
                                     </div>
                                 ))}
                             </div>
-
                             {options.length < 10 && (
-                                <button
-                                    type="button"
-                                    onClick={addOption}
-                                    className="mt-3 flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                                <button type="button" onClick={addOption}
+                                    style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, padding: '4px 0', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                                 >
-                                    <Plus size={18} />
-                                    Add Option
+                                    <Plus size={14} /> Add Option
                                 </button>
                             )}
                         </div>
 
                         {/* Settings */}
-                        <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700">
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={allowMultiple}
-                                    onChange={(e) => setAllowMultiple(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <div>
-                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Allow multiple selections</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Users can vote for more than one option</div>
-                                </div>
-                            </label>
-
-                            <label className="flex items-center gap-3 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    checked={anonymous}
-                                    onChange={(e) => setAnonymous(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                />
-                                <div>
-                                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">Anonymous voting</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">Don't show who voted for what</div>
-                                </div>
-                            </label>
+                        <div style={{ paddingTop: '14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <Checkbox checked={allowMultiple} onChange={setAllowMultiple} label="Allow multiple selections" sub="Users can vote for more than one option" />
+                            <Checkbox checked={anonymous} onChange={setAnonymous} label="Anonymous voting" sub="Don't show who voted for what" />
                         </div>
 
                         {/* End Date */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                                End Date (Optional)
-                            </label>
+                            <label style={labelStyle}>End Date (Optional)</label>
                             <input
-                                type="datetime-local"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
+                                type="datetime-local" value={endDate}
+                                onChange={e => setEndDate(e.target.value)}
                                 min={new Date().toISOString().slice(0, 16)}
-                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                                style={{ ...inputStyle, colorScheme: 'dark' }}
+                                onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                             />
                         </div>
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)', flexShrink: 0 }}>
+                        <button type="button" onClick={handleClose}
+                            style={{ padding: '7px 16px', fontSize: '13px', color: 'var(--text-secondary)', backgroundColor: 'transparent', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                        >Cancel</button>
+                        <button type="submit"
                             disabled={!question.trim() || options.filter(o => o.trim()).length < 2}
-                            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium"
-                        >
-                            Create Poll
-                        </button>
+                            style={{ padding: '7px 20px', fontSize: '13px', fontWeight: 600, color: '#0c0c0c', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease', opacity: (!question.trim() || options.filter(o => o.trim()).length < 2) ? 0.5 : 1 }}
+                            onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.opacity = '0.85'; }}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                        >Create Poll</button>
                     </div>
                 </form>
             </div>

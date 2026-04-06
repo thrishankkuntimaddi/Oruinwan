@@ -1,42 +1,49 @@
 import React from 'react';
+import { AlertTriangle, Lock } from 'lucide-react';
 
-/**
- * AdvancedTab Component
- * Displays dangerous workspace actions (delete) for admin users only
- */
-const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => {
-    return (
-        <div>
-            {isAdmin ? (
-                <div className="bg-red-50/50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30 rounded-2xl p-8">
-                    <h3 className="text-lg font-bold text-red-900 dark:text-red-400 mb-2">Danger Zone</h3>
-                    <p className="text-sm text-red-700/80 dark:text-red-400/80 mb-8 leading-relaxed">
-                        Deleting a workspace is permanent and cannot be undone. All messages, files, and data will be lost forever.
-                        <br />
-                        <strong>Only administrators can perform this action.</strong>
+const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => (
+    <div style={{ fontFamily: 'var(--font)' }}>
+        {isAdmin ? (
+            <div style={{ border: '1px solid rgba(198,60,60,0.25)', borderRadius: '2px', overflow: 'hidden' }}>
+                {/* Danger header */}
+                <div style={{ padding: '14px 18px', background: 'rgba(198,60,60,0.08)', borderBottom: '1px solid rgba(198,60,60,0.2)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <AlertTriangle size={15} style={{ color: 'var(--state-danger)', flexShrink: 0 }} />
+                    <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--state-danger)', margin: 0 }}>Danger Zone</h3>
+                </div>
+
+                {/* Warning text */}
+                <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                        Deleting a workspace is <strong style={{ color: 'var(--text-primary)' }}>permanent</strong> and cannot be undone.
+                        All messages, files, and data will be lost forever.{' '}
+                        <strong style={{ color: 'var(--state-danger)' }}>Only administrators can perform this action.</strong>
                     </p>
-                    <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-xl border border-red-100 dark:border-red-900/30 shadow-sm">
-                        <div>
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white">Delete this workspace</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Once deleted, it's gone for good.</p>
-                        </div>
-                        <button
-                            onClick={() => setShowDeleteConfirm(true)}
-                            className="px-5 py-2.5 bg-red-600 text-white text-sm font-bold rounded-xl hover:bg-red-700 shadow-md hover:shadow-lg transition-all"
-                        >
-                            Delete Workspace
-                        </button>
+                </div>
+
+                {/* Delete row */}
+                <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                    <div>
+                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>Delete this workspace</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Once deleted, it&apos;s gone for good.</div>
                     </div>
+                    <button
+                        onClick={() => setShowDeleteConfirm(true)}
+                        style={{ padding: '8px 16px', fontSize: '12px', fontWeight: 600, color: '#fff', background: 'var(--state-danger)', border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', flexShrink: 0, transition: '150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                        Delete Workspace
+                    </button>
                 </div>
-            ) : (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700">
-                    <div className="text-gray-400 mb-2 text-4xl">🔒</div>
-                    <p className="text-gray-500 dark:text-gray-300 font-semibold">Admin Access Required</p>
-                    <p className="text-sm text-gray-400 mt-2">Only workspace administrators can access advanced settings.</p>
-                </div>
-            )}
-        </div>
-    );
-};
+            </div>
+        ) : (
+            <div style={{ padding: '32px', textAlign: 'center', border: '1px solid var(--border-subtle)', borderRadius: '2px', background: 'var(--bg-active)' }}>
+                <Lock size={24} style={{ color: 'var(--text-muted)', marginBottom: '10px' }} />
+                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Admin Access Required</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Only workspace administrators can access advanced settings.</p>
+            </div>
+        )}
+    </div>
+);
 
 export default AdvancedTab;

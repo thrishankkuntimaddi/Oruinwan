@@ -1,64 +1,85 @@
-
+// CompanyAdminLayout — Monolith Flow Design System
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../admin/AdminSidebar';
-import OwnerSidebar from '../../pages/OwnerDashboard/OwnerSidebar'; // Import OwnerSidebar
+import OwnerSidebar from '../../pages/OwnerDashboard/OwnerSidebar';
 import { useCompany } from '../../contexts/CompanyContext';
-import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
-import { useTheme } from '../../contexts/ThemeContext';
-import { Sun, Moon } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CompanyAdminLayout = () => {
-    const { company, isOwner: contextIsOwner } = useCompany(); // Assume isOwner might be in context, or check user
+    const { company } = useCompany();
     const { user } = useAuth();
-    const { theme, toggleTheme } = useTheme();
 
-    const isOwner = user?.companyRole === 'owner' || contextIsOwner;
+    const isOwner = user?.companyRole === 'owner';
+    const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
     return (
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-200">
+        <div style={{
+            display: 'flex',
+            height: '100vh',
+            background: 'var(--bg-base)',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+            overflow: 'hidden',
+        }}>
             {isOwner ? <OwnerSidebar /> : <AdminSidebar />}
 
-            <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-                {/* Top Context Bar - Sticky */}
-                <header className="h-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 sticky top-0 z-10 transition-colors duration-200">
-                    <div className="flex items-center gap-4">
-                        {/* Company Name Context */}
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">
-                                Company Workspace
-                            </span>
-                            <h1 className="text-xl font-black text-gray-900 dark:text-white leading-none tracking-tight">
-                                {company?.name || 'My Company'}
-                            </h1>
-                        </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', minWidth: 0 }}>
+                {/* ── Top Context Header ── */}
+                <header style={{
+                    height: '56px',
+                    background: 'var(--bg-surface)',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 24px',
+                    flexShrink: 0,
+                    zIndex: 10,
+                }}>
+                    {/* Left — Company Identity */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                        <span style={{
+                            fontSize: '10px', fontWeight: 700,
+                            color: 'var(--text-muted)',
+                            textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1,
+                        }}>
+                            Company Workspace
+                        </span>
+                        <span style={{
+                            fontSize: '18px', fontWeight: 700,
+                            color: 'var(--text-primary)',
+                            letterSpacing: '-0.02em', lineHeight: 1.2,
+                        }}>
+                            {company?.name || 'My Company'}
+                        </span>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        {/* Quick Actions / Date (Optional) */}
-                        <div className="hidden md:flex flex-col items-end mr-4">
-                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                            </span>
-                            <span className="text-xs text-green-500 font-bold flex items-center gap-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                                System Online
-                            </span>
-                        </div>
-
-                        {/* Theme Toggle */}
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all border border-transparent hover:border-indigo-100 dark:hover:border-indigo-900"
-                            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                        >
-                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
+                    {/* Right — Date + Status */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
+                            {dateStr}
+                        </span>
+                        <span style={{
+                            fontSize: '11px', fontWeight: 600,
+                            color: 'var(--state-success)',
+                            display: 'flex', alignItems: 'center', gap: '4px', lineHeight: 1,
+                        }}>
+                            <span style={{
+                                display: 'inline-block', width: '6px', height: '6px',
+                                borderRadius: '50%', background: 'var(--state-success)', flexShrink: 0,
+                            }} />
+                            System Online
+                        </span>
                     </div>
                 </header>
 
-                {/* Main Scrollable Content */}
-                <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative">
+                {/* ── Main Content ── */}
+                <main style={{
+                    flex: 1, overflow: 'hidden',
+                    background: 'var(--bg-base)',
+                    position: 'relative',
+                    display: 'flex', flexDirection: 'column',
+                }}>
                     <Outlet />
                 </main>
             </div>

@@ -12,19 +12,14 @@ import ScheduleMeetingModal from "../../messagesComp/chatWindowComp/modals/Sched
 
 // ── Section Header (same pattern as TasksPanel) ───────────────────────────
 const SectionHeader = ({ label, isOpen, onClick, count }) => (
-    <div
-        onClick={onClick}
-        className="flex items-center justify-between px-4 py-2 group cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors mt-2 select-none"
-    >
-        <div className="flex items-center gap-2">
-            <span className={`text-gray-400 transform transition-transform duration-200 ${isOpen ? "rotate-90" : ""}`}>
-                <ChevronRight size={12} />
-            </span>
-            <span className="text-xs font-bold tracking-wider text-gray-500 uppercase">{label}</span>
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', cursor: 'pointer', marginTop: '8px', transition: 'background 150ms ease' }}
+        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ color: 'rgba(228,228,228,0.3)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }}><ChevronRight size={11} /></span>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>{label}</span>
             {count !== undefined && (
-                <span className="bg-gray-100 dark:bg-gray-800 text-gray-500 px-1.5 py-0.5 rounded text-[10px] font-medium">
-                    {count}
-                </span>
+                <span style={{ padding: '1px 6px', background: 'rgba(255,255,255,0.06)', fontSize: '10px', color: 'rgba(228,228,228,0.35)', fontFamily: 'Inter, system-ui, sans-serif' }}>{count}</span>
             )}
         </div>
     </div>
@@ -32,88 +27,41 @@ const SectionHeader = ({ label, isOpen, onClick, count }) => (
 
 // ── Meeting Card ───────────────────────────────────────────────────────────
 const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, isSelected }) => (
-    <div
-        onClick={onJoin}
-        className={`mx-3 mb-1.5 p-3 rounded-xl border transition-all cursor-pointer group relative overflow-hidden
-            ${isSelected
-                ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800"
-                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/50 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-700"
-            }`}
-    >
-        {/* Left Status Bar */}
-        <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${status === "live"
-                ? "bg-gradient-to-b from-red-500 to-pink-500"
-                : status === "upcoming"
-                    ? "bg-gradient-to-b from-blue-500 to-indigo-500"
-                    : "bg-gray-200 dark:bg-gray-700"
-            }`} />
-
-        <div className="flex justify-between items-start mb-2 pl-2">
+    <div onClick={onJoin} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: `1px solid ${isSelected ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, background: isSelected ? 'rgba(184,149,106,0.08)' : 'rgba(255,255,255,0.03)', cursor: onJoin ? 'pointer' : 'default', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
+        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: status === 'live' ? '#ef4444' : status === 'past' ? 'rgba(255,255,255,0.1)' : '#3b82f6' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
             <div>
-                <h4 className={`text-sm font-semibold ${isSelected
-                        ? "text-indigo-700 dark:text-indigo-300"
-                        : "text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                    } transition-colors`}>
-                    {title}
-                </h4>
+                <h4 style={{ fontSize: '12px', fontWeight: 600, color: isSelected ? '#e4e4e4' : 'rgba(228,228,228,0.75)', fontFamily: 'Inter, system-ui, sans-serif' }}>{title}</h4>
                 {channel && (
-                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
-                        <Hash size={10} />
-                        <span>{channel}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginTop: '2px' }}>
+                        <Hash size={9} /><span>{channel}</span>
                     </div>
                 )}
             </div>
-            {status === "live" ? (
-                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-[10px] font-bold rounded-full uppercase tracking-wide border border-red-100 dark:border-red-900/30 shrink-0">
-                    <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
-                    </span>
-                    Live
+            {status === 'live' ? (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 6px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '9px', fontWeight: 700, color: '#f87171', letterSpacing: '0.08em', flexShrink: 0 }}>
+                    <span style={{ position: 'relative', display: 'flex', width: '6px', height: '6px' }}>
+                        <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#f87171', opacity: 0.5, animation: 'ping 1s cubic-bezier(0,0,0.2,1) infinite' }} />
+                        <span style={{ position: 'relative', width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444' }} />
+                    </span> LIVE
                 </span>
-            ) : status === "past" ? (
-                <div className="flex items-center gap-1 text-xs text-gray-400 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded shrink-0">
-                    <History size={10} />
-                    <span>{time}</span>
-                </div>
             ) : (
-                <div className="flex items-center gap-1 text-xs text-gray-400 bg-gray-50 dark:bg-gray-800 px-1.5 py-0.5 rounded shrink-0">
-                    <Clock size={10} />
-                    <span>{time}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'rgba(228,228,228,0.3)', padding: '2px 6px', background: 'rgba(255,255,255,0.05)', flexShrink: 0 }}>
+                    {status === 'past' ? <History size={9} /> : <Clock size={9} />}<span>{time}</span>
                 </div>
             )}
         </div>
-
-        {/* Participants Row */}
-        <div className="flex items-center justify-between pl-2">
-            <div className="flex -space-x-1.5">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', gap: '-4px' }}>
                 {participants.slice(0, 4).map((p, i) => (
-                    <div
-                        key={i}
-                        className="w-5 h-5 rounded-full border-2 border-white dark:border-gray-800 bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-[7px] font-bold text-indigo-600 dark:text-indigo-300"
-                        title={p.username || p.initials}
-                    >
-                        {(p.username || p.initials || "?").slice(0, 2).toUpperCase()}
+                    <div key={i} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid #0c0c0c', background: 'rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 700, color: '#b8956a', marginLeft: i > 0 ? '-4px' : 0 }} title={p.username || p.initials}>
+                        {(p.username || p.initials || '?').slice(0, 2).toUpperCase()}
                     </div>
                 ))}
-                {participants.length > 4 && (
-                    <div className="w-5 h-5 rounded-full border-2 border-white dark:border-gray-800 bg-gray-100 dark:bg-gray-700/80 flex items-center justify-center text-[8px] font-bold text-gray-500">
-                        +{participants.length - 4}
-                    </div>
-                )}
-                {participants.length === 0 && (
-                    <span className="text-[10px] text-gray-400 pl-0.5">No participants yet</span>
-                )}
+                {participants.length === 0 && <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.25)', fontFamily: 'Inter, system-ui, sans-serif' }}>No participants</span>}
             </div>
-
-            {(status === "live" || status === "upcoming") && (
-                <button
-                    onClick={(e) => { e.stopPropagation(); onJoin && onJoin(); }}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                >
-                    {status === "live" ? "Join" : "View"}
-                </button>
-            )}
         </div>
     </div>
 );
@@ -192,31 +140,22 @@ const MeetingsPanel = () => {
     const totalLive = (active ? 1 : 0) + activeWorkspaceHuddles.length;
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
             {/* ── Header ── */}
-            <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0">
-                <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">
-                    Video Huddles
-                </h2>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={handleStartInstant}
-                        disabled={starting || active}
-                        title="Start Instant Huddle"
-                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {starting ? (
-                            <span className="block w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                            <Video size={18} />
-                        )}
+            <div style={{ height: '56px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#0c0c0c', flexShrink: 0 }}>
+                <h2 style={{ fontWeight: 700, fontSize: '15px', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>Video Huddles</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button onClick={handleStartInstant} disabled={starting || active} title="Start Instant Huddle"
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'rgba(228,228,228,0.4)', cursor: starting || active ? 'not-allowed' : 'pointer', opacity: starting || active ? 0.5 : 1, transition: 'all 150ms ease' }}
+                        onMouseEnter={e => { if (!starting && !active) e.currentTarget.style.color = '#b8956a'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}>
+                        {starting ? <span style={{ display: 'block', width: '16px', height: '16px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <Video size={17} />}
                     </button>
-                    <button
-                        onClick={() => setShowScheduleModal(true)}
-                        title="Schedule a Meeting"
-                        className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg transition-colors"
-                    >
-                        <Calendar size={18} />
+                    <button onClick={() => setShowScheduleModal(true)} title="Schedule a Meeting"
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
+                        <Calendar size={17} />
                     </button>
                 </div>
             </div>
@@ -225,53 +164,49 @@ const MeetingsPanel = () => {
             {active && (
                 <div
                     onClick={() => setSelectedHuddle(prev => prev || { title: "Instant Huddle", status: "live", participants })}
-                    className="mx-3 mt-3 p-2.5 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl flex items-center gap-2.5 cursor-pointer group hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                    style={{ margin: '10px 10px 0', padding: '10px', border: '1px solid rgba(34,197,94,0.25)', background: 'rgba(34,197,94,0.06)', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', transition: 'all 150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(34,197,94,0.1)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'rgba(34,197,94,0.06)'}
                 >
-                    <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
-                        <Radio size={13} className="text-white animate-pulse" />
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#22c55e', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Radio size={13} style={{ color: '#fff', animation: 'pulse 1.5s ease-in-out infinite' }} />
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-green-800 dark:text-green-200 truncate">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '12px', fontWeight: 600, color: '#4ade80', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                             {selectedHuddle?.title || "Instant Huddle"} • Active
                         </p>
-                        <p className="text-[10px] text-green-600 dark:text-green-400">
+                        <p style={{ fontSize: '10px', color: 'rgba(74,222,128,0.7)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                             {participants.length} participant{participants.length !== 1 ? "s" : ""} · {muted ? "Muted" : "Unmuted"}
                         </p>
                     </div>
-                    <div className="flex gap-1">
+                    <div style={{ display: 'flex', gap: '4px' }}>
                         <button
                             onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                             title={muted ? "Unmute" : "Mute"}
-                            className={`p-1.5 rounded-lg transition-colors ${muted ? "bg-red-100 dark:bg-red-900/30 text-red-600" : "bg-green-100 dark:bg-green-900/30 text-green-700"}`}
+                            style={{ padding: '5px', background: muted ? 'rgba(248,113,113,0.15)' : 'rgba(34,197,94,0.15)', border: `1px solid ${muted ? 'rgba(248,113,113,0.25)' : 'rgba(34,197,94,0.25)'}`, color: muted ? '#f87171' : '#4ade80', cursor: 'pointer', transition: 'all 150ms ease' }}
                         >
-                            <Mic size={11} />
+                            <Mic size={12} />
                         </button>
                         <button
                             onClick={(e) => { e.stopPropagation(); leaveHuddle(); }}
                             title="Leave Huddle"
-                            className="p-1.5 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 hover:bg-red-200 transition-colors"
+                            style={{ padding: '5px', background: 'rgba(248,113,113,0.15)', border: '1px solid rgba(248,113,113,0.25)', color: '#f87171', cursor: 'pointer', transition: 'all 150ms ease' }}
                         >
-                            <PhoneOutgoing size={11} />
+                            <PhoneOutgoing size={12} />
                         </button>
                     </div>
                 </div>
             )}
 
             {/* ── Tabs ── */}
-            <div className="px-4 py-3 shrink-0">
-                <div className="p-1 bg-gray-100 dark:bg-gray-800 rounded-xl flex gap-1">
+            <div style={{ padding: '10px 12px 6px', flexShrink: 0 }}>
+                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', gap: '2px', padding: '3px' }}>
                     {[
-                        { id: "upcoming", label: "Upcoming" },
-                        { id: "history", label: "History" },
+                        { id: 'upcoming', label: 'Upcoming' },
+                        { id: 'history', label: 'History' },
                     ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => handleTab(tab.id)}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${activeTab === tab.id
-                                    ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                                    : "text-gray-500 hover:text-gray-900 dark:hover:text-gray-300"
-                                }`}
-                        >
+                        <button key={tab.id} onClick={() => handleTab(tab.id)}
+                            style={{ flex: 1, padding: '5px', fontSize: '11px', fontWeight: activeTab === tab.id ? 600 : 400, background: activeTab === tab.id ? '#1a1a1a' : 'transparent', border: 'none', color: activeTab === tab.id ? '#e4e4e4' : 'rgba(228,228,228,0.4)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}>
                             {tab.label}
                         </button>
                     ))}
@@ -345,51 +280,39 @@ const MeetingsPanel = () => {
                                     const timeStr = start.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                                     const isLive = m.status === 'live';
                                     return (
-                                        <div
-                                            key={m._id}
-                                            className="mx-3 mb-1.5 p-3 rounded-xl border bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/50 hover:shadow-md hover:border-gray-200 dark:hover:border-gray-700 transition-all group relative overflow-hidden"
-                                        >
-                                            <div className={`absolute left-0 top-0 bottom-0 w-1 rounded-l-xl ${isLive ? 'bg-gradient-to-b from-red-500 to-pink-500' : 'bg-gradient-to-b from-blue-500 to-indigo-500'}`} />
-                                            <div className="pl-2">
-                                                <div className="flex items-start justify-between mb-1">
-                                                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate flex-1 mr-2">{m.title}</p>
+                                        <div key={m._id} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
+                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
+                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}>
+                                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isLive ? '#ef4444' : '#3b82f6' }} />
+                                            <div style={{ paddingLeft: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>{m.title}</p>
                                                     {isLive && (
-                                                        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 text-[9px] font-bold rounded-full border border-red-100 shrink-0">
-                                                            <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" /><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" /></span>
+                                                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '1px 5px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '9px', fontWeight: 700, color: '#f87171', flexShrink: 0 }}>
+                                                            <span style={{ position: 'relative', display: 'flex', width: '5px', height: '5px' }}><span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#f87171', opacity: 0.5, animation: 'ping 1s ease infinite' }} /><span style={{ position: 'relative', width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444' }} /></span>
                                                             LIVE
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mb-2">
-                                                    <Clock size={9} />
-                                                    <span>{timeStr}</span>
-                                                    <span>·</span>
-                                                    <span>{m.duration} min</span>
-                                                    {m.createdBy && (
-                                                        <><span>·</span><span className="text-gray-500">{m.createdBy.username || m.createdBy.firstName}</span></>
-                                                    )}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginBottom: '6px' }}>
+                                                    <Clock size={9} /><span>{timeStr}</span><span>·</span><span>{m.duration} min</span>
+                                                    {m.createdBy && (<><span>·</span><span style={{ color: 'rgba(228,228,228,0.4)' }}>{m.createdBy.username || m.createdBy.firstName}</span></>)}
                                                 </div>
-                                                <div className="flex gap-2">
+                                                <div style={{ display: 'flex', gap: '10px' }}>
                                                     {m.meetingLink && (
-                                                        <a
-                                                            href={m.meetingLink}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                                                        >
-                                                            <ExternalLink size={9} /> Join
+                                                        <a href={m.meetingLink} target="_blank" rel="noopener noreferrer"
+                                                            style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 600, color: '#b8956a', textDecoration: 'none' }}>
+                                                            <ExternalLink size={8} /> Join
                                                         </a>
                                                     )}
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${m._id}`); }}
-                                                        className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                                                    >
-                                                        View Details &rarr;
+                                                    <button onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${workspaceId}/meetings/${m._id}`); }}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 600, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                                        View Details →
                                                     </button>
-                                                    <button
-                                                        onClick={() => handleCancelMeeting(m._id)}
-                                                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors ml-auto opacity-0 group-hover:opacity-100"
-                                                    >
+                                                    <button onClick={() => handleCancelMeeting(m._id)}
+                                                        style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                                        onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                                                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}>
                                                         Cancel
                                                     </button>
                                                 </div>
@@ -401,28 +324,22 @@ const MeetingsPanel = () => {
                             </>
                         )}
 
-                        {/* Empty state — only when no live huddles AND no scheduled meetings */}
+                        {/* Empty state */}
                         {!active && activeWorkspaceHuddles.length === 0 && meetings.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                                <div className="w-12 h-12 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mb-3">
-                                    <Video size={20} className="text-indigo-500" />
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
+                                <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                                    <Video size={20} style={{ color: '#b8956a' }} />
                                 </div>
-                                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">No active huddles</p>
-                                <p className="text-xs text-gray-400 mb-4">Start an instant huddle or schedule one</p>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={handleStartInstant}
-                                        disabled={starting}
-                                        className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm shadow-indigo-500/30 disabled:opacity-60"
-                                    >
-                                        <Plus size={13} />
-                                        {starting ? "Starting..." : "Instant Huddle"}
+                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No active huddles</p>
+                                <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', marginBottom: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}>Start an instant huddle or schedule one</p>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button onClick={handleStartInstant} disabled={starting}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', opacity: starting ? 0.6 : 1 }}>
+                                        <Plus size={12} />{starting ? 'Starting...' : 'Instant Huddle'}
                                     </button>
-                                    <button
-                                        onClick={() => setShowScheduleModal(true)}
-                                        className="flex items-center gap-2 px-4 py-2 border border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 text-xs font-semibold rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
-                                    >
-                                        <Calendar size={13} /> Schedule
+                                    <button onClick={() => setShowScheduleModal(true)}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: 'transparent', border: '1px solid rgba(184,149,106,0.3)', color: '#b8956a', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}>
+                                        <Calendar size={12} /> Schedule
                                     </button>
                                 </div>
                             </div>
@@ -434,12 +351,12 @@ const MeetingsPanel = () => {
                 {activeTab === "history" && (
                     <>
                         {huddleHistory.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                                <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center mb-3">
-                                    <History size={20} className="text-gray-400" />
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 16px', textAlign: 'center' }}>
+                                <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                                    <History size={18} style={{ color: 'rgba(228,228,228,0.25)' }} />
                                 </div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">No huddle history yet</p>
-                                <p className="text-xs text-gray-400 mt-1">Ended huddles will appear here</p>
+                                <p style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>No huddle history yet</p>
+                                <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Ended huddles will appear here</p>
                             </div>
                         ) : (
                             <>
@@ -468,23 +385,22 @@ const MeetingsPanel = () => {
             </div>
 
             {/* ── Footer Stats ── */}
-            <div className="mt-auto px-4 py-3 border-t border-gray-100 dark:border-gray-800 shrink-0">
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl flex items-center gap-3">
-                    <div className="p-1.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 rounded-lg">
-                        <Users size={14} />
+            <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                <div style={{ padding: '10px 12px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.12)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ padding: '6px', background: 'rgba(184,149,106,0.1)', color: '#b8956a' }}>
+                        <Users size={13} />
                     </div>
                     <div>
-                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">Live Huddles</p>
-                        <p className="text-lg font-bold text-indigo-900 dark:text-indigo-100 leading-none">
-                            {totalLive}
-                            <span className="text-xs font-normal text-indigo-500 ml-1">active</span>
+                        <p style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Inter, system-ui, sans-serif' }}>Live Huddles</p>
+                        <p style={{ fontSize: '18px', fontWeight: 700, color: '#e4e4e4', lineHeight: 1, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            {totalLive}<span style={{ fontSize: '11px', fontWeight: 400, color: '#b8956a', marginLeft: '4px' }}>active</span>
                         </p>
                     </div>
                     {active && (
-                        <div className="ml-auto">
-                            <span className="relative flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
+                        <div style={{ marginLeft: 'auto' }}>
+                            <span style={{ position: 'relative', display: 'flex', width: '10px', height: '10px' }}>
+                                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#22c55e', opacity: 0.6, animation: 'ping 1s cubic-bezier(0,0,0.2,1) infinite' }} />
+                                <span style={{ position: 'relative', width: '10px', height: '10px', borderRadius: '50%', background: '#22c55e' }} />
                             </span>
                         </div>
                     )}

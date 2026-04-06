@@ -338,45 +338,31 @@ export default function Messages() {
               workspaceId={workspaceId || selectedChat.workspaceId}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full bg-slate-50 dark:bg-gray-900 relative overflow-hidden">
-              {/* Background Decor */}
-              <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse"></div>
-              <div className="absolute bottom-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-base, #0c0c0c)', position: 'relative', overflow: 'hidden' }}>
+              {/* Subtle amber ambient */}
+              <div style={{ position: 'absolute', top: '30%', left: '40%', width: '320px', height: '320px', background: '#b8956a', opacity: 0.03, borderRadius: '50%', filter: 'blur(100px)', pointerEvents: 'none' }} />
 
-              <div className="relative z-10 flex flex-col items-center max-w-lg text-center p-8">
-
-                {/* Video Container */}
-                <div className="w-24 h-24 mb-6 relative group">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-purple-500 to-indigo-500 rounded-2xl blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500"></div>
-                  <div className="relative w-full h-full bg-white dark:bg-gray-800 rounded-2xl shadow-xl flex items-center justify-center border border-purple-50 dark:border-gray-700 overflow-hidden transform group-hover:scale-105 transition-transform duration-300">
-                    <video
-                      src="/hover-animation.mp4"
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover opacity-90"
-                    />
-                  </div>
+              <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '360px', textAlign: 'center', padding: '32px' }}>
+                {/* Icon box */}
+                <div style={{ width: '72px', height: '72px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', overflow: 'hidden', flexShrink: 0 }}>
+                  <video src="/hover-animation.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                 </div>
 
-                <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
+                <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary, #e4e4e4)', marginBottom: '8px', letterSpacing: '-0.02em', fontFamily: 'Inter, system-ui, sans-serif' }}>
                   Direct Messages
                 </h2>
-                <p className="text-slate-500 dark:text-gray-400 mb-8 max-w-xs mx-auto leading-relaxed">
+                <p style={{ fontSize: '13px', color: 'var(--text-muted, rgba(228,228,228,0.4))', marginBottom: '28px', lineHeight: '1.6', fontFamily: 'Inter, system-ui, sans-serif' }}>
                   Select a conversation from the sidebar or start a new private chat.
                 </p>
 
-                {/* Visual Hint */}
-                {/* Visual Hint */}
                 <button
                   onClick={() => setShowCreateDM(true)}
-                  className="flex items-center gap-2 text-sm font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-4 py-2 rounded-full border border-purple-100 dark:border-purple-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors cursor-pointer"
-                >
-                  <MessageSquarePlus size={18} />
-                  <span>Start a new chat</span>
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                  <MessageSquarePlus size={15} />
+                  Start a new chat
                 </button>
-
               </div>
             </div>
           )}

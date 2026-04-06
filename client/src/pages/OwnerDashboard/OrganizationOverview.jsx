@@ -2,7 +2,6 @@ import React from 'react';
 import { Users, Briefcase, Building, TrendingUp } from 'lucide-react';
 
 const OrganizationOverview = ({ data }) => {
-    // Default values if data is loading or missing
     const stats = data || {
         totalUsers: 0,
         activeUsers: 0,
@@ -11,40 +10,82 @@ const OrganizationOverview = ({ data }) => {
         growthRate: { users: 0, workspaces: 0 }
     };
 
-    const StatCard = ({ icon: Icon, colorClass, bgClass, value, label, trend, trendLabel }) => (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-colors">
-            <div className="flex items-center justify-between mb-4">
-                <div className={`p-2 rounded-lg ${bgClass}`}>
-                    <Icon className={`w-5 h-5 ${colorClass}`} />
+    const StatCard = ({ icon: Icon, value, label, trend, trendLabel }) => {
+        const [hovered, setHovered] = React.useState(false);
+        return (
+            <div
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                style={{
+                    background: hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                    border: '1px solid var(--border-subtle)',
+                    padding: '20px',
+                    transition: 'background 150ms ease'
+                }}
+            >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <Icon size={16} style={{ color: 'var(--text-muted)' }} />
+                    {trend !== undefined && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            color: 'var(--state-success)',
+                            letterSpacing: '0.04em'
+                        }}>
+                            <TrendingUp size={10} />
+                            +{trend}
+                        </div>
+                    )}
                 </div>
-                {trend !== undefined && (
-                    <div className="flex items-center gap-1 text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
-                        <TrendingUp size={12} />
-                        +{trend}
-                    </div>
+                <div style={{
+                    fontSize: '26px',
+                    fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    letterSpacing: '-0.02em',
+                    lineHeight: '1.2'
+                }}>{value}</div>
+                <div style={{
+                    fontSize: '13px',
+                    color: 'var(--text-secondary)',
+                    marginTop: '4px'
+                }}>{label}</div>
+                {trendLabel && (
+                    <div style={{
+                        fontSize: '11px',
+                        color: 'var(--text-muted)',
+                        marginTop: '8px'
+                    }}>{trendLabel}</div>
                 )}
             </div>
-            <div className="text-3xl font-black text-slate-900 dark:text-white">{value}</div>
-            <div className="text-sm text-slate-500 dark:text-gray-400 font-medium mt-1">{label}</div>
-            {trendLabel && (
-                <div className="text-xs text-slate-400 dark:text-gray-500 mt-2">
-                    {trendLabel}
-                </div>
-            )}
-        </div>
-    );
+        );
+    };
 
     return (
         <section>
-            <div className="mb-4">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">Organization Overview</h3>
-                <p className="text-xs text-slate-500 dark:text-gray-500">High-level growth & scale metrics</p>
+            <div style={{ marginBottom: '16px' }}>
+                <h3 style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: 'var(--text-muted)',
+                    letterSpacing: '0.13em',
+                    textTransform: 'uppercase',
+                    margin: '0 0 4px'
+                }}>Organization Overview</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
+                    High-level growth & scale metrics
+                </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '1px',
+                background: 'var(--border-subtle)'
+            }}>
                 <StatCard
                     icon={Users}
-                    colorClass="text-blue-600 dark:text-blue-400"
-                    bgClass="bg-blue-50 dark:bg-blue-900/30"
                     value={stats.totalUsers}
                     label="Total Employees"
                     trend={stats.growthRate?.users}
@@ -52,16 +93,12 @@ const OrganizationOverview = ({ data }) => {
                 />
                 <StatCard
                     icon={Users}
-                    colorClass="text-green-600 dark:text-green-400"
-                    bgClass="bg-green-50 dark:bg-green-900/30"
                     value={stats.activeUsers}
                     label="Active Users"
                     trendLabel="Currently active"
                 />
                 <StatCard
                     icon={Briefcase}
-                    colorClass="text-purple-600 dark:text-purple-400"
-                    bgClass="bg-purple-50 dark:bg-purple-900/30"
                     value={stats.workspaceCount}
                     label="Total Workspaces"
                     trend={stats.growthRate?.workspaces}
@@ -69,8 +106,6 @@ const OrganizationOverview = ({ data }) => {
                 />
                 <StatCard
                     icon={Building}
-                    colorClass="text-orange-600 dark:text-orange-400"
-                    bgClass="bg-orange-50 dark:bg-orange-900/30"
                     value={stats.departmentCount}
                     label="Departments"
                     trendLabel="Structural units"

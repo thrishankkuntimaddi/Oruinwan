@@ -1,274 +1,162 @@
-// client/src/components/manager/ManagerTasks.jsx
+// ManagerTasks — Monolith Flow Design System
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '@services/api';
-import {
-    Plus, CheckCircle2, Clock, AlertCircle, MoreVertical,
-    User, X
-} from 'lucide-react';
+import { Plus, CheckCircle2, Clock, AlertCircle, User, X, CheckSquare } from 'lucide-react';
 
-const ManagerTasks = () => {
+const inpSt = { background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px', width: '100%', boxSizing: 'border-box' };
+const priorityColor = { highest: 'var(--state-danger)', high: '#e07852', medium: 'var(--accent)', low: 'var(--text-muted)', lowest: 'var(--text-muted)' };
+
+const COLS = [
+    { key: 'open',       title: 'To Do',      icon: AlertCircle,  nextStatus: 'in-progress', nextLabel: 'Start' },
+    { key: 'inProgress', title: 'In Progress', icon: Clock,        nextStatus: 'done',        nextLabel: 'Complete' },
+    { key: 'completed',  title: 'Completed',   icon: CheckCircle2, nextStatus: null,          nextLabel: null },
+];
+
+export default function ManagerTasks() {
     const { selectedDepartment } = useOutletContext();
     const [tasks, setTasks] = useState({ open: [], inProgress: [], completed: [], overdue: [] });
     const [loading, setLoading] = useState(true);
-    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [modalOpen, setModalOpen] = useState(false);
     const [newTask, setNewTask] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
 
-    // Fetch tasks when department changes
-    // Define fetchTasks with useCallback so it can be used in useEffect and other handlers
     const fetchTasks = useCallback(async () => {
         if (!selectedDepartment?._id) return;
         try {
             setLoading(true);
-            const response = await api.get(`/api/manager/tasks/${selectedDepartment._id}`);
-            setTasks(response.data.tasks);
-        } catch (error) {
-            console.error('Error fetching tasks:', error);
-        } finally {
-            setLoading(false);
-        }
+            const r = await api.get(`/api/manager/tasks/${selectedDepartment._id}`);
+            setTasks(r.data.tasks);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     }, [selectedDepartment]);
 
-    // Fetch tasks when department changes
-    useEffect(() => {
-        if (selectedDepartment) {
-            fetchTasks();
-        }
-    }, [selectedDepartment, fetchTasks]);
+    useEffect(() => { if (selectedDepartment) fetchTasks(); }, [selectedDepartment, fetchTasks]);
 
-    const handleCreateTask = async (e) => {
+    const handleCreate = async (e) => {
         e.preventDefault();
         try {
             await api.post(`/api/manager/tasks/${selectedDepartment._id}`, newTask);
-            setIsCreateModalOpen(false);
+            setModalOpen(false);
             setNewTask({ title: '', description: '', priority: 'medium', dueDate: '' });
-            fetchTasks(); // Refresh list
-        } catch (error) {
-            console.error('Error creating task:', error);
-        }
+            fetchTasks();
+        } catch (err) { console.error(err); }
     };
 
-    const handleStatusChange = async (taskId, newStatus) => {
-        try {
-            await api.patch(`/api/manager/tasks/${taskId}/status`, { status: newStatus });
-            fetchTasks(); // Refresh to move task to correct column
-        } catch (error) {
-            console.error('Error updating task status:', error);
-        }
+    const handleStatusChange = async (taskId, status) => {
+        try { await api.patch(`/api/manager/tasks/${taskId}/status`, { status }); fetchTasks(); }
+        catch (e) { console.error(e); }
     };
 
-    const StatusColumn = ({ title, items, status, icon: Icon, color, darkColor }) => (
-        <div className="flex-1 min-w-[300px] bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex flex-col h-full max-h-full">
-            <div className={`flex items-center gap-2 mb-4 font-bold ${color} ${darkColor}`}>
-                <Icon size={18} />
-                <h3>{title}</h3>
-                <span className="ml-auto bg-white dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs shadow-sm text-gray-600 dark:text-gray-300">
-                    {items.length}
-                </span>
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {/* Header skeleton */}
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '110px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '200px' }} /></div>
+                <div className="sk" style={{ height: '30px', width: '90px' }} />
             </div>
-
-            <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                {items.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
-                        <p className="text-sm">No tasks</p>
-                    </div>
-                ) : (
-                    items.map(task => (
-                        <div key={task._id} className="bg-white dark:bg-gray-700 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-600 hover:shadow-md transition-shadow group">
-                            <div className="flex justify-between items-start mb-2">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide
-                  ${task.priority === 'highest' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                                        task.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
-                                            task.priority === 'medium' ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                'bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-                                    }`}>
-                                    {task.priority}
-                                </span>
-                                <button className="text-gray-300 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <MoreVertical size={14} />
-                                </button>
-                            </div>
-
-                            <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-1">{task.title}</h4>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{task.description}</p>
-
-                            <div className="flex items-center justify-between pt-3 border-t border-gray-50 dark:border-gray-600">
-                                <div className="flex items-center gap-2">
-                                    {task.assignedTo && task.assignedTo.length > 0 ? (
-                                        <div className="flex -space-x-2">
-                                            {task.assignedTo.map((assignee, idx) => (
-                                                <div key={idx} className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 border-2 border-white dark:border-gray-700 flex items-center justify-center text-[10px] font-bold text-indigo-700 dark:text-indigo-300" title={assignee.username}>
-                                                    {assignee.username?.charAt(0).toUpperCase()}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-1 text-xs text-gray-400">
-                                            <User size={12} /> Unassigned
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Status Mover Actions */}
-                                <div className="flex gap-1">
-                                    {status === 'open' && (
-                                        <button
-                                            onClick={() => handleStatusChange(task._id, 'in-progress')}
-                                            className="p-1 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded" title="Start"
-                                        >
-                                            <Clock size={14} />
-                                        </button>
-                                    )}
-                                    {status === 'in-progress' && (
-                                        <button
-                                            onClick={() => handleStatusChange(task._id, 'done')}
-                                            className="p-1 hover:bg-green-50 dark:hover:bg-green-900/20 text-gray-400 hover:text-green-600 dark:hover:text-green-400 rounded" title="Complete"
-                                        >
-                                            <CheckCircle2 size={14} />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
+            {/* Kanban skeleton */}
+            <div style={{ flex: 1, padding: '20px 28px', display: 'flex', gap: '12px', overflow: 'hidden' }}>
+                {['To Do', 'In Progress', 'Completed'].map(col => (
+                    <div key={col} style={{ flex: '1 1 280px', minWidth: '260px', display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                        {/* Column header */}
+                        <div style={{ padding: '10px 14px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '7px' }}>
+                            <div className="sk" style={{ width: '13px', height: '13px' }} />
+                            <div className="sk" style={{ flex: 1, height: '9px' }} />
+                            <div className="sk" style={{ width: '28px', height: '18px' }} />
                         </div>
-                    ))
-                )}
+                        {/* Task card skeletons */}
+                        <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {[1,2,3].map(i => (
+                                <div key={i} style={{ background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <div className="sk" style={{ height: '16px', width: '52px' }} />
+                                    </div>
+                                    <div className="sk" style={{ height: '11px', width: '90%', marginBottom: '5px' }} />
+                                    <div className="sk" style={{ height: '9px', width: '70%', marginBottom: '5px' }} />
+                                    <div className="sk" style={{ height: '9px', width: '50%', marginBottom: '10px' }} />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                                        <div className="sk" style={{ width: '20px', height: '20px', borderRadius: '50%' }} />
+                                        <div className="sk" style={{ height: '22px', width: '60px' }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );
 
-    if (loading) return (
-    <div className="p-8 animate-pulse space-y-3">
-        <div className="h-5 w-40 bg-gray-200 dark:bg-gray-700 rounded-lg mb-6" />
-        {[80,60,90,55,75].map((w,i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700 flex items-center gap-4">
-                <div className="w-5 h-5 rounded-full border-2 border-gray-200 dark:border-gray-700 flex-shrink-0" />
-                <div className="flex-1 space-y-2">
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                    <div className="flex gap-2"><div className="h-5 w-16 bg-indigo-50 dark:bg-indigo-900/20 rounded-full" /><div className="h-5 w-14 bg-amber-50 dark:bg-amber-900/20 rounded-full" /></div>
-                </div>
-                <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-            </div>
-        ))}
-    </div>
-);
-
     return (
-        <div className="h-full flex flex-col bg-white dark:bg-gray-900 transition-colors duration-200">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             {/* Header */}
-            <div className="px-8 py-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex justify-between items-center">
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Task Board</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Manage tasks for {selectedDepartment?.name}</p>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <CheckSquare size={16} style={{ color: 'var(--accent)' }} /> Task Board
+                    </h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Tasks for {selectedDepartment?.name || 'department'}</p>
                 </div>
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-700 flex items-center gap-2"
-                >
-                    <Plus size={18} /> New Task
-                </button>
-            </div>
+                <NewTaskBtn onClick={() => setModalOpen(true)} />
+            </header>
 
-            {/* Kanban Board */}
-            <div className="flex-1 overflow-x-auto p-6 bg-gray-50 dark:bg-gray-900">
-                <div className="flex gap-6 h-full min-w-max">
-                    <StatusColumn
-                        title="To Do"
-                        items={tasks.open}
-                        status="open"
-                        icon={AlertCircle}
-                        color="text-gray-600"
-                        darkColor="dark:text-gray-300"
-                    />
-                    <StatusColumn
-                        title="In Progress"
-                        items={tasks.inProgress}
-                        status="in-progress"
-                        icon={Clock}
-                        color="text-blue-600"
-                        darkColor="dark:text-blue-400"
-                    />
-                    <StatusColumn
-                        title="Completed"
-                        items={tasks.completed}
-                        status="done"
-                        icon={CheckCircle2}
-                        color="text-green-600"
-                        darkColor="dark:text-green-400"
-                    />
-                </div>
-            </div>
-
-            {/* Create Task Modal */}
-            {isCreateModalOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
-                            <h3 className="font-bold text-gray-900 dark:text-white">Create New Task</h3>
-                            <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                                <X size={20} />
-                            </button>
+            {/* Kanban */}
+            <div style={{ flex: 1, overflowX: 'auto', padding: '20px 28px', display: 'flex', gap: '12px' }} className="custom-scrollbar">
+                {COLS.map(col => (
+                    <div key={col.key} style={{ flex: '1 1 280px', minWidth: '260px', display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                        {/* Col header */}
+                        <div style={{ padding: '10px 14px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '7px', flexShrink: 0 }}>
+                            <col.icon size={13} style={{ color: 'var(--accent)' }} />
+                            <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', flex: 1 }}>{col.title}</span>
+                            <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 7px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', color: 'var(--text-muted)' }}>{tasks[col.key]?.length || 0}</span>
                         </div>
-                        <form onSubmit={handleCreateTask} className="p-6 space-y-4">
+                        {/* Cards */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }} className="custom-scrollbar">
+                            {(!tasks[col.key] || tasks[col.key].length === 0) && (
+                                <div style={{ padding: '32px 16px', textAlign: 'center', border: '1px dashed var(--border-accent)', color: 'var(--text-muted)', fontSize: '11px' }}>No tasks</div>
+                            )}
+                            {(tasks[col.key] || []).map(task => (
+                                <TaskCard key={task._id} task={task} col={col} onStatus={handleStatusChange} />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Create Modal */}
+            {modalOpen && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Create New Task</h3>
+                            <button onClick={() => setModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}><X size={16} /></button>
+                        </div>
+                        <form onSubmit={handleCreate} style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {[{ key: 'title', label: 'Task Title *', type: 'text', req: true, ph: 'e.g. Update API Documentation' }].map(f => (
+                                <div key={f.key}>
+                                    <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '5px' }}>{f.label}</label>
+                                    <input type={f.type} required={f.req} value={newTask[f.key]} onChange={e => setNewTask(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.ph} style={inpSt} />
+                                </div>
+                            ))}
                             <div>
-                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Task Title <span className="text-red-500">*</span></label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={newTask.title}
-                                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    placeholder="e.g. Update API Documentation"
-                                />
+                                <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '5px' }}>Description</label>
+                                <textarea rows={3} value={newTask.description} onChange={e => setNewTask(p => ({ ...p, description: e.target.value }))} placeholder="Add details about this task..." style={{ ...inpSt, resize: 'none' }} />
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Description</label>
-                                <textarea
-                                    value={newTask.description}
-                                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                                    rows="3"
-                                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                                    placeholder="Add details about this task..."
-                                />
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Priority</label>
-                                    <select
-                                        value={newTask.priority}
-                                        onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    >
-                                        <option value="lowest">Lowest</option>
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                        <option value="highest">Highest</option>
+                                    <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '5px' }}>Priority</label>
+                                    <select value={newTask.priority} onChange={e => setNewTask(p => ({ ...p, priority: e.target.value }))} style={{ ...inpSt }}>
+                                        {['lowest', 'low', 'medium', 'high', 'highest'].map(v => <option key={v} value={v}>{v.charAt(0).toUpperCase() + v.slice(1)}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-1">Due Date</label>
-                                    <input
-                                        type="date"
-                                        value={newTask.dueDate}
-                                        onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
-                                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                                    />
+                                    <label style={{ display: 'block', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '5px' }}>Due Date</label>
+                                    <input type="date" value={newTask.dueDate} onChange={e => setNewTask(p => ({ ...p, dueDate: e.target.value }))} style={inpSt} />
                                 </div>
                             </div>
-                            <div className="pt-4 flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCreateModalOpen(false)}
-                                    className="px-4 py-2 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-6 py-2 text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors"
-                                >
-                                    Create Task
-                                </button>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                                <button type="button" onClick={() => setModalOpen(false)} style={{ padding: '7px 14px', background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', borderRadius: '2px' }}>Cancel</button>
+                                <button type="submit" style={{ padding: '7px 16px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px' }}>Create Task</button>
                             </div>
                         </form>
                     </div>
@@ -276,6 +164,50 @@ const ManagerTasks = () => {
             )}
         </div>
     );
+}
+
+const TaskCard = ({ task, col, onStatus }) => {
+    const [hov, setHov] = React.useState(false);
+    const pColor = priorityColor[task.priority] || 'var(--text-muted)';
+    return (
+        <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '12px', marginBottom: '6px', transition: 'background 150ms ease' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 6px', border: `1px solid ${pColor}`, color: pColor }}>{task.priority}</span>
+            </div>
+            <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '3px', lineHeight: '1.4' }}>{task.title}</p>
+            {task.description && <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px', lineHeight: '1.5', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{task.description}</p>}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                {task.assignedTo?.length > 0 ? (
+                    <div style={{ display: 'flex' }}>
+                        {task.assignedTo.slice(0, 3).map((a, i) => (
+                            <div key={i} style={{ width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--accent)', marginLeft: i > 0 ? '-6px' : 0 }} title={a.username}>
+                                {a.username?.charAt(0).toUpperCase()}
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)' }}><User size={10} /> Unassigned</span>
+                )}
+                {col.nextStatus && (
+                    <button onClick={() => onStatus(task._id, col.nextStatus)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600, cursor: 'pointer', transition: 'all 150ms ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.color = 'var(--accent)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-muted)'; }}>
+                        {col.key === 'open' ? <Clock size={10} /> : <CheckCircle2 size={10} />} {col.nextLabel}
+                    </button>
+                )}
+            </div>
+        </div>
+    );
 };
 
-export default ManagerTasks;
+const NewTaskBtn = ({ onClick }) => {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
+            <Plus size={13} /> New Task
+        </button>
+    );
+};

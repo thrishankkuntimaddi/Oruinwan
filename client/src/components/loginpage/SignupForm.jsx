@@ -1,420 +1,275 @@
+// SignupForm.jsx — Monolith Flow Design System
 import { useState, useEffect } from 'react';
-import { useToast } from "../../contexts/ToastContext";
-import { Eye, EyeOff, ChevronDown, AlertCircle, Info, CheckCircle2 } from "lucide-react";
-import { Button, Input } from "../../shared/components/ui";
+import { useToast } from '../../contexts/ToastContext';
+import { Eye, EyeOff, ChevronDown, CheckCircle2, AlertCircle, ArrowRight, Loader } from 'lucide-react';
+
+const COUNTRIES = [
+    { code: 'IN', name: 'IND', dial_code: '+91', length: 10, flag: '🇮🇳' },
+    { code: 'US', name: 'USA', dial_code: '+1',  length: 10, flag: '🇺🇸' },
+    { code: 'AE', name: 'UAE', dial_code: '+971',length: 9,  flag: '🇦🇪' },
+    { code: 'AU', name: 'AUS', dial_code: '+61', length: 9,  flag: '🇦🇺' },
+    { code: 'GB', name: 'UK',  dial_code: '+44', length: 10, flag: '🇬🇧' },
+    { code: 'FR', name: 'FRA', dial_code: '+33', length: 9,  flag: '🇫🇷' },
+    { code: 'CA', name: 'CAN', dial_code: '+1',  length: 10, flag: '🇨🇦' },
+];
+
+const PWD_RULES = [
+    { key: 'length',  label: '8–16 characters',      test: p => p.length >= 8 && p.length <= 16 },
+    { key: 'upper',   label: 'Uppercase letter',      test: p => /[A-Z]/.test(p) },
+    { key: 'number',  label: 'Number',                test: p => /[0-9]/.test(p) },
+    { key: 'special', label: 'Special character',     test: p => /[^A-Za-z0-9]/.test(p) },
+];
+
+const inp = (focused, err) => ({
+    width: '100%', boxSizing: 'border-box',
+    padding: '10px 12px',
+    background: '#141414',
+    border: `1px solid ${err ? '#e05252' : focused ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`,
+    color: '#e4e4e4', fontSize: '13px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif',
+    transition: 'border-color 150ms ease',
+});
+
+const Label = ({ children }) => (
+    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.4)', display: 'block', marginBottom: '6px' }}>
+        {children}
+    </label>
+);
+
+const StatusIcon = ({ s }) => {
+    if (s === 'checking') return <Loader size={13} style={{ color: '#b8956a', animation: 'spin 0.8s linear infinite' }} />;
+    if (s === 'available') return <CheckCircle2 size={13} style={{ color: '#5aba8a' }} />;
+    if (s === 'taken') return <AlertCircle size={13} style={{ color: '#e05252' }} />;
+    return null;
+};
 
 const SignupForm = ({ onSwitch }) => {
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
-  });
+    const [formData, setFormData] = useState({ username: '', email: '', phone: '', password: '', confirmPassword: '' });
+    const [errors, setErrors] = useState({});
+    const [vs, setVs] = useState({ username: 'idle', email: 'idle', phone: 'idle' });
+    const [showPwd, setShowPwd] = useState(false);
+    const [showCfm, setShowCfm] = useState(false);
+    const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+    const [showCountryDd, setShowCountryDd] = useState(false);
+    const [focused, setFocused] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const { showToast } = useToast();
 
-  const [errors, setErrors] = useState({});
-  const [validationStatus, setValidationStatus] = useState({
-    username: 'idle', // idle | checking | available | taken
-    email: 'idle',
-    phone: 'idle'
-  });
-  const { showToast } = useToast();
+    // Debounced username check —————————————————————————————————————
+    useEffect(() => {
+        const t = setTimeout(async () => {
+            if (formData.username.trim().length >= 3) {
+                setVs(p => ({ ...p, username: 'checking' }));
+                try {
+                    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-username`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: formData.username }) });
+                    const data = await res.json();
+                    if (data.exists) { setErrors(p => ({ ...p, username: 'Username already taken' })); setVs(p => ({ ...p, username: 'taken' })); }
+                    else { setErrors(p => ({ ...p, username: '' })); setVs(p => ({ ...p, username: 'available' })); }
+                } catch { setVs(p => ({ ...p, username: 'idle' })); }
+            } else { setVs(p => ({ ...p, username: 'idle' })); }
+        }, 500);
+        return () => clearTimeout(t);
+    }, [formData.username]);
 
-  const [showPwd, setShowPwd] = useState(false);
-  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+    // Debounced email check —————————————————————————————————————
+    useEffect(() => {
+        const t = setTimeout(async () => {
+            if (formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+                setVs(p => ({ ...p, email: 'checking' }));
+                try {
+                    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-email`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: formData.email }) });
+                    const data = await res.json();
+                    if (data.exists) { setErrors(p => ({ ...p, email: 'Email already registered' })); setVs(p => ({ ...p, email: 'taken' })); }
+                    else { setErrors(p => ({ ...p, email: '' })); setVs(p => ({ ...p, email: 'available' })); }
+                } catch { setVs(p => ({ ...p, email: 'idle' })); }
+            } else { setVs(p => ({ ...p, email: 'idle' })); }
+        }, 500);
+        return () => clearTimeout(t);
+    }, [formData.email]);
 
-  const countries = [
-    { code: 'IN', name: 'IND', dial_code: '+91', length: 10, flag: '🇮🇳' },
-    { code: 'US', name: 'USA', dial_code: '+1', length: 10, flag: '🇺🇸' },
-    { code: 'AE', name: 'UAE', dial_code: '+971', length: 9, flag: '🇦🇪' },
-    { code: 'AU', name: 'AUS', dial_code: '+61', length: 9, flag: '🇦🇺' },
-    { code: 'GB', name: 'UK', dial_code: '+44', length: 10, flag: '🇬🇧' },
-    { code: 'FR', name: 'FRA', dial_code: '+33', length: 9, flag: '🇫🇷' },
-    { code: 'CA', name: 'CAN', dial_code: '+1', length: 10, flag: '🇨🇦' },
-  ];
+    // Debounced phone check —————————————————————————————————————
+    useEffect(() => {
+        const t = setTimeout(async () => {
+            const digits = formData.phone.replace(/\D/g, '');
+            if (digits.length === selectedCountry.length) {
+                setVs(p => ({ ...p, phone: 'checking' }));
+                try {
+                    const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: formData.phone, phoneCode: selectedCountry.dial_code }) });
+                    const data = await res.json();
+                    if (data.exists) { setErrors(p => ({ ...p, phone: 'Phone already registered' })); setVs(p => ({ ...p, phone: 'taken' })); }
+                    else { setErrors(p => ({ ...p, phone: '' })); setVs(p => ({ ...p, phone: 'available' })); }
+                } catch { setVs(p => ({ ...p, phone: 'idle' })); }
+            } else { setVs(p => ({ ...p, phone: 'idle' })); }
+        }, 500);
+        return () => clearTimeout(t);
+    }, [formData.phone, selectedCountry]);
 
-  const [selectedCountry, setSelectedCountry] = useState(countries[0]);
-  const [showCountryDropdown, setShowCountryDropdown] = useState(false);
+    const handleChange = e => {
+        const { name, value } = e.target;
+        setFormData(p => ({ ...p, [name]: value }));
+        setErrors(p => ({ ...p, [name]: '' }));
+    };
 
-  // Debounced validation for username
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (formData.username && formData.username.trim().length >= 3) {
-        setValidationStatus(prev => ({ ...prev, username: 'checking' }));
+    const pwdRules = PWD_RULES.map(r => ({ ...r, met: r.test(formData.password) }));
+    const allPwdMet = pwdRules.every(r => r.met);
+    const passwordsMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
+    const passwordsDontMatch = formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword;
+
+    const isFormValid = formData.username && formData.email && formData.phone && formData.password && formData.confirmPassword &&
+        vs.username === 'available' && vs.email === 'available' && vs.phone === 'available' &&
+        passwordsMatch && allPwdMet && !Object.values(errors).some(e => e);
+
+    const handleSubmit = async e => {
+        e.preventDefault();
+        if (!isFormValid) return;
+        setLoading(true);
         try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-username`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: formData.username })
-          });
-          const data = await res.json();
-
-          if (data.exists) {
-            setErrors(prev => ({ ...prev, username: 'Username already exists' }));
-            setValidationStatus(prev => ({ ...prev, username: 'taken' }));
-          } else {
-            setErrors(prev => ({ ...prev, username: '' }));
-            setValidationStatus(prev => ({ ...prev, username: 'available' }));
-          }
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/signup`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: formData.username, email: formData.email, phone: formData.phone, phoneCode: selectedCountry.dial_code, password: formData.password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Signup failed');
+            showToast('Verification link sent to your email!', 'success');
+            onSwitch();
         } catch (err) {
-          setValidationStatus(prev => ({ ...prev, username: 'idle' }));
+            showToast(err.message, 'error');
+        } finally {
+            setLoading(false);
         }
-      } else {
-        setValidationStatus(prev => ({ ...prev, username: 'idle' }));
-      }
-    }, 500);
+    };
 
-    return () => clearTimeout(timer);
-  }, [formData.username]);
+    return (
+        <div>
+            <style>{`@keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }`}</style>
+            <div style={{ marginBottom: '24px' }}>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '6px' }}>Create account</h2>
+                <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)' }}>Join thousands of teams already on Chttrix.</p>
+            </div>
 
-  // Debounced validation for email
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      if (formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        setValidationStatus(prev => ({ ...prev, email: 'checking' }));
-        try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: formData.email })
-          });
-          const data = await res.json();
-
-          if (data.exists) {
-            setErrors(prev => ({ ...prev, email: 'Email already registered' }));
-            setValidationStatus(prev => ({ ...prev, email: 'taken' }));
-          } else {
-            setErrors(prev => ({ ...prev, email: '' }));
-            setValidationStatus(prev => ({ ...prev, email: 'available' }));
-          }
-        } catch (err) {
-          setValidationStatus(prev => ({ ...prev, email: 'idle' }));
-        }
-      } else {
-        setValidationStatus(prev => ({ ...prev, email: 'idle' }));
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [formData.email]);
-
-  // Debounced validation for phone
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      const digits = formData.phone.replace(/\D/g, '');
-      if (digits.length === selectedCountry.length) {
-        setValidationStatus(prev => ({ ...prev, phone: 'checking' }));
-        try {
-          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/check-phone`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              phone: formData.phone,
-              phoneCode: selectedCountry.dial_code
-            })
-          });
-          const data = await res.json();
-
-          if (data.exists) {
-            setErrors(prev => ({ ...prev, phone: 'Phone number already registered' }));
-            setValidationStatus(prev => ({ ...prev, phone: 'taken' }));
-          } else {
-            setErrors(prev => ({ ...prev, phone: '' }));
-            setValidationStatus(prev => ({ ...prev, phone: 'available' }));
-          }
-        } catch (err) {
-          setValidationStatus(prev => ({ ...prev, phone: 'idle' }));
-        }
-      } else {
-        setValidationStatus(prev => ({ ...prev, phone: 'idle' }));
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [formData.phone, selectedCountry]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-
-    // Clear error when user types
-    setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  const handleBlur = (e) => {
-    const { name, value } = e.target;
-
-    // Basic validation on blur
-    if (!value.trim()) {
-      setErrors(prev => ({ ...prev, [name]: `${name.charAt(0).toUpperCase() + name.slice(1)} is required` }));
-    }
-  };
-
-  // Check if passwords match (for border color)
-  const passwordsMatch = formData.password && formData.confirmPassword && formData.password === formData.confirmPassword;
-  const passwordsDontMatch = formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword;
-
-  const isFormValid =
-    formData.username &&
-    formData.email &&
-    formData.phone &&
-    formData.password &&
-    formData.confirmPassword &&
-    validationStatus.username === 'available' &&
-    validationStatus.email === 'available' &&
-    validationStatus.phone === 'available' &&
-    passwordsMatch &&
-    !Object.values(errors).some(err => err);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!isFormValid) {
-      return;
-    }
-
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/signup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: formData.username,
-          email: formData.email,
-          phone: formData.phone,
-          phoneCode: selectedCountry.dial_code,
-          password: formData.password
-        })
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) throw new Error(data.message || "Signup failed");
-
-      showToast("Verification link has been sent to your email. Please check your inbox.", "success");
-      onSwitch();
-    } catch (err) {
-      console.error("Signup Error:", err);
-      showToast(err.message, "error");
-    }
-  };
-
-  return (
-    <div className="w-full bg-transparent">
-      <div className="mb-4">
-        <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight mb-2">Create Account</h2>
-        <p className="text-slate-500 dark:text-slate-400">Join our community of innovators today.</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-3">
-        {/* Username */}
-        <div className="space-y-1">
-          <Input
-            label="Username"
-            name="username"
-            value={formData.username}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Choose a username"
-            error={errors.username}
-            iconPosition="right"
-            icon={
-              validationStatus.username === 'checking' ? <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /> :
-                validationStatus.username === 'available' ? <CheckCircle2 className="text-success-500" size={18} /> :
-                  validationStatus.username === 'taken' ? <AlertCircle className="text-danger-500" size={18} /> : null
-            }
-          />
-        </div>
-
-        {/* Email */}
-        <div className="space-y-1">
-          <Input
-            label="Email"
-            name="email"
-            type="email"
-            value={formData.email}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            placeholder="Enter your email"
-            error={errors.email}
-            iconPosition="right"
-            icon={
-              validationStatus.email === 'checking' ? <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" /> :
-                validationStatus.email === 'available' ? <CheckCircle2 className="text-success-500" size={18} /> :
-                  validationStatus.email === 'taken' ? <AlertCircle className="text-danger-500" size={18} /> : null
-            }
-          />
-        </div>
-
-        {/* Phone */}
-        <div className="space-y-1">
-          <label className="block text-sm font-medium text-secondary-700 dark:text-secondary-300">Phone Number</label>
-          <div className="flex gap-2">
-            {/* Country Selector - Updating logic to match Input styles */}
-            <div className="relative w-32">
-              <button
-                type="button"
-                onClick={() => setShowCountryDropdown(!showCountryDropdown)}
-                className="w-full flex items-center justify-between px-3 py-2 h-10 border border-secondary-300 dark:border-secondary-700 bg-white dark:bg-secondary-800 text-secondary-900 dark:text-white rounded-lg outline-none focus:ring-2 focus:ring-primary-500 transition-shadow"
-              >
-                <span className="flex items-center gap-2 text-sm">
-                  <span>{selectedCountry.flag}</span>
-                  <span>{selectedCountry.dial_code}</span>
-                </span>
-                <ChevronDown size={14} className={`transition-transform text-secondary-500 ${showCountryDropdown ? 'rotate-180' : ''}`} />
-              </button>
-              {showCountryDropdown && (
-                <div className="absolute z-50 w-48 mt-1 bg-white dark:bg-secondary-800 border border-secondary-200 dark:border-secondary-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
-                  {countries.map((country) => (
-                    <button
-                      key={country.code}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCountry(country);
-                        setShowCountryDropdown(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-secondary-50 dark:hover:bg-secondary-700 text-left text-sm text-secondary-900 dark:text-secondary-100"
-                    >
-                      <span>{country.flag}</span>
-                      <span className="flex-1">{country.name}</span>
-                      <span className="text-secondary-500">{country.dial_code}</span>
-                    </button>
-                  ))}
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Username */}
+                <div>
+                    <Label>Username</Label>
+                    <div style={{ position: 'relative' }}>
+                        <input name="username" placeholder="Choose a username"
+                            value={formData.username} onChange={handleChange}
+                            onFocus={() => setFocused('username')} onBlur={() => setFocused(null)}
+                            style={{ ...inp(focused === 'username', errors.username), paddingRight: '36px' }} />
+                        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <StatusIcon s={vs.username} />
+                        </div>
+                    </div>
+                    {errors.username && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.username}</p>}
                 </div>
-              )}
-            </div>
 
-            {/* Phone Input */}
-            <div className="relative flex-1">
-              <input
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder={`${selectedCountry.length} digits`}
-                className={`
-                    block w-full rounded-lg border-secondary-300 bg-white
-                    text-secondary-900 shadow-sm
-                    focus:border-primary-500 focus:ring-primary-500
-                    disabled:cursor-not-allowed disabled:bg-secondary-50 disabled:text-secondary-500
-                    dark:bg-secondary-800 dark:border-secondary-700 dark:text-white dark:placeholder-secondary-500
-                    dark:focus:border-primary-500 dark:focus:ring-primary-500
-                    transition-colors duration-200
-                    pl-3 py-2 sm:text-sm h-10
-                `}
-              />
-              {validationStatus.phone === 'checking' && (
-                <div className="absolute right-3 top-2.5">
-                  <div className="w-4 h-4 border-2 border-primary-600 border-t-transparent rounded-full animate-spin" />
+                {/* Email */}
+                <div>
+                    <Label>Email</Label>
+                    <div style={{ position: 'relative' }}>
+                        <input name="email" type="email" placeholder="you@company.com"
+                            value={formData.email} onChange={handleChange}
+                            onFocus={() => setFocused('email')} onBlur={() => setFocused(null)}
+                            style={{ ...inp(focused === 'email', errors.email), paddingRight: '36px' }} />
+                        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                            <StatusIcon s={vs.email} />
+                        </div>
+                    </div>
+                    {errors.email && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.email}</p>}
                 </div>
-              )}
-              {validationStatus.phone === 'available' && (
-                <CheckCircle2 className="absolute right-3 top-2.5 text-success-500" size={18} />
-              )}
-              {validationStatus.phone === 'taken' && (
-                <AlertCircle className="absolute right-3 top-2.5 text-danger-500" size={18} />
-              )}
-            </div>
 
-          </div>
-          {errors.phone && <p className="text-danger-500 text-xs mt-1">{errors.phone}</p>}
+                {/* Phone */}
+                <div>
+                    <Label>Phone Number</Label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        {/* Country selector */}
+                        <div style={{ position: 'relative', width: '110px', flexShrink: 0 }}>
+                            <button type="button" onClick={() => setShowCountryDd(!showCountryDd)}
+                                style={{ width: '100%', padding: '10px 8px', background: '#141414', border: `1px solid ${focused === 'phone' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`, color: '#e4e4e4', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                <span>{selectedCountry.flag} {selectedCountry.dial_code}</span>
+                                <ChevronDown size={11} style={{ color: 'rgba(228,228,228,0.3)', transform: showCountryDd ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
+                            </button>
+                            {showCountryDd && (
+                                <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, width: '180px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '200px', overflowY: 'auto', marginTop: '2px' }}>
+                                    {COUNTRIES.map(c => (
+                                        <button key={c.code} type="button" onClick={() => { setSelectedCountry(c); setShowCountryDd(false); }}
+                                            style={{ width: '100%', padding: '8px 12px', background: selectedCountry.code === c.code ? 'rgba(184,149,106,0.1)' : 'none', border: 'none', color: '#e4e4e4', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', gap: '8px', alignItems: 'center', textAlign: 'left' }}>
+                                            <span>{c.flag}</span><span style={{ flex: 1 }}>{c.name}</span><span style={{ color: 'rgba(228,228,228,0.4)' }}>{c.dial_code}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        {/* Phone input */}
+                        <div style={{ flex: 1, position: 'relative' }}>
+                            <input name="phone" placeholder={`${selectedCountry.length} digits`}
+                                value={formData.phone} onChange={handleChange}
+                                onFocus={() => setFocused('phone')} onBlur={() => setFocused(null)}
+                                style={{ ...inp(focused === 'phone', errors.phone), paddingRight: '36px' }} />
+                            <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                                <StatusIcon s={vs.phone} />
+                            </div>
+                        </div>
+                    </div>
+                    {errors.phone && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.phone}</p>}
+                </div>
+
+                {/* Password */}
+                <div>
+                    <Label>Password</Label>
+                    <div style={{ position: 'relative' }}>
+                        <input name="password" type={showPwd ? 'text' : 'password'} placeholder="Create a password"
+                            value={formData.password} onChange={handleChange}
+                            onFocus={() => setFocused('password')} onBlur={() => setFocused(null)}
+                            style={{ ...inp(focused === 'password'), paddingRight: '36px' }} />
+                        <button type="button" onClick={() => setShowPwd(!showPwd)}
+                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(228,228,228,0.35)', display: 'flex' }}>
+                            {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                    </div>
+                    {/* Password rules */}
+                    {formData.password.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                            {pwdRules.map(r => (
+                                <span key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: r.met ? '#5aba8a' : 'rgba(228,228,228,0.3)', fontWeight: 600 }}>
+                                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: r.met ? '#5aba8a' : 'rgba(255,255,255,0.15)' }} />
+                                    {r.label}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* Confirm password */}
+                <div>
+                    <Label>Confirm Password</Label>
+                    <div style={{ position: 'relative' }}>
+                        <input name="confirmPassword" type={showCfm ? 'text' : 'password'} placeholder="Confirm your password"
+                            value={formData.confirmPassword} onChange={handleChange}
+                            onFocus={() => setFocused('confirmPassword')} onBlur={() => setFocused(null)}
+                            style={{ ...inp(focused === 'confirmPassword', passwordsDontMatch), paddingRight: '36px', borderColor: passwordsMatch ? '#5aba8a' : passwordsDontMatch ? '#e05252' : focused === 'confirmPassword' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
+                        <button type="button" onClick={() => setShowCfm(!showCfm)}
+                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(228,228,228,0.35)', display: 'flex' }}>
+                            {showCfm ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Submit */}
+                <button type="submit" disabled={!isFormValid || loading}
+                    style={{ width: '100%', padding: '11px', background: isFormValid && !loading ? '#b8956a' : 'rgba(184,149,106,0.3)', border: 'none', color: isFormValid && !loading ? '#0c0c0c' : 'rgba(228,228,228,0.3)', fontSize: '13px', fontWeight: 700, cursor: isFormValid && !loading ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 150ms ease', marginTop: '4px' }}>
+                    {loading ? 'Creating account...' : <><span>Create Account</span><ArrowRight size={13} /></>}
+                </button>
+            </form>
+
+            <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: 'rgba(228,228,228,0.35)' }}>
+                Already have an account?{' '}
+                <button onClick={onSwitch} style={{ background: 'none', border: 'none', color: '#b8956a', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px' }}>
+                    Sign in
+                </button>
+            </p>
         </div>
-
-        {/* Password with Hover Tooltip */}
-        <div className="space-y-1">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-            Password
-            <div className="relative group">
-              <Info size={14} className="text-slate-400 hover:text-indigo-500 cursor-help transition-colors" />
-              {/* Tooltip */}
-              <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 p-3 bg-slate-900 text-white text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
-                <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 bg-slate-900 rotate-45" />
-                <p className="font-bold mb-2 text-indigo-300">Password Requirements:</p>
-                <ul className="space-y-1 text-slate-300">
-                  <li>• 8-16 characters</li>
-                  <li>• At least one uppercase letter</li>
-                  <li>• At least one lowercase letter</li>
-                  <li>• At least one number</li>
-                  <li>• At least one special character</li>
-                  <li>• No spaces</li>
-                </ul>
-              </div>
-            </div>
-          </label>
-          <div className="relative">
-            <input
-              type={showPwd ? "text" : "password"}
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Create a password"
-              className="w-full px-4 py-3 pr-10 border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border rounded-lg outline-none transition-all"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPwd(!showPwd)}
-              className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-            >
-              {showPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Confirm Password with Border Color Indicator */}
-        <div className="space-y-1">
-          <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Confirm Password</label>
-          <div className="relative">
-            <input
-              type={showConfirmPwd ? "text" : "password"}
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              placeholder="Confirm your password"
-              className={`w-full px-4 py-3 pr-10 bg-slate-50 dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder:text-slate-400 border-2 rounded-lg outline-none transition-all ${passwordsMatch
-                ? 'border-green-500 focus:ring-2 focus:ring-green-200'
-                : passwordsDontMatch
-                  ? 'border-red-500 focus:ring-2 focus:ring-red-200'
-                  : 'border-slate-200 dark:border-slate-700'
-                }`}
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-              className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-            >
-              {showConfirmPwd ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-        </div>
-
-        {/* Submit Button */}
-        <Button
-          type="submit"
-          disabled={!isFormValid}
-          className="w-full p-3 font-bold mt-4"
-          variant="primary"
-          size="lg"
-        >
-          Create Account
-        </Button>
-
-        {/* Already have account */}
-        <div className="mt-6 text-center">
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={onSwitch}
-              className="font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 hover:underline transition-colors"
-            >
-              Sign in
-            </button>
-          </p>
-        </div>
-      </form >
-    </div >
-  );
+    );
 };
 
 export default SignupForm;

@@ -2,195 +2,170 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Users, Search, Edit, Trash2, MessageCircle } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useNavigate } from 'react-router-dom';
-import DepartmentModal from '../../components/company/DepartmentModal'; // Import Modal
-import DepartmentDetailsModal from '../../components/company/DepartmentDetailsModal'; // Import "Window" (Modal)
-import { getDepartments, deleteDepartment } from '../../services/departmentService'; // Use service
+import DepartmentModal from '../../components/company/DepartmentModal';
+import DepartmentDetailsModal from '../../components/company/DepartmentDetailsModal';
+import { getDepartments, deleteDepartment } from '../../services/departmentService';
+
+const inputSt = {
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px',
+};
 
 const DepartmentManagement = () => {
-  const { company } = useCompany();
-  const navigate = useNavigate();
-  const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedDept, setSelectedDept] = useState(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [viewDepartment, setViewDepartment] = useState(null);
-  const [searchQuery, setSearchQuery] = useState('');
+    const { company } = useCompany();
+    const navigate = useNavigate();
+    const [departments, setDepartments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedDept, setSelectedDept] = useState(null);
+    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+    const [viewDepartment, setViewDepartment] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
-  const fetchDepartments = useCallback(async () => {
-    if (!company?._id) return;
-    try {
-      setLoading(true);
-      const res = await getDepartments(company._id);
-      setDepartments(res.departments || []);
-    } catch (err) {
-      console.error("Failed to fetch departments", err);
-    } finally {
-      setLoading(false);
-    }
-  }, [company?._id]);
+    const fetchDepartments = useCallback(async () => {
+        if (!company?._id) return;
+        try {
+            setLoading(true);
+            const res = await getDepartments(company._id);
+            setDepartments(res.departments || []);
+        } catch (err) {
+            console.error('Failed to fetch departments', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [company?._id]);
 
-  useEffect(() => {
-    fetchDepartments();
-  }, [fetchDepartments]);
+    useEffect(() => { fetchDepartments(); }, [fetchDepartments]);
 
-  const handleCreate = () => {
-    setSelectedDept(null);
-    setIsModalOpen(true);
-  };
+    const handleCreate = () => { setSelectedDept(null); setIsModalOpen(true); };
+    const handleEdit = (dept) => { setSelectedDept(dept); setIsModalOpen(true); };
+    const handleDelete = async (deptId) => {
+        if (window.confirm('Are you sure you want to delete this department?')) {
+            try { await deleteDepartment(deptId); fetchDepartments(); }
+            catch { alert('Failed to delete department'); }
+        }
+    };
+    const handleRowClick = (dept) => { setViewDepartment(dept); setIsDetailsOpen(true); };
+    const filteredDepartments = departments.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const handleEdit = (dept) => {
-    setSelectedDept(dept);
-    setIsModalOpen(true);
-  };
+    return (
+        <React.Fragment>
+            <header style={{ height: '56px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
+                <div>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>Departments</h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Structure & Access</p>
+                </div>
+                <CreateBtn onClick={handleCreate} />
+            </header>
 
-  const handleDelete = async (deptId) => {
-    if (window.confirm('Are you sure you want to delete this department? This action cannot be undone.')) {
-      try {
-        await deleteDepartment(deptId);
-        fetchDepartments(); // Refresh list
-      } catch (error) {
-        console.error("Failed to delete department", error);
-        alert("Failed to delete department");
-      }
-    }
-  };
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }} className="custom-scrollbar">
+                <div style={{ position: 'relative', marginBottom: '14px', maxWidth: '320px' }}>
+                    <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                    <input type="text" placeholder="Search departments..." value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={{ ...inputSt, width: '100%', paddingLeft: '30px', boxSizing: 'border-box' }} />
+                </div>
 
-  const handleRowClick = (dept) => {
-    setViewDepartment(dept);
-    setIsDetailsOpen(true);
-  };
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
+                                {['Name', 'Head', 'Members', 'Created', 'Actions'].map((h, i) => (
+                                    <th key={h} style={{ padding: '10px 16px', textAlign: i === 4 ? 'right' : 'left', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {loading ? (
+                                <>
+                                    {[1,2,3,4].map(i => (
+                                        <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                            <td style={{ padding: '12px 16px' }}>
+                                                <div className="sk" style={{ height: '12px', width: '140px', marginBottom: '4px' }} />
+                                                <div className="sk" style={{ height: '9px', width: '100px' }} />
+                                            </td>
+                                            <td style={{ padding: '12px 16px' }}><div className="sk" style={{ height: '20px', width: '80px' }} /></td>
+                                            <td style={{ padding: '12px 16px' }}><div className="sk" style={{ height: '9px', width: '30px' }} /></td>
+                                            <td style={{ padding: '12px 16px' }}><div className="sk" style={{ height: '9px', width: '80px' }} /></td>
+                                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                                    <div className="sk" style={{ height: '26px', width: '26px' }} />
+                                                    <div className="sk" style={{ height: '26px', width: '26px' }} />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </>
+                            ) : filteredDepartments.length === 0 ? (
+                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>No departments found</td></tr>
+                            ) : filteredDepartments.map(dept => (
+                                <tr key={dept._id} onClick={() => handleRowClick(dept)} style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', transition: 'background 150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{dept.name}</div>
+                                        {dept.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{dept.description}</div>}
+                                    </td>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        {dept.head ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', border: '1px solid var(--accent)', color: 'var(--accent)' }}>{dept.head?.username || 'Unknown'}</span>
+                                                <button onClick={e => {
+                                                    e.stopPropagation();
+                                                    if (company?.defaultWorkspace) navigate(`/workspace/${company.defaultWorkspace}/dm/new/${dept.head._id}`);
+                                                    else alert('No default workspace available.');
+                                                }} style={{ padding: '3px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'color 150ms ease' }}
+                                                    onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+                                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'} title="Message Manager">
+                                                    <MessageCircle size={13} />
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Unassigned</span>
+                                        )}
+                                    </td>
+                                    <td style={{ padding: '12px 16px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                            <Users size={12} style={{ color: 'var(--text-muted)' }} /> {dept.members?.length || 0}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '12px 16px', fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(dept.createdAt).toLocaleDateString()}</td>
+                                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                        <ActionIconBtn icon={Edit} onClick={e => { e.stopPropagation(); handleEdit(dept); }} hoverColor="var(--accent)" />
+                                        <ActionIconBtn icon={Trash2} onClick={e => { e.stopPropagation(); handleDelete(dept._id); }} hoverColor="var(--state-danger)" />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-  const filteredDepartments = departments.filter(dept =>
-    dept.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+            <DepartmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} department={selectedDept} companyId={company?._id} onSuccess={fetchDepartments} />
+            <DepartmentDetailsModal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} department={viewDepartment} companyId={company?._id} onUpdate={() => { fetchDepartments(); setIsDetailsOpen(false); }} />
+        </React.Fragment>
+    );
+};
 
-  return (
-    <React.Fragment>
-      <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 transition-colors duration-200">
-        <div>
-          <h2 className="text-xl font-black text-slate-800 dark:text-white">Departments</h2>
-          <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">Structure & Access</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors shadow-sm"
-          >
-            <Plus size={18} /> Add Department
-          </button>
-        </div>
-      </header>
+const CreateBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
+            <Plus size={13} /> Add Department
+        </button>
+    );
+};
 
-      <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-
-        <div className="relative mb-6 max-w-md">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search departments..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 text-gray-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-600 transition-all shadow-sm font-medium"
-          />
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-100 dark:border-gray-700 overflow-hidden transition-colors">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-gray-700/50 border-b border-slate-100 dark:border-gray-700">
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Head</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Members</th>
-                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-gray-700">
-              {loading ? (
-                <tr><td colSpan="5" className="text-center py-12 text-slate-500 dark:text-gray-400">Loading departments...</td></tr>
-              ) : filteredDepartments.length === 0 ? (
-                <tr><td colSpan="5" className="text-center py-12 text-slate-500 dark:text-gray-400">No departments found</td></tr>
-              ) : (
-                filteredDepartments.map(dept => (
-                  <tr
-                    key={dept._id}
-                    className="hover:bg-slate-50/50 dark:hover:bg-gray-700/30 transition-colors group cursor-pointer"
-                    onClick={() => handleRowClick(dept)}
-                  >
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-slate-800 dark:text-white">{dept.name}</div>
-                      {dept.description && <div className="text-xs text-slate-400 dark:text-gray-500">{dept.description}</div>}
-                    </td>
-                    <td className="px-6 py-4">
-                      {dept.head ? (
-                        <div className="flex items-center gap-2">
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800">{dept.head?.username || 'Unknown'}</span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (company?.defaultWorkspace) {
-                                navigate(`/workspace/${company.defaultWorkspace}/dm/new/${dept.head._id}`);
-                              } else {
-                                alert("No default workspace available to start chat.");
-                              }
-                            }}
-                            className="p-1 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-full transition-colors"
-                            title="Message Manager"
-                          >
-                            <MessageCircle size={14} />
-                          </button>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 dark:text-gray-500 italic text-xs font-medium">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-600 dark:text-gray-300">
-                      <div className="flex items-center gap-2">
-                        <Users size={14} className="text-slate-400 dark:text-gray-500" /> {dept.members?.length || 0}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-xs font-medium text-slate-400 dark:text-gray-500">{new Date(dept.createdAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleEdit(dept); }}
-                        className="p-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleDelete(dept._id); }}
-                        className="p-2 ml-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-                        title="Delete Department"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <DepartmentModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        department={selectedDept}
-        companyId={company?._id}
-        onSuccess={fetchDepartments}
-      />
-
-      <DepartmentDetailsModal
-        isOpen={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        department={viewDepartment}
-        companyId={company?._id}
-        onUpdate={() => { fetchDepartments(); setIsDetailsOpen(false); }}
-      />
-    </React.Fragment>
-  );
+const ActionIconBtn = ({ icon: Icon, onClick, hoverColor }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: '5px', background: hov ? 'var(--bg-active)' : 'none', border: hov ? `1px solid var(--border-default)` : '1px solid transparent', color: hov ? hoverColor : 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', marginLeft: '2px', transition: 'all 150ms ease' }}>
+            <Icon size={13} />
+        </button>
+    );
 };
 
 export default DepartmentManagement;

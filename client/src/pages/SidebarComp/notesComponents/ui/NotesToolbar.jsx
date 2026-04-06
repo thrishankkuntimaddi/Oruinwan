@@ -1,84 +1,114 @@
 import React from 'react';
 import { Clock, Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download, Info } from 'lucide-react';
 
+const BTN = {
+  base: { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(228,228,228,0.35)', transition: 'all 150ms ease' },
+};
+
 const NotesToolbar = ({
-    formattedDate,
-    showShareTooltip,
-    showMenu,
-    setShowMenu,
-    handleAI,
-    handleShare,
-    handleDuplicate,
-    handleDownloadPDF,
-    setIsDeleteModalOpen,
-    setShowInfoModal,
-    menuRef
+  formattedDate,
+  showShareTooltip,
+  showMenu,
+  setShowMenu,
+  handleAI,
+  handleShare,
+  handleDuplicate,
+  handleDownloadPDF,
+  setIsDeleteModalOpen,
+  setShowInfoModal,
+  menuRef,
+  isPinned,
+  handleToggleStar,
+  handleToggleArchive,
 }) => {
-    return (
-        <div className="h-16 px-8 flex items-center justify-between shadow-sm bg-white dark:bg-gray-900 shrink-0 z-10 relative">
-            <div className="flex items-center gap-2 text-xs font-medium text-gray-400 dark:text-gray-500">
-                <Clock size={14} />
-                <span>Last edited {formattedDate}</span>
-            </div>
+  return (
+    <div style={{
+      height: '52px', padding: '0 24px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      background: '#0e0e0e', borderBottom: '1px solid rgba(255,255,255,0.06)',
+      flexShrink: 0, zIndex: 10, position: 'relative',
+    }}>
+      {/* Left: last edited */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>
+        <Clock size={12} />
+        <span>Last edited {formattedDate}</span>
+      </div>
 
-            <div className="flex items-center gap-3">
-                {/* AI Button */}
-                <button
-                    onClick={handleAI}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-lg shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/30 hover:scale-105 transition-all active:scale-95 text-xs font-semibold tracking-wide"
+      {/* Right: action buttons */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+
+        {/* AI Button */}
+        <button onClick={handleAI}
+          style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+          onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+          onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+        >
+          <Sparkles size={13} />
+          <span>AI Draft</span>
+        </button>
+
+        <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+
+        {/* Share */}
+        <button onClick={handleShare}
+          style={{ ...BTN.base, padding: '6px' }}
+          title="Copy Link"
+          onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          {showShareTooltip
+            ? <Check size={17} style={{ color: '#34d399' }} />
+            : <Share2 size={17} />}
+        </button>
+
+        {/* Delete */}
+        <button onClick={() => setIsDeleteModalOpen(true)}
+          style={{ ...BTN.base, padding: '6px' }}
+          title="Delete Note"
+          onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <Trash2 size={17} />
+        </button>
+
+        {/* More ⋯ */}
+        <div style={{ position: 'relative' }} ref={menuRef}>
+          <button onClick={() => setShowMenu(!showMenu)}
+            style={{ ...BTN.base, padding: '6px', background: showMenu ? 'rgba(255,255,255,0.07)' : 'transparent', color: showMenu ? '#e4e4e4' : 'rgba(228,228,228,0.35)' }}
+            onMouseEnter={e => { if (!showMenu) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; } }}
+            onMouseLeave={e => { if (!showMenu) { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; } }}
+          >
+            <MoreHorizontal size={17} />
+          </button>
+
+          {showMenu && (
+            <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '192px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', zIndex: 20 }}>
+              {[
+                { label: 'Duplicate', Icon: Copy, action: handleDuplicate },
+                { label: 'Download PDF', Icon: Download, action: handleDownloadPDF },
+              ].map(({ label, Icon: Ic, action }) => (
+                <button key={label} onClick={action}
+                  style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                    <Sparkles size={14} />
-                    <span>AI Draft</span>
+                  <Ic size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> {label}
                 </button>
-
-                <div className="h-6 w-px bg-gray-200 mx-1" />
-
-                {/* Share Button */}
-                <div className="relative">
-                    <button
-                        onClick={handleShare}
-                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
-                        title="Copy Link"
-                    >
-                        {showShareTooltip ? <Check size={18} className="text-green-600 dark:text-green-400" /> : <Share2 size={18} />}
-                    </button>
-                </div>
-
-                {/* Delete Button */}
-                <button
-                    onClick={() => setIsDeleteModalOpen(true)}
-                    className="p-2 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                    title="Delete Note"
-                >
-                    <Trash2 size={18} />
-                </button>
-
-                <div className="relative" ref={menuRef}>
-                    <button
-                        onClick={() => setShowMenu(!showMenu)}
-                        className={`p-2 rounded-lg transition-colors ${showMenu ? "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
-                    >
-                        <MoreHorizontal size={18} />
-                    </button>
-
-                    {showMenu && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-20 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                            <button onClick={handleDuplicate} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
-                                <Copy size={14} className="text-gray-400" /> Duplicate
-                            </button>
-                            <button onClick={handleDownloadPDF} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
-                                <Download size={14} className="text-gray-400" /> Download PDF
-                            </button>
-                            <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
-                            <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-2 transition-colors">
-                                <Info size={14} className="text-gray-400" /> Note Info
-                            </button>
-                        </div>
-                    )}
-                </div>
+              ))}
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
+              <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }}
+                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <Info size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Note Info
+              </button>
             </div>
+          )}
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default NotesToolbar;

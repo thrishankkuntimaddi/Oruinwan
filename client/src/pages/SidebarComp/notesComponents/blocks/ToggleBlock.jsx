@@ -18,24 +18,23 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-2">
-            <div className={`rounded-xl border transition-all duration-200 overflow-hidden ${open
-                    ? 'border-gray-200 dark:border-gray-700/80 shadow-sm'
-                    : 'border-transparent hover:border-gray-200 dark:hover:border-gray-700/50'
-                }`}>
+        <div style={{
+                border: open ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
+                transition: 'border 200ms ease, box-shadow 200ms ease',
+                overflow: 'hidden',
+                boxShadow: open ? '0 4px 20px rgba(0,0,0,0.3)' : 'none',
+            }}>
                 {/* Header */}
                 <div
-                    className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer rounded-xl transition-colors ${open
-                            ? 'bg-gray-50 dark:bg-gray-800/80 rounded-b-none'
-                            : 'hover:bg-gray-50 dark:hover:bg-gray-800/40'
-                        }`}
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', cursor: 'pointer', transition: 'background 150ms ease', background: open ? 'rgba(255,255,255,0.04)' : 'transparent' }}
                     onClick={toggle}
+                    onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                    onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent'; }}
                 >
-                    <div className={`flex-shrink-0 w-5 h-5 flex items-center justify-center rounded-md transition-all ${open ? 'bg-blue-100 dark:bg-blue-900/40' : 'bg-gray-100 dark:bg-gray-800'
-                        }`}>
+                    <div style={{ flexShrink: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: open ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.06)', transition: 'background 150ms ease' }}>
                         <ChevronRight
-                            size={13}
-                            className={`transition-transform duration-200 ${open ? 'rotate-90 text-blue-500' : 'text-gray-400'
-                                }`}
+                            size={12}
+                            style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', color: open ? '#b8956a' : 'rgba(228,228,228,0.35)' }}
                         />
                     </div>
                     <input
@@ -44,24 +43,28 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         onChange={e => { e.stopPropagation(); setTitle(e.target.value); }}
                         onClick={e => e.stopPropagation()}
                         placeholder="Section title..."
-                        className="flex-1 bg-transparent border-none focus:ring-0 outline-none text-sm font-semibold text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600"
+                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        className="placeholder-gray-700"
                     />
                     <button
                         onClick={e => { e.stopPropagation(); onRemoveBlock(block.id); }}
-                        className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded"
+                        style={{ padding: '3px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                        className="group-hover:!opacity-100"
+                        onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
                     >
-                        <Trash2 size={12} />
+                        <Trash2 size={11} />
                     </button>
                 </div>
 
                 {/* Body — animated slide */}
                 {open && (
-                    <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900/50">
+                    <div style={{ padding: '10px 16px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.015)' }}>
                         <textarea
                             value={body}
                             onChange={e => setBody(e.target.value)}
                             placeholder="Add content..."
-                            className="w-full bg-transparent border-none focus:ring-0 outline-none resize-none text-sm text-gray-600 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-700 leading-relaxed min-h-[50px]"
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', color: 'rgba(228,228,228,0.7)', lineHeight: 1.65, minHeight: '50px', fontFamily: 'Inter, system-ui, sans-serif' }}
                             onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                             autoFocus
                         />

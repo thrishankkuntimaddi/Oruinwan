@@ -368,7 +368,7 @@ const HomePanel = ({ title }) => {
     const dms = items.filter(i => !i.isFavorite && i.type === 'dm');
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 relative">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', position: 'relative' }}>
             {/* Workspace Header with Dropdown */}
             <WorkspaceHeader
                 workspaceName={workspaceName}
@@ -389,26 +389,23 @@ const HomePanel = ({ title }) => {
 
                 {/* Selection Mode Header */}
                 {isSelectionMode && (
-                    <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-900/30 flex items-center justify-between sticky top-0 z-10 transition-colors">
-                        <span className="text-sm font-bold text-blue-900 dark:text-blue-100">{selectedItems.size} selected</span>
-                        <div className="flex gap-2">
+                    <div style={{ padding: '6px 14px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedItems.size} selected</span>
+                        <div style={{ display: 'flex', gap: '4px' }}>
                             <button
                                 onClick={() => setShowSelectionDeleteConfirm(true)}
                                 disabled={selectedItems.size === 0}
-                                className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                style={{ padding: '5px', color: 'var(--state-danger)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '2px', display: 'flex', opacity: selectedItems.size === 0 ? 0.4 : 1, transition: '150ms ease' }}
                                 title="Delete Selected"
                             >
-                                <Trash2 size={16} />
+                                <Trash2 size={15} />
                             </button>
                             <button
-                                onClick={() => {
-                                    setIsSelectionMode(false);
-                                    setSelectedItems(new Set());
-                                }}
-                                className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
+                                style={{ padding: '5px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '150ms ease' }}
                                 title="Cancel"
                             >
-                                <X size={16} />
+                                <X size={15} />
                             </button>
                         </div>
                     </div>
@@ -493,36 +490,39 @@ const HomePanel = ({ title }) => {
                     onAdd={() => setShowScheduleModal(true)}
                 />
                 {expanded.schedules && (
-                    <div className="space-y-0.5 pb-1">
+                    <div style={{ padding: '0 0 4px' }}>
                         {meetingsLoading ? (
-                            <div className="flex items-center gap-2 px-5 py-2 text-gray-400">
-                                <Loader size={12} className="animate-spin" />
-                                <span className="text-xs">Loading...</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', color: 'var(--text-muted)' }}>
+                                <Loader size={11} className="animate-spin" />
+                                <span style={{ fontSize: '12px' }}>Loading...</span>
                             </div>
                         ) : (
                             scheduledMeetings.map(meeting => (
                                 <div
                                     key={meeting._id}
-                                    className="group flex items-center gap-2.5 px-4 py-2 rounded-md mx-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-default"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px 6px 18px', cursor: 'default', transition: '150ms ease' }}
+                                    className="group"
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                 >
                                     {/* Icon */}
-                                    <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center shrink-0">
+                                    <div style={{ width: '24px', height: '24px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                         {meeting.status === 'live' ? (
-                                            <span className="relative flex h-2 w-2">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                                            <span style={{ position: 'relative', display: 'flex', width: '8px', height: '8px' }}>
+                                                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--state-danger)', opacity: 0.75, animation: 'ws-spin 1s ease infinite' }} />
+                                                <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', width: '8px', height: '8px', background: 'var(--state-danger)' }} />
                                             </span>
                                         ) : (
-                                            <Calendar size={13} className="text-indigo-500 dark:text-indigo-400" />
+                                            <Calendar size={11} style={{ color: 'var(--accent)' }} />
                                         )}
                                     </div>
 
                                     {/* Details */}
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate leading-tight">
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, lineHeight: 1.3 }}>
                                             {meeting.title}
                                         </p>
-                                        <p className="text-[10px] text-gray-400 flex items-center gap-1">
+                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', margin: '2px 0 0' }}>
                                             <Clock size={8} />
                                             {formatTime(meeting.startTime)} · {formatRelativeTime(meeting.startTime)}
                                             {meeting.duration ? ` · ${meeting.duration}m` : ''}
@@ -530,23 +530,21 @@ const HomePanel = ({ title }) => {
                                     </div>
 
                                     {/* Actions */}
-                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', opacity: 0, transition: '150ms ease' }} className="group-hover:opacity-100">
                                         {meeting.meetingLink && (
-                                            <a
-                                                href={meeting.meetingLink}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                title="Open meeting link"
-                                                className="p-1 rounded hover:bg-indigo-100 dark:hover:bg-indigo-900/40 text-indigo-500"
+                                            <a href={meeting.meetingLink} target="_blank" rel="noopener noreferrer" title="Open meeting link"
+                                                style={{ padding: '3px', borderRadius: '2px', color: 'var(--accent)', display: 'flex', transition: '150ms ease' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                                 onClick={e => e.stopPropagation()}
                                             >
                                                 <ExternalLink size={11} />
                                             </a>
                                         )}
-                                        <button
-                                            onClick={() => handleCancelMeeting(meeting._id)}
-                                            title="Cancel"
-                                            className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors"
+                                        <button onClick={() => handleCancelMeeting(meeting._id)} title="Cancel"
+                                            style={{ padding: '3px', borderRadius: '2px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: '150ms ease' }}
+                                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                                         >
                                             <X size={11} />
                                         </button>
@@ -561,121 +559,108 @@ const HomePanel = ({ title }) => {
             {/* Schedule Meeting Modal */}
             {showScheduleModal && (
                 <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+                    style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', fontFamily: 'var(--font)' }}
                     onClick={e => { if (e.target === e.currentTarget) setShowScheduleModal(false); }}
                 >
-                    <div className="relative w-full max-w-sm mx-4 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    <div style={{ position: 'relative', width: '100%', maxWidth: '340px', margin: '0 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
                         {/* Header */}
-                        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-700 bg-indigo-600">
-                            <div className="p-1.5 bg-white/20 rounded-lg">
-                                <Calendar size={15} className="text-white" />
-                            </div>
-                            <h2 className="text-sm font-bold text-white flex-1">Schedule Meeting</h2>
-                            <button onClick={() => setShowScheduleModal(false)} className="text-white/70 hover:text-white p-1">
-                                <X size={16} />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
+                            <Calendar size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                            <h2 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flex: 1, margin: 0 }}>Schedule Meeting</h2>
+                            <button onClick={() => setShowScheduleModal(false)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px', borderRadius: '2px', transition: '150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                            >
+                                <X size={15} />
                             </button>
                         </div>
 
                         {/* Form */}
-                        <form onSubmit={handleScheduleMeeting} className="px-5 py-4 space-y-3">
-                            {/* Title */}
+                        <form onSubmit={handleScheduleMeeting} style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {/* Shared input/label style */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                    Title <span className="text-red-500">*</span>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>
+                                    Title <span style={{ color: 'var(--state-danger)' }}>*</span>
                                 </label>
                                 <input
-                                    type="text"
-                                    value={scheduleForm.title}
+                                    type="text" value={scheduleForm.title}
                                     onChange={e => setScheduleForm(f => ({ ...f, title: e.target.value }))}
-                                    placeholder="e.g. Weekly Sync"
-                                    maxLength={100}
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    placeholder="e.g. Weekly Sync" maxLength={100}
+                                    style={{ width: '100%', padding: '8px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+                                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                                 />
                             </div>
 
-                            {/* Date */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                    Date <span className="text-red-500">*</span>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>
+                                    Date <span style={{ color: 'var(--state-danger)' }}>*</span>
                                 </label>
                                 <input
-                                    type="date"
-                                    value={scheduleForm.startDate}
+                                    type="date" value={scheduleForm.startDate}
                                     onChange={e => setScheduleForm(f => ({ ...f, startDate: e.target.value }))}
                                     min={new Date().toISOString().slice(0, 10)}
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    style={{ width: '100%', padding: '8px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box', colorScheme: 'dark' }}
+                                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                                 />
                             </div>
 
-                            {/* Time + Duration */}
-                            <div className="grid grid-cols-2 gap-3">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Time</label>
-                                    <div className="flex gap-1">
-                                        <select
-                                            value={scheduleForm.startHour}
-                                            onChange={e => setScheduleForm(f => ({ ...f, startHour: e.target.value }))}
-                                            className="flex-1 px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>Time</label>
+                                    <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                                        <select value={scheduleForm.startHour} onChange={e => setScheduleForm(f => ({ ...f, startHour: e.target.value }))}
+                                            style={{ flex: 1, padding: '8px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', cursor: 'pointer' }}
                                         >
-                                            {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => (
-                                                <option key={h} value={h}>{h}</option>
-                                            ))}
+                                            {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => <option key={h} value={h}>{h}</option>)}
                                         </select>
-                                        <span className="self-center text-gray-400 font-bold">:</span>
-                                        <select
-                                            value={scheduleForm.startMin}
-                                            onChange={e => setScheduleForm(f => ({ ...f, startMin: e.target.value }))}
-                                            className="flex-1 px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                        <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '12px' }}>:</span>
+                                        <select value={scheduleForm.startMin} onChange={e => setScheduleForm(f => ({ ...f, startMin: e.target.value }))}
+                                            style={{ flex: 1, padding: '8px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', cursor: 'pointer' }}
                                         >
                                             {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Duration</label>
-                                    <select
-                                        value={scheduleForm.duration}
-                                        onChange={e => setScheduleForm(f => ({ ...f, duration: Number(e.target.value) }))}
-                                        className="w-full px-2 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>Duration</label>
+                                    <select value={scheduleForm.duration} onChange={e => setScheduleForm(f => ({ ...f, duration: Number(e.target.value) }))}
+                                        style={{ width: '100%', padding: '8px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', cursor: 'pointer' }}
                                     >
                                         {[15, 30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}
                                     </select>
                                 </div>
                             </div>
 
-                            {/* Meeting Link (optional) */}
                             <div>
-                                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                                    Meeting link <span className="text-gray-400 font-normal">(optional)</span>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>
+                                    Meeting link <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '11px' }}>(optional)</span>
                                 </label>
                                 <input
-                                    type="url"
-                                    value={scheduleForm.meetingLink}
+                                    type="url" value={scheduleForm.meetingLink}
                                     onChange={e => setScheduleForm(f => ({ ...f, meetingLink: e.target.value }))}
                                     placeholder="https://meet.google.com/..."
-                                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                    style={{ width: '100%', padding: '8px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+                                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                                 />
                             </div>
 
-                            {/* Actions */}
-                            <div className="flex gap-2 pt-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowScheduleModal(false)}
-                                    className="flex-1 py-2 text-sm font-medium rounded-xl border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                            <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
+                                <button type="button" onClick={() => setShowScheduleModal(false)}
+                                    style={{ flex: 1, padding: '9px', fontSize: '13px', fontWeight: 500, borderRadius: '2px', border: '1px solid var(--border-default)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                 >
                                     Cancel
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={schedulingLoading}
-                                    className="flex-1 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white transition disabled:opacity-60 flex items-center justify-center gap-2"
+                                <button type="submit" disabled={schedulingLoading}
+                                    style={{ flex: 1, padding: '9px', fontSize: '13px', fontWeight: 600, borderRadius: '2px', border: '1px solid var(--border-accent)', background: 'var(--bg-active)', color: 'var(--accent)', cursor: schedulingLoading ? 'wait' : 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: schedulingLoading ? 0.65 : 1, transition: '150ms ease' }}
+                                    onMouseEnter={e => { if (!schedulingLoading) e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
+                                    onMouseLeave={e => { if (!schedulingLoading) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                                 >
-                                    {schedulingLoading ? (
-                                        <><Loader size={13} className="animate-spin" /> Scheduling…</>
-                                    ) : (
-                                        'Schedule'
-                                    )}
+                                    {schedulingLoading ? <><Loader size={12} className="animate-spin" /> Scheduling…</> : 'Schedule'}
                                 </button>
                             </div>
                         </form>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, UserPlus, X } from 'lucide-react';
+import { Users, UserPlus, X, Search } from 'lucide-react';
 
 export default function InviteTab({
     searchQuery,
@@ -16,38 +16,50 @@ export default function InviteTab({
         (u) => !members.some((m) => String(m._id) === String(u._id))
     );
 
+    const avatarColor = (name = '') => {
+        const colors = ['#b8956a', '#9c7fd4', '#63b3ed', '#48bb78', '#fc8181', '#f6ad55'];
+        return colors[name.charCodeAt(0) % colors.length];
+    };
+
     return (
-        <div className="space-y-4">
-            {/* Search Input */}
-            <div className="relative">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+            {/* Search */}
+            <div style={{ position: 'relative' }}>
+                <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input
                     type="text"
                     placeholder="Search by name or email..."
                     value={searchQuery}
                     onChange={(e) => onSearchQueryChange(e.target.value)}
-                    className="w-full px-4 py-2.5 pl-10 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                    style={{
+                        width: '100%', padding: '8px 32px 8px 32px',
+                        backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)',
+                        borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)',
+                        outline: 'none', boxSizing: 'border-box', transition: 'border-color 150ms ease',
+                    }}
+                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                 />
-                <svg className="w-5 h-5 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
                 {searchQuery && (
                     <button
                         onClick={() => onSearchQueryChange('')}
-                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                        style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '2px', transition: 'color 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
-                        <X size={18} />
+                        <X size={14} />
                     </button>
                 )}
             </div>
 
-            {/* Debug Info Panel - Toggleable */}
+            {/* Debug Panel */}
             {showDebugInfo && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs">
-                    <div className="font-bold text-yellow-900 mb-1">🐛 Debug Info:</div>
-                    <div className="text-yellow-700 space-y-0.5">
+                <div style={{ padding: '10px 12px', backgroundColor: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', borderRadius: '2px', fontSize: '11px' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>Debug Info</div>
+                    <div style={{ color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <div>• Total workspace users: {allUsers.length}</div>
                         <div>• Channel members: {members.length}</div>
-                        <div>• Non-members (eligible to invite): {nonMembers.length}</div>
+                        <div>• Non-members eligible: {nonMembers.length}</div>
                         <div>• Filtered by search: {filteredNonMembers.length}</div>
                         <div>• Workspace ID: {channel.workspaceId || 'N/A'}</div>
                     </div>
@@ -55,47 +67,78 @@ export default function InviteTab({
             )}
 
             {filteredNonMembers.length === 0 ? (
-                <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <Users size={24} className="text-gray-400" />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', opacity: 0.6 }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                        <Users size={20} style={{ color: 'var(--text-muted)' }} />
                     </div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                    <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', margin: '0 0 4px' }}>
                         {searchQuery ? 'No members found' : "Everyone's already here!"}
                     </p>
-                    <p className="text-xs text-gray-500">
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
                         {searchQuery ? 'Try a different search term' : 'All workspace members are in this channel.'}
                     </p>
                 </div>
             ) : (
                 <>
-                    <div className="text-xs text-gray-500 mb-2">
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
                         {filteredNonMembers.length} member{filteredNonMembers.length !== 1 ? 's' : ''} available
-                    </div>
-                    <div className="space-y-2">
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {filteredNonMembers.map((user) => (
-                            <div key={user._id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:bg-blue-50/30 dark:hover:bg-gray-700 transition-all group">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                                        {(user?.username || 'U').charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <div className="text-sm font-medium text-gray-900 dark:text-white">{user?.username || 'Unknown'}</div>
-                                        <div className="text-xs text-gray-500">{user?.email || ''}</div>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => onInvite(user._id)}
-                                    disabled={loading}
-                                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 active:scale-95"
-                                    title="Add to Channel"
-                                >
-                                    <UserPlus size={20} />
-                                </button>
-                            </div>
+                            <UserRow key={user._id} user={user} loading={loading} onInvite={onInvite} avatarColor={avatarColor} />
                         ))}
                     </div>
                 </>
             )}
+        </div>
+    );
+}
+
+function UserRow({ user, loading, onInvite, avatarColor }) {
+    const [hovered, setHovered] = React.useState(false);
+    const initials = (name = '') => name.charAt(0).toUpperCase();
+    const bg = avatarColor(user?.username || 'U');
+
+    return (
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 12px', borderRadius: '2px', transition: '150ms ease',
+                backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-active)',
+                border: `1px solid ${hovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                    width: '32px', height: '32px', borderRadius: '50%',
+                    backgroundColor: bg, display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', color: '#0c0c0c', fontSize: '12px',
+                    fontWeight: 700, flexShrink: 0,
+                }}>
+                    {initials(user?.username)}
+                </div>
+                <div>
+                    <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{user?.username || 'Unknown'}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{user?.email || ''}</div>
+                </div>
+            </div>
+            <button
+                onClick={() => onInvite(user._id)}
+                disabled={loading}
+                style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '6px', borderRadius: '2px', background: 'none',
+                    border: '1px solid var(--border-accent)', cursor: loading ? 'not-allowed' : 'pointer',
+                    color: 'var(--accent)', transition: '150ms ease', opacity: loading ? 0.5 : 1,
+                }}
+                onMouseEnter={e => { if (!loading) { e.currentTarget.style.backgroundColor = 'var(--accent)'; e.currentTarget.style.color = '#0c0c0c'; } }}
+                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--accent)'; }}
+                title="Add to Channel"
+            >
+                <UserPlus size={16} />
+            </button>
         </div>
     );
 }

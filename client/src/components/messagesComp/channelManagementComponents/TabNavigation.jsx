@@ -1,37 +1,46 @@
 import React from 'react';
 
+const TABS = [
+    { key: 'members', label: 'Members', alwaysShow: true },
+    { key: 'settings', label: 'Manage Channel', adminOnly: true },
+    { key: 'invite', label: 'Invite People', adminOnly: true },
+    { key: 'integrations', label: 'Integrations', alwaysShow: true },
+];
+
 export default function TabNavigation({ activeTab, onTabChange, isAdmin }) {
+    const visibleTabs = TABS.filter(t => t.alwaysShow || (t.adminOnly && isAdmin));
+
     return (
-        <div className="flex border-b border-gray-100 dark:border-gray-800 px-6">
-            <button
-                onClick={() => onTabChange("members")}
-                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "members" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
-            >
-                Members
-            </button>
-            {isAdmin && (
-                <button
-                    onClick={() => onTabChange("settings")}
-                    className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "settings" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
-                >
-                    Manage Channel
-                </button>
-            )}
-            {isAdmin && (
-                <button
-                    onClick={() => onTabChange("invite")}
-                    className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === "invite" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
-                >
-                    Invite People
-                </button>
-            )}
-            <button
-                onClick={() => onTabChange("integrations")}
-                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${activeTab === "integrations" ? "border-blue-600 text-blue-600 dark:text-blue-400" : "border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"}`}
-            >
-                🔌 Integrations
-            </button>
+        <div style={{
+            display: 'flex',
+            borderBottom: '1px solid var(--border-default)',
+            padding: '0 24px',
+            backgroundColor: 'var(--bg-surface)',
+            flexShrink: 0,
+        }}>
+            {visibleTabs.map(tab => {
+                const isActive = activeTab === tab.key;
+                return (
+                    <button
+                        key={tab.key}
+                        onClick={() => onTabChange(tab.key)}
+                        style={{
+                            padding: '10px 12px',
+                            fontSize: '13px', fontWeight: 400,
+                            color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                            background: 'none', border: 'none',
+                            borderBottom: isActive ? '1px solid var(--accent)' : '1px solid transparent',
+                            cursor: 'pointer', whiteSpace: 'nowrap',
+                            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                            transition: 'color 150ms ease, border-color 150ms ease',
+                        }}
+                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = 'var(--text-muted)'; }}
+                    >
+                        {tab.label}
+                    </button>
+                );
+            })}
         </div>
     );
 }
-

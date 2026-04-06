@@ -2,8 +2,21 @@ import { useEffect, useState } from "react";
 import { Search, X, Send, Users, Hash, MessageSquare } from "lucide-react";
 import api from '@services/api';
 
+const T = {
+  bg:       '#111111',
+  base:     '#0c0c0c',
+  surface:  'rgba(255,255,255,0.04)',
+  border:   'rgba(255,255,255,0.08)',
+  accent:   '#b8956a',
+  accentBg: 'rgba(184,149,106,0.1)',
+  accentBorder: 'rgba(184,149,106,0.3)',
+  text:     '#e4e4e4',
+  muted:    'rgba(228,228,228,0.4)',
+  font:     'Inter, system-ui, sans-serif',
+};
+
 export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }) {
-    const [activeTab, setActiveTab] = useState('dms'); // 'dms', 'channels', 'members'
+    const [activeTab, setActiveTab] = useState('dms');
     const [dmContacts, setDmContacts] = useState([]);
     const [channels, setChannels] = useState([]);
     const [members, setMembers] = useState([]);
@@ -15,48 +28,27 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
     useEffect(() => {
         async function loadData() {
             if (!workspaceId) return;
-
             setLoading(true);
             try {
-                // Fetch all workspace data in parallel
                 const [dmsRes, channelsRes, membersRes] = await Promise.all([
                     api.get(`/api/v2/messages/workspace/${workspaceId}/dms`),
                     api.get(`/api/workspaces/${workspaceId}/channels`),
                     api.get(`/api/workspaces/${workspaceId}/members`)
                 ]);
-
-                // Format DM contacts
                 const dms = (dmsRes.data.sessions || []).map(session => ({
-                    type: 'dm',
-                    id: session.otherUser?._id,
+                    type: 'dm', id: session.otherUser?._id,
                     name: session.otherUser?.username || 'Unknown',
                     avatar: session.otherUser?.profilePicture,
                     status: session.otherUser?.userStatus || 'offline'
                 }));
-
-                // Format channels
                 const chans = (channelsRes.data.channels || []).map(ch => ({
-                    type: 'channel',
-                    id: ch._id,
-                    name: ch.name,
-                    isPrivate: ch.isPrivate
+                    type: 'channel', id: ch._id, name: ch.name, isPrivate: ch.isPrivate
                 }));
-
-                // Format workspace members (exclude those already in DMs)
-                const dmUserIds = new Set(dms.map(dm => dm.id));
+                const dmUserIds = new Set(dms.map(d => d.id));
                 const mems = (membersRes.data.members || [])
                     .filter(m => !dmUserIds.has(m._id))
-                    .map(m => ({
-                        type: 'member',
-                        id: m._id,
-                        name: m.username,
-                        avatar: m.profilePicture,
-                        status: m.userStatus || 'offline'
-                    }));
-
-                setDmContacts(dms);
-                setChannels(chans);
-                setMembers(mems);
+                    .map(m => ({ type: 'member', id: m._id, name: m.username, avatar: m.profilePicture, status: m.userStatus || 'offline' }));
+                setDmContacts(dms); setChannels(chans); setMembers(mems);
                 setLoading(false);
             } catch (err) {
                 console.error("Failed to load broadcast data:", err);
@@ -68,198 +60,140 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
 
     const toggleItem = (item) => {
         const exists = selectedItems.find(s => s.id === item.id && s.type === item.type);
-        if (exists) {
-            setSelectedItems(selectedItems.filter(s => !(s.id === item.id && s.type === item.type)));
-        } else {
-            setSelectedItems([...selectedItems, item]);
-        }
+        if (exists) setSelectedItems(selectedItems.filter(s => !(s.id === item.id && s.type === item.type)));
+        else setSelectedItems([...selectedItems, item]);
     };
 
     const handleSend = () => {
         if (!message.trim() || selectedItems.length === 0) return;
-
         onSendBroadcast(selectedItems, message);
     };
 
-    // Filter current tab items by search
     const getCurrentItems = () => {
-        let items = activeTab === 'dms' ? dmContacts :
-            activeTab === 'channels' ? channels : members;
-
-        if (searchQuery) {
-            items = items.filter(item =>
-                item.name.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
+        let items = activeTab === 'dms' ? dmContacts : activeTab === 'channels' ? channels : members;
+        if (searchQuery) items = items.filter(i => i.name.toLowerCase().includes(searchQuery.toLowerCase()));
         return items;
     };
 
     const currentItems = getCurrentItems();
+    const tabs = [
+        { key: 'dms',      label: 'DMs',      Icon: MessageSquare, count: dmContacts.length },
+        { key: 'channels', label: 'Channels',  Icon: Hash,          count: channels.length  },
+        { key: 'members',  label: 'Members',   Icon: Users,         count: members.length   },
+    ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in p-4">
-            <div className="bg-white dark:bg-slate-800 w-full max-w-7xl h-[85vh] rounded-xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col">
+        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '16px' }}>
+            <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '100%', maxWidth: '900px', height: '82vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
                 {/* Header */}
-                <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                            <Users className="text-blue-600 dark:text-blue-400" size={20} />
+                <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ width: '36px', height: '36px', background: T.accentBg, border: `1px solid ${T.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Users size={17} style={{ color: T.accent }} />
                         </div>
                         <div>
-                            <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Broadcast</h2>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">Send a message to multiple people at once</p>
+                            <h2 style={{ fontSize: '16px', fontWeight: 700, color: T.text, fontFamily: T.font, margin: 0 }}>New Broadcast</h2>
+                            <p style={{ fontSize: '12px', color: T.muted, fontFamily: T.font, marginTop: '2px' }}>Send a message to multiple people at once</p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        style={{ padding: '6px', background: 'transparent', border: `1px solid ${T.border}`, color: T.muted, cursor: 'pointer', transition: 'all 150ms ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
                     >
-                        <X size={20} className="text-gray-500 dark:text-gray-400" />
+                        <X size={15} />
                     </button>
                 </div>
 
-                {/* Main Content - 2 Column Layout */}
-                <div className="flex-1 flex overflow-hidden">
-                    {/* Left Column - Contact Selection */}
-                    <div className="w-96 border-r border-gray-200 dark:border-gray-700 flex flex-col">
-                        {/* Horizontal Tabs */}
-                        <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                            <div className="flex">
-                                <button
-                                    onClick={() => setActiveTab('dms')}
-                                    className={`flex-1 px-3 py-4 text-xs font-medium transition-colors relative ${activeTab === 'dms'
-                                        ? 'text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-center gap-1.5">
-                                        <MessageSquare size={14} />
-                                        <span>DMs</span>
-                                        <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">
-                                            {dmContacts.length}
-                                        </span>
-                                    </div>
-                                    {activeTab === 'dms' && (
-                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"></div>
-                                    )}
-                                </button>
-
-                                <button
-                                    onClick={() => setActiveTab('channels')}
-                                    className={`flex-1 px-3 py-4 text-xs font-medium transition-colors relative ${activeTab === 'channels'
-                                        ? 'text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-center gap-1.5">
-                                        <Hash size={14} />
-                                        <span>Channels</span>
-                                        <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">
-                                            {channels.length}
-                                        </span>
-                                    </div>
-                                    {activeTab === 'channels' && (
-                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"></div>
-                                    )}
-                                </button>
-
-                                <button
-                                    onClick={() => setActiveTab('members')}
-                                    className={`flex-1 px-3 py-4 text-xs font-medium transition-colors relative ${activeTab === 'members'
-                                        ? 'text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                                        }`}
-                                >
-                                    <div className="flex items-center justify-center gap-1.5">
-                                        <Users size={14} />
-                                        <span>Members</span>
-                                        <span className="text-[10px] bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded-full">
-                                            {members.length}
-                                        </span>
-                                    </div>
-                                    {activeTab === 'members' && (
-                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400"></div>
-                                    )}
-                                </button>
-                            </div>
+                {/* Main Content */}
+                <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+                    {/* Left — Contact Selection */}
+                    <div style={{ width: '320px', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
+                        {/* Tabs */}
+                        <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+                            {tabs.map(({ key, label, Icon, count }) => {
+                                const isActive = activeTab === key;
+                                return (
+                                    <button
+                                        key={key}
+                                        onClick={() => setActiveTab(key)}
+                                        style={{ flex: 1, padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: 'transparent', border: 'none', borderBottom: `2px solid ${isActive ? T.accent : 'transparent'}`, color: isActive ? T.accent : T.muted, cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: T.font, transition: 'all 150ms ease' }}
+                                        onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = T.text; }}
+                                        onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = T.muted; }}
+                                    >
+                                        <Icon size={13} />
+                                        <span>{label}</span>
+                                        <span style={{ fontSize: '10px', padding: '1px 5px', background: T.surface, color: T.muted, fontFamily: T.font }}>{count}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         {/* Search */}
-                        <div className="p-3 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                        <div style={{ padding: '10px 12px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
+                            <div style={{ position: 'relative' }}>
+                                <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: T.muted }} />
                                 <input
                                     type="text"
                                     placeholder="Search..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                    style={{ width: '100%', paddingLeft: '28px', paddingRight: '10px', paddingTop: '7px', paddingBottom: '7px', background: T.surface, border: `1px solid ${T.border}`, color: T.text, fontSize: '12px', outline: 'none', fontFamily: T.font, boxSizing: 'border-box' }}
+                                    onFocus={e => e.currentTarget.style.borderColor = T.accentBorder}
+                                    onBlur={e => e.currentTarget.style.borderColor = T.border}
                                 />
                             </div>
                         </div>
 
-                        {/* Contact List */}
-                        <div className="flex-1 overflow-y-auto">
+                        {/* List */}
+                        <div style={{ flex: 1, overflowY: 'auto' }}>
                             {loading ? (
-                                <div className="flex items-center justify-center h-40">
-                                    <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px' }}>
+                                    <div style={{ width: '22px', height: '22px', border: `2px solid ${T.accent}`, borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                                 </div>
                             ) : currentItems.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-40 text-gray-500 dark:text-gray-400">
-                                    <p className="text-sm">No {activeTab === 'dms' ? 'DMs' : activeTab === 'channels' ? 'channels' : 'members'} found</p>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px' }}>
+                                    <p style={{ fontSize: '12px', color: T.muted, fontFamily: T.font }}>No {activeTab === 'dms' ? 'DMs' : activeTab} found</p>
                                 </div>
                             ) : (
-                                <div className="p-2">
+                                <div style={{ padding: '6px' }}>
                                     {currentItems.map((item) => {
                                         const isSelected = selectedItems.some(s => s.id === item.id && s.type === item.type);
-
                                         return (
                                             <button
                                                 key={`${item.type}-${item.id}`}
                                                 onClick={() => toggleItem(item)}
-                                                className={`w-full flex items-center gap-2.5 p-2.5 rounded-lg transition-colors ${isSelected
-                                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-500'
-                                                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/50 border-2 border-transparent'
-                                                    }`}
+                                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: isSelected ? T.accentBg : 'transparent', border: `1px solid ${isSelected ? T.accentBorder : 'transparent'}`, cursor: 'pointer', transition: 'all 150ms ease', marginBottom: '2px' }}
+                                                onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.surface; }}
+                                                onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                                             >
                                                 {/* Avatar/Icon */}
                                                 {item.type === 'channel' ? (
-                                                    <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                        <Hash size={16} className="text-gray-600 dark:text-gray-400" />
+                                                    <div style={{ width: '28px', height: '28px', background: T.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                        <Hash size={14} style={{ color: T.muted }} />
                                                     </div>
                                                 ) : (
-                                                    <div className="relative flex-shrink-0">
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${item.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300' :
-                                                            item.status === 'away' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300' :
-                                                                item.status === 'dnd' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' :
-                                                                    'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                                                            }`}>
+                                                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                                                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: T.accentBg, border: `1px solid ${T.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: T.accent, fontFamily: T.font }}>
                                                             {item.name.charAt(0).toUpperCase()}
                                                         </div>
-                                                        {/* Status dot */}
-                                                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-800 ${item.status === 'active' ? 'bg-green-500' :
-                                                            item.status === 'away' ? 'bg-yellow-500' :
-                                                                item.status === 'dnd' ? 'bg-red-500' :
-                                                                    'bg-gray-400'
-                                                            }`}></div>
+                                                        <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '8px', height: '8px', borderRadius: '50%', border: `2px solid ${T.bg}`, background: item.status === 'active' ? '#34d399' : 'rgba(255,255,255,0.2)' }} />
                                                     </div>
                                                 )}
 
-                                                {/* Name */}
-                                                <div className="flex-1 text-left min-w-0">
-                                                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                                        {item.type === 'channel' && '# '}{item.name}
+                                                <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+                                                    <p style={{ fontSize: '12px', fontWeight: 500, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: T.font }}>
+                                                        {item.name}
                                                     </p>
                                                 </div>
 
                                                 {/* Checkbox */}
-                                                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0 ${isSelected
-                                                    ? 'bg-blue-600 border-blue-600'
-                                                    : 'border-gray-300 dark:border-gray-600'
-                                                    }`}>
+                                                <div style={{ width: '14px', height: '14px', border: `1.5px solid ${isSelected ? T.accent : T.border}`, background: isSelected ? T.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
                                                     {isSelected && (
-                                                        <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                                        <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+                                                            <path d="M2 6l3 3 5-5" stroke="#0c0c0c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                                         </svg>
                                                     )}
                                                 </div>
@@ -271,66 +205,66 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                         </div>
                     </div>
 
-                    {/* Right Column - Message Area */}
-                    <div className="flex-1 flex flex-col bg-gray-50 dark:bg-slate-900/50">
-                        {/* Selected Recipients Header - Aligned with Tabs */}
-                        <div className="border-b border-gray-200 dark:border-gray-700 flex-shrink-0 min-h-[61px] flex items-center px-4 bg-white dark:bg-slate-800">
-                            <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                To:
-                            </span>
+                    {/* Right — Message Area */}
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: T.base }}>
+                        {/* Recipients */}
+                        <div style={{ borderBottom: `1px solid ${T.border}`, minHeight: '52px', display: 'flex', alignItems: 'center', padding: '8px 16px', flexShrink: 0, flexWrap: 'wrap', gap: '6px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font, flexShrink: 0 }}>TO:</span>
                             {selectedItems.length === 0 ? (
-                                <span className="ml-2 text-sm text-gray-400 dark:text-gray-500 italic">No recipients selected</span>
+                                <span style={{ fontSize: '13px', color: T.muted, fontFamily: T.font, fontStyle: 'italic' }}>No recipients selected</span>
                             ) : (
-                                <div className="flex flex-wrap gap-2 ml-2">
-                                    {selectedItems.map(item => (
-                                        <span
-                                            key={`selected-${item.type}-${item.id}`}
-                                            className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs"
+                                selectedItems.map(item => (
+                                    <span
+                                        key={`sel-${item.type}-${item.id}`}
+                                        style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '2px 8px', background: T.accentBg, border: `1px solid ${T.accentBorder}`, color: T.accent, fontSize: '11px', fontWeight: 600, fontFamily: T.font }}
+                                    >
+                                        {item.type === 'channel' && '# '}{item.name}
+                                        <button
+                                            onClick={() => toggleItem(item)}
+                                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.accent, padding: 0, display: 'flex', alignItems: 'center' }}
                                         >
-                                            {item.type === 'channel' && '# '}{item.name}
-                                            <button
-                                                onClick={() => toggleItem(item)}
-                                                className="hover:bg-blue-200 dark:hover:bg-blue-800 rounded-full p-0.5"
-                                            >
-                                                <X size={12} />
-                                            </button>
-                                        </span>
-                                    ))}
-                                </div>
+                                            <X size={10} />
+                                        </button>
+                                    </span>
+                                ))
                             )}
                         </div>
 
                         {/* Message Input */}
-                        <div className="flex-1 p-4 flex flex-col">
-                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                        <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font, marginBottom: '10px' }}>
                                 Your Message
                             </div>
                             <textarea
                                 placeholder="Type your broadcast message here..."
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
-                                className="flex-1 p-4 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
+                                style={{ flex: 1, padding: '12px', background: T.surface, border: `1px solid ${T.border}`, color: T.text, fontSize: '13px', resize: 'none', outline: 'none', fontFamily: T.font, lineHeight: 1.6, transition: 'border-color 150ms ease', boxSizing: 'border-box' }}
+                                onFocus={e => e.currentTarget.style.borderColor = T.accentBorder}
+                                onBlur={e => e.currentTarget.style.borderColor = T.border}
                             />
                         </div>
 
                         {/* Footer */}
-                        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center flex-shrink-0">
-                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                            <p style={{ fontSize: '12px', color: T.muted, fontFamily: T.font }}>
                                 {selectedItems.length} recipient{selectedItems.length !== 1 ? 's' : ''} selected
                             </p>
-                            <div className="flex gap-2">
+                            <div style={{ display: 'flex', gap: '8px' }}>
                                 <button
                                     onClick={onClose}
-                                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                    style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, color: T.muted, background: 'transparent', border: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.font, transition: 'all 150ms ease' }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleSend}
                                     disabled={!message.trim() || selectedItems.length === 0}
-                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:cursor-not-allowed rounded-lg transition-colors flex items-center gap-2"
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700, color: '#0c0c0c', background: T.accent, border: 'none', cursor: !message.trim() || selectedItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: !message.trim() || selectedItems.length === 0 ? 0.4 : 1 }}
                                 >
-                                    <Send size={16} />
+                                    <Send size={13} />
                                     Send Broadcast
                                 </button>
                             </div>
@@ -338,6 +272,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                     </div>
                 </div>
             </div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 }

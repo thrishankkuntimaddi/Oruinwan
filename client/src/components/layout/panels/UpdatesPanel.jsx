@@ -1,74 +1,81 @@
 import React from "react";
-import { Layout, User, Bell, Hash, Zap, Search } from "lucide-react";
+import { Layout, User, Bell, Hash, Zap } from "lucide-react";
 import { useUpdates } from "../../../contexts/UpdatesContext";
 
+const S = {
+  panel:   { display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' },
+  header:  { height: '56px', display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 },
+  title:   { fontSize: '15px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' },
+  label:   { fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' },
+  divider: { height: '1px', background: 'rgba(255,255,255,0.06)', margin: '8px 12px' },
+};
+
+const navBtn = (active) => ({
+  width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+  padding: '8px 12px',
+  background: active ? 'rgba(184,149,106,0.1)' : 'transparent',
+  border: active ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent',
+  color: active ? '#b8956a' : 'rgba(228,228,228,0.5)',
+  fontSize: '13px', fontWeight: active ? 600 : 400,
+  cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', textAlign: 'left',
+  transition: 'all 150ms ease',
+});
+
+const FILTERS = [
+  { id: 'all',       label: 'Team Pulse',       Icon: Zap },
+  { id: 'my-posts',  label: 'My Achievements',  Icon: User },
+  { id: 'mentions',  label: 'Mentions',          Icon: Bell },
+];
+
+const TAGS = ['#Milestone', '#BugFix', '#Launch', '#Design', '#Engineering'];
+
 const UpdatesPanel = () => {
-    const { activeFilter, setActiveFilter } = useUpdates();
+  const { activeFilter, setActiveFilter } = useUpdates();
 
-    const filters = [
-        { id: "all", label: "Team Pulse", icon: Zap },
-        { id: "my-posts", label: "My Achievements", icon: User },
-        { id: "mentions", label: "Mentions", icon: Bell },
-    ];
+  return (
+    <div style={S.panel}>
+      <div style={S.header}>
+        <Layout size={16} style={{ color: '#b8956a', flexShrink: 0 }} />
+        <span style={S.title}>Updates</span>
+      </div>
 
-    const trendingTags = ["#Milestone", "#BugFix", "#Launch", "#Design", "#Engineering"];
+      <div style={{ padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        <p style={{ ...S.label, padding: '4px 12px 8px' }}>Filter</p>
+        {FILTERS.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setActiveFilter(f.id)}
+            style={navBtn(activeFilter === f.id)}
+            onMouseEnter={e => { if (activeFilter !== f.id) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+            onMouseLeave={e => { if (activeFilter !== f.id) e.currentTarget.style.background = 'transparent'; }}
+          >
+            <f.Icon size={14} style={{ flexShrink: 0 }} />
+            {f.label}
+          </button>
+        ))}
+      </div>
 
-    return (
-        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
-            {/* Header */}
-            <div className="h-16 border-b border-gray-200 dark:border-gray-800 flex items-center px-5 bg-white dark:bg-gray-900 shrink-0">
-                <h2 className="font-bold text-xl text-gray-800 dark:text-gray-100 tracking-tight flex items-center gap-2">
-                    <Layout className="text-blue-600" size={20} />
-                    Updates
-                </h2>
-            </div>
+      <div style={S.divider} />
 
-            {/* Search */}
-            <div className="px-4 pt-4">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input
-                        type="text"
-                        placeholder="Search updates..."
-                        className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                    />
-                </div>
-            </div>
-
-            {/* Navigation */}
-            <div className="p-4 space-y-1">
-                {filters.map((filter) => (
-                    <button
-                        key={filter.id}
-                        onClick={() => setActiveFilter(filter.id)}
-                        className={`w-full text-left px-4 py-3 rounded-xl text-sm font-medium transition-all flex items-center gap-3
-                            ${activeFilter === filter.id
-                                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 shadow-sm"
-                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                            }
-                        `}
-                    >
-                        <filter.icon size={18} />
-                        {filter.label}
-                    </button>
-                ))}
-            </div>
-
-            {/* Trending Tags */}
-            <div className="mt-6 px-6">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-                    <Hash size={12} /> Trending Topics
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                    {trendingTags.slice(0, 5).map(tag => (
-                        <span key={tag} className="px-2 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-xs text-gray-600 dark:text-gray-400 hover:border-blue-300 dark:hover:border-blue-600 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors">
-                            {tag}
-                        </span>
-                    ))}
-                </div>
-            </div>
+      <div style={{ padding: '8px 20px' }}>
+        <p style={{ ...S.label, marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Hash size={11} /> Trending Topics
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {TAGS.map(tag => (
+            <span
+              key={tag}
+              style={{ padding: '3px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '11px', color: 'rgba(228,228,228,0.45)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'border-color 150ms ease' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'}
+              onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+            >
+              {tag}
+            </span>
+          ))}
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default UpdatesPanel;

@@ -10,7 +10,7 @@ import BroadcastModal from "../../messagesComp/BroadcastModal";
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import api from '@services/api';
 
-const MessagesPanel = ({ title }) => {
+const MessagesPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const { workspaceId, dmId, channelId } = useParams();
@@ -235,59 +235,61 @@ const MessagesPanel = ({ title }) => {
             }
         };
 
+        const rowStyle = {
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: isMobile ? '10px 14px' : '8px 10px',
+            minHeight: isMobile ? '60px' : 'auto',
+            cursor: 'pointer', border: '1px solid transparent',
+            background: isSelected ? 'rgba(184,149,106,0.12)'
+                : isActive ? 'rgba(184,149,106,0.08)'
+                    : 'transparent',
+            borderColor: isActive ? 'rgba(184,149,106,0.2)' : 'transparent',
+            transition: 'all 150ms ease',
+            WebkitTapHighlightColor: 'transparent',
+        };
+
+        const statusColor = item.status === 'active' || item.status === 'online' ? '#22c55e'
+            : item.status === 'away' ? '#f59e0b'
+                : item.status === 'dnd' || item.status === 'busy' ? '#ef4444'
+                    : 'rgba(228,228,228,0.2)';
+
+        const avatarBg = isActive ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.07)';
+        const avatarColor = isActive ? '#b8956a' : 'rgba(228,228,228,0.6)';
+
         return (
             <div
                 key={item.id}
                 onClick={handleClick}
-                className={`group p-2 rounded-xl cursor-pointer flex items-center justify-between border transition-all duration-200
-                    ${isSelectionMode && isSelected ? "bg-blue-50 dark:bg-blue-900/40 border-blue-200 dark:border-blue-800" :
-                        isActive
-                            ? "bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 shadow-sm"
-                            : "hover:bg-white dark:hover:bg-gray-800 hover:shadow-sm border-transparent hover:border-gray-100 dark:hover:border-gray-700"
-                    }`}
+                style={rowStyle}
+                onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'transparent'; }}
             >
-                <div className="flex items-center gap-2.5 flex-1">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
                     {isSelectionMode && (
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
-                            }`}>
-                            {isSelected && <CheckSquare size={10} className="text-white" />}
+                        <div style={{ width: '14px', height: '14px', border: `1px solid ${isSelected ? '#b8956a' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? '#b8956a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {isSelected && <CheckSquare size={9} style={{ color: '#0c0c0c' }} />}
                         </div>
                     )}
-                    <div className="relative">
-                        {/* Dynamic avatar color based on user status - matching HomePanel style */}
-                        <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-inner
-                            ${isActive ? "bg-blue-200 text-blue-700 dark:bg-blue-800 dark:text-blue-200" :
-                                item.status === "active" || item.status === "online"
-                                    ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300"
-                                    : item.status === "away"
-                                        ? "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300"
-                                        : item.status === "dnd" || item.status === "busy"
-                                            ? "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300"
-                                            : "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                            }`}>
-                            {isBroadcast ? <Megaphone size={14} /> : item.name.charAt(0).toUpperCase()}
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: isMobile ? '42px' : '34px', height: isMobile ? '42px' : '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: isMobile ? '15px' : '13px', background: avatarBg, color: avatarColor, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            {isBroadcast ? <Megaphone size={isMobile ? 17 : 14} /> : item.name.charAt(0).toUpperCase()}
                         </div>
-                        {/* Status Indicator */}
                         {!isBroadcast && (
-                            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-gray-900 ${item.status === "active" || item.status === "online" ? "bg-green-500" :
-                                item.status === "away" ? "bg-yellow-500" :
-                                    item.status === "dnd" || item.status === "busy" ? "bg-red-500" :
-                                        "bg-gray-400"
-                                }`}></div>
+                            <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: isMobile ? '11px' : '9px', height: isMobile ? '11px' : '9px', borderRadius: '50%', background: statusColor, border: '2px solid #0c0c0c' }} />
                         )}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <div className={`text-sm font-semibold truncate ${isActive ? "text-blue-900 dark:text-blue-100" : "text-gray-900 dark:text-gray-100"}`}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: isActive ? 600 : 400, color: isActive ? '#e4e4e4' : 'rgba(228,228,228,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                             {item.name}
                         </div>
-                        <div className={`text-xs line-clamp-1 ${isActive ? "text-blue-600 dark:text-blue-300" : "text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300"}`}>
-                            {item.lastMessage || "No messages yet"}
+                        <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            {item.lastMessage || 'No messages yet'}
                         </div>
                     </div>
                 </div>
 
                 {item.unread > 0 && !isSelectionMode && (
-                    <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center text-[10px] text-white font-bold shadow-sm shadow-blue-500/30">
+                    <div style={{ minWidth: '18px', height: '18px', borderRadius: '9px', background: '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#0c0c0c', fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', padding: '0 4px' }}>
                         {item.unread}
                     </div>
                 )}
@@ -296,114 +298,82 @@ const MessagesPanel = ({ title }) => {
     };
 
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
             {/* Header */}
-            <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0 border-b border-gray-200 dark:border-gray-800">
-                <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight">
-                    Messages
-                </h2>
-                <div className="flex items-center gap-1">
-                    <button
-                        onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        className={`p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600" : ""
-                            }`}
+            <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#0c0c0c', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <h2 style={{ fontWeight: 700, fontSize: '15px', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>Messages</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <button onClick={() => setIsSelectionMode(!isSelectionMode)}
+                        style={{ padding: '6px', background: isSelectionMode ? 'rgba(184,149,106,0.1)' : 'transparent', border: isSelectionMode ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: isSelectionMode ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         title="Manage Messages"
-                    >
-                        <Settings2 size={20} />
-                    </button>
-                    <button
-                        onClick={() => setShowCreateDM(true)}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                        onMouseEnter={e => { if (!isSelectionMode) e.currentTarget.style.color = '#e4e4e4'; }}
+                        onMouseLeave={e => { if (!isSelectionMode) e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
+                    ><Settings2 size={18} /></button>
+                    <button onClick={() => setShowCreateDM(true)}
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         title="New Message"
-                    >
-                        <Plus size={20} />
-                    </button>
+                        onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
+                    ><Plus size={18} /></button>
                 </div>
             </div>
 
             {/* Search */}
-            <div className="px-4 pt-6">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search messages..."
-                        className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                    />
+            <div style={{ padding: '10px 12px 4px' }}>
+                <div style={{ position: 'relative' }}>
+                    <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)' }} size={13} />
+                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search messages..."
+                        style={{ width: '100%', paddingLeft: '30px', paddingRight: '10px', paddingTop: '6px', paddingBottom: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
                 </div>
             </div>
 
             {/* Filters & Broadcast */}
-            <div className="px-4 py-3 flex items-center justify-between">
-                <div className="flex space-x-2">
-                    <button
-                        onClick={() => setFilter("all")}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${filter === "all" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            }`}
-                    >
-                        All
-                    </button>
-                    <button
-                        onClick={() => setFilter("unread")}
-                        className={`px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${filter === "unread" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400" : "bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            }`}
-                    >
-                        Unread
-                    </button>
+            <div style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                    {['all', 'unread'].map(f => (
+                        <button key={f} onClick={() => setFilter(f)}
+                            style={{ padding: '3px 10px', fontSize: '11px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', background: filter === f ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${filter === f ? 'rgba(184,149,106,0.25)' : 'rgba(255,255,255,0.08)'}`, color: filter === f ? '#b8956a' : 'rgba(228,228,228,0.4)', transition: 'all 150ms ease' }}>
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                    ))}
                 </div>
-
-                <button
-                    onClick={handleBroadcast}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                <button onClick={handleBroadcast}
+                    style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
                     title="New Broadcast"
-                >
-                    <Megaphone size={16} />
-                </button>
+                    onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
+                ><Megaphone size={15} /></button>
             </div>
 
             {/* Selection Mode Header */}
             {isSelectionMode && (
-                <div className="px-4 py-2 bg-blue-50 border-b border-blue-100 flex items-center justify-between sticky top-0 z-10">
-                    <span className="text-sm font-bold text-blue-900">{selectedItems.size} selected</span>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowDeleteConfirm(true)}
-                            disabled={selectedItems.size === 0}
-                            className="p-1.5 text-red-600 hover:bg-red-100 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Delete Selected"
-                        >
-                            <Trash2 size={16} />
-                        </button>
-                        <button
-                            onClick={() => {
-                                setIsSelectionMode(false);
-                                setSelectedItems(new Set());
-                            }}
-                            className="p-1.5 text-gray-600 hover:bg-gray-200 rounded-lg"
-                            title="Cancel"
-                        >
-                            <X size={16} />
-                        </button>
+                <div style={{ padding: '8px 16px', background: 'rgba(184,149,106,0.08)', borderBottom: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#b8956a', fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedItems.size} selected</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setShowDeleteConfirm(true)} disabled={selectedItems.size === 0}
+                            style={{ padding: '5px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: selectedItems.size === 0 ? 0.4 : 1 }} title="Delete">
+                            <Trash2 size={15} /></button>
+                        <button onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
+                            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer' }} title="Cancel">
+                            <X size={15} /></button>
                     </div>
                 </div>
             )}
 
             {/* Contact List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-3 pb-3 space-y-1">
-                <div className="px-2 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 4px 8px' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', padding: '4px 12px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                     {activeWorkspace?.name || 'Workspace'} Conversations
-                </div>
+                </p>
 
                 {isLoading ? (
-                    <div className="px-2 space-y-1 animate-pulse">
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         {[60, 75, 50, 85, 65].map((w, i) => (
-                            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
-                                <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                                <div className="flex-1 space-y-1.5">
-                                    <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{ width: `${w}%` }} />
-                                    <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w * 0.6}%` }} />
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ height: '10px', background: 'rgba(255,255,255,0.06)', width: `${w}%` }} />
+                                    <div style={{ height: '8px', background: 'rgba(255,255,255,0.04)', width: `${w * 0.6}%` }} />
                                 </div>
                             </div>
                         ))}
@@ -411,7 +381,7 @@ const MessagesPanel = ({ title }) => {
                 ) : filteredList.length > 0 ? (
                     filteredList.map((item) => <Item key={item.id} item={item} />)
                 ) : (
-                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                    <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: '12px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {searchQuery ? 'No conversations found' : 'No conversations yet'}
                     </div>
                 )}

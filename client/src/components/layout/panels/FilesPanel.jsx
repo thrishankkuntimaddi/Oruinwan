@@ -1,142 +1,119 @@
-// client/src/components/layout/panels/FilesPanel.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FolderOpen, File, Upload, Search, ChevronRight, Tag, RefreshCw } from 'lucide-react';
+import { FolderOpen, Upload, Search, ChevronRight, RefreshCw } from 'lucide-react';
 import { useFiles } from '../../../hooks/useFiles';
 
-const FilesPanel = ({ title }) => {
-    const { workspaceId } = useParams();
-    const navigate = useNavigate();
-    const { files, loading, listFiles } = useFiles();
-    const [search, setSearch] = useState('');
-    const [activeTag, setActiveTag] = useState(null);
+const S = {
+  panel:  { display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' },
+  header: { padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 },
+  label:  { fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', gap: '6px' },
+  input:  { width: '100%', paddingLeft: '28px', paddingRight: '8px', paddingTop: '6px', paddingBottom: '6px', fontSize: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' },
+};
 
-    useEffect(() => {
-        if (workspaceId) listFiles(workspaceId, { folderId: 'root' });
-    }, [workspaceId, listFiles]);
+const FilesPanel = () => {
+  const { workspaceId } = useParams();
+  const navigate = useNavigate();
+  const { files, loading, listFiles } = useFiles();
+  const [search, setSearch] = useState('');
+  const [activeTag, setActiveTag] = useState(null);
 
-    // Collect all unique tags from loaded files
-    const allTags = [...new Set(files.flatMap(f => f.tags || []))];
+  useEffect(() => {
+    if (workspaceId) listFiles(workspaceId, { folderId: 'root' });
+  }, [workspaceId, listFiles]);
 
-    const filtered = files.filter(f => {
-        const matchesSearch = !search || f.name.toLowerCase().includes(search.toLowerCase());
-        const matchesTag = !activeTag || (f.tags || []).includes(activeTag);
-        return matchesSearch && matchesTag;
-    });
+  const allTags = [...new Set(files.flatMap(f => f.tags || []))];
+  const filtered = files.filter(f => {
+    const matchesSearch = !search || f.name.toLowerCase().includes(search.toLowerCase());
+    const matchesTag = !activeTag || (f.tags || []).includes(activeTag);
+    return matchesSearch && matchesTag;
+  });
 
-    const handleFileClick = (file) => {
-        navigate(`/workspace/${workspaceId}/files/${file._id}`);
-    };
+  const getMimeIcon = (mimeType = '') => {
+    if (mimeType.startsWith('image/')) return '🖼️';
+    if (mimeType.startsWith('video/')) return '🎬';
+    if (mimeType.startsWith('audio/')) return '🎵';
+    if (mimeType.includes('pdf')) return '📄';
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '📊';
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return '📑';
+    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+    return '📎';
+  };
 
-    const getMimeIcon = (mimeType = '') => {
-        if (mimeType.startsWith('image/')) return '🖼️';
-        if (mimeType.startsWith('video/')) return '🎬';
-        if (mimeType.startsWith('audio/')) return '🎵';
-        if (mimeType.includes('pdf')) return '📄';
-        if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '📊';
-        if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return '📑';
-        if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
-        return '📎';
-    };
-
-    return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900">
-            {/* Header */}
-            <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-800">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <FolderOpen size={13} /> Files
-                    </span>
-                    <div className="flex gap-1">
-                        <button
-                            onClick={() => listFiles(workspaceId, { folderId: 'root' })}
-                            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded transition-colors"
-                            title="Refresh"
-                        >
-                            <RefreshCw size={13} />
-                        </button>
-                        <button
-                            onClick={() => navigate(`/workspace/${workspaceId}/files`)}
-                            className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors"
-                            title="Upload"
-                        >
-                            <Upload size={13} />
-                        </button>
-                    </div>
-                </div>
-                {/* Search */}
-                <div className="relative">
-                    <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Search files..."
-                        className="w-full pl-6 pr-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 rounded border-none outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400"
-                    />
-                </div>
-            </div>
-
-            {/* Tag filters */}
-            {allTags.length > 0 && (
-                <div className="px-3 py-2 flex flex-wrap gap-1 border-b border-gray-100 dark:border-gray-800">
-                    <button
-                        onClick={() => setActiveTag(null)}
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${!activeTag ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'}`}
-                    >
-                        All
-                    </button>
-                    {allTags.slice(0, 8).map(tag => (
-                        <button
-                            key={tag}
-                            onClick={() => setActiveTag(activeTag === tag ? null : tag)}
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-medium transition-colors ${activeTag === tag ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400 hover:bg-gray-200'}`}
-                        >
-                            #{tag}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* File list */}
-            <div className="flex-1 overflow-y-auto">
-                {loading && (
-                    <div className="flex items-center justify-center py-8">
-                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-                    </div>
-                )}
-                {!loading && filtered.length === 0 && (
-                    <div className="flex flex-col items-center py-10 px-4 text-center">
-                        <FolderOpen size={32} className="text-gray-200 dark:text-gray-700 mb-2" />
-                        <p className="text-xs text-gray-400">No files yet</p>
-                        <button
-                            onClick={() => navigate(`/workspace/${workspaceId}/files`)}
-                            className="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
-                        >
-                            Upload a file
-                        </button>
-                    </div>
-                )}
-                {filtered.map(file => (
-                    <button
-                        key={file._id}
-                        onClick={() => handleFileClick(file)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors group"
-                    >
-                        <span className="text-base shrink-0">{getMimeIcon(file.mimeType)}</span>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium text-gray-800 dark:text-gray-200 truncate">{file.name}</p>
-                            {file.tags?.length > 0 && (
-                                <p className="text-[10px] text-gray-400 truncate">
-                                    {file.tags.map(t => `#${t}`).join(' ')}
-                                </p>
-                            )}
-                        </div>
-                        <ChevronRight size={11} className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-                    </button>
-                ))}
-            </div>
+  return (
+    <div style={S.panel}>
+      {/* Header */}
+      <div style={S.header}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <span style={S.label}>
+            <FolderOpen size={12} /> Files
+          </span>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button onClick={() => listFiles(workspaceId, { folderId: 'root' })} title="Refresh"
+              style={{ padding: '4px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}
+            ><RefreshCw size={12} /></button>
+            <button onClick={() => navigate(`/workspace/${workspaceId}/files`)} title="Upload"
+              style={{ padding: '4px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+              onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}
+            ><Upload size={12} /></button>
+          </div>
         </div>
-    );
+        {/* Search */}
+        <div style={{ position: 'relative' }}>
+          <Search size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)' }} />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search files..." style={S.input} />
+        </div>
+      </div>
+
+      {/* Tag filters */}
+      {allTags.length > 0 && (
+        <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: '4px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          {[null, ...allTags.slice(0, 8)].map((tag, i) => (
+            <button key={i} onClick={() => setActiveTag(tag === activeTag ? null : tag)}
+              style={{ fontSize: '10px', padding: '2px 8px', background: activeTag === tag ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${activeTag === tag ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, color: activeTag === tag ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}>
+              {tag ? `#${tag}` : 'All'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* File list */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {loading && (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+            <div style={{ width: '16px', height: '16px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          </div>
+        )}
+        {!loading && filtered.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', textAlign: 'center' }}>
+            <FolderOpen size={28} style={{ color: 'rgba(228,228,228,0.12)', marginBottom: '8px' }} />
+            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>No files yet</p>
+            <button onClick={() => navigate(`/workspace/${workspaceId}/files`)}
+              style={{ marginTop: '10px', fontSize: '12px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
+              Upload a file
+            </button>
+          </div>
+        )}
+        {filtered.map(file => (
+          <button key={file._id} onClick={() => navigate(`/workspace/${workspaceId}/files/${file._id}`)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', transition: 'background 150ms ease' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+            <span style={{ fontSize: '14px', flexShrink: 0 }}>{getMimeIcon(file.mimeType)}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '12px', fontWeight: 500, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>{file.name}</p>
+              {file.tags?.length > 0 && (
+                <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{file.tags.map(t => `#${t}`).join(' ')}</p>
+              )}
+            </div>
+            <ChevronRight size={11} style={{ color: 'rgba(228,228,228,0.2)', flexShrink: 0 }} />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 };
 
 export default FilesPanel;

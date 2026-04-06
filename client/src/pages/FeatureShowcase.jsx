@@ -1,645 +1,611 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
-import { useTheme } from "../contexts/ThemeContext";
+// FeatureShowcase.jsx — Chttrix Landing Page · Monolith Flow Design System
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import {
-    MessageSquare,
-    Zap,
-    CheckSquare,
-    Globe,
-    Shield,
-    Sparkles,
-    ArrowRight,
-    Play,
-    Sun,
-    Moon,
-    Laptop,
-    Briefcase,
-    Building2,
-    CheckCircle2,
-    MessageCircle,
-    GitBranch,
-    Monitor,
-    Smartphone,
-    Apple,
-    Volume2,
-    VolumeX
-} from "lucide-react";
+    MessageSquare, Zap, CheckSquare, Globe, Shield, Sparkles, ArrowRight,
+    Laptop, Briefcase, Building2, CheckCircle2, MessageCircle, GitBranch,
+    Monitor, Smartphone, Apple, Volume2, VolumeX, Lock, Server, Users,
+    Play, ChevronRight,
+} from 'lucide-react';
+import LoadingScreen from '../shared/components/ui/LoadingScreen';
 
-import LoadingScreen from "../shared/components/ui/LoadingScreen";
+const VIDEO_HERO  = '/hover-animation.mp4';
+const VIDEO_AI    = '/ChttrixAI-animation.mp4';
 
-// Video Assets
-const VIDEO_HERO_LOGO = "/hover-animation.mp4";
-const VIDEO_AI = "/ChttrixAI-animation.mp4";
+// ─── Utility: animate on scroll ───────────────────────────────────────────────
+function useReveal() {
+    const ref = useRef(null);
+    const [visible, setVisible] = useState(false);
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const ob = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVisible(true); ob.disconnect(); } }, { threshold: 0.12 });
+        ob.observe(el);
+        return () => ob.disconnect();
+    }, []);
+    return [ref, visible];
+}
 
-const DownloadButton = ({ children, className }) => {
-    const [label, setLabel] = useState(null);
-
-    const handleClick = () => {
-        setLabel("Coming Soon");
-        setTimeout(() => setLabel(null), 2000);
-    };
-
+// ─── Subcomponents ─────────────────────────────────────────────────────────────
+const NavLink = ({ href, children }) => {
+    const [hov, setHov] = useState(false);
     return (
-        <button
-            onClick={handleClick}
-            className={`${className} transition-all duration-300`}
-        >
-            {label || children}
+        <a href={href}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ fontSize: '13px', fontWeight: 600, color: hov ? '#e4e4e4' : 'rgba(228,228,228,0.5)', textDecoration: 'none', transition: 'color 150ms ease', letterSpacing: '0.01em' }}>
+            {children}
+        </a>
+    );
+};
+
+const AccentBtn = ({ onClick, children, large }) => {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: large ? '13px 28px' : '9px 20px', background: hov ? 'rgba(184,149,106,0.92)' : 'var(--accent, #b8956a)', border: 'none', color: '#0c0c0c', fontSize: large ? '14px' : '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.01em', transition: 'all 150ms ease', display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {children}
         </button>
     );
 };
 
+const GhostBtn = ({ onClick, children, large }) => {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: large ? '12px 28px' : '8px 20px', background: hov ? 'rgba(255,255,255,0.06)' : 'transparent', border: '1px solid rgba(255,255,255,0.14)', color: hov ? '#e4e4e4' : 'rgba(228,228,228,0.7)', fontSize: large ? '14px' : '13px', fontWeight: 600, cursor: 'pointer', transition: 'all 150ms ease', display: 'inline-flex', alignItems: 'center', gap: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {children}
+        </button>
+    );
+};
+
+const FeatureCard = ({ icon: Icon, title, desc, color }) => {
+    const [hov, setHov] = useState(false);
+    const [ref, vis] = useReveal();
+    return (
+        <div ref={ref} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: hov ? 'rgba(255,255,255,0.04)' : '#111', border: `1px solid ${hov ? color : 'rgba(255,255,255,0.07)'}`, padding: '28px 24px', transition: 'all 220ms ease', cursor: 'default', opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(20px)', transitionDelay: '0ms' }}>
+            <div style={{ width: '40px', height: '40px', background: `${color}14`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+                <Icon size={19} style={{ color }} />
+            </div>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '8px', letterSpacing: '-0.01em' }}>{title}</h3>
+            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.7' }}>{desc}</p>
+        </div>
+    );
+};
+
+const TrustPillar = ({ icon: Icon, title, desc }) => {
+    const [ref, vis] = useReveal();
+    return (
+        <div ref={ref} style={{ textAlign: 'center', padding: '32px 24px', opacity: vis ? 1 : 0, transform: vis ? 'translateY(0)' : 'translateY(16px)', transition: 'all 400ms ease' }}>
+            <div style={{ width: '48px', height: '48px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <Icon size={22} style={{ color: '#b8956a' }} />
+            </div>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '8px' }}>{title}</h3>
+            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.7', maxWidth: '240px', margin: '0 auto' }}>{desc}</p>
+        </div>
+    );
+};
+
+const SolutionCard = ({ icon: Icon, label, title, desc, features, cta, accent, onClick }) => {
+    const [hov, setHov] = useState(false);
+    return (
+        <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: '#111', border: `1px solid ${hov ? accent : 'rgba(255,255,255,0.07)'}`, padding: '36px 32px', transition: 'all 220ms ease', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 10px', background: `${accent}14`, border: `1px solid ${accent}30`, marginBottom: '24px', width: 'fit-content' }}>
+                <Icon size={13} style={{ color: accent }} />
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{label}</span>
+            </div>
+            <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', marginBottom: '10px', letterSpacing: '-0.02em' }}>{title}</h3>
+            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.7', marginBottom: '24px' }}>{desc}</p>
+            <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px', flex: 1 }}>
+                {features.map((f, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'rgba(228,228,228,0.7)' }}>
+                        <CheckCircle2 size={13} style={{ color: accent, flexShrink: 0 }} />
+                        {f}
+                    </li>
+                ))}
+            </ul>
+            <button onClick={onClick} style={{ padding: '11px 0', background: accent, border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.01em', fontFamily: 'Inter, system-ui, sans-serif', opacity: hov ? 0.92 : 1, transition: 'opacity 150ms ease' }}>
+                {cta}
+            </button>
+        </div>
+    );
+};
+
+const DownloadCard = ({ icon: Icon, title, desc, color, actions }) => {
+    const [hov, setHov] = useState(false);
+    return (
+        <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: '#111', border: `1px solid ${hov ? color : 'rgba(255,255,255,0.07)'}`, padding: '28px 24px', transition: 'all 220ms ease' }}>
+            <div style={{ width: '42px', height: '42px', background: `${color}14`, border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
+                <Icon size={20} style={{ color }} />
+            </div>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', marginBottom: '6px' }}>{title}</h3>
+            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', marginBottom: '20px', lineHeight: '1.6' }}>{desc}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {actions}
+            </div>
+        </div>
+    );
+};
+
+const DlBtn = ({ label, onClick }) => {
+    const [hov, setHov] = useState(false);
+    const [flash, setFlash] = useState(false);
+    const handleClick = () => { setFlash(true); setTimeout(() => setFlash(false), 1800); if (onClick) onClick(); };
+    return (
+        <button onClick={handleClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: '9px 14px', background: hov ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: hov ? '#e4e4e4' : 'rgba(228,228,228,0.6)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif', textAlign: 'left' }}>
+            {flash ? 'Coming Soon ✦' : label}
+        </button>
+    );
+};
+
+// ─── FEATURES DATA ─────────────────────────────────────────────────────────────
+const FEATURES = [
+    { icon: MessageSquare, color: '#6ea8fe', title: 'Channels', desc: 'Structured, threaded conversations for every project and topic. Keep the noise out, the focus in.' },
+    { icon: MessageCircle, color: '#a78bfa', title: 'Direct Messages', desc: 'Private 1:1 and group chats. Secure, fast, context-aware.' },
+    { icon: GitBranch, color: '#c084fc', title: 'Threads', desc: 'Reply to any message without cluttering the main channel. Side conversations, properly organized.' },
+    { icon: Zap, color: '#fbbf24', title: 'Video Huddles', desc: 'One-click voice and video. Screen-share live, no calendar invite needed.' },
+    { icon: CheckSquare, color: '#34d399', title: 'Tasks', desc: 'Native project management — Kanban boards, deadlines, assignments, and progress tracking.' },
+    { icon: Globe, color: '#fb923c', title: 'Notes', desc: 'Collaborative wiki-style documents that live next to your conversations.' },
+    { icon: Shield, color: '#f472b6', title: 'Updates', desc: 'Async status reports for teams. Async standup, no meeting required.' },
+    { icon: Sparkles, color: '#b8956a', title: 'Chttrix AI', desc: 'The intelligence layer connecting it all — summarize threads, generate tasks, answer questions.' },
+];
+
+// ─── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const FeatureShowcase = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { theme, toggleTheme } = useTheme();
     const [isLoading, setIsLoading] = useState(true);
-    const [isFirstVisit, setIsFirstVisit] = useState(false);
-
-    const scrollToSection = (id) => {
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth' });
-        }
-    };
-
+    const [isFirstVisit] = useState(() => {
+        const visited = localStorage.getItem('chttrix_visited');
+        if (!visited) { localStorage.setItem('chttrix_visited', 'true'); return true; }
+        return false;
+    });
     const [scrolled, setScrolled] = useState(false);
-
-    // Refs for video control
     const heroVideoRef = useRef(null);
     const aiVideoRef = useRef(null);
+    const [heroMuted, setHeroMuted] = useState(true);
+    const [aiMuted, setAiMuted] = useState(true);
 
-    const [isHeroMuted, setIsHeroMuted] = useState(false);
-    const [isAiMuted, setIsAiMuted] = useState(false);
-
-    const toggleHeroMute = () => {
-        if (heroVideoRef.current) {
-            heroVideoRef.current.muted = !heroVideoRef.current.muted;
-            setIsHeroMuted(heroVideoRef.current.muted);
-        }
-    };
-
-    const toggleAiMute = () => {
-        if (aiVideoRef.current) {
-            aiVideoRef.current.muted = !aiVideoRef.current.muted;
-            setIsAiMuted(aiVideoRef.current.muted);
-        }
-    };
+    // Enable page scroll (html/body have overflow:hidden globally for the app shell)
+    useEffect(() => {
+        document.documentElement.classList.add('public-scroll');
+        window.scrollTo(0, 0);
+        return () => document.documentElement.classList.remove('public-scroll');
+    }, []);
 
     useEffect(() => {
-        // Check if this is the first visit
-        const hasVisitedBefore = localStorage.getItem('chttrix_visited');
-        
-        if (!hasVisitedBefore) {
-            // First time visiting - show full loading screen
-            setIsFirstVisit(true);
-            localStorage.setItem('chttrix_visited', 'true');
-        } else {
-            // Not first time - show quick loading
-            setTimeout(() => setIsLoading(false), 500);
-        }
-        
-        if (user) {
-            navigate("/workspaces");
-        }
-        const handleScroll = () => setScrolled(window.scrollY > 20);
-        window.addEventListener("scroll", handleScroll);
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, [user, navigate]);
+        if (user) { navigate('/workspaces'); return; }
+        if (!isFirstVisit) setTimeout(() => setIsLoading(false), 300);
+        const onScroll = () => setScrolled(window.scrollY > 30);
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, [user, navigate, isFirstVisit]);
 
-    // Intersection Observer for Auto-Play/Pause with Sound
+    // Video intersection observer
     useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                entries.forEach((entry) => {
-                    const video = entry.target;
-                    const isHero = video === heroVideoRef.current;
-                    const setMutedState = isHero ? setIsHeroMuted : setIsAiMuted;
+        const ob = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.play().catch(() => {});
+                } else {
+                    e.target.pause();
+                }
+            });
+        }, { threshold: 0.4 });
+        if (heroVideoRef.current) ob.observe(heroVideoRef.current);
+        if (aiVideoRef.current) ob.observe(aiVideoRef.current);
+        return () => ob.disconnect();
+    }, []);
 
-                    if (entry.isIntersecting) {
-                        // User request: "sound has to play automatically... I need it in unmute"
-                        // Attempt unmuted play
-                        video.muted = false;
-                        setMutedState(false);
-
-                        video.play().catch((err) => {
-                            // Fallback if browser blocks unmuted autoplay
-                            console.warn("Autoplay with sound blocked. Fallback to muted.", err);
-                            video.muted = true;
-                            setMutedState(true);
-                            video.play().catch((e) => console.error("Autoplay failed", e));
-                        });
-                    } else {
-                        video.pause();
-                    }
-                });
-            },
-            { threshold: 0.5 } // Play when 50% of the video is visible
-        );
-
-        const heroVideo = heroVideoRef.current;
-        const aiVideo = aiVideoRef.current;
-
-        if (heroVideo) observer.observe(heroVideo);
-        if (aiVideo) observer.observe(aiVideo);
-
-        return () => observer.disconnect();
+    const scrollTo = useCallback((id) => {
+        document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
     }, []);
 
     if (user) return null;
 
+    const S = {
+        page: { minHeight: '100vh', background: '#0c0c0c', color: '#e4e4e4', fontFamily: 'Inter, system-ui, -apple-system, sans-serif', overflowX: 'hidden' },
+        container: { maxWidth: '1160px', margin: '0 auto', padding: '0 24px' },
+        sectionLabel: { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.8)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' },
+        sectionH2: { fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: '14px' },
+        sectionSub: { fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.7', maxWidth: '560px' },
+        divider: { borderTop: '1px solid rgba(255,255,255,0.06)' },
+    };
+
     return (
-        <div className="min-h-screen w-full bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500 relative">
-            {/* Full Loading Screen - Only on first visit */}
+        <div style={S.page}>
+            {/* ── Loading ────────────────── */}
             {isLoading && isFirstVisit && <LoadingScreen onComplete={() => setIsLoading(false)} />}
-            
-            {/* Simple Loading Spinner - Subsequent visits */}
-            {isLoading && !isFirstVisit && (
-                <div className="fixed inset-0 z-[9999] bg-white dark:bg-[#030712] flex items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-12 h-12 border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600 dark:border-t-indigo-400 rounded-full animate-spin"></div>
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Loading...</p>
-                    </div>
-                </div>
-            )}
 
-
+            {/* ── Global page styles ──────── */}
             <style>{`
-                @keyframes float-slow {
+                html { scroll-behavior: smooth; }
+                * { box-sizing: border-box; margin: 0; padding: 0; }
+                ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }
+                @keyframes heroFloat {
                     0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-12px); }
+                    50%       { transform: translateY(-10px); }
                 }
-                .animate-float-slow {
-                    animation: float-slow 8s ease-in-out infinite;
+                @keyframes pulse-dot {
+                    0%, 100% { opacity: 1; transform: scale(1); }
+                    50%       { opacity: 0.5; transform: scale(1.5); }
                 }
-                @keyframes text-shimmer {
-                    0% { background-position: 0% 50%; }
-                    100% { background-position: 100% 50%; }
+                @keyframes marquee {
+                    from { transform: translateX(0); }
+                    to   { transform: translateX(-50%); }
                 }
-                .animate-text-shimmer {
-                    background-size: 200% auto;
-                    animation: text-shimmer 3s linear infinite;
-                }
-                .glass-card {
-                    background: rgba(255, 255, 255, 0.7);
-                    backdrop-filter: blur(20px);
-                    border: 1px solid rgba(0, 0, 0, 0.05);
-                }
-                .dark .glass-card {
-                    background: rgba(17, 24, 39, 0.4);
-                    border: 1px solid rgba(255, 255, 255, 0.05);
-                }
-                .text-glow {
-                     text-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
-                }
-                 .hero-gradient {
-                    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.1) 0%, rgba(255, 255, 255, 0) 60%);
-                }
-                .dark .hero-gradient {
-                    background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.15) 0%, rgba(3, 7, 18, 0) 60%);
-                }
+                .landing-btn-accent:hover { opacity: 0.88; }
             `}</style>
 
-            {/* Navbar */}
-            <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 shadow-sm" : "bg-transparent border-transparent"}`}>
-                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform" />
-                        <span className="font-exul font-black text-2xl tracking-tighter text-slate-900 dark:text-white">Chttrix</span>
+            {/* ══════════════════════════════
+                NAV
+            ══════════════════════════════ */}
+            <nav style={{
+                position: 'fixed', top: 0, width: '100%', zIndex: 100,
+                background: scrolled ? 'rgba(12,12,12,0.92)' : 'transparent',
+                borderBottom: scrolled ? '1px solid rgba(255,255,255,0.07)' : '1px solid transparent',
+                backdropFilter: scrolled ? 'blur(16px)' : 'none',
+                transition: 'all 300ms ease',
+            }}>
+                <div style={{ ...S.container, height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    {/* Logo */}
+                    <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                        <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '30px', height: '30px', objectFit: 'cover' }} />
+                        <span style={{ fontSize: '17px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
                     </div>
 
-                    <div className="hidden md:flex items-center gap-8 text-sm font-bold text-slate-500 dark:text-slate-400">
-                        <a href="#platform" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Platform</a>
-                        <a href="#ai" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Chttrix Intelligence</a>
-                        <a href="#accounts" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Solutions</a>
-                        <a href="#downloads" className="hover:text-indigo-600 dark:hover:text-white transition-colors">Downloads</a>
+                    {/* Center Nav */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                        <NavLink href="#platform">Platform</NavLink>
+                        <NavLink href="#ai">Chttrix AI</NavLink>
+                        <NavLink href="#accounts">Solutions</NavLink>
+                        <NavLink href="#downloads">Downloads</NavLink>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors"
-                            aria-label="Toggle Theme"
-                        >
-                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                    {/* Right actions */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button onClick={() => navigate('/login')}
+                            style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.6)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.6)'}>
+                            Log in
                         </button>
-                        <div className="h-6 w-px bg-slate-200 dark:bg-white/10 mx-2"></div>
-                        <button onClick={() => navigate("/login")} className="text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-white transition-colors">Log in</button>
-                        <button
-                            onClick={() => document.getElementById("accounts").scrollIntoView({ behavior: 'smooth' })}
-                            className="bg-slate-900 dark:bg-indigo-600 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-slate-800 dark:hover:bg-indigo-500 transition-all hover:-translate-y-0.5 hover:shadow-lg dark:hover:shadow-[0_0_20px_rgba(99,102,241,0.5)]"
-                        >
-                            Get Started
-                        </button>
+                        <AccentBtn onClick={() => scrollTo('accounts')}>
+                            Get Started <ChevronRight size={14} />
+                        </AccentBtn>
                     </div>
                 </div>
             </nav>
 
-            {/* Hero Section - Split Layout */}
-            <header className="relative pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden hero-gradient">
-                <div className="container mx-auto px-6 relative z-10">
-                    <div className="flex flex-col-reverse lg:flex-row items-center gap-12 lg:gap-20">
+            {/* ══════════════════════════════
+                HERO
+            ══════════════════════════════ */}
+            <section style={{ paddingTop: '120px', paddingBottom: '80px', position: 'relative', overflow: 'hidden' }}>
+                {/* Ambient background */}
+                <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(184,149,106,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '0', left: '-10%', width: '500px', height: '400px', background: 'radial-gradient(circle, rgba(155,142,207,0.05) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
-                        {/* Text Content (Left) */}
-                        <div className="flex-1 text-center lg:text-left">
-                            <h1 className="text-6xl md:text-8xl font-black tracking-tighter text-slate-900 dark:text-white mb-6 leading-[0.9] dark:text-glow">
-                                One Platform.<br />
-                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:via-purple-400 dark:to-indigo-400 animate-text-shimmer">Limitless  Possibilities.</span>
-                            </h1>
-
-                            <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 mb-10 leading-relaxed font-medium">
-                                The operating system for the future of work. <br className="hidden md:block" />
-                                Seamlessly combining <span className="font-bold text-slate-900 dark:text-white">Channels, Huddles, Tasks, Notes, Updates</span> and <span className="font-bold text-purple-600 dark:text-purple-400">ChttrixAI</span>.
-                            </p>
-
-                            <div className="flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4 mb-12">
-                                <button
-                                    onClick={() => document.getElementById("accounts").scrollIntoView({ behavior: 'smooth' })}
-                                    className="w-full sm:w-auto px-8 py-4 bg-indigo-600 dark:bg-white text-white dark:text-black text-lg font-bold rounded-2xl hover:bg-indigo-700 dark:hover:bg-indigo-50 transition-all hover:scale-105 hover:shadow-xl dark:hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] flex items-center justify-center gap-3"
-                                >
-                                    Start Building HQ <ArrowRight size={20} />
-                                </button>
-                                <div className="flex items-center gap-2 text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-4">
-                                    <span className="relative flex h-2 w-2 mr-2">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                                    </span>
-                                    Waitlist Open
-                                </div>
-                            </div>
+                <div style={{ ...S.container, display: 'flex', alignItems: 'center', gap: '64px', flexWrap: 'wrap' }}>
+                    {/* Left — text */}
+                    <div style={{ flex: '1 1 400px' }}>
+                        {/* Status badge */}
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 12px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '32px' }}>
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', animation: 'pulse-dot 2s ease-in-out infinite', flexShrink: 0 }} />
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(184,149,106,0.9)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                                Waitlist Open · Free to Join
+                            </span>
                         </div>
 
-                        {/* Interactive Video (Right) */}
-                        <div className="flex-1 w-full max-w-lg lg:max-w-xl">
-                            <div
-                                className="relative aspect-square rounded-[3rem] overflow-hidden shadow-2xl shadow-indigo-500/10 dark:shadow-indigo-500/20 border border-slate-200 dark:border-white/10 group cursor-default bg-slate-100 dark:bg-white/5 animate-float-slow"
-                            >
-                                {/* Static / Placeholder State */}
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 transition-opacity duration-300 z-10">
-                                    <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-indigo-500 dark:text-white">
-                                        <Play fill="currentColor" size={32} className="ml-1" />
-                                    </div>
-                                </div>
+                        <h1 style={{ fontSize: 'clamp(36px,5.5vw,68px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: '22px' }}>
+                            One workspace.<br />
+                            <span style={{ color: '#b8956a' }}>Every conversation.</span>
+                        </h1>
 
-                                <video
-                                    ref={heroVideoRef}
-                                    src={VIDEO_HERO_LOGO}
-                                    autoPlay
-                                    muted
-                                    playsInline
-                                    loop
-                                    className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                                />
+                        <p style={{ fontSize: '16px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.75', marginBottom: '36px', maxWidth: '500px' }}>
+                            Chttrix is the operating system for modern teams — channels, DMs, video huddles, tasks, notes, and <span style={{ color: 'rgba(184,149,106,0.9)', fontWeight: 600 }}>Chttrix AI</span>, all in one place. No tab-switching. No context loss. Just work.
+                        </p>
 
-                                {/* Audio Control - Hero */}
-                                <button
-                                    onClick={toggleHeroMute}
-                                    className="absolute bottom-6 right-6 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md transition-all z-20 hover:scale-110"
-                                    aria-label={isHeroMuted ? "Unmute" : "Mute"}
-                                >
-                                    {isHeroMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                                </button>
-                            </div>
+                        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '40px' }}>
+                            <AccentBtn large onClick={() => scrollTo('accounts')}>
+                                Start Free <ArrowRight size={15} />
+                            </AccentBtn>
+                            <GhostBtn large onClick={() => scrollTo('platform')}>
+                                <Play size={13} /> See How It Works
+                            </GhostBtn>
                         </div>
 
+                        {/* Trust badges */}
+                        <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                            {['SOC 2 Ready', 'End-to-end encrypted', '99.9% uptime SLA'].map(b => (
+                                <div key={b} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(228,228,228,0.35)', fontWeight: 600, letterSpacing: '0.02em' }}>
+                                    <CheckCircle2 size={11} style={{ color: '#34d399' }} />
+                                    {b}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right — hero video */}
+                    <div style={{ flex: '1 1 360px', maxWidth: '520px', animation: 'heroFloat 9s ease-in-out infinite' }}>
+                        <div style={{ position: 'relative', border: '1px solid rgba(255,255,255,0.09)', background: '#111', overflow: 'hidden', aspectRatio: '1/1' }}>
+                            <video ref={heroVideoRef} src={VIDEO_HERO} autoPlay muted={heroMuted} playsInline loop
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                            <button onClick={() => { heroVideoRef.current.muted = !heroMuted; setHeroMuted(!heroMuted); }}
+                                style={{ position: 'absolute', bottom: '16px', right: '16px', width: '36px', height: '36px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)', color: '#e4e4e4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease' }}>
+                                {heroMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </header>
+            </section>
 
-            {/* Powerful Features Grid */}
-            <section id="platform" className="scroll-mt-24 py-12 bg-slate-50 dark:bg-[#030712] relative border-y border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6">
-                    <div className="text-center mb-24">
-                        <h2 className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white mb-6">Simplicity meets <span className="text-indigo-600 dark:text-indigo-500">Power</span>.</h2>
-                        <p className="text-xl text-slate-500 dark:text-slate-400 max-w-2xl mx-auto">Everything you need to run your company, in one tab.</p>
+            {/* ══════════════════════════════
+                SOCIAL PROOF BAR
+            ══════════════════════════════ */}
+            <section style={{ ...S.divider, background: 'rgba(255,255,255,0.02)', padding: '28px 0', overflow: 'hidden' }}>
+                <div style={S.container}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '48px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
+                            Trusted by teams at
+                        </p>
+                        {['Startups', 'Creative Studios', 'Growth Agencies', 'Remote-first Companies', 'SaaS Teams'].map(name => (
+                            <span key={name} style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(228,228,228,0.2)', letterSpacing: '0.02em' }}>{name}</span>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ══════════════════════════════
+                PLATFORM FEATURES
+            ══════════════════════════════ */}
+            <section id="platform" style={{ padding: '96px 0', ...S.divider }}>
+                <div style={S.container}>
+                    <div style={{ marginBottom: '56px' }}>
+                        <p style={S.sectionLabel}>
+                            <span style={{ width: '20px', height: '1px', background: '#b8956a', display: 'inline-block' }} />
+                            Platform
+                        </p>
+                        <h2 style={S.sectionH2}>Everything your team needs.<br />Nothing it doesn't.</h2>
+                        <p style={S.sectionSub}>Eight deeply integrated tools built to replace five separate apps. Fewer context switches. More deep work.</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        {FEATURES.map((f, i) => (
+                            <FeatureCard key={i} {...f} />
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+            {/* ══════════════════════════════
+                AI SECTION
+            ══════════════════════════════ */}
+            <section id="ai" style={{ padding: '96px 0', background: '#0f0f0f' }}>
+                <div style={S.container}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '72px', flexWrap: 'wrap' }}>
+                        {/* Video */}
+                        <div style={{ flex: '1 1 380px', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden', background: '#111' }}>
+                            <video ref={aiVideoRef} src={VIDEO_AI} autoPlay muted={aiMuted} playsInline loop
+                                style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
+                        </div>
+
+                        {/* Text */}
+                        <div style={{ flex: '1 1 360px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '24px' }}>
+                                <Sparkles size={12} style={{ color: '#b8956a' }} />
+                                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Chttrix Intelligence™</span>
+                            </div>
+
+                            <h2 style={{ ...S.sectionH2, marginBottom: '18px' }}>
+                                Your AI teammate.<br />
+                                <span style={{ color: '#b8956a' }}>Always on.</span>
+                            </h2>
+
+                            <p style={{ ...S.sectionSub, marginBottom: '32px' }}>
+                                Chttrix AI doesn't just chat — it understands your entire workspace. It reads threads, generates tasks, writes drafts, and surfaces answers before you ask.
+                            </p>
+
+                            <ul style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '36px' }}>
+                                {[
+                                    'Summarize any channel or thread instantly',
+                                    'Auto-generate tasks from conversations',
+                                    'Answer questions with workspace context',
+                                    'Mention @ChttrixAI in any message',
+                                ].map((item, i) => (
+                                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'rgba(228,228,228,0.65)' }}>
+                                        <span style={{ width: '6px', height: '6px', background: '#b8956a', flexShrink: 0 }} />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <GhostBtn onClick={() => navigate('/chttrix-docs')}>
+                                Explore AI capabilities <ArrowRight size={13} />
+                            </GhostBtn>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ══════════════════════════════
+                TRUST / SECURITY
+            ══════════════════════════════ */}
+            <section style={{ padding: '80px 0', ...S.divider }}>
+                <div style={S.container}>
+                    <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+                        <p style={{ ...S.sectionLabel, justifyContent: 'center' }}>
+                            <span style={{ width: '20px', height: '1px', background: '#b8956a', display: 'inline-block' }} />
+                            Security & Trust
+                        </p>
+                        <h2 style={{ ...S.sectionH2, textAlign: 'center' }}>Built for enterprises.<br />Trusted by everyone.</h2>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', borderTop: '1px solid rgba(255,255,255,0.05)', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
                         {[
-                            {
-                                icon: <MessageSquare size={32} className="text-blue-500 dark:text-blue-400" />,
-                                title: "Channels",
-                                desc: "Structured, threaded conversations for every project and topic. Keep the noise down and the focus up."
-                            },
-                            {
-                                icon: <MessageCircle size={32} className="text-indigo-500 dark:text-indigo-400" />,
-                                title: "Direct Messages",
-                                desc: "Private 1:1 conversations and small group chats. Secure, fast, and built for focused collaboration."
-                            },
-                            {
-                                icon: <GitBranch size={32} className="text-violet-500 dark:text-violet-400" />,
-                                title: "Threads",
-                                desc: "Keep conversations organized. Reply to any message to start a side discussion without cluttering the main channel."
-                            },
-                            {
-                                icon: <Zap size={32} className="text-yellow-500 dark:text-yellow-400" />,
-                                title: "Video Huddles",
-                                desc: "Jump into a voice or video call instantly. Screen share and collaborate without scheduling a meeting."
-                            },
-                            {
-                                icon: <CheckSquare size={32} className="text-green-500 dark:text-green-400" />,
-                                title: "Tasks",
-                                desc: "Native project management. Assign to-dos, set due dates, and track progress via Kanban boards."
-                            },
-                            {
-                                icon: <Globe size={32} className="text-orange-500 dark:text-orange-400" />,
-                                title: "Notes",
-                                desc: "Collaborative documents that live right alongside your chat. Write specs, meeting notes, and wikis."
-                            },
-                            {
-                                icon: <Shield size={32} className="text-pink-500 dark:text-pink-400" />,
-                                title: "Updates",
-                                desc: "Async status reports for companies. Share weekly goals and blockers without the meetings."
-                            },
-                            {
-                                icon: <Sparkles size={32} className="text-purple-500 dark:text-purple-400" />,
-                                title: "ChttrixAI",
-                                desc: "The intelligence layer that connects it all. Summarize chats, generate tasks, and find answers."
-                            }
-                        ].map((item, i) => (
-                            <div key={i} className="glass-card p-8 rounded-2xl hover:bg-white hover:shadow-xl dark:hover:bg-white/5 transition-all duration-300 group hover:-translate-y-2 cursor-default">
-                                <div className="mb-6 p-4 bg-slate-100 dark:bg-white/5 rounded-2xl inline-block group-hover:scale-110 transition-transform">
-                                    {item.icon}
-                                </div>
-                                <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">{item.title}</h3>
-                                <p className="text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{item.desc}</p>
+                            { icon: Lock, title: 'End-to-End Encryption', desc: 'All messages and files encrypted in transit and at rest using AES-256.' },
+                            { icon: Server, title: 'SOC 2 Type II Ready', desc: 'Security controls mapped to SOC 2 criteria with audit-ready audit logging.' },
+                            { icon: Users, title: 'Granular Access Control', desc: 'Role-based permissions across workspaces, channels, and admin panels.' },
+                            { icon: Shield, title: 'Data Residency Options', desc: 'Choose where your data lives. EU, US, or bring your own cloud.' },
+                        ].map((p, i) => (
+                            <div key={i} style={{ borderRight: '1px solid rgba(255,255,255,0.05)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                <TrustPillar {...p} />
                             </div>
                         ))}
                     </div>
                 </div>
             </section>
 
-            {/* AI Integration - Video Showcase */}
-            {/* AI Integration - Video Showcase */}
-            <section id="ai" className="scroll-mt-24 py-12 bg-white dark:bg-[#0B0F19] relative overflow-hidden">
-                <div className="container mx-auto px-6 relative z-10">
-                    <div className="flex flex-col lg:flex-row items-center gap-20">
-                        {/* Video Left */}
-                        <div className="flex-1 w-full">
-                            <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-purple-900/20 border border-slate-200 dark:border-white/10 group">
-                                {/* Video Background Glow */}
-                                <div className="absolute inset-0 bg-purple-500/10 blur-[50px] group-hover:bg-purple-500/20 transition-colors"></div>
+            {/* ══════════════════════════════
+                SOLUTIONS / GET STARTED
+            ══════════════════════════════ */}
+            <section id="accounts" style={{ padding: '96px 0', background: '#0f0f0f' }}>
+                <div style={S.container}>
+                    <div style={{ marginBottom: '56px' }}>
+                        <p style={S.sectionLabel}>
+                            <span style={{ width: '20px', height: '1px', background: '#b8956a', display: 'inline-block' }} />
+                            Get Started
+                        </p>
+                        <h2 style={S.sectionH2}>Choose your HQ.</h2>
+                        <p style={S.sectionSub}>Tailored for individuals and ambitious teams. Start free, upgrade when you grow.</p>
+                    </div>
 
-                                <video
-                                    ref={aiVideoRef}
-                                    src={VIDEO_AI}
-                                    autoPlay
-                                    loop
-                                    muted
-                                    playsInline
-                                    className="relative w-full h-auto rounded-3xl transform group-hover:scale-[1.02] transition-transform duration-700"
-                                />
-
-                                {/* Audio Control - AI */}
-                                <button
-                                    onClick={toggleAiMute}
-                                    className="absolute bottom-6 right-6 p-3 rounded-full bg-black/50 text-white hover:bg-black/70 backdrop-blur-md transition-all z-20 hover:scale-110 opacity-0 group-hover:opacity-100"
-                                    aria-label={isAiMuted ? "Unmute" : "Mute"}
-                                >
-                                    {isAiMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                                </button>
-
-
-                            </div>
-                        </div>
-
-                        {/* Text Right */}
-                        <div className="flex-1">
-                            <div className="inline-block px-4 py-2 bg-purple-100 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-500/20 rounded-lg text-purple-600 dark:text-purple-400 font-bold mb-8">
-                                Chttrix Intelligence ™
-                            </div>
-                            <h2 className="text-5xl font-black text-slate-900 dark:text-white mb-8 leading-tight">
-                                Your teammate that <br />
-                                <span className="text-purple-600 dark:text-purple-400">never sleeps.</span>
-                            </h2>
-                            <p className="text-xl text-slate-500 dark:text-slate-400 mb-10 leading-relaxed">
-                                Chttrix AI doesn't just chat. It understands your entire workspace context. It writes code, summarizes threads, and automates your busy work.
-                                <br /><br />
-                                <span className="text-base font-bold text-slate-700 dark:text-slate-300">
-                                    Mention @ChttrixAI in any channel, DM, or thread to summon help.
-                                </span>
-                            </p>
-
-                            <button onClick={() => navigate("/chttrix-docs")} className="flex items-center gap-3 text-lg font-bold text-purple-600 dark:text-purple-400 hover:gap-4 transition-all">
-                                See capabilities <ArrowRight size={20} />
-                            </button>
-                        </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        <SolutionCard
+                            icon={Briefcase} label="Personal" accent="#6ea8fe"
+                            title="Personal Workspace"
+                            desc="For freelancers, students, and solo projects. Get started instantly — no card required."
+                            features={['Unlimited personal projects', 'Basic Chttrix AI access', 'Up to 3 collaboration invites', 'Free forever']}
+                            cta="Create Free Account"
+                            onClick={() => navigate('/login?mode=signup')}
+                        />
+                        <SolutionCard
+                            icon={Building2} label="Company" accent="#b8956a"
+                            title="Company HQ"
+                            desc="For teams that need structure, oversight, and scale. Full admin controls included."
+                            features={['Unlimited team members', 'Full Chttrix AI suite', 'Admin dashboard & org chart', 'Departments, roles & permissions', 'Audit logs & compliance tools']}
+                            cta="Register Company HQ"
+                            onClick={() => navigate('/register-company')}
+                        />
                     </div>
                 </div>
             </section>
 
-            {/* Account Types / Solutions */}
-            <section id="accounts" className="scroll-mt-24 py-12 bg-slate-50 dark:bg-[#030712] border-t border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Choose your HQ.</h2>
-                        <p className="text-lg text-slate-500 dark:text-slate-400">Tailored experiences for individuals and ambitious companies.</p>
+            {/* ══════════════════════════════
+                DOWNLOADS
+            ══════════════════════════════ */}
+            <section id="downloads" style={{ padding: '96px 0', ...S.divider }}>
+                <div style={S.container}>
+                    <div style={{ marginBottom: '56px' }}>
+                        <p style={S.sectionLabel}>
+                            <span style={{ width: '20px', height: '1px', background: '#b8956a', display: 'inline-block' }} />
+                            Available Everywhere
+                        </p>
+                        <h2 style={S.sectionH2}>Your workspace in your pocket.</h2>
+                        <p style={S.sectionSub}>Web, desktop, and mobile — synced in real time across all your devices.</p>
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                        {/* Personal Account */}
-                        <div className="bg-white dark:bg-[#0B0F19] p-10 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 dark:hover:border-indigo-500 transition-colors shadow-sm hover:shadow-xl group relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity transform group-hover:scale-110 duration-500">
-                                <Laptop size={120} />
-                            </div>
-                            <div className="w-12 h-12 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-8">
-                                <Briefcase size={24} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Personal Workspace</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
-                                Perfect for freelancers, students, and side-projects.
-                            </p>
-                            <ul className="space-y-4 mb-8">
-                                <li className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-medium">
-                                    <CheckCircle2 size={18} className="text-blue-500" /> Unlimited Personal Projects
-                                </li>
-                                <li className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-medium">
-                                    <CheckCircle2 size={18} className="text-blue-500" /> Basic AI Assistance
-                                </li>
-                                <li className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-medium">
-                                    <CheckCircle2 size={18} className="text-blue-500" /> Free Forever
-                                </li>
-                            </ul>
-                            <button onClick={() => navigate("/login?mode=signup")} className="w-full py-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 hover:border-blue-500 dark:hover:border-blue-500 text-slate-900 dark:text-white font-bold transition-all">
-                                Create Personal Account
-                            </button>
-                        </div>
-
-                        {/* Company Account */}
-                        <div className="bg-indigo-50 dark:bg-[#0F1623] p-10 rounded-3xl border border-indigo-100 dark:border-white/10 hover:border-indigo-500 transition-colors shadow-2xl group relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-8 opacity-5 dark:opacity-10 group-hover:opacity-10 dark:group-hover:opacity-20 transition-opacity transform group-hover:scale-110 duration-500">
-                                <Building2 size={120} className="text-indigo-900 dark:text-white" />
-                            </div>
-                            <div className="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center mb-8 shadow-lg shadow-indigo-500/30">
-                                <Building2 size={24} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Company HQ</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
-                                For teams that want to ship faster. Includes Admin controls.
-                            </p>
-                            <ul className="space-y-4 mb-8">
-                                <li className="flex items-center gap-3 text-slate-700 dark:text-white font-medium">
-                                    <CheckCircle2 size={18} className="text-indigo-500 dark:text-indigo-400" /> Team Updates & Goals
-                                </li>
-                                <li className="flex items-center gap-3 text-slate-700 dark:text-white font-medium">
-                                    <CheckCircle2 size={18} className="text-indigo-500 dark:text-indigo-400" /> Unlimited History & AI
-                                </li>
-                                <li className="flex items-center gap-3 text-slate-700 dark:text-white font-medium">
-                                    <CheckCircle2 size={18} className="text-indigo-500 dark:text-indigo-400" /> Admin Dashboard (Build HQ)
-                                </li>
-                            </ul>
-                            <button onClick={() => navigate("/register-company")} className="w-full py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all shadow-lg shadow-indigo-500/25">
-                                Register Company HQ
-                            </button>
-                        </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        <DownloadCard icon={Globe} color="#6ea8fe" title="Web App" desc="Access your workspace from any browser — no installation required."
+                            actions={<button onClick={() => navigate('/login')} style={{ padding: '10px 14px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Launch Chttrix Web →</button>} />
+                        <DownloadCard icon={Monitor} color="#a78bfa" title="Desktop App" desc="Native performance, offline support, and system notifications."
+                            actions={<><DlBtn label="⌘ Download for Mac" /><DlBtn label="⊞ Download for Windows" /></>} />
+                        <DownloadCard icon={Smartphone} color="#34d399" title="Mobile App" desc="Stay connected on the go — iOS and Android apps coming soon."
+                            actions={<><DlBtn label="⬇ Download on App Store" /><DlBtn label="⬇ Get it on Google Play" /></>} />
                     </div>
                 </div>
             </section>
 
-            {/* Downloads Section */}
-            <section id="downloads" className="scroll-mt-24 py-12 bg-white dark:bg-[#0B0F19] relative border-t border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Available Everywhere.</h2>
-                        <p className="text-lg text-slate-500 dark:text-slate-400">Seamlessly sync across all your devices.</p>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-                        {/* Web App */}
-                        <div className="bg-slate-50 dark:bg-[#030712] p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
-                            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6 text-3xl">
-                                <Globe size={32} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Web App</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
-                                Access your workspace from any browser. No installation required.
-                            </p>
-                            <button onClick={() => navigate("/login")} className="w-full py-3.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-black font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2">
-                                Launch Chttrix Web
-                            </button>
-                        </div>
-
-                        {/* Desktop App */}
-                        <div className="bg-slate-50 dark:bg-[#030712] p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-purple-500 dark:hover:border-purple-500 transition-all hover:-translate-y-1 hover:shadow-xl group font-sans">
-                            <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mb-6 text-3xl">
-                                <Monitor size={32} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Desktop App</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
-                                Native performance, system notifications, and offline support.
-                            </p>
-                            <div className="space-y-3">
-                                <DownloadButton className="w-full py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex items-center justify-center gap-2">
-                                    <Apple size={18} /> Download for Mac
-                                </DownloadButton>
-                                <DownloadButton className="w-full py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex items-center justify-center gap-2">
-                                    <Monitor size={18} /> Download for Windows
-                                </DownloadButton>
-                            </div>
-                        </div>
-
-                        {/* Mobile App */}
-                        <div className="bg-slate-50 dark:bg-[#030712] p-8 rounded-3xl border border-slate-200 dark:border-white/10 hover:border-green-500 dark:hover:border-green-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
-                            <div className="w-16 h-16 bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-2xl flex items-center justify-center mb-6 text-3xl">
-                                <Smartphone size={32} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-3">Mobile App</h3>
-                            <p className="text-slate-500 dark:text-slate-400 mb-8 h-12">
-                                Stay connected on the go. Available for iOS and Android.
-                            </p>
-                            <div className="grid grid-cols-2 gap-3">
-                                <DownloadButton className="py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex flex-col items-center justify-center gap-1">
-                                    <span className="text-xs font-medium opacity-60">Download on the</span>
-                                    <span className="flex items-center gap-1"><Apple size={14} /> App Store</span>
-                                </DownloadButton>
-                                <DownloadButton className="py-3.5 rounded-xl bg-slate-200 dark:bg-white/10 text-slate-900 dark:text-white font-bold hover:bg-slate-300 dark:hover:bg-white/20 transition-all flex flex-col items-center justify-center gap-1">
-                                    <span className="text-xs font-medium opacity-60">GET IT ON</span>
-                                    <span className="flex items-center gap-1"><Play size={14} fill="currentColor" /> Google Play</span>
-                                </DownloadButton>
-                            </div>
-                        </div>
+            {/* ══════════════════════════════
+                CTA BANNER
+            ══════════════════════════════ */}
+            <section style={{ padding: '80px 0', background: 'rgba(184,149,106,0.05)', borderTop: '1px solid rgba(184,149,106,0.15)', borderBottom: '1px solid rgba(184,149,106,0.15)' }}>
+                <div style={{ ...S.container, textAlign: 'center' }}>
+                    <h2 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.025em', marginBottom: '14px' }}>
+                        Ready to build your HQ?
+                    </h2>
+                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.45)', marginBottom: '36px' }}>
+                        Join the waitlist. Free accounts open now.
+                    </p>
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <AccentBtn large onClick={() => scrollTo('accounts')}>
+                            Get Started Free <ArrowRight size={15} />
+                        </AccentBtn>
+                        <GhostBtn large onClick={() => navigate('/login')}>
+                            Log in to existing account
+                        </GhostBtn>
                     </div>
                 </div>
             </section>
 
-            {/* Footer */}
-            <footer className="bg-white dark:bg-[#030712] pt-20 pb-12 border-t border-slate-200 dark:border-white/5 transition-colors duration-500">
-                <div className="container mx-auto px-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-12 mb-16">
+            {/* ══════════════════════════════
+                FOOTER
+            ══════════════════════════════ */}
+            <footer style={{ background: '#080808', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '64px', paddingBottom: '40px' }}>
+                <div style={S.container}>
+                    {/* Top row — brand + columns */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '48px', marginBottom: '56px', flexWrap: 'wrap' }}>
+                        {/* Brand */}
                         <div>
-                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Product</h4>
-                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
-                                <li><button onClick={() => scrollToSection('platform')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Features</button></li>
-                                <li><button onClick={() => scrollToSection('ai')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Chttrix AI</button></li>
-                                <li><button onClick={() => scrollToSection('accounts')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Enterprise</button></li>
-                                <li><button onClick={() => navigate('/security')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Security</button></li>
-                                <li><button onClick={() => scrollToSection('downloads')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Downloads</button></li>
-                            </ul>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
+                                <span style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
+                            </div>
+                            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.35)', lineHeight: '1.8', maxWidth: '220px' }}>
+                                The operating system for forward-thinking teams. Channels, AI, tasks — all in one place.
+                            </p>
+                            {/* Social icons */}
+                            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                                {[
+                                    { label: '𝕏', href: 'https://x.com/chttrix' },
+                                    { label: 'in', href: 'https://www.linkedin.com/company/chttrix/' },
+                                    { label: '▶', href: 'https://youtube.com/@chttrix' },
+                                ].map(s => (
+                                    <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
+                                        style={{ width: '30px', height: '30px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(228,228,228,0.4)', fontSize: '12px', fontWeight: 700, textDecoration: 'none', transition: 'all 150ms ease' }}
+                                        onMouseEnter={e => { e.currentTarget.style.borderColor = '#b8956a'; e.currentTarget.style.color = '#b8956a'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}>
+                                        {s.label}
+                                    </a>
+                                ))}
+                            </div>
                         </div>
-                        <div>
-                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Company</h4>
-                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
-                                <li><button onClick={() => navigate('/about')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">About Us</button></li>
-                                <li className="flex items-center gap-2">
-                                    <button onClick={() => navigate('/careers')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Careers</button>
-                                    {/* <span className="bg-indigo-600 text-[10px] font-bold px-2 py-0.5 rounded-full text-white">Hiring</span> */}
-                                </li>
-                                <li><button onClick={() => navigate('/blog')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Blog</button></li>
-                                <li><button onClick={() => navigate('/brand')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Brand & Media</button></li>
-                                <li><button onClick={() => navigate('/contact')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Contact</button></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Resources</h4>
-                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
-                                <li><button onClick={() => navigate('/chttrix-docs')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Documentation</button></li>
-                                <li><button onClick={() => navigate('/help')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Help Center</button></li>
-                                <li><button onClick={() => navigate('/community')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Community</button></li>
-                                <li><button onClick={() => navigate('/partners')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Partners</button></li>
-                                <li><button onClick={() => navigate('/status')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Status</button></li>
-                            </ul>
-                        </div>
-                        <div>
-                            <h4 className="font-bold mb-6 text-slate-900 dark:text-white">Legal</h4>
-                            <ul className="space-y-4 text-sm text-slate-500 dark:text-slate-400">
-                                <li><button onClick={() => navigate('/privacy')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Privacy Policy</button></li>
-                                <li><button onClick={() => navigate('/terms')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Terms of Service</button></li>
-                                <li><button onClick={() => navigate('/cookies')} className="hover:text-indigo-600 dark:hover:text-white transition-colors">Cookie Settings</button></li>
-                            </ul>
-                        </div>
+
+                        {/* Link columns */}
+                        {[
+                            { title: 'Product', links: [{ l: 'Features', f: () => scrollTo('platform') }, { l: 'Chttrix AI', f: () => scrollTo('ai') }, { l: 'Enterprise', f: () => scrollTo('accounts') }, { l: 'Security', f: () => navigate('/security') }, { l: 'Downloads', f: () => scrollTo('downloads') }] },
+                            { title: 'Company', links: [{ l: 'About Us', f: () => navigate('/about') }, { l: 'Careers', f: () => navigate('/careers') }, { l: 'Blog', f: () => navigate('/blog') }, { l: 'Brand & Media', f: () => navigate('/brand') }, { l: 'Contact', f: () => navigate('/contact') }] },
+                            { title: 'Resources', links: [{ l: 'Documentation', f: () => navigate('/chttrix-docs') }, { l: 'Help Center', f: () => navigate('/help') }, { l: 'Community', f: () => navigate('/community') }, { l: 'Status', f: () => navigate('/status') }] },
+                            { title: 'Legal', links: [{ l: 'Privacy Policy', f: () => navigate('/privacy') }, { l: 'Terms of Service', f: () => navigate('/terms') }, { l: 'Cookie Settings', f: () => navigate('/cookies') }] },
+                        ].map(col => (
+                            <div key={col.title}>
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.4)', marginBottom: '18px' }}>{col.title}</h4>
+                                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {col.links.map(link => (
+                                        <li key={link.l}>
+                                            <button onClick={link.f} style={{ background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textAlign: 'left', transition: 'color 150ms ease' }}
+                                                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
+                                                {link.l}
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
                     </div>
 
-                    <div className="pt-8 border-t border-slate-200 dark:border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-                        <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-sm font-medium">
+                    {/* Bottom bar */}
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)' }}>
                             © 2026 Chttrix Inc. All rights reserved.
-                        </div>
-                        <div className="flex gap-6 text-sm font-bold text-slate-500 dark:text-slate-400">
-                            <a
-                                href="https://x.com/chttrix"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:text-indigo-600 dark:hover:text-white transition-colors"
-                            >
-                                Twitter/X
-                            </a>
-                            <a
-                                href="https://www.linkedin.com/company/chttrix/"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:text-indigo-600 dark:hover:text-white transition-colors"
-                            >
-                                LinkedIn
-                            </a>
-                            <a
-                                href="https://youtube.com/@chttrix"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:text-indigo-600 dark:hover:text-white transition-colors"
-                            >
-                                YouTube
-                            </a>
-                        </div>
+                        </span>
+                        <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.2)', fontFamily: '"JetBrains Mono", monospace' }}>
+                            v1.0 · workspace-os
+                        </span>
                     </div>
                 </div>
             </footer>

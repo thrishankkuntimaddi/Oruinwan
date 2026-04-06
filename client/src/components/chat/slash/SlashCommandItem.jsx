@@ -1,67 +1,60 @@
 import React from "react";
+import { CornerDownLeft } from "lucide-react";
 
-/**
- * SlashCommandItem
- * Single row in the slash command dropdown.
- *
- * Props:
- *   command    – command object from mockSlashCommands
- *   isActive   – boolean (keyboard-highlighted)
- *   onSelect   – (command) => void
- *   onHover    – (command) => void — preview on hover
- */
 export default function SlashCommandItem({ command, isActive, onSelect, onHover }) {
+  const [hovered, setHovered] = React.useState(false);
+  const active = isActive || hovered;
+
   return (
     <button
-      onMouseDown={(e) => {
-        e.preventDefault(); // prevent blur before click registers
-        onSelect(command);
+      onMouseDown={(e) => { e.preventDefault(); onSelect(command); }}
+      onMouseEnter={() => { setHovered(true); onHover?.(command); }}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+        padding: '7px 10px', textAlign: 'left', border: 'none',
+        backgroundColor: active ? 'var(--bg-hover)' : 'transparent',
+        borderRadius: '2px', cursor: 'pointer',
+        transition: 'background-color 150ms ease',
       }}
-      onMouseEnter={() => onHover?.(command)}
-      className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors group rounded-lg ${
-        isActive
-          ? "bg-blue-50 dark:bg-blue-900/30"
-          : "hover:bg-gray-50 dark:hover:bg-gray-700/60"
-      }`}
     >
       {/* Emoji icon */}
-      <div
-        className={`w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0 transition-transform group-hover:scale-110 ${command.color}`}
-      >
+      <div style={{
+        width: 30, height: 30, borderRadius: '2px',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '15px', flexShrink: 0,
+        backgroundColor: active ? 'var(--bg-active)' : 'var(--bg-active)',
+        border: '1px solid var(--border-subtle)',
+      }}>
         {command.emoji}
       </div>
 
       {/* Command + description */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-xs font-mono font-bold ${
-              isActive
-                ? "text-blue-600 dark:text-blue-400"
-                : "text-gray-800 dark:text-gray-200"
-            }`}
-          >
-            {command.command}
-          </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-300 dark:text-gray-600 hidden sm:block">
-            {command.label}
-          </span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span style={{
+            fontSize: '12px', fontFamily: 'monospace', fontWeight: 700,
+            color: active ? 'var(--accent)' : 'var(--text-primary)',
+          }}>{command.command}</span>
+          <span style={{
+            fontSize: '9px', fontWeight: 700, textTransform: 'uppercase',
+            letterSpacing: '0.12em', color: 'var(--text-muted)',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+          }}>{command.label}</span>
         </div>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5 leading-tight">
-          {command.description}
-        </p>
+        <p style={{
+          fontSize: '11px', color: 'var(--text-secondary)', overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '1px 0 0',
+          fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        }}>{command.description}</p>
       </div>
 
-      {/* Arrow hint */}
-      <span
-        className={`text-xs flex-shrink-0 transition-opacity ${
-          isActive
-            ? "opacity-100 text-blue-400"
-            : "opacity-0 group-hover:opacity-60 text-gray-400"
-        }`}
-      >
-        ↵
-      </span>
+      {/* Enter hint */}
+      <CornerDownLeft size={12} style={{
+        flexShrink: 0, color: 'var(--accent)',
+        opacity: active ? 1 : 0,
+        transition: 'opacity 150ms ease',
+      }} />
     </button>
   );
 }

@@ -71,9 +71,9 @@ function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationT
 
     if (loading) {
         return (
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
-                <Lock size={14} className="animate-pulse" />
-                <span className="italic">Decrypting...</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                <Lock size={13} style={{ animation: 'pulse 1.5s infinite' }} />
+                <span style={{ fontStyle: 'italic' }}>Decrypting...</span>
             </div>
         );
     }
@@ -81,16 +81,16 @@ function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationT
     // If decryption failed, show lock emoji (already set in decrypted state)
     if (decrypted?.startsWith('🔒')) {
         return (
-            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 text-sm">
-                <Lock size={14} />
-                <span className="italic">{decrypted}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                <Lock size={13} />
+                <span style={{ fontStyle: 'italic' }}>{decrypted}</span>
             </div>
         );
     }
 
     // Successfully decrypted - show plaintext
     return (
-        <div className="text-gray-800 dark:text-gray-200">
+        <div style={{ color: 'var(--text-primary)' }}>
             {decrypted}
         </div>
     );

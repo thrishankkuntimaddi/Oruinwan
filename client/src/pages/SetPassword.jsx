@@ -1,302 +1,190 @@
+// SetPassword.jsx — Monolith Flow Design System (OAuth first-login)
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Eye, EyeOff, Check, AlertCircle, Shield, Key, CheckCircle2, Sun, Moon, Sparkles, ArrowRight } from 'lucide-react';
+import { Lock, Eye, EyeOff, Shield, Key, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '../contexts/ToastContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useTheme } from '../contexts/ThemeContext';
 import api from '@services/api';
+
+const RULES = [
+    { key: 'len', label: '8+ characters',    test: p => p.length >= 8 },
+    { key: 'up',  label: 'Uppercase letter', test: p => /[A-Z]/.test(p) },
+    { key: 'num', label: 'Number',           test: p => /\d/.test(p) },
+    { key: 'sym', label: 'Special character', test: p => /[^A-Za-z0-9]/.test(p) },
+];
+
+const inputSt = (err) => ({
+    width: '100%', boxSizing: 'border-box',
+    background: 'var(--bg-input)',
+    border: `1px solid ${err ? 'var(--state-danger)' : 'var(--border-default)'}`,
+    color: 'var(--text-primary)', fontSize: '13px',
+    padding: '10px 38px 10px 38px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif',
+    transition: 'border-color 150ms ease',
+});
 
 const SetPassword = () => {
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { user } = useAuth();
-    const { theme, toggleTheme } = useTheme();
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [skipPassword, setSkipPassword] = useState(false);
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [skipMode, setSkipMode] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Password strength indicators
-    const hasMinLength = password.length >= 8;
-    const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    const hasUpperCase = /[A-Z]/.test(password);
-    const passwordsMatch = password && password === confirmPassword;
-
-    const isPasswordValid = hasMinLength && hasNumber && hasSpecialChar && hasUpperCase && passwordsMatch;
-
-    // Redirect if user is not OAuth or already has password set
     useEffect(() => {
         if (!user) return;
-
-        // Redirect to workspaces if this is not an OAuth user or password is already set
         if (user.authProvider === 'local' || user.passwordSetAt) {
             navigate('/workspaces', { replace: true });
         }
     }, [user, navigate]);
 
-    const handleSetPassword = async () => {
-        if (!isPasswordValid) {
-            showToast('Please meet all password requirements', 'error');
-            return;
-        }
+    const rules = RULES.map(r => ({ ...r, met: r.test(password) }));
+    const allMet = rules.every(r => r.met);
+    const matches = password.length > 0 && password === confirmPassword;
+    const isValid = allMet && matches;
+    const confirmError = confirmPassword.length > 0 && password !== confirmPassword;
 
+    const handleSetPassword = async () => {
+        if (!isValid) { showToast('Please meet all password requirements', 'error'); return; }
         setLoading(true);
         try {
-            await api.post('/api/auth/oauth/set-password', {
-                password
-            });
-
+            await api.post('/api/auth/oauth/set-password', { password });
             showToast('Password set successfully!', 'success');
-
-            // Clear the OAuth setup flag
-            localStorage.removeItem("oauthPasswordSetupRequired");
-            localStorage.removeItem("oauthProvider");
-
-            // Redirect to workspaces
-            setTimeout(() => {
-                navigate('/workspaces', { replace: true });
-            }, 500);
-
+            localStorage.removeItem('oauthPasswordSetupRequired');
+            localStorage.removeItem('oauthProvider');
+            setTimeout(() => navigate('/workspaces', { replace: true }), 500);
         } catch (error) {
-            console.error('Password set error:', error);
-            showToast(
-                error.response?.data?.message || 'Failed to set password',
-                'error'
-            );
-        } finally {
-            setLoading(false);
-        }
+            showToast(error.response?.data?.message || 'Failed to set password', 'error');
+        } finally { setLoading(false); }
     };
 
     const handleSkip = async () => {
         setLoading(true);
         try {
             await api.post('/api/auth/oauth/skip-password');
-
             showToast('You can set a password later from settings', 'info');
-
-            // Clear the OAuth setup flag
-            localStorage.removeItem("oauthPasswordSetupRequired");
-            localStorage.removeItem("oauthProvider");
-
-            // Redirect to workspaces
-            setTimeout(() => {
-                navigate('/workspaces', { replace: true });
-            }, 500);
-
+            localStorage.removeItem('oauthPasswordSetupRequired');
+            localStorage.removeItem('oauthProvider');
+            setTimeout(() => navigate('/workspaces', { replace: true }), 500);
         } catch (error) {
-            console.error('Skip password error:', error);
-            showToast(
-                error.response?.data?.message || 'Failed to skip password setup',
-                'error'
-            );
-        } finally {
-            setLoading(false);
-        }
+            showToast(error.response?.data?.message || 'Failed to skip', 'error');
+        } finally { setLoading(false); }
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-[#030712] dark:via-[#0B0F19] dark:to-[#030712] transition-colors duration-500 relative overflow-hidden">
-            {/* Enhanced Background Effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {/* Animated gradient orbs */}
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-indigo-400/30 via-purple-400/20 to-transparent dark:from-indigo-600/20 dark:via-purple-600/10 rounded-full blur-3xl animate-pulse -translate-y-1/3 translate-x-1/3"></div>
-                <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-blue-400/30 via-cyan-400/20 to-transparent dark:from-blue-600/20 dark:via-cyan-600/10 rounded-full blur-3xl animate-pulse translate-y-1/3 -translate-x-1/3" style={{ animationDelay: '1s' }}></div>
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-gradient-to-br from-pink-400/20 via-rose-400/10 to-transparent dark:from-pink-600/10 dark:via-rose-600/5 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-            </div>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif', padding: '24px' }}>
+            {/* Ambient glow */}
+            <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+            <div style={{ position: 'fixed', bottom: '-20%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(155,142,207,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-            {/* Toggle Theme (Top Right) */}
-            <div className="absolute top-8 right-8 z-50">
-                <button
-                    onClick={toggleTheme}
-                    className="p-3 rounded-2xl bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 transition-all shadow-lg shadow-slate-900/5 hover:shadow-xl hover:scale-105 active:scale-95"
-                >
-                    {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                </button>
-            </div>
+            <div style={{ width: '100%', maxWidth: '420px', animation: 'slideUp 300ms cubic-bezier(0.16,1,0.3,1)' }}>
+                {/* Logo */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
+                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Chttrix</span>
+                </div>
 
-            <div className="w-full max-w-lg relative z-10 px-6">
-
-                {/* Main Glass Card - Compacted */}
-                <div className="backdrop-blur-2xl bg-white/80 dark:bg-[#0B0F19]/70 border border-white/60 dark:border-white/10 shadow-2xl shadow-slate-900/10 dark:shadow-black/20 rounded-2xl p-6 md:p-8 transition-all duration-300 hover:shadow-3xl hover:border-white/80 dark:hover:border-white/20">
-
-                    {/* Header with Icon and Title - Compacted */}
-                    <div className="text-center mb-6">
-                        <div className="relative w-14 h-14 mx-auto mb-4">
-                            {/* Glowing background */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl blur-lg opacity-50 animate-pulse"></div>
-                            {/* Icon container */}
-                            <div className="relative w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 transform rotate-3 hover:rotate-6 transition-transform">
-                                <Shield size={28} className="text-white" strokeWidth={2.5} />
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-md">
-                                    <Sparkles size={10} className="text-white" strokeWidth={3} />
-                                </div>
-                            </div>
-                        </div>
-                        <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-900 to-purple-900 dark:from-white dark:via-indigo-200 dark:to-purple-200 mb-2 tracking-tight">
-                            Secure Your Account
-                        </h1>
-                        <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed max-w-sm mx-auto">
-                            You signed in with <span className="font-bold text-indigo-600 dark:text-indigo-400">{user?.authProvider}</span>. Set a password to enable email login.
-                        </p>
+                {/* Card */}
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '32px' }}>
+                    {/* Icon */}
+                    <div style={{ width: '44px', height: '44px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                        <Shield size={22} style={{ color: 'var(--accent)' }} />
                     </div>
 
-                    <div className="space-y-4">
-                        {/* Password Input - Compacted */}
-                        <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">New Password</label>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                                    <Lock size={16} />
-                                </div>
-                                <input
-                                    type={showPassword ? "text" : "password"}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-2.5 rounded-lg border-2 border-slate-200 dark:border-white/10 bg-white/50 dark:bg-[#030712]/50 text-slate-900 dark:text-white dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-sm"
-                                    placeholder="Enter new password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                                >
-                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', letterSpacing: '-0.02em' }}>Secure Your Account</h1>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.6' }}>
+                        You signed in with <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{user?.authProvider}</span>. Set a password to enable email login.
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* New Password */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Create a password"
+                                    style={inputSt(false)}
+                                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'} />
+                                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+                                    {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                                 </button>
                             </div>
                         </div>
 
-                        {/* Confirm Password - Compacted */}
-                        <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 ml-1">Confirm Password</label>
-                            <div className="relative group">
-                                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                                    <Lock size={16} />
+                        {/* Inline requirements */}
+                        {password.length > 0 && (
+                            <div style={{ padding: '12px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
+                                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Requirements</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                    {rules.map(r => (
+                                        <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: r.met ? 'var(--state-success)' : 'var(--text-muted)', fontWeight: r.met ? 600 : 400 }}>
+                                            {r.met ? <CheckCircle2 size={11} /> : <div style={{ width: '11px', height: '11px', borderRadius: '50%', border: '1px solid var(--border-accent)', flexShrink: 0 }} />}
+                                            {r.label}
+                                        </div>
+                                    ))}
                                 </div>
-                                <input
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-2.5 rounded-lg border-2 border-slate-200 dark:border-white/10 bg-white/50 dark:bg-[#030712]/50 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-medium text-sm"
-                                    placeholder="Confirm new password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                                >
-                                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Password Requirements - Compacted */}
-                        {password && (
-                            <div className="p-4 rounded-xl bg-gradient-to-br from-slate-50 to-blue-50/50 dark:from-white/5 dark:to-indigo-900/10 border border-slate-200/60 dark:border-white/10 transition-all duration-300 animate-fadeIn">
-                                <div className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                                    <div className="w-0.5 h-3 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full"></div>
-                                    Password Requirements
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div className={`flex items-center gap-2 text-xs font-semibold transition-all ${hasMinLength ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-500'}`}>
-                                        {hasMinLength ? <CheckCircle2 size={14} className="shrink-0" /> : <div className="w-[14px] h-[14px] rounded-full border-2 border-slate-300 dark:border-slate-600 shrink-0"></div>}
-                                        <span>8+ chars</span>
-                                    </div>
-                                    <div className={`flex items-center gap-2 text-xs font-semibold transition-all ${hasUpperCase ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-500'}`}>
-                                        {hasUpperCase ? <CheckCircle2 size={14} className="shrink-0" /> : <div className="w-[14px] h-[14px] rounded-full border-2 border-slate-300 dark:border-slate-600 shrink-0"></div>}
-                                        <span>Uppercase</span>
-                                    </div>
-                                    <div className={`flex items-center gap-2 text-xs font-semibold transition-all ${hasNumber ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-500'}`}>
-                                        {hasNumber ? <CheckCircle2 size={14} className="shrink-0" /> : <div className="w-[14px] h-[14px] rounded-full border-2 border-slate-300 dark:border-slate-600 shrink-0"></div>}
-                                        <span>Number</span>
-                                    </div>
-                                    <div className={`flex items-center gap-2 text-xs font-semibold transition-all ${hasSpecialChar ? 'text-green-600 dark:text-green-400' : 'text-slate-500 dark:text-slate-500'}`}>
-                                        {hasSpecialChar ? <CheckCircle2 size={14} className="shrink-0" /> : <div className="w-[14px] h-[14px] rounded-full border-2 border-slate-300 dark:border-slate-600 shrink-0"></div>}
-                                        <span>Special</span>
-                                    </div>
-                                </div>
-                                {confirmPassword && (
-                                    <div className={`mt-3 pt-3 border-t border-slate-200/60 dark:border-white/10 flex items-center gap-2 text-xs font-bold transition-all ${passwordsMatch ? 'text-green-600 dark:text-green-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                                        {passwordsMatch ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
-                                        <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
-                                    </div>
-                                )}
                             </div>
                         )}
 
-                        {/* Skip Option - Compacted */}
-                        <div className="pt-1">
-                            <label className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer group ${skipPassword ? 'bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/30 dark:to-purple-900/20 border-indigo-300 dark:border-indigo-700 shadow-md shadow-indigo-500/10' : 'bg-white/40 dark:bg-transparent border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-300 dark:hover:border-white/20'}`}>
-                                <div className="relative flex items-center pt-0.5">
-                                    <input
-                                        type="checkbox"
-                                        checked={skipPassword}
-                                        onChange={(e) => setSkipPassword(e.target.checked)}
-                                        className="peer sr-only"
-                                    />
-                                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${skipPassword ? 'bg-gradient-to-br from-indigo-600 to-purple-600 border-indigo-600 text-white' : 'border-slate-400 dark:border-slate-500'}`}>
-                                        {skipPassword && <Check size={12} strokeWidth={4} />}
-                                    </div>
-                                </div>
-                                <div className="flex-1">
-                                    <span className={`block font-bold text-sm ${skipPassword ? 'text-indigo-900 dark:text-indigo-100' : 'text-slate-700 dark:text-slate-300'}`}>
-                                        Skip for now
-                                    </span>
-                                    <span className={`block text-xs mt-0.5 ${skipPassword ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500 dark:text-slate-400'}`}>
-                                        You can set this later in account settings
-                                    </span>
-                                </div>
-                            </label>
-                        </div>
-
-                        {/* Actions - Compacted */}
-                        <div className="pt-2">
-                            {skipPassword ? (
-                                <button
-                                    onClick={handleSkip}
-                                    disabled={loading}
-                                    className="w-full py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 font-bold text-base hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 group"
-                                >
-                                    {loading ? (
-                                        <div className="w-5 h-5 border-2 border-slate-600 border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            Skip Setup
-                                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                                        </>
-                                    )}
+                        {/* Confirm Password */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                                <input type={showConfirm ? 'text' : 'password'} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Confirm password"
+                                    style={inputSt(confirmError)}
+                                    onFocus={e => !confirmError && (e.target.style.borderColor = 'var(--border-accent)')}
+                                    onBlur={e => !confirmError && (e.target.style.borderColor = 'var(--border-default)')} />
+                                <button type="button" onClick={() => setShowConfirm(!showConfirm)}
+                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+                                    {showConfirm ? <EyeOff size={14} /> : <Eye size={14} />}
                                 </button>
-                            ) : (
-                                <button
-                                    onClick={handleSetPassword}
-                                    disabled={!isPasswordValid || loading}
-                                    className="w-full py-3 rounded-xl text-white font-bold text-base bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-size-200 bg-pos-0 hover:bg-pos-100 shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/40 transform hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 flex items-center justify-center gap-2 group"
-                                >
-                                    {loading ? (
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <>
-                                            Set Password
-                                            <Key size={18} className="group-hover:rotate-12 transition-transform" />
-                                        </>
-                                    )}
-                                </button>
+                            </div>
+                            {confirmPassword.length > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', fontSize: '11px', fontWeight: 600, color: matches ? 'var(--state-success)' : 'var(--state-danger)' }}>
+                                    {matches ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
+                                    {matches ? 'Passwords match' : 'Passwords do not match'}
+                                </div>
                             )}
                         </div>
+
+                        {/* Skip toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: skipMode ? 'rgba(184,149,106,0.06)' : 'var(--bg-active)', border: `1px solid ${skipMode ? 'var(--border-accent)' : 'var(--border-subtle)'}`, cursor: 'pointer', transition: 'all 150ms ease' }}
+                            onClick={() => setSkipMode(!skipMode)}>
+                            <div style={{ width: '16px', height: '16px', border: `1px solid ${skipMode ? 'var(--accent)' : 'var(--border-default)'}`, background: skipMode ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
+                                {skipMode && <CheckCircle2 size={10} style={{ color: 'var(--bg-base)' }} />}
+                            </div>
+                            <div>
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', margin: 0 }}>Skip for now</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Set a password later from account settings</p>
+                            </div>
+                        </div>
+
+                        {/* Action button */}
+                        {skipMode ? (
+                            <button onClick={handleSkip} disabled={loading}
+                                style={{ padding: '10px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, transition: 'all 150ms ease' }}>
+                                {loading ? 'Skipping...' : 'Skip Setup →'}
+                            </button>
+                        ) : (
+                            <button onClick={handleSetPassword} disabled={!isValid || loading}
+                                style={{ padding: '10px', background: isValid ? 'var(--accent)' : 'var(--bg-active)', border: 'none', color: isValid ? 'var(--bg-base)' : 'var(--text-muted)', fontSize: '13px', fontWeight: 700, cursor: isValid && !loading ? 'pointer' : 'not-allowed', opacity: loading ? 0.6 : 1, transition: 'all 150ms ease', letterSpacing: '0.02em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <Key size={14} />
+                                {loading ? 'Setting Password...' : 'Set Password'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                {/* Footer Text */}
-                <div className="mt-8 text-center">
-                    <p className="text-sm font-medium text-slate-400 dark:text-slate-500 flex items-center justify-center gap-2">
-                        <Shield size={16} />
-                        Secure Authentication System
-                    </p>
-                </div>
+                <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '24px', opacity: 0.5 }}>
+                    © 2026 Chttrix Inc.
+                </p>
             </div>
         </div>
     );

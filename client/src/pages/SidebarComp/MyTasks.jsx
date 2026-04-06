@@ -19,11 +19,12 @@ import {
   Plus, Search, X, Loader2, CheckCircle2, Clock, Circle,
   ChevronUp, ChevronDown, Minus, Calendar, User, Flag,
   AlertTriangle, Trash2, RotateCcw, Activity, ListTodo,
-  LayoutGrid, List, SlidersHorizontal, ChevronRight,
+  LayoutGrid, List, SlidersHorizontal, ChevronRight, ChevronLeft,
   BookOpen, Inbox, Send, Eye, Archive, Hash, Bell, Zap,
   GitBranch, Timer, Users
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import TaskModal from '../../components/tasksComp/TaskModal';
 import WorkspaceTaskDetailPanel from '../../components/tasksComp/WorkspaceTaskDetailPanel';
 import TransferRequestModal from '../../components/tasksComp/TransferRequestModal';
@@ -39,17 +40,22 @@ import api from '@services/api';
 
 // ─── Design tokens (Jira Atlas palette) ─────────────────────────────────────-
 
-const JIRA_BLUE = '#0052CC';
-const BOARD_BG = '#F4F5F7';
-const CARD_SHADOW = '0 1px 2px rgba(9,30,66,0.25)';
+const JIRA_BLUE = '#b8956a'; // amber accent
+const BOARD_BG = '#0f0f0f';  // Monolith Flow board bg
+const SIDEBAR_BG = '#111111';
+const TOOLBAR_BG = '#0c0c0c';
+const BORDER_COLOR = 'rgba(255,255,255,0.06)';
+const TEXT_PRIMARY = '#e4e4e4';
+const TEXT_MUTED = 'rgba(228,228,228,0.45)';
+const CARD_SHADOW = '0 1px 2px rgba(0,0,0,0.5)';
 
 const STATUS_META = {
-  'To Do': { bg: '#DFE1E6', color: '#42526E', border: '#DFE1E6' },
-  'In Progress': { bg: '#DEEBFF', color: '#0052CC', border: '#0052CC' },
-  'Completed': { bg: '#E3FCEF', color: '#00875A', border: '#00875A' },
-  'Cancelled': { bg: '#FFE9E9', color: '#DE350B', border: '#DE350B' },
-  'Blocked': { bg: '#FFE9E9', color: '#FF5630', border: '#FF5630' },
-  'In Review': { bg: '#EAE6FF', color: '#6554C0', border: '#6554C0' },
+  'To Do':      { bg: 'rgba(255,255,255,0.06)', color: 'rgba(228,228,228,0.5)', border: 'rgba(255,255,255,0.12)' },
+  'In Progress':{ bg: 'rgba(96,165,250,0.12)', color: '#60a5fa',               border: 'rgba(96,165,250,0.25)'  },
+  'Completed':  { bg: 'rgba(52,211,153,0.1)',  color: '#34d399',               border: 'rgba(52,211,153,0.25)'  },
+  'Cancelled':  { bg: 'rgba(248,113,113,0.08)',color: '#f87171',               border: 'rgba(248,113,113,0.2)'  },
+  'Blocked':    { bg: 'rgba(248,113,113,0.1)', color: '#f87171',               border: 'rgba(248,113,113,0.25)' },
+  'In Review':  { bg: 'rgba(167,139,250,0.1)', color: '#a78bfa',               border: 'rgba(167,139,250,0.25)' },
 };
 
 const PRIORITY_META = {
@@ -104,18 +110,17 @@ function PriorityIcon({ priority, size = 14 }) {
 function StatusBadge({ status }) {
   const m = STATUS_META[status] || STATUS_META['To Do'];
   return (
-    <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-sm"
-      style={{ background: m.bg, color: m.color }}>
-      {status === 'To Do' && <Circle size={8} className="mr-1" strokeWidth={2.5} />}
-      {status === 'In Progress' && <Clock size={8} className="mr-1" strokeWidth={2.5} />}
-      {status === 'Completed' && <CheckCircle2 size={8} className="mr-1" strokeWidth={2.5} />}
+    <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '3px 8px', background: m.bg, color: m.color, border: `1px solid ${m.border}` }}>
+      {status === 'To Do' && <Circle size={8} style={{ marginRight: '4px' }} strokeWidth={2.5} />}
+      {status === 'In Progress' && <Clock size={8} style={{ marginRight: '4px' }} strokeWidth={2.5} />}
+      {status === 'Completed' && <CheckCircle2 size={8} style={{ marginRight: '4px' }} strokeWidth={2.5} />}
       {status}
     </span>
   );
 }
 
 function avatarColor(name) {
-  const colors = ['#6554C0', '#0052CC', '#00875A', '#FF5630', '#FF991F', '#36B37E', '#00B8D9', '#8777D9'];
+  const colors = ['#b8956a', '#60a5fa', '#34d399', '#a78bfa', '#fb923c', '#f472b6', '#38bdf8', '#818cf8'];
   if (!name) return colors[0];
   return colors[name.charCodeAt(0) % colors.length];
 }
@@ -157,21 +162,19 @@ function IssueTypeIcon({ type = 'task', size = 11 }) {
 function TransferBanner({ task, onApprove, onReject, onRequest }) {
   if (task.transferRequest?.status === 'pending') {
     return (
-      <div className="flex items-start gap-2 px-3 py-2 rounded-sm mt-2 text-xs"
-        style={{ background: '#EAE6FF', border: '1px solid #C0B6F2' }}>
-        <Bell size={12} className="mt-0.5 flex-shrink-0" style={{ color: '#6554C0' }} />
-        <div className="flex-1">
-          <span className="font-semibold" style={{ color: '#6554C0' }}>Transfer Pending</span>
-          <span className="text-gray-500 ml-1">→ {task.transferRequest.requestedTo?.username || '?'}</span>
-          {task.transferRequest.note && <p className="text-gray-500 italic mt-0.5">"{task.transferRequest.note}"</p>}
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '8px 12px', marginTop: '6px', fontSize: '12px', background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.22)' }}>
+        <Bell size={12} style={{ marginTop: '1px', flexShrink: 0, color: '#a78bfa' }} />
+        <div style={{ flex: 1 }}>
+          <span style={{ fontWeight: 700, color: '#a78bfa' }}>Transfer Pending</span>
+          <span style={{ color: 'rgba(228,228,228,0.4)', marginLeft: '6px' }}>→ {task.transferRequest.requestedTo?.username || '?'}</span>
+          {task.transferRequest.note && <p style={{ color: 'rgba(228,228,228,0.35)', fontStyle: 'italic', marginTop: '2px' }}>"{task.transferRequest.note}"</p>}
         </div>
         {onApprove && (
-          <div className="flex gap-1 flex-shrink-0">
+          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
             <button onClick={e => { e.stopPropagation(); onApprove(); }}
-              className="px-2 py-1 text-[10px] font-bold text-white rounded-sm"
-              style={{ background: '#6554C0' }}>Approve</button>
+              style={{ padding: '3px 10px', fontSize: '10px', fontWeight: 700, color: '#0c0c0c', background: '#a78bfa', border: 'none', cursor: 'pointer' }}>Approve</button>
             <button onClick={e => { e.stopPropagation(); onReject(); }}
-              className="px-2 py-1 text-[10px] font-medium text-gray-600 bg-white border border-gray-200 rounded-sm">Reject</button>
+              style={{ padding: '3px 8px', fontSize: '10px', color: '#a78bfa', background: 'transparent', border: '1px solid rgba(167,139,250,0.3)', cursor: 'pointer' }}>Reject</button>
           </div>
         )}
       </div>
@@ -192,8 +195,10 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
 
   return (
     <div
-      className="group relative bg-white hover:bg-gray-50 transition-colors cursor-pointer border-b"
-      style={{ borderColor: '#DFE1E6' }}
+      className="group relative"
+      style={{ background: '#111', borderBottom: `1px solid ${BORDER_COLOR}`, cursor: 'pointer', transition: 'background 150ms ease' }}
+      onMouseEnter={e => e.currentTarget.style.background = '#161616'}
+      onMouseLeave={e => e.currentTarget.style.background = '#111'}
       onClick={() => onEdit(task)}
     >
       {/* Priority strip */}
@@ -215,7 +220,8 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
                 {task.issueKey}
               </span>
             )}
-            <p className={`text-sm font-medium leading-snug flex-1 truncate ${isCompleted || isDeleted ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+            <p className={`text-sm font-medium leading-snug flex-1 truncate ${isCompleted || isDeleted ? 'line-through' : ''}`}
+              style={{ color: isCompleted || isDeleted ? 'rgba(228,228,228,0.3)' : TEXT_PRIMARY }}>
               {task.title}
             </p>
           </div>
@@ -224,8 +230,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
           {task.labels?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
               {task.labels.slice(0, 4).map(l => (
-                <span key={l} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium"
-                  style={{ background: '#F4F5F7', color: '#42526E' }}>{l}</span>
+                <span key={l} style={{ display: 'inline-flex', alignItems: 'center', padding: '1px 6px', fontSize: '9px', fontWeight: 600, background: 'rgba(184,149,106,0.12)', color: '#b8956a', border: '1px solid rgba(184,149,106,0.2)' }}>{l}</span>
               ))}
             </div>
           )}
@@ -233,7 +238,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
           {/* Meta row */}
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {/* Channel / Project */}
-            <span className="flex items-center gap-1 text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'rgba(228,228,228,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 6px' }}>
               <Hash size={9} /> {task.project || 'General'}
             </span>
 
@@ -339,21 +344,17 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
   return (
     <div
       onClick={() => onEdit(task)}
-      className="group bg-white rounded-sm cursor-pointer mb-2 relative"
-      style={{
-        boxShadow: CARD_SHADOW,
-        borderLeft: `3px solid ${pMeta.color}`,
-      }}
-      onMouseEnter={e => { e.currentTarget.style.boxShadow = `${CARD_SHADOW}, 0 0 0 1px rgba(0,82,204,0.4)`; }}
-      onMouseLeave={e => { e.currentTarget.style.boxShadow = CARD_SHADOW; }}
-    >
+      className="group rounded-sm cursor-pointer mb-2 relative"
+      style={{ background: '#1a1a1a', boxShadow: CARD_SHADOW, borderLeft: `3px solid ${pMeta.color}` }}
+      onMouseEnter={e => e.currentTarget.style.background = '#222'}
+      onMouseLeave={e => e.currentTarget.style.background = '#1a1a1a'}>
       <div className="px-3 pt-2 pb-2.5">
         <div className="flex items-start gap-2">
           <div className="w-3.5 h-3.5 rounded-sm flex items-center justify-center mt-0.5 flex-shrink-0"
             style={{ background: STATUS_META[task.status]?.color || '#42526E' }}>
             <div className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
           </div>
-          <p className={`text-sm leading-snug flex-1 ${task.status === 'Completed' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+          <p className={`text-sm leading-snug flex-1`} style={{ color: task.status === 'Completed' ? 'rgba(228,228,228,0.3)' : TEXT_PRIMARY, textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}>
             {task.title}
           </p>
           <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
@@ -363,7 +364,7 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
         </div>
 
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <span className="flex items-center gap-1 text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'rgba(228,228,228,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 5px' }}>
             <Hash size={8} /> {task.project || 'General'}
           </span>
           <PriorityIcon priority={task.priority} size={12} />
@@ -390,7 +391,7 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
 
 function BoardColumn({ col, tasks, view, onEdit, onDelete }) {
   return (
-    <div className="flex-1 flex flex-col min-h-0 min-w-0" style={{ background: BOARD_BG }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0, background: BOARD_BG }}>
       <div className="flex items-center gap-2 px-3 py-2.5 flex-shrink-0"
         style={{ borderTop: `3px solid ${col.topColor}` }}>
         <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: col.color }}>
@@ -435,10 +436,9 @@ function StatsStrip({ tasks, currentUserId }) {
   return (
     <div className="flex gap-3 px-5 pb-3 flex-shrink-0">
       {stats.map(s => (
-        <div key={s.label} className="flex items-center gap-2 bg-white rounded-sm px-3 py-2"
-          style={{ boxShadow: CARD_SHADOW, border: '1px solid #DFE1E6' }}>
+        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER_COLOR}`, borderRadius: '2px', padding: '6px 10px' }}>
           <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-          <span className="text-[11px] text-gray-500 font-medium">{s.label}</span>
+          <span style={{ fontSize: '11px', color: TEXT_MUTED, fontWeight: 500 }}>{s.label}</span>
           <span className="text-sm font-bold" style={{ color: s.color }}>{s.value}</span>
         </div>
       ))}
@@ -475,6 +475,8 @@ export default function MyTasks() {
   const pathMatch = window.location.pathname.match(/\/workspace\/([^/]+)/);
   const workspaceId = pathMatch ? pathMatch[1] : null;
 
+  const isMobile = useIsMobile();
+
   const [viewMode, setViewMode] = useState('list'); // list | board | sprint | timeline | workload
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState('priority');
@@ -483,6 +485,8 @@ export default function MyTasks() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  // Mobile nav: false = show sidebar nav, true = show task list
+  const [mobileShowList, setMobileShowList] = useState(false);
   // Right-side detail panel (replaces click-to-edit modal)
   const [selectedTask, setSelectedTask] = useState(null);
   const [completionTask, setCompletionTask] = useState(null);
@@ -624,6 +628,8 @@ export default function MyTasks() {
     const params = new URLSearchParams(location.search);
     params.set('tab', key);
     navigate(`?${params.toString()}`, { replace: true });
+    // On mobile, switch to list view after selecting a category
+    if (isMobile) setMobileShowList(true);
   };
 
   const isDeleted = activeView === 'deleted-tasks';
@@ -659,18 +665,17 @@ export default function MyTasks() {
   // ── Loading skeleton ──
   if (loading) {
     return (
-      <div className="flex h-full overflow-hidden" style={{ background: '#F4F5F7' }}>
-        <div className="w-52 flex-shrink-0 bg-white border-r" style={{ borderColor: '#DFE1E6' }}>
-          <div className="p-4 space-y-2 animate-pulse">
-            {[100, 80, 90, 70, 85].map((w, i) => (
-              <div key={i} className="h-8 rounded" style={{ background: '#F4F5F7', width: `${w}%` }} />
-            ))}
-          </div>
+      <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: BOARD_BG }}>
+        <style>{`@keyframes mf-sh{0%,100%{opacity:.35}50%{opacity:.7}}.mf-sh{animation:mf-sh 1.6s ease-in-out infinite}`}</style>
+        <div className="mf-sh" style={{ width: '200px', flexShrink: 0, background: SIDEBAR_BG, borderRight: `1px solid ${BORDER_COLOR}`, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {[100, 80, 90, 70, 85].map((w, i) => (
+            <div key={i} style={{ height: '32px', background: 'rgba(255,255,255,0.05)', width: `${w}%` }} />
+          ))}
         </div>
-        <div className="flex-1 flex flex-col p-5 gap-3 animate-pulse">
-          <div className="h-6 w-48 bg-gray-200 rounded" />
+        <div className="mf-sh" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', gap: '12px' }}>
+          <div style={{ height: '20px', width: '180px', background: 'rgba(255,255,255,0.08)' }} />
           {[90, 75, 85, 65, 80].map((w, i) => (
-            <div key={i} className="bg-white rounded-sm h-14 shadow-sm" style={{ width: `${w}%` }} />
+            <div key={i} style={{ height: '48px', background: 'rgba(255,255,255,0.05)', width: `${w}%` }} />
           ))}
         </div>
       </div>
@@ -678,30 +683,33 @@ export default function MyTasks() {
   }
 
   return (
-    <div className="flex h-full overflow-hidden" style={{ background: '#F4F5F7' }}>
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: BOARD_BG }}>
 
       {/* ── Left sidebar ── */}
-      <div className="w-52 flex-shrink-0 bg-white border-r flex flex-col overflow-y-auto" style={{ borderColor: '#DFE1E6' }}>
+      <div style={{
+        width: isMobile ? '100%' : '200px',
+        flexShrink: 0, background: SIDEBAR_BG,
+        borderRight: isMobile ? 'none' : `1px solid ${BORDER_COLOR}`,
+        display: (isMobile && mobileShowList) ? 'none' : 'flex',
+        flexDirection: 'column', overflowY: 'auto'
+      }}>
         <div className="px-3 py-4">
-          <p className="text-[10px] font-bold uppercase tracking-widest mb-3 px-2" style={{ color: '#7A869A' }}>Tasks</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest mb-3 px-2" style={{ color: TEXT_MUTED }}>Tasks</p>
           <nav className="space-y-0.5">
             {SIDEBAR_VIEWS.map((v, i) =>
               v === null
-                ? <div key={i} className="my-2 border-t" style={{ borderColor: '#DFE1E6' }} />
+                ? <div key={i} style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '6px 8px' }} />
                 : (
                   <button key={v.key} onClick={() => setView(v.key)}
-                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded text-sm font-medium transition-all"
-                    style={{
-                      background: activeView === v.key ? '#DEEBFF' : 'transparent',
-                      color: activeView === v.key ? JIRA_BLUE : '#42526E',
-                      fontWeight: activeView === v.key ? 700 : 500,
-                    }}>
-                    <span style={{ color: activeView === v.key ? JIRA_BLUE : '#7A869A' }}>
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', background: activeView === v.key ? 'rgba(184,149,106,0.12)' : 'transparent', border: activeView === v.key ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: activeView === v.key ? JIRA_BLUE : 'rgba(228,228,228,0.5)', fontWeight: activeView === v.key ? 700 : 400, fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
+                    onMouseEnter={e => { if (activeView !== v.key) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    onMouseLeave={e => { if (activeView !== v.key) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <span style={{ color: activeView === v.key ? JIRA_BLUE : 'rgba(228,228,228,0.35)', flexShrink: 0 }}>
                       {v.icon}
                     </span>
-                    {v.label}
-                    <span className="ml-auto text-[10px] font-bold tabular-nums"
-                      style={{ color: activeView === v.key ? JIRA_BLUE : '#7A869A' }}>
+                    <span style={{ flex: 1 }}>{v.label}</span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'monospace', color: activeView === v.key ? JIRA_BLUE : 'rgba(228,228,228,0.3)' }}>
                       {v.key === 'my-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) === String(currentUserId) && t.status !== 'Completed').length}
                       {v.key === 'shared-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) !== String(currentUserId) && t.assignees?.some(a => String(a._id) === String(currentUserId)) && t.status !== 'Completed').length}
                       {v.key === 'assigned-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) !== String(currentUserId) && t.status !== 'Completed').length}
@@ -717,34 +725,27 @@ export default function MyTasks() {
           {/* Channel filter in sidebar — only channels with tasks in current view */}
           {channelNames.length > 0 && (
             <div className="mt-4">
-              <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: '#7A869A' }}>By Channel</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: TEXT_MUTED }}>By Channel</p>
               <div className="space-y-0.5">
                 {/* All Channels reset button */}
                 <button onClick={() => setChannelFilter('all')}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-all"
-                  style={{
-                    background: channelFilter === 'all' ? '#DEEBFF' : 'transparent',
-                    color: channelFilter === 'all' ? JIRA_BLUE : '#42526E',
-                  }}>
-                  <Hash size={10} style={{ opacity: 0.5 }} />
-                  <span className="flex-1 text-left">All Channels</span>
-                  <span className="text-[10px] font-bold tabular-nums" style={{ color: channelFilter === 'all' ? JIRA_BLUE : '#7A869A' }}>
-                    {viewFiltered.length}
-                  </span>
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === 'all' ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === 'all' ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === 'all' ? JIRA_BLUE : 'rgba(228,228,228,0.5)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
+                  onMouseEnter={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                  onMouseLeave={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Hash size={10} style={{ color: channelFilter === 'all' ? JIRA_BLUE : 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>All Channels</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === 'all' ? JIRA_BLUE : 'rgba(228,228,228,0.3)' }}>{viewFiltered.length}</span>
                 </button>
-                {/* Per-channel buttons — only channels with tasks */}
                 {channelNames.map(ch => (
                   <button key={ch} onClick={() => setChannelFilter(ch)}
-                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs transition-all"
-                    style={{
-                      background: channelFilter === ch ? '#DEEBFF' : 'transparent',
-                      color: channelFilter === ch ? JIRA_BLUE : '#42526E',
-                    }}>
-                    <Hash size={10} style={{ opacity: 0.5 }} />
-                    <span className="flex-1 text-left truncate">{ch}</span>
-                    <span className="text-[10px] font-bold tabular-nums" style={{ color: channelFilter === ch ? JIRA_BLUE : '#7A869A' }}>
-                      {channelCounts[ch] || 0}
-                    </span>
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === ch ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === ch ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === ch ? JIRA_BLUE : 'rgba(228,228,228,0.5)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
+                    onMouseEnter={e => { if (channelFilter !== ch) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    onMouseLeave={e => { if (channelFilter !== ch) e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    <Hash size={10} style={{ color: channelFilter === ch ? JIRA_BLUE : 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch}</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === ch ? JIRA_BLUE : 'rgba(228,228,228,0.3)' }}>{channelCounts[ch] || 0}</span>
                   </button>
                 ))}
               </div>
@@ -754,117 +755,163 @@ export default function MyTasks() {
       </div>
 
       {/* ── Main content + optional right panel ── */}
-      <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
+      <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden"
+        style={{ display: (isMobile && !mobileShowList) ? 'none' : 'flex' }}
+      >
         <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
 
           {/* ── Toolbar ── */}
-          <div className="flex-shrink-0 bg-white border-b px-5 py-3" style={{ borderColor: '#DFE1E6' }}>
-            <div className="flex items-center gap-3">
-              <div>
-                <h1 className="text-base font-bold" style={{ color: '#172B4D' }}>{viewLabel}</h1>
-                <p className="text-xs" style={{ color: '#7A869A' }}>{viewDesc}</p>
-              </div>
+          <div style={{ flexShrink: 0, background: TOOLBAR_BG, borderBottom: `1px solid ${BORDER_COLOR}`, padding: isMobile ? '0' : '10px 20px' }}>
+            {isMobile ? (
+              /* ── Mobile toolbar: 2 compact rows ── */
+              <>
+                {/* Row 1: back + title + create */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderBottom: `1px solid ${BORDER_COLOR}` }}>
+                  {mobileShowList && (
+                    <button
+                      onClick={() => setMobileShowList(false)}
+                      style={{ display: 'flex', alignItems: 'center', padding: '4px', color: JIRA_BLUE, background: 'none', border: 'none', cursor: 'pointer', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                  )}
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: TEXT_PRIMARY, fontFamily: 'Inter, system-ui, sans-serif', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {viewLabel}
+                  </span>
+                  {canCreate && (
+                    <button
+                      onClick={() => { setEditingTask(null); setShowModal(true); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: JIRA_BLUE, border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
+                    >
+                      <Plus size={12} strokeWidth={2.5} /> New
+                    </button>
+                  )}
+                </div>
+                {/* Row 2: search + sort compact */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px' }}>
+                  <div style={{ position: 'relative', flex: 1 }}>
+                    <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.35)' }} />
+                    <input
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      placeholder="Search issues…"
+                      style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '6px', paddingBottom: '6px', background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
+                      onFocus={e => e.target.style.borderColor = JIRA_BLUE}
+                      onBlur={e => e.target.style.borderColor = BORDER_COLOR}
+                    />
+                  </div>
+                  <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
+                    style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '80px' }}>
+                    {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                  <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
+                    style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '90px' }}>
+                    <option value="all">All Priority</option>
+                    {['Highest', 'High', 'Medium', 'Low', 'Lowest'].map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+              </>
+            ) : (
+              /* ── Desktop toolbar: original single row ── */
+              <div className="flex items-center gap-3">
+                <div>
+                  <h1 className="text-base font-bold" style={{ color: TEXT_PRIMARY }}>{viewLabel}</h1>
+                  <p className="text-xs" style={{ color: TEXT_MUTED }}>{viewDesc}</p>
+                </div>
 
-              <div className="flex-1" />
+                <div className="flex-1" />
 
-              {/* Search */}
-              <div className="relative">
-                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search issues…"
-                  className="pl-8 pr-3 py-1.5 text-xs border rounded-sm focus:outline-none w-44"
-                  style={{ borderColor: '#DFE1E6' }}
-                  onFocus={e => e.target.style.borderColor = JIRA_BLUE}
-                  onBlur={e => e.target.style.borderColor = '#DFE1E6'}
-                />
-              </div>
+                {/* Search */}
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Search issues…"
+                    style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', padding: '5px 8px 5px 28px', outline: 'none', width: '160px', fontFamily: 'Inter, system-ui, sans-serif' }}
+                    onFocus={e => e.target.style.borderColor = JIRA_BLUE}
+                    onBlur={e => e.target.style.borderColor = BORDER_COLOR}
+                  />
+                </div>
 
-              {/* Sort */}
-              <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
-                className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
-                style={{ borderColor: '#DFE1E6' }}>
-                {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
+                {/* Sort */}
+                <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
+                  style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
 
-              {/* Priority filter */}
-              <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-                className="text-xs border rounded-sm px-2 py-1.5 bg-white focus:outline-none text-gray-700"
-                style={{ borderColor: '#DFE1E6' }}>
-                <option value="all">All Priorities</option>
-                {['Highest', 'High', 'Medium', 'Low', 'Lowest', 'Emergency'].map(p =>
-                  <option key={p} value={p}>{p}</option>
-                )}
-              </select>
+                {/* Priority filter */}
+                <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
+                  style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  <option value="all">All Priorities</option>
+                  {['Highest', 'High', 'Medium', 'Low', 'Lowest', 'Emergency'].map(p =>
+                    <option key={p} value={p}>{p}</option>
+                  )}
+                </select>
 
-              {/* View toggle — expanded for new views */}
-              <div className="flex rounded-sm overflow-hidden border" style={{ borderColor: '#DFE1E6' }}>
-                {[
-                  { key: 'list',      Icon: List,         title: 'List view' },
-                  { key: 'board',     Icon: LayoutGrid,   title: 'Kanban board' },
-                  { key: 'sprint',    Icon: Activity,     title: 'Sprint board' },
-                  { key: 'timeline',  Icon: GitBranch,    title: 'Timeline' },
-                  { key: 'workload',  Icon: Users,        title: 'Workload' },
-                ].map(({ key, Icon, title }, idx) => (
-                  <button
-                    key={key}
-                    onClick={() => setViewMode(key)}
-                    title={title}
-                    className={`px-2.5 py-1.5 flex items-center transition-all ${idx > 0 ? 'border-l' : ''}`}
-                    style={{
-                      borderColor: '#DFE1E6',
-                      background: viewMode === key ? '#DEEBFF' : 'white',
-                      color: viewMode === key ? JIRA_BLUE : '#42526E'
-                    }}
-                  >
-                    <Icon size={14} />
+                {/* View toggle */}
+                <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${BORDER_COLOR}` }}>
+                  {[
+                    { key: 'list',      Icon: List,         title: 'List view' },
+                    { key: 'board',     Icon: LayoutGrid,   title: 'Kanban board' },
+                    { key: 'sprint',    Icon: Activity,     title: 'Sprint board' },
+                    { key: 'timeline',  Icon: GitBranch,    title: 'Timeline' },
+                    { key: 'workload',  Icon: Users,        title: 'Workload' },
+                  ].map(({ key, Icon, title }, idx) => (
+                    <button
+                      key={key}
+                      onClick={() => setViewMode(key)}
+                      title={title}
+                      style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', background: viewMode === key ? 'rgba(184,149,106,0.15)' : 'transparent', color: viewMode === key ? JIRA_BLUE : TEXT_MUTED, borderLeft: idx > 0 ? `1px solid ${BORDER_COLOR}` : 'none', cursor: 'pointer', border: 'none', borderLeft: idx > 0 ? `1px solid ${BORDER_COLOR}` : 'none' }}
+                    >
+                      <Icon size={14} />
+                    </button>
+                  ))}
+                </div>
+
+                {canCreate && (
+                  <button onClick={() => { setEditingTask(null); setShowModal(true); }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
+                    style={{ background: JIRA_BLUE }}>
+                    <Plus size={13} strokeWidth={2.5} /> Create
                   </button>
-                ))}
+                )}
               </div>
-
-              {canCreate && (
-                <button onClick={() => { setEditingTask(null); setShowModal(true); }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
-                  style={{ background: JIRA_BLUE }}>
-                  <Plus size={13} strokeWidth={2.5} /> Create
-                </button>
-              )}
-            </div>
+            )}
           </div>
 
           {/* ── Stats strip ── */}
           {activeView === 'all-tasks' && (
-            <div className="flex-shrink-0 bg-white border-b px-4 py-2.5 flex items-center gap-3" style={{ borderColor: '#DFE1E6' }}>
+            <div style={{ flexShrink: 0, background: TOOLBAR_BG, borderBottom: `1px solid ${BORDER_COLOR}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               {[
-                { label: 'Active', count: tasks.filter(t => !t.deleted && t.status !== 'Completed').length, color: JIRA_BLUE },
-                { label: 'Overdue', count: tasks.filter(t => isOverdue(t)).length, color: '#FF5630' },
-                { label: 'Completed', count: tasks.filter(t => t.status === 'Completed').length, color: '#00875A' },
-                { label: 'In Review', count: tasks.filter(t => t.status === 'In Review').length, color: '#6554C0' },
+                { label: 'Active',    count: tasks.filter(t => !t.deleted && t.status !== 'Completed').length, color: JIRA_BLUE },
+                { label: 'Overdue',   count: tasks.filter(t => isOverdue(t)).length,                          color: '#f87171' },
+                { label: 'Completed', count: tasks.filter(t => t.status === 'Completed').length,              color: '#34d399' },
+                { label: 'In Review', count: tasks.filter(t => t.status === 'In Review').length,              color: '#a78bfa' },
               ].map(s => (
-                <div key={s.label} className="flex items-center gap-1.5 text-xs">
-                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: s.color }} />
-                  <span style={{ color: '#7A869A' }}>{s.label}</span>
-                  <span className="font-bold" style={{ color: s.color }}>{s.count}</span>
+                <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: s.color }} />
+                  <span style={{ color: TEXT_MUTED }}>{s.label}</span>
+                  <span style={{ fontWeight: 700, color: s.color }}>{s.count}</span>
                 </div>
               ))}
-              <div className="flex-1" />
-              <span className="text-xs" style={{ color: '#7A869A' }}>{filtered.length} showing</span>
+              <div style={{ flex: 1 }} />
+              <span style={{ fontSize: '11px', color: TEXT_MUTED }}>{filtered.length} showing</span>
             </div>
           )}
 
           {/* ── Content area ── */}
           <div className="flex-1 min-h-0 overflow-hidden">
             {filtered.length === 0 && viewMode !== 'workload' ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3 opacity-60">
-                <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center">
-                  {isDeleted ? <Trash2 size={24} className="text-gray-400" /> : <CheckCircle2 size={24} className="text-gray-400" />}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', background: BOARD_BG }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER_COLOR}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {isDeleted ? <Trash2 size={22} style={{ color: TEXT_MUTED }} /> : <CheckCircle2 size={22} style={{ color: TEXT_MUTED }} />}
                 </div>
-                <div className="text-center">
-                  <p className="font-semibold text-sm text-gray-600">
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{ fontWeight: 600, fontSize: '13px', color: TEXT_MUTED }}>
                     {isDeleted ? 'Trash is empty' : search ? 'No matching issues' : 'No issues here'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                  <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '4px' }}>
                     {isDeleted ? 'Deleted items will appear here.' : canCreate ? 'Click Create to add your first issue.' : ''}
                   </p>
                 </div>
@@ -894,17 +941,16 @@ export default function MyTasks() {
               <WorkloadPanel workspaceId={workspaceId} />
             ) : (
               /* List view (default) */
-              <div className="h-full overflow-y-auto" style={{ background: BOARD_BG }}>
+              <div className="h-full overflow-y-auto" style={{ background: BOARD_BG, scrollbarWidth: 'thin' }}>
                 {/* Table header */}
-                <div className="sticky top-0 flex items-center gap-4 px-5 py-2 text-[10px] font-bold uppercase tracking-wider bg-white border-b"
-                  style={{ color: '#7A869A', borderColor: '#DFE1E6' }}>
-                  <span className="w-4 flex-shrink-0" />
-                  <span className="flex-1">Summary</span>
-                  <span className="w-28 text-center">Channel</span>
-                  <span className="w-20 text-center">Priority</span>
-                  <span className="w-24 text-center">Due Date</span>
-                  <span className="w-24 text-center">Status</span>
-                  <span className="w-12" />
+                <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: '#0a0a0a', borderBottom: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontFamily: 'monospace', zIndex: 10 }}>
+                  <span style={{ width: '16px', flexShrink: 0 }} />
+                  <span style={{ flex: 1 }}>Summary</span>
+                  <span style={{ width: '112px', textAlign: 'center' }}>Channel</span>
+                  <span style={{ width: '80px', textAlign: 'center' }}>Priority</span>
+                  <span style={{ width: '96px', textAlign: 'center' }}>Due Date</span>
+                  <span style={{ width: '96px', textAlign: 'center' }}>Status</span>
+                  <span style={{ width: '48px' }} />
                 </div>
 
                 <div>

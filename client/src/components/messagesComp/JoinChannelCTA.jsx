@@ -4,10 +4,7 @@ import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
 /**
- * JoinChannelCTA Component
- * 
- * Shown when a non-member clicks a public discoverable channel.
- * Provides a button to self-join the channel via the backend endpoint.
+ * JoinChannelCTA — shown when a non-member views a public discoverable channel.
  */
 export default function JoinChannelCTA({ channel, onJoinSuccess }) {
     const [isJoining, setIsJoining] = useState(false);
@@ -17,89 +14,80 @@ export default function JoinChannelCTA({ channel, onJoinSuccess }) {
     const handleJoin = async () => {
         setIsJoining(true);
         setError(null);
-
         try {
             await api.post(`/api/channels/${channel._id}/join-discoverable`);
-
             showToast(`Successfully joined #${channel.name}`, 'success');
-
-            // Notify parent to refresh channel data
-            if (onJoinSuccess) {
-                onJoinSuccess();
-            }
+            if (onJoinSuccess) onJoinSuccess();
         } catch (err) {
             const errorMessage = err.response?.data?.message || 'Failed to join channel';
-            const errorCode = err.response?.data?.code;
-
             setError(errorMessage);
             showToast(errorMessage, 'error');
-
-            console.error('[JOIN_CTA] Error:', errorCode, errorMessage);
         } finally {
             setIsJoining(false);
         }
     };
 
     return (
-        <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 p-8">
-            <div className="max-w-md w-full text-center space-y-6">
-                {/* Channel Icon */}
-                <div className="flex justify-center">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                        <Hash size={36} className="text-white" strokeWidth={2.5} />
-                    </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', backgroundColor: 'var(--bg-base)' }}>
+            <div style={{ maxWidth: '360px', width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
+
+                {/* Channel icon */}
+                <div style={{ width: '64px', height: '64px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Hash size={28} style={{ color: 'var(--accent)' }} strokeWidth={2} />
                 </div>
 
-                {/* Channel Name */}
+                {/* Channel name + description */}
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px', fontFamily: 'var(--font)' }}>
                         #{channel.name}
                     </h2>
                     {channel.description && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>
                             {channel.description}
                         </p>
                     )}
                 </div>
 
-                {/* Message */}
-                <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800">
-                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                {/* Info card */}
+                <div style={{ width: '100%', padding: '12px 16px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.65 }}>
                         You are not a member of this channel. Join to start chatting and collaborating!
                     </p>
                 </div>
 
-                {/* Error Display */}
+                {/* Error */}
                 {error && (
-                    <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 flex items-start gap-3">
-                        <AlertCircle size={20} className="text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-sm text-red-700 dark:text-red-300 text-left">
-                            {error}
-                        </p>
+                    <div style={{ width: '100%', padding: '10px 14px', backgroundColor: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: '2px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <AlertCircle size={16} style={{ color: 'var(--state-danger)', flexShrink: 0, marginTop: '1px' }} />
+                        <p style={{ fontSize: '12px', color: 'var(--state-danger)', margin: 0, textAlign: 'left' }}>{error}</p>
                     </div>
                 )}
 
-                {/* Join Button */}
+                {/* Join button */}
                 <button
                     onClick={handleJoin}
                     disabled={isJoining}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/30 hover:shadow-blue-500/50 transition-all duration-200 flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:shadow-none"
+                    style={{
+                        width: '100%', padding: '10px 0',
+                        backgroundColor: isJoining ? 'var(--bg-active)' : 'var(--accent)',
+                        color: isJoining ? 'var(--text-muted)' : '#0c0c0c',
+                        border: 'none', outline: 'none', borderRadius: '2px',
+                        fontSize: '14px', fontWeight: 600,
+                        fontFamily: 'var(--font)', cursor: isJoining ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        transition: '120ms ease',
+                    }}
+                    onMouseEnter={e => { if (!isJoining) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                    onMouseLeave={e => { if (!isJoining) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                 >
                     {isJoining ? (
-                        <>
-                            <Loader2 size={20} className="animate-spin" />
-                            <span>Joining...</span>
-                        </>
+                        <><Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} /><span>Joining...</span></>
                     ) : (
-                        <>
-                            <UserPlus size={20} />
-                            <span>Join Channel</span>
-                        </>
+                        <><UserPlus size={16} /><span>Join Channel</span></>
                     )}
                 </button>
 
-                {/* Info */}
-                <p className="text-xs text-gray-400 dark:text-gray-500">
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
                     This is a public discoverable channel. Anyone in the workspace can join.
                 </p>
             </div>

@@ -1,307 +1,242 @@
-// client/src/pages/settingsTabs/ComplianceTab.jsx
-// GDPR & Compliance settings panel: data export, account deletion, audit logs,
-// legal hold status, and message retention policy.
-
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    Download, Trash2, FileText, Shield, AlertCircle, Clock,
-    ChevronLeft, ChevronRight, Loader, Check, Lock
-} from 'lucide-react';
+import { Download, Trash2, FileText, AlertCircle, Clock, ChevronLeft, ChevronRight, Loader2, Check, Lock } from 'lucide-react';
 import Card from './Card';
 import api from '@services/api';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 const fmtDate = (d) => d ? new Date(d).toLocaleString() : '—';
 
 const Badge = ({ color, children }) => {
-    const styles = {
-        green: 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-700',
-        red: 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-700',
-        gray: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700',
-        amber: 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-700',
+    const palette = {
+        green: { color: 'var(--state-success)', bg: 'rgba(90,186,138,0.12)', border: 'rgba(90,186,138,0.3)' },
+        red:   { color: 'var(--state-danger)',  bg: 'rgba(224,82,82,0.12)',  border: 'rgba(224,82,82,0.3)' },
+        gray:  { color: 'var(--text-muted)',    bg: 'var(--bg-active)',      border: 'var(--border-default)' },
     };
+    const p = palette[color] || palette.gray;
     return (
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${styles[color] || styles.gray}`}>
-            {children}
-        </span>
+        <span style={{
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            padding: '2px 8px', borderRadius: 2, fontSize: 11, fontWeight: 600,
+            color: p.color, backgroundColor: p.bg, border: `1px solid ${p.border}`, ...S.font,
+        }}>{children}</span>
     );
 };
 
-// ── ComplianceTab ─────────────────────────────────────────────────────────────
 const ComplianceTab = ({ user }) => {
-    // Audit logs
     const [logs, setLogs] = useState([]);
     const [logPage, setLogPage] = useState(1);
     const [logTotal, setLogTotal] = useState(0);
     const [logPages, setLogPages] = useState(1);
     const [logsLoading, setLogsLoading] = useState(false);
-
-    // Legal hold
     const [legalHold, setLegalHold] = useState(false);
     const [legalHoldReason, setLegalHoldReason] = useState('');
-
-    // Retention policy
     const [retentionDays, setRetentionDays] = useState('');
     const [retentionLoading, setRetentionLoading] = useState(false);
     const [retentionSaved, setRetentionSaved] = useState(false);
-
-    // Delete account modal
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteConfirm, setDeleteConfirm] = useState('');
     const [deleteLoading, setDeleteLoading] = useState(false);
-
-    // Export
     const [exportLoading, setExportLoading] = useState(false);
-
-    // Error / success
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
     const flashError = (msg) => { setError(msg); setTimeout(() => setError(''), 4000); };
     const flashSuccess = (msg) => { setSuccess(msg); setTimeout(() => setSuccess(''), 4000); };
 
-    // ── Load audit logs ───────────────────────────────────────────────────────
     const loadLogs = useCallback(async (page = 1) => {
         setLogsLoading(true);
         try {
             const { data } = await api.get(`/api/compliance/audit-logs?page=${page}&limit=10`);
-            setLogs(data.logs || []);
-            setLogTotal(data.total || 0);
-            setLogPages(data.pages || 1);
-            setLogPage(page);
-        } catch {
-            setLogs([]);
-        } finally {
-            setLogsLoading(false);
-        }
+            setLogs(data.logs || []); setLogTotal(data.total || 0);
+            setLogPages(data.pages || 1); setLogPage(page);
+        } catch { setLogs([]); } finally { setLogsLoading(false); }
     }, []);
 
-    // ── Load legal hold status ────────────────────────────────────────────────
     const loadLegalHold = useCallback(async () => {
         if (!user?._id) return;
         try {
             const { data } = await api.get(`/api/compliance/legal-hold/${user._id}`);
-            setLegalHold(data.legalHold || false);
-            setLegalHoldReason(data.reason || '');
-        } catch { /* non-critical */ }
+            setLegalHold(data.legalHold || false); setLegalHoldReason(data.reason || '');
+        } catch { }
     }, [user]);
 
-    // ── Load retention policy ─────────────────────────────────────────────────
     const loadRetention = useCallback(async () => {
-        try {
-            const { data } = await api.get('/api/compliance/retention-policy');
-            setRetentionDays(data.retentionDays ?? '');
-        } catch { /* non-critical */ }
+        try { const { data } = await api.get('/api/compliance/retention-policy'); setRetentionDays(data.retentionDays ?? ''); }
+        catch { }
     }, []);
 
-    useEffect(() => {
-        loadLogs(1);
-        loadLegalHold();
-        loadRetention();
-    }, [loadLogs, loadLegalHold, loadRetention]);
+    useEffect(() => { loadLogs(1); loadLegalHold(); loadRetention(); }, [loadLogs, loadLegalHold, loadRetention]);
 
-    // ── Export personal data ──────────────────────────────────────────────────
     const handleExport = async () => {
         setExportLoading(true);
         try {
             const res = await api.get('/api/compliance/export-user', { responseType: 'blob' });
             const url = URL.createObjectURL(new Blob([res.data]));
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `chttrix-my-data-${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
+            const a = document.createElement('a'); a.href = url; a.download = `chttrix-my-data-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
             flashSuccess('Data export downloaded successfully');
-        } catch (err) {
-            flashError(err.response?.data?.message || 'Export failed');
-        } finally {
-            setExportLoading(false);
-        }
+        } catch (err) { flashError(err.response?.data?.message || 'Export failed'); }
+        finally { setExportLoading(false); }
     };
 
-    // ── Delete account ────────────────────────────────────────────────────────
     const handleDeleteAccount = async () => {
-        if (deleteConfirm !== 'DELETE') {
-            flashError('Type DELETE to confirm');
-            return;
-        }
+        if (deleteConfirm !== 'DELETE') { flashError('Type DELETE to confirm'); return; }
         setDeleteLoading(true);
-        try {
-            await api.delete('/api/compliance/delete-user');
-            // Force logout after deletion
-            window.location.href = '/login?deleted=true';
-        } catch (err) {
-            flashError(err.response?.data?.message || 'Deletion failed');
-        } finally {
-            setDeleteLoading(false);
-            setShowDeleteModal(false);
-        }
+        try { await api.delete('/api/compliance/delete-user'); window.location.href = '/login?deleted=true'; }
+        catch (err) { flashError(err.response?.data?.message || 'Deletion failed'); }
+        finally { setDeleteLoading(false); setShowDeleteModal(false); }
     };
 
-    // ── Save retention policy ─────────────────────────────────────────────────
     const handleSaveRetention = async () => {
         const days = retentionDays === '' ? null : parseInt(retentionDays);
-        if (days !== null && (isNaN(days) || days < 1)) {
-            flashError('Retention days must be a positive number');
-            return;
-        }
+        if (days !== null && (isNaN(days) || days < 1)) { flashError('Retention days must be a positive number'); return; }
         setRetentionLoading(true);
         try {
             await api.patch('/api/compliance/retention-policy', { retentionDays: days });
-            setRetentionSaved(true);
-            setTimeout(() => setRetentionSaved(false), 2000);
-            flashSuccess('Retention policy saved');
-        } catch (err) {
-            flashError(err.response?.data?.message || 'Failed to save');
-        } finally {
-            setRetentionLoading(false);
-        }
+            setRetentionSaved(true); setTimeout(() => setRetentionSaved(false), 2000); flashSuccess('Retention policy saved');
+        } catch (err) { flashError(err.response?.data?.message || 'Failed to save'); }
+        finally { setRetentionLoading(false); }
     };
 
+    const severityColor = (s) => s === 'critical' ? 'var(--state-danger)' : s === 'warning' ? 'var(--accent)' : 'var(--text-muted)';
+
+    const inputBase = {
+        padding: '8px 10px', backgroundColor: 'var(--bg-input)',
+        border: '1px solid var(--border-default)', borderRadius: 2,
+        fontSize: 13, color: 'var(--text-primary)', outline: 'none',
+        boxSizing: 'border-box', transition: 'border-color 150ms ease', ...S.font,
+    };
+
+    const btnAccent = (disabled) => ({
+        flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 16px', fontSize: 13, fontWeight: 500,
+        color: '#0c0c0c', backgroundColor: 'var(--accent)', border: 'none', borderRadius: 2,
+        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1,
+        transition: 'background-color 150ms ease', ...S.font,
+    });
+
+    const btnDanger = (disabled) => ({
+        flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6,
+        padding: '8px 16px', fontSize: 13, fontWeight: 500,
+        color: 'var(--state-danger)', backgroundColor: 'rgba(224,82,82,0.08)',
+        border: '1px solid rgba(224,82,82,0.3)', borderRadius: 2,
+        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1,
+        transition: 'background-color 150ms ease', ...S.font,
+    });
+
     return (
-        <div className="space-y-4">
-            {/* Global error / success */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
             {error && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg text-[12.5px] text-red-700 dark:text-red-400">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 2, backgroundColor: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', fontSize: 13, color: 'var(--state-danger)', ...S.font }}>
                     <AlertCircle size={14} />{error}
                 </div>
             )}
             {success && (
-                <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg text-[12.5px] text-green-700 dark:text-green-400">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderRadius: 2, backgroundColor: 'rgba(90,186,138,0.08)', border: '1px solid rgba(90,186,138,0.3)', fontSize: 13, color: 'var(--state-success)', ...S.font }}>
                     <Check size={14} />{success}
                 </div>
             )}
 
-            {/* ── GDPR Data Export ──────────────────────────────────────── */}
+            {/* Export */}
             <Card title="Export My Data" subtitle="GDPR Article 20 — Right to data portability">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                        <p className="text-[12.5px] text-gray-600 dark:text-gray-400 mb-2">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.6, ...S.font }}>
                             Download a complete JSON archive of your profile, tasks, notes, and activity history.
                         </p>
-                        <p className="text-[11px] text-gray-400">Your data will be delivered as a downloadable file.</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', ...S.font }}>Your data will be delivered as a downloadable file.</p>
                     </div>
-                    <button
-                        onClick={handleExport}
-                        disabled={exportLoading}
-                        className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-60"
-                    >
-                        {exportLoading ? <Loader size={13} className="animate-spin" /> : <Download size={13} />}
+                    <button onClick={handleExport} disabled={exportLoading} style={btnAccent(exportLoading)}
+                        onMouseEnter={e => { if (!exportLoading) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                        onMouseLeave={e => { if (!exportLoading) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}>
+                        {exportLoading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={13} />}
                         {exportLoading ? 'Preparing…' : 'Download'}
                     </button>
                 </div>
             </Card>
 
-            {/* ── Legal Hold Status ─────────────────────────────────────── */}
+            {/* Legal Hold */}
             <Card title="Legal Hold" subtitle="Compliance status of this account">
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-                    <div className={`p-2 rounded-lg ${legalHold ? 'bg-red-100 dark:bg-red-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
-                        <Lock size={15} className={legalHold ? 'text-red-600 dark:text-red-400' : 'text-gray-400'} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, backgroundColor: 'var(--bg-active)', border: `1px solid ${legalHold ? 'rgba(224,82,82,0.3)' : 'var(--border-default)'}`, borderRadius: 2 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: legalHold ? 'rgba(224,82,82,0.12)' : 'var(--bg-hover)' }}>
+                        <Lock size={15} style={{ color: legalHold ? 'var(--state-danger)' : 'var(--text-muted)' }} />
                     </div>
-                    <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">Status</span>
-                            <Badge color={legalHold ? 'red' : 'green'}>
-                                {legalHold ? 'Under Legal Hold' : 'No Hold'}
-                            </Badge>
+                    <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', ...S.font }}>Status</span>
+                            <Badge color={legalHold ? 'red' : 'green'}>{legalHold ? 'Under Legal Hold' : 'No Hold'}</Badge>
                         </div>
-                        {legalHold && legalHoldReason && (
-                            <p className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{legalHoldReason}</p>
-                        )}
-                        {!legalHold && (
-                            <p className="text-[11.5px] text-gray-400 mt-0.5">
-                                Your data can be exported or deleted freely.
-                            </p>
-                        )}
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: 0, ...S.font }}>
+                            {legalHold ? (legalHoldReason || 'Contact your administrator.') : 'Your data can be exported or deleted freely.'}
+                        </p>
                     </div>
                 </div>
                 {legalHold && (
-                    <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-700 rounded-lg text-[12px] text-amber-700 dark:text-amber-400">
-                        <AlertCircle size={13} className="inline mr-1" />
-                        This account is under legal hold. Data deletion is blocked until the hold is removed by an administrator.
+                    <div style={{ marginTop: 12, padding: 12, borderRadius: 2, backgroundColor: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.25)', fontSize: 12, color: 'var(--accent)', ...S.font }}>
+                        <AlertCircle size={12} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
+                        Data deletion is blocked until the hold is removed by an administrator.
                     </div>
                 )}
             </Card>
 
-            {/* ── Message Retention Policy ──────────────────────────────── */}
+            {/* Retention */}
             <Card title="Message Retention" subtitle="Automatically delete your sent messages after N days">
-                <div className="flex items-end gap-3 max-w-sm">
-                    <div className="flex-1">
-                        <label className="block text-[10.5px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5">
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, maxWidth: 360 }}>
+                    <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: 6, ...S.font }}>
                             Retention Period (days)
                         </label>
-                        <input
-                            type="number"
-                            min="1"
-                            value={retentionDays}
-                            onChange={e => setRetentionDays(e.target.value)}
-                            placeholder="No retention policy"
-                            className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[12.5px] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
-                        />
+                        <input type="number" min="1" value={retentionDays} onChange={e => setRetentionDays(e.target.value)} placeholder="No retention policy"
+                            style={{ ...inputBase, width: '100%' }}
+                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'} />
                     </div>
-                    <button
-                        onClick={handleSaveRetention}
-                        disabled={retentionLoading}
-                        className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-60"
-                    >
-                        {retentionLoading ? <Loader size={13} className="animate-spin" /> : retentionSaved ? <Check size={13} /> : <Clock size={13} />}
+                    <button onClick={handleSaveRetention} disabled={retentionLoading} style={{ ...btnAccent(retentionLoading), flexShrink: 0 }}
+                        onMouseEnter={e => { if (!retentionLoading) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                        onMouseLeave={e => { if (!retentionLoading) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}>
+                        {retentionLoading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : retentionSaved ? <Check size={13} /> : <Clock size={13} />}
                         Save
                     </button>
                 </div>
-                <p className="mt-2 text-[11px] text-gray-400">
-                    Leave empty to disable. Messages are deleted in nightly batches.
-                </p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, ...S.font }}>Leave empty to disable. Messages are deleted in nightly batches.</p>
             </Card>
 
-            {/* ── Audit Logs ────────────────────────────────────────────── */}
+            {/* Audit Log */}
             <Card title="Audit Log" subtitle="Your recent account activity">
                 {logsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                        <Loader size={18} className="animate-spin text-gray-400" />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
+                        <Loader2 size={18} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} />
                     </div>
                 ) : logs.length === 0 ? (
-                    <div className="text-center py-8 text-gray-400 text-[13px]">
-                        <FileText size={24} className="mx-auto mb-2 opacity-40" />
-                        No activity recorded yet.
+                    <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                        <FileText size={24} style={{ color: 'var(--text-muted)', margin: '0 auto 8px', opacity: 0.4 }} />
+                        <p style={{ fontSize: 13, color: 'var(--text-muted)', margin: 0, ...S.font }}>No activity recorded yet.</p>
                     </div>
                 ) : (
-                    <div className="space-y-0">
+                    <div>
                         {logs.map((log, i) => (
-                            <div key={log._id || i} className={`flex items-start gap-3 py-2.5 ${i < logs.length - 1 ? 'border-b border-gray-100 dark:border-gray-800' : ''}`}>
-                                <div className={`mt-0.5 w-1.5 h-1.5 rounded-full flex-shrink-0 ${log.severity === 'critical' ? 'bg-red-500' : log.severity === 'warning' ? 'bg-amber-500' : 'bg-blue-400'}`} />
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <span className="text-[12px] font-semibold text-gray-800 dark:text-gray-100">{log.action}</span>
-                                        <Badge color={log.status === 'success' ? 'green' : log.status === 'failure' ? 'red' : 'gray'}>
-                                            {log.status}
-                                        </Badge>
+                            <div key={log._id || i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '10px 0', borderBottom: i < logs.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
+                                <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: severityColor(log.severity), flexShrink: 0, marginTop: 5 }} />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+                                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', ...S.font }}>{log.action}</span>
+                                        <Badge color={log.status === 'success' ? 'green' : log.status === 'failure' ? 'red' : 'gray'}>{log.status}</Badge>
                                     </div>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 truncate">{log.description || log.resource}</p>
-                                    <p className="text-[10.5px] text-gray-400 mt-0.5">{fmtDate(log.createdAt)}</p>
+                                    {(log.description || log.resource) && <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', ...S.font }}>{log.description || log.resource}</p>}
+                                    <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, ...S.font }}>{fmtDate(log.createdAt)}</p>
                                 </div>
-                                {log.ipAddress && (
-                                    <span className="text-[10.5px] text-gray-400 flex-shrink-0 hidden sm:block">{log.ipAddress}</span>
-                                )}
+                                {log.ipAddress && <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0, ...S.font }}>{log.ipAddress}</span>}
                             </div>
                         ))}
-
-                        {/* Pagination */}
                         {logPages > 1 && (
-                            <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100 dark:border-gray-800">
-                                <span className="text-[11.5px] text-gray-400">
-                                    Page {logPage} of {logPages} ({logTotal} events)
-                                </span>
-                                <div className="flex gap-1">
-                                    <button
-                                        disabled={logPage <= 1}
-                                        onClick={() => loadLogs(logPage - 1)}
-                                        className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                    ><ChevronLeft size={14} /></button>
-                                    <button
-                                        disabled={logPage >= logPages}
-                                        onClick={() => loadLogs(logPage + 1)}
-                                        className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                                    ><ChevronRight size={14} /></button>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 12, marginTop: 4, borderTop: '1px solid var(--border-default)' }}>
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)', ...S.font }}>Page {logPage} of {logPages} ({logTotal} events)</span>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    {[[ChevronLeft, logPage <= 1, () => loadLogs(logPage - 1)], [ChevronRight, logPage >= logPages, () => loadLogs(logPage + 1)]].map(([Icon, dis, fn], idx) => (
+                                        <button key={idx} disabled={dis} onClick={fn} style={{ padding: 6, borderRadius: 2, background: 'none', border: '1px solid var(--border-default)', cursor: dis ? 'not-allowed' : 'pointer', color: dis ? 'var(--text-muted)' : 'var(--text-secondary)', opacity: dis ? 0.4 : 1, display: 'flex', alignItems: 'center' }}>
+                                            <Icon size={14} />
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -309,68 +244,46 @@ const ComplianceTab = ({ user }) => {
                 )}
             </Card>
 
-            {/* ── Delete Account ────────────────────────────────────────── */}
+            {/* Delete Account */}
             <Card title="Delete Account" subtitle="GDPR Article 17 — Right to erasure">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                        <p className="text-[12.5px] text-gray-600 dark:text-gray-400 mb-1">
-                            Permanently erase your account data. This is irreversible.
-                        </p>
-                        {legalHold && (
-                            <p className="text-[11.5px] text-red-500 flex items-center gap-1 mt-1">
-                                <Lock size={11} /> Blocked — account is under legal hold.
-                            </p>
-                        )}
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
+                    <div style={{ flex: 1 }}>
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.6, ...S.font }}>Permanently erase your account data. This is irreversible.</p>
+                        {legalHold && <p style={{ fontSize: 12, color: 'var(--state-danger)', display: 'flex', alignItems: 'center', gap: 5, margin: 0, ...S.font }}><Lock size={11} /> Blocked — account is under legal hold.</p>}
                     </div>
-                    <button
-                        onClick={() => setShowDeleteModal(true)}
-                        disabled={legalHold}
-                        className="flex-shrink-0 flex items-center gap-2 px-4 py-2 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-700 text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                    >
-                        <Trash2 size={13} />
-                        Delete Account
+                    <button onClick={() => setShowDeleteModal(true)} disabled={legalHold} style={btnDanger(legalHold)}
+                        onMouseEnter={e => { if (!legalHold) e.currentTarget.style.backgroundColor = 'rgba(224,82,82,0.14)'; }}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(224,82,82,0.08)'}>
+                        <Trash2 size={13} /> Delete Account
                     </button>
                 </div>
             </Card>
 
-            {/* ── Delete confirmation modal ─────────────────────────────── */}
+            {/* Delete Modal */}
             {showDeleteModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-                    <div className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0">
-                                <AlertCircle size={18} className="text-red-600" />
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
+                    <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid rgba(224,82,82,0.4)', borderRadius: 2, padding: 24, maxWidth: 400, width: '100%' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                            <div style={{ width: 32, height: 32, borderRadius: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(224,82,82,0.12)' }}>
+                                <AlertCircle size={16} style={{ color: 'var(--state-danger)' }} />
                             </div>
-                            <div>
-                                <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">Confirm Account Deletion</h3>
-                                <p className="text-[12px] text-gray-500">This action is permanent and cannot be undone.</p>
-                            </div>
+                            <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0, ...S.font }}>Confirm Account Deletion</h3>
                         </div>
-                        <p className="text-[12.5px] text-gray-700 dark:text-gray-300">
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6, ...S.font }}>
                             Your profile, messages, tasks, and all associated data will be anonymized in accordance with GDPR Article 17.
                         </p>
-                        <div>
-                            <label className="block text-[10.5px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5">
-                                Type <span className="text-red-500">DELETE</span> to confirm
+                        <div style={{ marginBottom: 16 }}>
+                            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: 6, ...S.font }}>
+                                Type <span style={{ color: 'var(--state-danger)', fontFamily: 'monospace' }}>DELETE</span> to confirm
                             </label>
-                            <input
-                                type="text"
-                                value={deleteConfirm}
-                                onChange={e => setDeleteConfirm(e.target.value)}
-                                placeholder="DELETE"
-                                className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[12.5px] text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-400"
-                            />
+                            <input type="text" value={deleteConfirm} onChange={e => setDeleteConfirm(e.target.value)} placeholder="DELETE"
+                                style={{ ...inputBase, width: '100%', fontFamily: 'monospace', letterSpacing: '0.05em', borderColor: deleteConfirm === 'DELETE' ? 'var(--state-danger)' : 'var(--border-default)' }} />
                         </div>
-                        <div className="flex gap-2 justify-end">
-                            <button onClick={() => { setShowDeleteModal(false); setDeleteConfirm(''); }} className="px-4 py-2 text-[12.5px] font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDeleteAccount}
-                                disabled={deleteLoading || deleteConfirm !== 'DELETE'}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50"
-                            >
-                                {deleteLoading ? <Loader size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={() => { setShowDeleteModal(false); setDeleteConfirm(''); }} style={{ flex: 1, padding: '8px 12px', fontSize: 13, fontWeight: 500, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: 2, cursor: 'pointer', ...S.font }}>Cancel</button>
+                            <button onClick={handleDeleteAccount} disabled={deleteLoading || deleteConfirm !== 'DELETE'}
+                                style={{ flex: 1, padding: '8px 12px', fontSize: 13, fontWeight: 500, color: '#fff', backgroundColor: 'var(--state-danger)', border: 'none', borderRadius: 2, cursor: deleteLoading || deleteConfirm !== 'DELETE' ? 'not-allowed' : 'pointer', opacity: deleteLoading || deleteConfirm !== 'DELETE' ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, ...S.font }}>
+                                {deleteLoading && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
                                 Delete My Account
                             </button>
                         </div>

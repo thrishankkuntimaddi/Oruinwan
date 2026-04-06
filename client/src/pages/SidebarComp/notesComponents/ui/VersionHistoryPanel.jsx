@@ -2,99 +2,113 @@ import React from 'react';
 import { X, RotateCcw, Clock } from 'lucide-react';
 
 const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore, onClose }) => {
-    const formatTime = (ts) => {
-        const d = new Date(ts);
-        const now = new Date();
-        const diffMs = now - d;
-        const diffMin = Math.floor(diffMs / 60000);
-        if (diffMin < 1) return 'Just now';
-        if (diffMin < 60) return `${diffMin}m ago`;
-        const diffH = Math.floor(diffMin / 60);
-        if (diffH < 24) return `${diffH}h ago`;
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    };
+  const formatTime = (ts) => {
+    const d = new Date(ts);
+    const now = new Date();
+    const diffMin = Math.floor((now - d) / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `${diffH}h ago`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
 
-    const getPreview = (content) => {
-        try {
-            const parsed = JSON.parse(content);
-            if (Array.isArray(parsed)) {
-                return parsed.filter(b => b.type === 'text' || b.type === 'heading').map(b => b.content?.replace(/<[^>]*>/g, '')).filter(Boolean).join(' ').slice(0, 80) || 'No text content';
-            }
-        } catch { }
-        return (content || '').slice(0, 80) || 'No content';
-    };
+  const getPreview = (content) => {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed))
+        return parsed.filter(b => b.type === 'text' || b.type === 'heading')
+          .map(b => b.content?.replace(/<[^>]*>/g, '')).filter(Boolean).join(' ').slice(0, 80) || 'No text content';
+    } catch { }
+    return (content || '').slice(0, 80) || 'No content';
+  };
 
-    return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 w-72 flex-shrink-0">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 dark:border-gray-800">
-                <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-                        <Clock size={14} className="text-white" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-bold text-gray-900 dark:text-white">Version History</h3>
-                        <p className="text-[10px] text-gray-400">{versions.length} saved versions</p>
-                    </div>
-                </div>
-                <button
-                    onClick={onClose}
-                    className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                >
-                    <X size={15} />
-                </button>
-            </div>
-
-            {/* Current version */}
-            <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800">
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                    <p className="text-xs font-semibold text-blue-700 dark:text-blue-400">Current version</p>
-                </div>
-                <p className="text-[11px] text-blue-500 dark:text-blue-500 mt-1 truncate ml-4">{getPreview(currentContent) || 'No content yet'}</p>
-            </div>
-
-            {/* Version list */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-800">
-                {versions.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-                        <Clock size={32} className="text-gray-200 dark:text-gray-700 mb-3" />
-                        <p className="text-sm text-gray-500 dark:text-gray-400">No saved versions yet</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Versions are saved automatically as you edit</p>
-                    </div>
-                ) : (
-                    [...versions].reverse().map((v, idx) => (
-                        <div key={v._id || v.savedAt || idx} className="group p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                            <div className="flex items-start justify-between gap-2">
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-1.5 mb-1">
-                                        <div className="w-1.5 h-1.5 bg-gray-400 dark:bg-gray-500 rounded-full flex-shrink-0" />
-                                        <p className="text-xs font-semibold text-gray-600 dark:text-gray-300 truncate">{v.title || 'Untitled'}</p>
-                                    </div>
-                                    {/* Use savedAt (DB field) with timestamp as fallback */}
-                                    <p className="text-[10px] text-gray-400 mb-1.5 ml-3">{formatTime(v.savedAt || v.timestamp)}</p>
-                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-3 line-clamp-2 leading-relaxed">
-                                        {getPreview(v.content)}
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => onRestore(v)}
-                                    className="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 text-xs font-medium rounded-lg transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
-                                    title="Restore this version"
-                                >
-                                    <RotateCcw size={11} /> Restore
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
-                <p className="text-[10px] text-gray-400 text-center">Last 50 auto-saves · Stored in database</p>
-            </div>
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', height: '100%',
+      background: '#111111', borderLeft: '1px solid rgba(255,255,255,0.07)',
+      width: '288px', flexShrink: 0,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '28px', height: '28px', background: 'rgba(184,149,106,0.15)', border: '1px solid rgba(184,149,106,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Clock size={13} style={{ color: '#b8956a' }} />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>Version History</h3>
+            <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', fontFamily: 'monospace' }}>{versions.length} saved versions</p>
+          </div>
         </div>
-    );
+        <button onClick={onClose}
+          style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+        >
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Current version banner */}
+      <div style={{ padding: '8px 14px', background: 'rgba(184,149,106,0.06)', borderBottom: '1px solid rgba(184,149,106,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ width: '6px', height: '6px', background: '#b8956a', borderRadius: '50%', flexShrink: 0 }} />
+          <p style={{ fontSize: '11px', fontWeight: 700, color: '#b8956a', fontFamily: 'monospace' }}>Current version</p>
+        </div>
+        <p style={{ fontSize: '11px', color: 'rgba(184,149,106,0.5)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginLeft: '14px' }}>
+          {getPreview(currentContent) || 'No content yet'}
+        </p>
+      </div>
+
+      {/* Version list */}
+      <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin' }}>
+        {versions.length === 0 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
+            <Clock size={32} style={{ color: 'rgba(228,228,228,0.1)', marginBottom: '12px' }} />
+            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.35)', fontWeight: 500 }}>No saved versions yet</p>
+            <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', marginTop: '4px' }}>Versions are saved automatically as you edit</p>
+          </div>
+        ) : (
+          [...versions].reverse().map((v, idx) => (
+            <div key={v._id || v.savedAt || idx}
+              style={{ padding: '10px 14px', borderBottom: '1px solid rgba(255,255,255,0.05)', transition: 'background 150ms ease' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                    <div style={{ width: '5px', height: '5px', background: 'rgba(228,228,228,0.2)', borderRadius: '50%', flexShrink: 0 }} />
+                    <p style={{ fontSize: '11px', fontWeight: 600, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{v.title || 'Untitled'}</p>
+                  </div>
+                  <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginBottom: '4px', marginLeft: '11px', fontFamily: 'monospace' }}>{formatTime(v.savedAt || v.timestamp)}</p>
+                  <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', marginLeft: '11px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
+                    {getPreview(v.content)}
+                  </p>
+                </div>
+                <button onClick={() => onRestore(v)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#161616', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(228,228,228,0.45)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', flexShrink: 0, transition: 'all 150ms ease', opacity: 0, fontFamily: 'Inter, system-ui, sans-serif' }}
+                  className="version-restore-btn"
+                  title="Restore this version"
+                  onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#b8956a'; e.currentTarget.style.borderColor = 'rgba(184,149,106,0.35)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = '0'; }}
+                >
+                  <RotateCcw size={11} /> Restore
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.2)', textAlign: 'center', fontFamily: 'monospace' }}>
+          Last 50 auto-saves · Stored in database
+        </p>
+      </div>
+    </div>
+  );
 };
 
 export default VersionHistoryPanel;

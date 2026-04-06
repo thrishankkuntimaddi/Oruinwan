@@ -2,27 +2,49 @@
 // Limited Settings for Admin (NOT Owner) - Only Notifications and User Defaults
 
 import React, { useState } from 'react';
-import {
-    Bell, Users, Check, AlertCircle
-} from 'lucide-react';
+import { Bell, Users, Check, AlertCircle } from 'lucide-react';
+
+const Toggle = ({ checked, onChange }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', width: '36px', height: '20px', background: checked ? 'var(--accent)' : hov ? 'var(--border-accent)' : 'var(--bg-active)', border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: '10px', cursor: 'pointer', transition: 'all 150ms ease', flexShrink: 0, padding: 0 }}>
+            <span style={{ position: 'absolute', left: checked ? '18px' : '2px', width: '14px', height: '14px', background: checked ? 'var(--bg-base)' : 'var(--text-muted)', borderRadius: '50%', transition: 'left 150ms ease', display: 'block' }} />
+        </button>
+    );
+};
+
+const ToggleRow = ({ label, description, checked, onChange }) => (
+    <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+        <div style={{ flex: 1 }}>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{description}</p>
+        </div>
+        <Toggle checked={checked} onChange={onChange} />
+    </div>
+);
+
+const inputSt = {
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px', width: '100%', boxSizing: 'border-box',
+};
 
 const AdminSettingsLimited = () => {
     const [activeTab, setActiveTab] = useState('notifications');
     const [isSaving, setIsSaving] = useState(false);
-
-    // Mock state for settings (would come from backend)
     const [settings, setSettings] = useState({
-        // Notifications
         emailOnNewUser: true,
         emailOnWorkspaceCreate: true,
         weeklyDigest: true,
         emailOnDepartmentCreate: true,
         emailOnSecurityAlert: true,
-
-        // User Defaults
         defaultRole: 'member',
         autoApproveJoin: false,
     });
+
+    const set = (key, val) => setSettings(s => ({ ...s, [key]: val }));
 
     const tabs = [
         { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -31,218 +53,90 @@ const AdminSettingsLimited = () => {
 
     const handleSave = async () => {
         setIsSaving(true);
-        // TODO: Call backend API to save settings
-        setTimeout(() => {
-            setIsSaving(false);
-            // Show success toast
-        }, 1000);
+        setTimeout(() => setIsSaving(false), 1000);
     };
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             {/* Header */}
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
+            <header style={{ height: '56px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white">Admin Settings</h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">Configure your admin preferences</p>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>Admin Settings</h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Configure your admin preferences</p>
                 </div>
-                <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-                >
-                    {isSaving ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Saving...
-                        </>
-                    ) : (
-                        <>
-                            <Check size={16} /> Save Changes
-                        </>
-                    )}
-                </button>
+                <SaveBtn saving={isSaving} onClick={handleSave} />
             </header>
 
-            <div className="flex flex-1 overflow-hidden">
-                {/* Sidebar Tabs */}
-                <div className="w-64 bg-white dark:bg-gray-800 border-r border-slate-200 dark:border-gray-700 overflow-y-auto custom-scrollbar">
-                    <nav className="p-4 space-y-1">
-                        {tabs.map((tab) => {
-                            const Icon = tab.icon;
+            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                {/* Sidebar */}
+                <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className="custom-scrollbar">
+                    <nav style={{ padding: '8px' }}>
+                        {tabs.map(tab => {
+                            const active = activeTab === tab.id;
+                            const [hov, setHov] = React.useState(false);
                             return (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id
-                                        ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-                                        : 'text-slate-600 dark:text-gray-400 hover:bg-slate-50 dark:hover:bg-gray-700'
-                                        }`}
-                                >
-                                    <Icon size={18} />
-                                    {tab.label}
+                                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                                    onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', background: active ? 'var(--bg-active)' : hov ? 'var(--bg-hover)' : 'transparent', border: active ? '1px solid var(--border-accent)' : '1px solid transparent', borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent', color: active ? 'var(--accent)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: active ? 600 : 400, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', borderRadius: '2px', transition: 'all 150ms ease' }}>
+                                    <tab.icon size={13} style={{ flexShrink: 0 }} /> {tab.label}
                                 </button>
                             );
                         })}
                     </nav>
-
-                    {/* Info Box */}
-                    <div className="m-4 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
-                        <div className="flex gap-3">
-                            <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    {/* Limited Access Notice */}
+                    <div style={{ margin: '12px 8px', padding: '12px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderLeft: '2px solid var(--accent)' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                            <AlertCircle size={13} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
                             <div>
-                                <p className="text-sm font-bold text-amber-900 dark:text-amber-300">Limited Access</p>
-                                <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                                    As an admin, you have access to limited settings. Billing and security settings are managed by the workspace owner.
-                                </p>
+                                <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)', marginBottom: '3px' }}>Limited Access</p>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: '1.5' }}>Billing and security settings are managed by the workspace owner.</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Content Area */}
-                <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-                    {/* NOTIFICATIONS TAB */}
+                {/* Content */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }} className="custom-scrollbar">
                     {activeTab === 'notifications' && (
-                        <div className="max-w-3xl space-y-6">
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">Notification Preferences</h3>
-                                <p className="text-sm text-slate-500 dark:text-gray-400">Control what emails you receive as an admin</p>
+                        <div style={{ maxWidth: '560px' }}>
+                            <div style={{ marginBottom: '14px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Notification Preferences</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Control what emails you receive as an admin</p>
                             </div>
-
-                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 divide-y divide-slate-100 dark:divide-gray-700">
-                                <div className="p-6 flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-1">New User Joined</h4>
-                                        <p className="text-xs text-slate-500 dark:text-gray-400">Get notified when someone joins your company</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.emailOnNewUser}
-                                            onChange={(e) => setSettings({ ...settings, emailOnNewUser: e.target.checked })}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 dark:peer-focus:ring-indigo-800/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                    </label>
-                                </div>
-
-                                <div className="p-6 flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Workspace Created</h4>
-                                        <p className="text-xs text-slate-500 dark:text-gray-400">Get notified when a new workspace is created</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.emailOnWorkspaceCreate}
-                                            onChange={(e) => setSettings({ ...settings, emailOnWorkspaceCreate: e.target.checked })}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 dark:peer-focus:ring-indigo-800/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                    </label>
-                                </div>
-
-                                <div className="p-6 flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Department Created</h4>
-                                        <p className="text-xs text-slate-500 dark:text-gray-400">Get notified when a new department is created</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.emailOnDepartmentCreate}
-                                            onChange={(e) => setSettings({ ...settings, emailOnDepartmentCreate: e.target.checked })}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 dark:peer-focus:ring-indigo-800/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                    </label>
-                                </div>
-
-                                <div className="p-6 flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Security Alerts</h4>
-                                        <p className="text-xs text-slate-500 dark:text-gray-400">Get notified of security events and suspicious activity</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.emailOnSecurityAlert}
-                                            onChange={(e) => setSettings({ ...settings, emailOnSecurityAlert: e.target.checked })}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 dark:peer-focus:ring-indigo-800/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                    </label>
-                                </div>
-
-                                <div className="p-6 flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Weekly Digest</h4>
-                                        <p className="text-xs text-slate-500 dark:text-gray-400">Receive a weekly summary of company activity</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.weeklyDigest}
-                                            onChange={(e) => setSettings({ ...settings, weeklyDigest: e.target.checked })}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 dark:peer-focus:ring-indigo-800/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                    </label>
+                            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                                <ToggleRow label="New User Joined" description="Get notified when someone joins your company" checked={settings.emailOnNewUser} onChange={v => set('emailOnNewUser', v)} />
+                                <ToggleRow label="Workspace Created" description="Get notified when a new workspace is created" checked={settings.emailOnWorkspaceCreate} onChange={v => set('emailOnWorkspaceCreate', v)} />
+                                <ToggleRow label="Department Created" description="Get notified when a new department is created" checked={settings.emailOnDepartmentCreate} onChange={v => set('emailOnDepartmentCreate', v)} />
+                                <ToggleRow label="Security Alerts" description="Get notified of security events and suspicious activity" checked={settings.emailOnSecurityAlert} onChange={v => set('emailOnSecurityAlert', v)} />
+                                <div style={{ borderBottom: 'none' }}>
+                                    <ToggleRow label="Weekly Digest" description="Receive a weekly summary of company activity" checked={settings.weeklyDigest} onChange={v => set('weeklyDigest', v)} />
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* USER DEFAULTS TAB */}
                     {activeTab === 'users' && (
-                        <div className="max-w-3xl space-y-6">
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">User Defaults</h3>
-                                <p className="text-sm text-slate-500 dark:text-gray-400">Set default settings for new users</p>
+                        <div style={{ maxWidth: '560px' }}>
+                            <div style={{ marginBottom: '14px' }}>
+                                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>User Defaults</h3>
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Set default settings for new users</p>
                             </div>
-
-                            <div className="bg-white dark:bg-gray-800 rounded-xl border border-slate-200 dark:border-gray-700 p-6 space-y-6">
-                                <div>
-                                    <label className="block text-sm font-bold text-slate-700 dark:text-gray-300 mb-2">Default Role for New Users</label>
-                                    <select
-                                        value={settings.defaultRole}
-                                        onChange={(e) => setSettings({ ...settings, defaultRole: e.target.value })}
-                                        className="w-full px-4 py-2 border border-slate-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                                    >
-                                        <option value="member">Member (Standard)</option>
-                                        <option value="manager">Manager</option>
-                                        <option value="guest">Guest (Limited)</option>
-                                    </select>
-                                    <p className="text-xs text-slate-400 dark:text-gray-500 mt-1">New users will be assigned this role by default</p>
-                                </div>
-
-                                <hr className="border-slate-100 dark:border-gray-700" />
-
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-1">Auto-Approve Domain Join</h4>
-                                        <p className="text-xs text-slate-500 dark:text-gray-400">Automatically approve users with verified domain email</p>
-                                    </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={settings.autoApproveJoin}
-                                            onChange={(e) => setSettings({ ...settings, autoApproveJoin: e.target.checked })}
-                                            className="sr-only peer"
-                                        />
-                                        <div className="w-11 h-6 bg-slate-200 dark:bg-gray-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300/50 dark:peer-focus:ring-indigo-800/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                                    </label>
-                                </div>
+                            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px', marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Default Role for New Users</label>
+                                <select value={settings.defaultRole} onChange={e => set('defaultRole', e.target.value)} style={inputSt}>
+                                    <option value="member">Member (Standard)</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="guest">Guest (Limited)</option>
+                                </select>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>New users will be assigned this role by default</p>
+                                <div style={{ margin: '14px 0', borderTop: '1px solid var(--border-subtle)' }} />
+                                <ToggleRow label="Auto-Approve Domain Join" description="Automatically approve users with verified domain email" checked={settings.autoApproveJoin} onChange={v => set('autoApproveJoin', v)} />
                             </div>
-
-                            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-4 flex gap-3">
-                                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                            <div style={{ background: 'var(--bg-active)', border: '1px solid var(--border-default)', padding: '12px 14px', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                <AlertCircle size={13} style={{ color: 'var(--text-secondary)', flexShrink: 0, marginTop: '1px' }} />
                                 <div>
-                                    <p className="text-sm font-bold text-blue-900 dark:text-blue-300">Note</p>
-                                    <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                                        These settings apply to new users joining the organization. Existing users are not affected.
-                                    </p>
+                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '3px' }}>Note</p>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.5' }}>These settings apply to new users joining. Existing users are not affected.</p>
                                 </div>
                             </div>
                         </div>
@@ -250,6 +144,20 @@ const AdminSettingsLimited = () => {
                 </div>
             </div>
         </div>
+    );
+};
+
+const SaveBtn = ({ saving, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={saving} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', borderRadius: '2px', opacity: saving ? 0.7 : 1, transition: 'all 150ms ease' }}>
+            {saving ? (
+                <><div style={{ width: '12px', height: '12px', border: '2px solid var(--bg-base)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> Saving...</>
+            ) : (
+                <><Check size={13} /> Save Changes</>
+            )}
+        </button>
     );
 };
 

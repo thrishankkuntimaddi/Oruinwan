@@ -2,8 +2,22 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings, Puzzle, FolderOpen, BookOpen } from "lucide-react";
+import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings, Puzzle, FolderOpen, BookOpen, ChevronDown } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
+
+// Icon map shared for workspace icons
+const ICON_MAP_LG = {
+    rocket: <Rocket size={18} />, briefcase: <Briefcase size={18} />, zap: <Zap size={18} />,
+    palette: <Palette size={18} />, microscope: <Microscope size={18} />, globe: <Globe size={18} />,
+    shield: <Shield size={18} />, trend: <TrendingUp size={18} />, bulb: <Lightbulb size={18} />,
+    flame: <Flame size={18} />, target: <Target size={18} />, trophy: <Trophy size={18} />,
+};
+const ICON_MAP_SM = {
+    rocket: <Rocket size={13} />, briefcase: <Briefcase size={13} />, zap: <Zap size={13} />,
+    palette: <Palette size={13} />, microscope: <Microscope size={13} />, globe: <Globe size={13} />,
+    shield: <Shield size={13} />, trend: <TrendingUp size={13} />, bulb: <Lightbulb size={13} />,
+    flame: <Flame size={13} />, target: <Target size={13} />, trophy: <Trophy size={13} />,
+};
 
 const IconSidebar = ({ onProfileClick }) => {
     const navigate = useNavigate();
@@ -11,14 +25,10 @@ const IconSidebar = ({ onProfileClick }) => {
     const { user } = useAuth();
     const { workspaces, activeWorkspace, setActiveWorkspace } = useWorkspace();
 
-    // ✅ CORRECT: Use WorkspaceContext as single source of truth
-    // IconSidebar is not always a direct child of route with :workspaceId
     const workspaceId = activeWorkspace?.id;
-
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
     const menuRef = useRef(null);
 
-    // Close menu when clicking outside
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -31,142 +41,112 @@ const IconSidebar = ({ onProfileClick }) => {
 
     const isActive = (itemPath) => {
         if (!workspaceId) return false;
-
         const path = location.pathname;
-
-        // Home highlighting: active for /home or /home/... (home-nested routes)
-        if (itemPath === "/home") {
-            return path.includes(`/workspace/${workspaceId}/home`);
-        }
-
-        // Channels highlighting: active for /channels or /channel/:id
-        if (itemPath === "/channels") {
-            return path.includes(`/workspace/${workspaceId}/channels`) ||
-                path.includes(`/workspace/${workspaceId}/channel/`);
-        }
-
-        // Messages highlighting: active for /messages or /dm/:id
-        // Note: we exclude /home/dm paths because they belong to the Home icon
-        if (itemPath === "/messages") {
-            return (path.includes(`/workspace/${workspaceId}/messages`) ||
-                path.includes(`/workspace/${workspaceId}/dm/`)) &&
-                !path.includes("/home/");
-        }
-
-        // Default prefix matching for other items
+        if (itemPath === "/home") return path.includes(`/workspace/${workspaceId}/home`);
+        if (itemPath === "/channels") return path.includes(`/workspace/${workspaceId}/channels`) || path.includes(`/workspace/${workspaceId}/channel/`);
+        if (itemPath === "/messages") return (path.includes(`/workspace/${workspaceId}/messages`) || path.includes(`/workspace/${workspaceId}/dm/`)) && !path.includes("/home/");
         const fullPath = `/workspace/${workspaceId}${itemPath}`;
         return path === fullPath || path.startsWith(fullPath + "/");
     };
 
     const navItems = [
-        { icon: <Home size={20} strokeWidth={2} />, path: "/home", label: "Home" },
-        { icon: <Hash size={20} strokeWidth={2} />, path: "/channels", label: "Channels" },
-        { icon: <MessageSquare size={20} strokeWidth={2} />, path: "/messages", label: "Messages" },
-        { icon: <CheckSquare size={20} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
-        { icon: <FileText size={20} strokeWidth={2} />, path: "/notes", label: "Notes" },
-        { icon: <FolderOpen size={20} strokeWidth={2} />, path: "/files", label: "Files" },
-        { icon: <BookOpen size={20} strokeWidth={2} />, path: "/knowledge", label: "Knowledge" },
-        { icon: <Video size={20} strokeWidth={2} />, path: "/huddles", label: "Huddles" },
-        { icon: <Puzzle size={20} strokeWidth={2} />, path: "/apps", label: "Apps" },
-        // Only show Updates for company users
-        ...(user?.userType === "company" ? [
-            { icon: <Newspaper size={20} strokeWidth={2} />, path: "/updates", label: "Updates" }
-        ] : []),
-
-        // Admin Dashboard Link
-        ...((['owner', 'admin'].includes(user?.companyRole) || user?.isCoOwner) ? [
-            { icon: <Shield size={20} strokeWidth={2} />, path: "/admin/analytics", label: "Admin", absolute: true }
-        ] : []),
-
-        // Manager Dashboard Link
-        ...((user?.companyRole === 'manager' || (user?.managedDepartments && user.managedDepartments.length > 0)) ? [
-            { icon: <Briefcase size={20} strokeWidth={2} />, path: "/manager/dashboard/overview", label: "Manager", absolute: true }
-        ] : []),
+        { icon: <Home size={19} strokeWidth={2} />, path: "/home", label: "Home" },
+        { icon: <Hash size={19} strokeWidth={2} />, path: "/channels", label: "Channels" },
+        { icon: <MessageSquare size={19} strokeWidth={2} />, path: "/messages", label: "Messages" },
+        { icon: <CheckSquare size={19} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
+        { icon: <FileText size={19} strokeWidth={2} />, path: "/notes", label: "Notes" },
+        { icon: <FolderOpen size={19} strokeWidth={2} />, path: "/files", label: "Files" },
+        { icon: <BookOpen size={19} strokeWidth={2} />, path: "/knowledge", label: "Knowledge" },
+        { icon: <Video size={19} strokeWidth={2} />, path: "/huddles", label: "Huddles" },
+        { icon: <Puzzle size={19} strokeWidth={2} />, path: "/apps", label: "Apps" },
+        ...(user?.userType === "company" ? [{ icon: <Newspaper size={19} strokeWidth={2} />, path: "/updates", label: "Updates" }] : []),
+        ...((['owner', 'admin'].includes(user?.companyRole) || user?.isCoOwner) ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/admin/analytics", label: "Admin", absolute: true }] : []),
+        ...((user?.companyRole === 'manager' || (user?.managedDepartments && user.managedDepartments.length > 0)) ? [{ icon: <Briefcase size={19} strokeWidth={2} />, path: "/manager/dashboard/overview", label: "Manager", absolute: true }] : []),
     ];
 
-    return (
-        <div className="w-[60px] bg-white dark:bg-gray-900 flex flex-col items-center py-3 border-r border-gray-200 dark:border-gray-800 z-50 shadow-sm relative shrink-0">
-            {/* Top Space */}
-            <div className="h-1"></div>
+    // ── Shared style helpers ──────────────────────────────────────────
+    const btnBase = {
+        width: '36px', height: '36px', borderRadius: '2px', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', background: 'none',
+        border: 'none', cursor: 'pointer', transition: 'background 150ms ease, color 150ms ease',
+        color: 'var(--text-muted)',
+    };
+    const btnActive = { ...btnBase, background: 'var(--bg-hover)', color: 'var(--accent)' };
 
-            {/* Workspace Switcher */}
-            <div className="relative mb-3" ref={menuRef}>
+    return (
+        <div style={{
+            width: '52px', background: 'var(--bg-base)', display: 'flex', flexDirection: 'column',
+            alignItems: 'center', paddingTop: '10px', paddingBottom: '8px',
+            borderRight: '1px solid var(--border-subtle)', zIndex: 50,
+            position: 'relative', flexShrink: 0, fontFamily: 'var(--font)',
+        }}>
+
+            {/* Workspace switcher badge */}
+            <div style={{ position: 'relative', marginBottom: '10px' }} ref={menuRef}>
                 <button
-                    onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
-                    style={{ backgroundColor: activeWorkspace?.color || '#2563eb' }}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-bold text-xl cursor-pointer hover:opacity-90 transition-opacity shadow-sm relative"
+                    onClick={() => setShowWorkspaceMenu(s => !s)}
+                    title={activeWorkspace?.name || 'Switch Workspace'}
+                    style={{
+                        width: '36px', height: '36px', borderRadius: '2px', border: 'none', cursor: 'pointer',
+                        backgroundColor: activeWorkspace?.color || '#b8956a',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff', position: 'relative', transition: 'opacity 150ms ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                 >
-                    {(() => {
-                        // Icon mapping for Lucide components
-                        const iconMap = {
-                            'rocket': <Rocket size={20} />,
-                            'briefcase': <Briefcase size={20} />,
-                            'zap': <Zap size={20} />,
-                            'palette': <Palette size={20} />,
-                            'microscope': <Microscope size={20} />,
-                            'globe': <Globe size={20} />,
-                            'shield': <Shield size={20} />,
-                            'trend': <TrendingUp size={20} />,
-                            'bulb': <Lightbulb size={20} />,
-                            'flame': <Flame size={20} />,
-                            'target': <Target size={20} />,
-                            'trophy': <Trophy size={20} />
-                        };
-                        const icon = activeWorkspace?.icon || 'rocket';
-                        return iconMap[icon] || iconMap['rocket'];
-                    })()}
-                    <div className="absolute -bottom-1 -right-1 bg-white dark:bg-gray-800 rounded-full p-0.5 border border-gray-200 dark:border-gray-700">
-                        <svg className="w-2 h-2 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M19 9l-7 7-7-7" /></svg>
+                    {ICON_MAP_LG[activeWorkspace?.icon] || ICON_MAP_LG.rocket}
+
+                    {/* Chevron badge */}
+                    <div style={{
+                        position: 'absolute', bottom: '-3px', right: '-3px',
+                        width: '12px', height: '12px', borderRadius: '50%',
+                        background: 'var(--bg-base)', border: '1px solid var(--border-subtle)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                        <ChevronDown size={7} style={{ color: 'var(--text-muted)' }} />
                     </div>
                 </button>
 
-                {/* Dropdown Menu */}
+                {/* Workspace Switcher Dropdown */}
                 {showWorkspaceMenu && (
-                    <div className="absolute left-14 top-0 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-[100] overflow-hidden animate-fade-in">
-                        <div className="p-3 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                    <div style={{
+                        position: 'absolute', left: '46px', top: 0, width: '220px',
+                        background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+                        borderRadius: '2px', zIndex: 100, overflow: 'hidden',
+                        animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)',
+                    }}>
+                        {/* Header */}
+                        <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                             <button
-                                onClick={() => navigate("/workspaces")}
-                                className="w-full text-left text-sm font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center group"
+                                onClick={() => { navigate("/workspaces"); setShowWorkspaceMenu(false); }}
+                                style={{ width: '100%', textAlign: 'left', fontSize: '12px', fontWeight: 600, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: '150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                             >
                                 <span>Manage Workspaces</span>
-                                <span className="ml-auto group-hover:translate-x-1 transition-transform">→</span>
+                                <span>→</span>
                             </button>
                         </div>
-                        <div className="py-2">
-                            <div className="px-4 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Switch to</div>
+
+                        {/* Workspace list */}
+                        <div style={{ padding: '4px 0' }}>
+                            <div style={{ padding: '4px 12px', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Switch to</div>
                             {workspaces.map(ws => (
                                 <button
                                     key={ws.id}
-                                    onClick={() => {
-                                        setActiveWorkspace(ws);
-                                        setShowWorkspaceMenu(false);
-                                        navigate(`/workspace/${ws.id}/home`);
-                                    }}
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 flex items-center gap-3 transition-colors"
+                                    onClick={() => { setActiveWorkspace(ws); setShowWorkspaceMenu(false); navigate(`/workspace/${ws.id}/home`); }}
+                                    style={{ width: '100%', textAlign: 'left', padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '10px', background: ws.id === activeWorkspace?.id ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = ws.id === activeWorkspace?.id ? 'var(--bg-hover)' : 'none'}
                                 >
-                                    <div
-                                        style={{ backgroundColor: ws.color || '#2563eb' }}
-                                        className="w-6 h-6 rounded text-white flex items-center justify-center text-xs font-bold"
-                                    >
-                                        {(() => {
-                                            const iconMap = {
-                                                'rocket': <Rocket size={14} />,
-                                                'briefcase': <Briefcase size={14} />,
-                                                'zap': <Zap size={14} />,
-                                                'palette': <Palette size={14} />,
-                                                'microscope': <Microscope size={14} />,
-                                                'globe': <Globe size={14} />,
-                                                'shield': <Shield size={14} />,
-                                                'trend': <TrendingUp size={14} />,
-                                                'bulb': <Lightbulb size={14} />,
-                                                'flame': <Flame size={14} />,
-                                                'target': <Target size={14} />,
-                                                'trophy': <Trophy size={14} />
-                                            };
-                                            return iconMap[ws.icon] || iconMap['rocket'];
-                                        })()}
+                                    <div style={{ width: '22px', height: '22px', borderRadius: '2px', backgroundColor: ws.color || '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                                        {ICON_MAP_SM[ws.icon] || ICON_MAP_SM.rocket}
                                     </div>
-                                    <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">{ws.name}</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)' }}>{ws.name}</span>
+                                    {ws.id === activeWorkspace?.id && (
+                                        <div style={{ marginLeft: 'auto', width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
+                                    )}
                                 </button>
                             ))}
                         </div>
@@ -175,27 +155,37 @@ const IconSidebar = ({ onProfileClick }) => {
             </div>
 
             {/* Nav Icons */}
-            <div className="flex-1 flex flex-col space-y-1 w-full items-center overflow-y-auto no-scrollbar">
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', width: '100%', alignItems: 'center', overflowY: 'auto', padding: '2px 0' }} className="no-scrollbar">
                 {navItems.map((item) => {
                     const targetPath = item.absolute
                         ? item.path
-                        : (workspaceId
-                            ? `/workspace/${workspaceId}${item.path}`
-                            : '/workspaces');
+                        : (workspaceId ? `/workspace/${workspaceId}${item.path}` : '/workspaces');
+                    const active = isActive(item.path);
 
                     return (
-                        <div key={item.path} className="relative group">
+                        <div key={item.path} style={{ position: 'relative' }} className="group">
                             <button
                                 onClick={() => navigate(targetPath)}
-                                className={`w-9 h-9 rounded-xl flex items-center justify-center text-xl transition-all ${isActive(item.path)
-                                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                                    : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
-                                    }`}
+                                style={active ? btnActive : btnBase}
+                                onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                                onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; } }}
+                                title={item.label}
                             >
+                                {/* Active indicator bar */}
+                                {active && (
+                                    <div style={{ position: 'absolute', left: 0, top: '20%', height: '60%', width: '2px', background: 'var(--accent)', borderRadius: '0 2px 2px 0' }} />
+                                )}
                                 {item.icon}
                             </button>
                             {/* Tooltip */}
-                            <div className="absolute left-12 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                            <div style={{
+                                position: 'absolute', left: '44px', top: '50%', transform: 'translateY(-50%)',
+                                background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+                                color: 'var(--text-primary)', fontSize: '11px', fontWeight: 500,
+                                padding: '4px 8px', borderRadius: '2px', whiteSpace: 'nowrap',
+                                pointerEvents: 'none', zIndex: 50, opacity: 0, transition: 'opacity 100ms ease',
+                                fontFamily: 'var(--font)',
+                            }} className="group-hover:opacity-100">
                                 {item.label}
                             </div>
                         </div>
@@ -203,31 +193,43 @@ const IconSidebar = ({ onProfileClick }) => {
                 })}
             </div>
 
-            {/* Settings and Profile Icons */}
-            <div className="mt-auto space-y-2 pb-1">
-                {/* Settings Button */}
-                <div className="relative group">
+            {/* Bottom: Settings + Profile */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', paddingTop: '8px' }}>
+                {/* Settings */}
+                <div style={{ position: 'relative' }} className="group">
                     <button
                         onClick={() => navigate("/settings", { state: { from: location.pathname } })}
-                        className="w-9 h-9 rounded-xl flex items-center justify-center transition-all text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
+                        style={btnBase}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        title="Settings"
                     >
-                        <Settings size={20} strokeWidth={2} />
+                        <Settings size={19} strokeWidth={2} />
                     </button>
-                    {/* Tooltip */}
-                    <div className="absolute left-12 top-1/2 -translate-y-1/2 bg-gray-800 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-lg">
+                    <div style={{
+                        position: 'absolute', left: '44px', top: '50%', transform: 'translateY(-50%)',
+                        background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+                        color: 'var(--text-primary)', fontSize: '11px', fontWeight: 500,
+                        padding: '4px 8px', borderRadius: '2px', whiteSpace: 'nowrap',
+                        pointerEvents: 'none', zIndex: 50, opacity: 0, transition: 'opacity 100ms ease',
+                        fontFamily: 'var(--font)',
+                    }} className="group-hover:opacity-100">
                         Settings
                     </div>
                 </div>
 
-                {/* Profile Icon */}
-                <div onClick={onProfileClick} className="cursor-pointer">
+                {/* Profile */}
+                <div onClick={onProfileClick} style={{ cursor: 'pointer', transition: 'opacity 150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    title={user?.username || 'Profile'}
+                >
                     <Avatar
                         src={user?.profilePicture}
                         fallback={user?.username || "User"}
                         alt={user?.username}
                         status={user?.userStatus === "dnd" ? "busy" : user?.userStatus === "away" ? "away" : "online"}
-                        size="md"
-                        className="hover:ring-2 hover:ring-gray-300 dark:hover:ring-gray-500 transition-all border-2 border-transparent"
+                        size="sm"
                     />
                 </div>
             </div>

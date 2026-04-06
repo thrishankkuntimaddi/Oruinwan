@@ -3,120 +3,178 @@ import api from '@services/api';
 import { Globe, MessageSquare, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const getPlanColor = (plan) => {
+    if (plan === 'enterprise') return 'var(--accent)';
+    if (plan === 'professional') return 'var(--state-success)';
+    return 'var(--text-muted)';
+};
+
 const ActiveCompanies = () => {
     const [companies, setCompanies] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
-    useEffect(() => {
-        fetchCompanies();
-    }, []);
+    useEffect(() => { fetchCompanies(); }, []);
 
     const fetchCompanies = async () => {
         try {
-            const res = await api.get(`/api/admin/active-companies`);
+            const res = await api.get('/api/admin/active-companies');
             setCompanies(res.data);
-            setLoading(false);
         } catch (err) {
             console.error(err);
+        } finally {
             setLoading(false);
         }
     };
 
     const filtered = companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading companies...</div>;
+    if (loading) return <LoadingSpinner />;
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white">Active Companies</h2>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                    <input
-                        type="text"
-                        placeholder="Search companies..."
-                        className="pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 transition-colors w-64"
-                        value={searchTerm}
-                        onChange={e => setSearchTerm(e.target.value)}
-                    />
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', margin: 0 }}>Active Companies</h1>
+                <SearchInput value={searchTerm} onChange={setSearchTerm} placeholder="Search companies..." />
             </div>
 
-            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 overflow-hidden transition-colors">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left bg-white dark:bg-slate-800">
-                        <thead className="bg-gray-50 dark:bg-slate-900/50 border-b border-gray-100 dark:border-slate-700">
-                            <tr>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Company</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Plan</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Admin</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Joined</th>
-                                <th className="px-6 py-4 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase text-right">Actions</th>
+            <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
+                                {['Company', 'Plan', 'Admin', 'Joined', 'Actions'].map((col, i) => (
+                                    <th key={col} style={{ padding: '10px 16px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: i === 4 ? 'right' : 'left' }}>{col}</th>
+                                ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
+                        <tbody>
                             {filtered.map(company => (
-                                <tr key={company._id} className="hover:bg-gray-50/50 dark:hover:bg-slate-700/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold shrink-0">
-                                                {company.logo ? <img src={company.logo} alt="" className="w-full h-full object-cover rounded-xl" /> : company.name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-gray-900 dark:text-white">{company.name}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                                                    <Globe size={10} /> {company.domain || "No domain"}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide 
-                                            ${company.plan === 'enterprise' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300' :
-                                                company.plan === 'professional' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' :
-                                                    'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                                            {company.plan || 'Free'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">{company.admins[0]?.user?.username || 'Unknown'}</p>
-                                        <p className="text-xs text-gray-400">{company.billingEmail}</p>
-                                    </td>
-                                    <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                        {new Date(company.createdAt).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => navigate(`/chttrix-admin/dm/${company._id}`)}
-                                                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-xs font-bold text-gray-700 dark:text-white hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-100 dark:hover:border-indigo-500/30 transition-all shadow-sm"
-                                                title="Message Admin"
-                                            >
-                                                <MessageSquare size={14} />
-                                            </button>
-                                            {/* TODO: Add view details modal or page */}
-                                            <button
-                                                className="inline-flex items-center gap-2 px-4 py-2 bg-gray-900 dark:bg-indigo-600 border border-transparent rounded-xl text-xs font-bold text-white hover:bg-black dark:hover:bg-indigo-700 transition-all shadow-md shadow-gray-200 dark:shadow-none"
-                                            >
-                                                Manage
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                <CompanyRow key={company._id} company={company} navigate={navigate} />
                             ))}
                         </tbody>
                     </table>
+                    {filtered.length === 0 && (
+                        <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
+                            No active companies found.
+                        </div>
+                    )}
                 </div>
-                {filtered.length === 0 && (
-                    <div className="p-12 text-center text-gray-400">
-                        No active companies found.
-                    </div>
-                )}
             </div>
         </div>
     );
 };
+
+const CompanyRow = ({ company, navigate }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <tr
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{ background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', transition: 'background 150ms ease' }}
+        >
+            <td style={{ padding: '14px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+                        {company.logo ? <img src={company.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : company.name.charAt(0)}
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{company.name}</div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                            <Globe size={10} /> {company.domain || 'No domain'}
+                        </div>
+                    </div>
+                </div>
+            </td>
+            <td style={{ padding: '14px 16px' }}>
+                <span style={{
+                    fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: getPlanColor(company.plan),
+                    padding: '2px 8px',
+                    border: `1px solid ${getPlanColor(company.plan)}`
+                }}>
+                    {company.plan || 'Free'}
+                </span>
+            </td>
+            <td style={{ padding: '14px 16px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{company.admins[0]?.user?.username || 'Unknown'}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{company.billingEmail}</div>
+            </td>
+            <td style={{ padding: '14px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {new Date(company.createdAt).toLocaleDateString()}
+            </td>
+            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                    <IconBtn icon={MessageSquare} title="Message Admin" onClick={() => navigate(`/chttrix-admin/dm/${company._id}`)} />
+                    <PrimaryBtn label="Manage" />
+                </div>
+            </td>
+        </tr>
+    );
+};
+
+const IconBtn = ({ icon: Icon, title, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} title={title} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ width: '32px', height: '32px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', transition: 'all 150ms ease' }}>
+            <Icon size={14} />
+        </button>
+    );
+};
+
+const PrimaryBtn = ({ label, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ padding: '6px 12px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, borderRadius: '2px', cursor: 'pointer', transition: 'all 150ms ease' }}>
+            {label}
+        </button>
+    );
+};
+
+const SearchInput = ({ value, onChange, placeholder }) => (
+    <div style={{ position: 'relative' }}>
+        <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+        <input
+            type="text"
+            placeholder={placeholder}
+            value={value}
+            onChange={e => onChange(e.target.value)}
+            style={{
+                paddingLeft: '32px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px',
+                background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+                color: 'var(--text-primary)', fontSize: '13px',
+                outline: 'none', width: '220px',
+                fontFamily: 'inherit'
+            }}
+        />
+    </div>
+);
+
+const LoadingSpinner = () => (
+    <div style={{ padding: '20px', background: 'var(--bg-base)' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <div className="sk" style={{ height: '32px', flex: 1 }} />
+            <div className="sk" style={{ height: '32px', width: '120px' }} />
+        </div>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '16px' }}>
+                {[120,60,60,70,40].map((w,i) => <div key={i} className="sk" style={{ height: '8px', width: `${w}px` }} />)}
+            </div>
+            {[1,2,3,4,5].map(i => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '11px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div className="sk" style={{ width: '28px', height: '28px', flexShrink: 0 }} />
+                        <div><div className="sk" style={{ height: '10px', width: '120px', marginBottom: '4px' }} /><div className="sk" style={{ height: '8px', width: '80px' }} /></div>
+                    </div>
+                    <div className="sk" style={{ height: '18px', width: '60px' }} />
+                    <div className="sk" style={{ height: '10px', width: '40px' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div className="sk" style={{ width: '6px', height: '6px', borderRadius: '50%' }} /><div className="sk" style={{ height: '8px', width: '40px' }} /></div>
+                    <div style={{ display: 'flex', gap: '4px' }}><div className="sk" style={{ height: '22px', width: '22px' }} /><div className="sk" style={{ height: '22px', width: '22px' }} /></div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default ActiveCompanies;

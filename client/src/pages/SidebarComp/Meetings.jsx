@@ -43,7 +43,7 @@ const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
 
             {/* Avatar */}
             <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${color} p-[2px] shadow-2xl`}>
-                <div className="w-full h-full rounded-full bg-[#1a1b23] flex items-center justify-center">
+                <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: '#111' }}>
                     <span className="text-3xl font-bold text-white">{getInitials(label)}</span>
                 </div>
             </div>
@@ -71,56 +71,58 @@ const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
 
 // ── Landing / No Huddle Selected View ─────────────────────────────────────
 const LandingView = ({ onStart, onSchedule, starting }) => (
-    <div className="h-full flex flex-col items-center justify-center text-center px-8 bg-gray-50 dark:bg-gray-950">
-        {/* Ambient blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/3 left-1/4 w-[40vw] h-[40vw] bg-indigo-500/5 rounded-full blur-[100px]" />
-            <div className="absolute bottom-1/3 right-1/4 w-[30vw] h-[30vw] bg-purple-500/5 rounded-full blur-[100px]" />
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px', background: '#0c0c0c', position: 'relative', overflow: 'hidden' }}>
+        {/* Ambient glow */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', top: '30%', left: '20%', width: '40vw', height: '40vw', background: 'rgba(184,149,106,0.04)', borderRadius: '50%', filter: 'blur(100px)' }} />
+            <div style={{ position: 'absolute', bottom: '25%', right: '20%', width: '30vw', height: '30vw', background: 'rgba(184,149,106,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
         </div>
 
-        <div className="relative z-10 flex flex-col items-center">
-            <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-indigo-500/10">
-                <Video size={36} className="text-indigo-600 dark:text-indigo-400" />
+        <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: '88px', height: '88px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px' }}>
+                <Video size={34} style={{ color: '#b8956a' }} />
             </div>
 
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">
+            <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#e4e4e4', marginBottom: '10px', letterSpacing: '-0.02em', fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Video Huddles Center
             </h2>
-            <p className="text-gray-500 dark:text-gray-400 max-w-sm mb-8 text-base leading-relaxed">
+            <p style={{ color: 'rgba(228,228,228,0.45)', maxWidth: '360px', marginBottom: '32px', fontSize: '14px', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Start a real-time video call with your team, or select an active huddle from the sidebar to join.
             </p>
 
-            <div className="flex flex-col gap-3 w-full max-w-xs">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '260px' }}>
                 <button
                     onClick={onStart}
                     disabled={starting}
-                    className="flex items-center justify-center gap-2.5 w-full px-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-2xl transition-all shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '12px 24px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontWeight: 700, fontSize: '14px', cursor: starting ? 'not-allowed' : 'pointer', opacity: starting ? 0.6 : 1, transition: 'opacity 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
                     {starting ? (
                         <>
-                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            <span style={{ width: '14px', height: '14px', border: '2px solid #0c0c0c', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
                             Starting...
                         </>
                     ) : (
                         <>
-                            <Radio size={17} />
+                            <Radio size={16} />
                             Start Instant Huddle
                         </>
                     )}
                 </button>
                 <button
                     onClick={onSchedule}
-                    className="flex items-center justify-center gap-2 w-full px-6 py-3 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-sm"
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '10px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(228,228,228,0.6)', fontWeight: 500, fontSize: '13px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e4e4e4'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
                 >
-                    <Calendar size={14} />
+                    <Calendar size={13} />
                     Schedule for Later
                 </button>
             </div>
 
             {/* Feature Pills */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-10">
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '36px' }}>
                 {["HD Video", "Screen Share", "Real-time Audio", "Participants List", "In-call Chat"].map(f => (
-                    <span key={f} className="px-3 py-1 bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-xs rounded-full font-medium">
+                    <span key={f} style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(228,228,228,0.35)', fontSize: '11px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {f}
                     </span>
                 ))}
@@ -143,11 +145,11 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
     }, []);
 
     return (
-        <div className="h-full w-full flex flex-col bg-[#0F1115] text-white overflow-hidden relative">
-            {/* Ambient Background */}
+        <div className="h-full w-full flex flex-col text-white overflow-hidden relative" style={{ background: '#0c0c0c' }}>
+            {/* Ambient Background — amber tones only */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] bg-purple-600/15 rounded-full blur-[150px] animate-pulse" />
-                <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] bg-blue-600/15 rounded-full blur-[150px] animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full" style={{ background: 'rgba(184,149,106,0.04)', filter: 'blur(150px)', animation: 'pulse 4s ease-in-out infinite' }} />
+                <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full" style={{ background: 'rgba(184,149,106,0.025)', filter: 'blur(150px)', animation: 'pulse 4s ease-in-out infinite', animationDelay: '1s' }} />
             </div>
 
             {/* ── Header ── */}
@@ -237,9 +239,8 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                     {/* Screen Share */}
                     <button
                         onClick={onToggleScreen}
-                        className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${isScreenSharing ? 'bg-blue-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
-                            }`}
-                        style={{ width: 52, height: 52 }}
+                        className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${isScreenSharing ? 'text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'}`}
+                        style={{ width: 52, height: 52, ...(isScreenSharing ? { background: '#b8956a' } : {}) }}
                         title="Share Screen"
                     >
                         <Monitor size={20} />
@@ -261,9 +262,8 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                     {/* Chat */}
                     <button
                         onClick={() => setShowChat(c => !c)}
-                        className={`relative flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${showChat ? 'bg-indigo-600 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
-                            }`}
-                        style={{ width: 52, height: 52 }}
+                        className={`relative flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${showChat ? 'text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'}`}
+                        style={{ width: 52, height: 52, ...(showChat ? { background: '#b8956a' } : {}) }}
                     >
                         <MessageSquare size={20} />
                     </button>
@@ -276,7 +276,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                     >
                         <Users size={20} />
                         {participants.length > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full text-[9px] font-bold flex items-center justify-center">
+                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full text-[9px] font-bold flex items-center justify-center" style={{ background: '#b8956a', color: '#0c0c0c' }}>
                                 {participants.length}
                             </span>
                         )}
@@ -301,22 +301,22 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
 
 // ── Connecting State ───────────────────────────────────────────────────────
 const ConnectingView = () => (
-    <div className="h-full flex flex-col items-center justify-center bg-[#0F1115] text-white">
+    <div className="h-full flex flex-col items-center justify-center text-white" style={{ background: '#0c0c0c' }}>
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-indigo-600/10 rounded-full blur-[150px]" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full" style={{ background: 'rgba(184,149,106,0.06)', filter: 'blur(150px)' }} />
         </div>
         <div className="relative z-10 flex flex-col items-center gap-6">
             <div className="relative">
-                <div className="w-28 h-28 rounded-full border border-white/20 animate-ping absolute inset-0" />
-                <div className="w-28 h-28 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-[2px] shadow-2xl shadow-indigo-500/50 relative z-10">
-                    <div className="w-full h-full rounded-full bg-[#1a1b23] flex items-center justify-center">
-                        <Radio size={32} className="text-indigo-400 animate-pulse" />
+                <div className="w-28 h-28 rounded-full border border-white/10 animate-ping absolute inset-0" />
+                <div className="w-28 h-28 rounded-full p-[2px] shadow-2xl relative z-10" style={{ background: 'linear-gradient(135deg, #b8956a, #8a6a47)' }}>
+                    <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: '#111' }}>
+                        <Radio size={32} style={{ color: '#b8956a', animation: 'pulse 1.5s ease-in-out infinite' }} />
                     </div>
                 </div>
             </div>
             <div className="text-center">
                 <h3 className="text-xl font-bold text-white mb-1">Connecting...</h3>
-                <p className="text-white/40 text-sm">Establishing secure connection</p>
+                <p className="text-sm" style={{ color: 'rgba(228,228,228,0.4)' }}>Establishing secure connection</p>
             </div>
         </div>
     </div>

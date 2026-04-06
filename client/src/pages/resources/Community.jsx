@@ -1,303 +1,126 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, Github, Calendar, Lightbulb, Users, Shield, Mail } from 'lucide-react';
+// Community.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import PublicPageShell from '../../components/layout/PublicPageShell';
+import { Users, MessageSquare, Sparkles, Globe, ArrowRight, Hash, Star } from 'lucide-react';
 
-const Community = () => {
-    const navigate = useNavigate();
+const CHANNELS = [
+    { name: '#announcements',     members: '2.4k', desc: 'Official updates from the Chttrix team',      color: '#b8956a', locked: true },
+    { name: '#general',           members: '2.1k', desc: 'Open discussion about Chttrix and productivity', color: '#6ea8fe' },
+    { name: '#feature-requests',  members: '890',  desc: 'Submit and vote on product ideas',            color: '#5aba8a' },
+    { name: '#engineering',       members: '640',  desc: 'Technical deep-dives and API discussion',     color: '#a78bfa' },
+    { name: '#show-and-tell',     members: '510',  desc: 'Share how you use Chttrix in your workflow', color: '#fbbf24' },
+    { name: '#newcomers',         members: '1.2k', desc: 'New to Chttrix? Start here',                  color: '#34d399' },
+];
 
-    const communityFeatures = [
-        {
-            icon: <MessageSquare className="w-8 h-8" />,
-            title: 'Ask Questions',
-            description: 'Get help from other users and learn best practices',
-            color: 'blue'
-        },
-        {
-            icon: <Lightbulb className="w-8 h-8" />,
-            title: 'Share Feedback',
-            description: 'Submit feature requests and vote on ideas from others',
-            color: 'yellow'
-        },
-        {
-            icon: <Github className="w-8 h-8" />,
-            title: 'Report Bugs',
-            description: 'Help us identify and fix unexpected behavior',
-            color: 'red'
-        },
-        {
-            icon: <Users className="w-8 h-8" />,
-            title: 'Learn Together',
-            description: 'Discover workflows and collaboration tips',
-            color: 'green'
-        },
-        {
-            icon: <Shield className="w-8 h-8" />,
-            title: 'Stay Updated',
-            description: 'Get notified about product changes and improvements',
-            color: 'purple'
-        }
-    ];
+const SPOTLIGHTS = [
+    { user: 'MH', name: 'Maya H.',      role: 'CTO at Fluxio',         quote: 'We replaced four tools with Chttrix. Onboarding time dropped by 60%.', stars: 5 },
+    { user: 'AR', name: 'Arjun R.',     role: 'Head of Product, Cenda', quote: 'The AI summaries alone save me about 45 minutes a day.', stars: 5 },
+    { user: 'PL', name: 'Priya L.',     role: 'Engineering Lead',       quote: 'Channels + Tasks in one place solved a coordination nightmare we had.', stars: 5 },
+];
 
-    const colorClasses = {
-        blue: 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400',
-        yellow: 'bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400',
-        red: 'bg-red-100 dark:bg-red-900/20 text-red-600 dark:text-red-400',
-        green: 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400',
-        purple: 'bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400',
-        indigo: 'bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400'
-    };
+const Star5 = () => (
+    <div style={{ display: 'flex', gap: '2px' }}>
+        {Array(5).fill(0).map((_, i) => <Star key={i} size={11} style={{ color: '#b8956a', fill: '#b8956a' }} />)}
+    </div>
+);
 
+export default function Community() {
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
-            {/* Navbar */}
-            <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
-                        <span className="font-black text-2xl tracking-tighter">Chttrix</span>
-                    </div>
-                    <button onClick={() => navigate("/")} className="text-sm font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-white transition-colors flex items-center gap-2">
-                        <ArrowLeft size={16} /> Back to Home
-                    </button>
-                </div>
-            </nav>
-
-            {/* Hero Section */}
-            <header className="pt-40 pb-20 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 dark:from-[#0B0F19] dark:via-[#0F1623] dark:to-[#030712] text-center px-6 border-b border-slate-200 dark:border-white/5">
-                <div className="max-w-4xl mx-auto">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 font-bold mb-8">
-                        <Users size={16} />
-                        Join the Community
-                    </div>
-                    <h1 className="text-5xl md:text-6xl font-black mb-6 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
-                        Join the Chttrix Community
-                    </h1>
-                    <p className="text-xl text-slate-600 dark:text-slate-300 mb-4 leading-relaxed">
-                        The Chttrix community is a place for users, builders, and teams to connect, share feedback, and help shape the future of secure collaboration.
-                    </p>
-                    <p className="text-lg text-slate-500 dark:text-slate-400 font-bold">
-                        We're building Chttrix in the open — and your input matters.
-                    </p>
-                </div>
-            </header>
-
-            {/* What You Can Do Here */}
-            <section className="py-20 container mx-auto px-6 max-w-6xl">
-                <div className="text-center mb-16">
-                    <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">What You Can Do Here</h2>
-                    <p className="text-lg text-slate-500 dark:text-slate-400">
-                        This is not a support-only space — it's a place for discussion and collaboration.
-                    </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {communityFeatures.map((feature, index) => (
-                        <div key={index} className="bg-white dark:bg-[#0B0F19] p-8 rounded-3xl border border-slate-200 dark:border-white/5 hover:border-indigo-500 dark:hover:border-indigo-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
-                            <div className={`w-16 h-16 ${colorClasses[feature.color]} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                {feature.icon}
-                            </div>
-                            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-3">{feature.title}</h3>
-                            <p className="text-slate-500 dark:text-slate-400 leading-relaxed">{feature.description}</p>
+        <PublicPageShell title="Community">
+            {/* Hero */}
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '80px 0 64px' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px', display: 'flex', gap: '60px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 400px' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
+                            <Users size={11} style={{ color: '#b8956a' }} />
+                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Community</span>
                         </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* Where the Community Lives */}
-            <section className="py-20 bg-white dark:bg-[#0B0F19] border-y border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6 max-w-5xl">
-                    <div className="text-center mb-16">
-                        <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Where the Community Lives</h2>
-                        <p className="text-lg text-slate-500 dark:text-slate-400">
-                            Currently, the Chttrix community is hosted across the following channels
+                        <h1 style={{ fontSize: 'clamp(28px,4.5vw,48px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '16px' }}>
+                            Join the Chttrix community.
+                        </h1>
+                        <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.8', marginBottom: '28px', maxWidth: '460px' }}>
+                            Connect with thousands of users, share workflows, request features, and get help from people who use Chttrix every day.
                         </p>
+                        <a href="https://discord.gg/chttrix" target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', background: '#b8956a', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, textDecoration: 'none', transition: 'opacity 150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                            Join Discord Community <ArrowRight size={14} />
+                        </a>
                     </div>
-
-                    <div className="grid md:grid-cols-2 gap-8">
-                        {/* Community Forum */}
-                        <div className="bg-slate-50 dark:bg-[#030712] p-10 rounded-3xl border-2 border-slate-200 dark:border-white/10 hover:border-blue-500 dark:hover:border-blue-500 transition-all group">
-                            <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6">
-                                <MessageSquare size={32} />
+                    <div style={{ flex: '1 1 280px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        {[
+                            { value: '2,400+', label: 'Members' },
+                            { value: '340+',   label: 'Discussions/mo' },
+                            { value: '98%',    label: 'Questions answered' },
+                            { value: '< 2h',   label: 'Avg response time' },
+                        ].map(s => (
+                            <div key={s.label} style={{ background: '#111', padding: '20px', textAlign: 'center' }}>
+                                <p style={{ fontSize: '24px', fontWeight: 700, color: '#b8956a', letterSpacing: '-0.03em', marginBottom: '4px' }}>{s.value}</p>
+                                <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</p>
                             </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">Community Forum</h3>
-                            <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-                                Ask questions, share ideas, and discuss workflows with fellow Chttrix users.
-                            </p>
-                            <button className="text-blue-600 dark:text-blue-400 font-bold hover:gap-2 transition-all flex items-center gap-1">
-                                Coming Soon →
-                            </button>
-                        </div>
-
-                        {/* GitHub Discussions */}
-                        <div className="bg-slate-50 dark:bg-[#030712] p-10 rounded-3xl border-2 border-slate-200 dark:border-white/10 hover:border-purple-500 dark:hover:border-purple-500 transition-all group">
-                            <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mb-6">
-                                <Github size={32} />
-                            </div>
-                            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-4">GitHub Discussions</h3>
-                            <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-                                For developers: Technical discussions, API feedback, and roadmap conversations.
-                            </p>
-                            <button className="text-purple-600 dark:text-purple-400 font-bold hover:gap-2 transition-all flex items-center gap-1">
-                                Coming Soon →
-                            </button>
-                        </div>
-                    </div>
-
-                    <p className="text-center text-slate-500 dark:text-slate-400 mt-10 italic">
-                        More community spaces may be added as Chttrix grows.
-                    </p>
-                </div>
-            </section>
-
-            {/* Product Updates & Feature Requests */}
-            <section className="py-20 container mx-auto px-6 max-w-6xl">
-                <div className="grid md:grid-cols-2 gap-12">
-                    {/* Product Updates */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-xl flex items-center justify-center">
-                                <Shield size={24} />
-                            </div>
-                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Product Updates & Announcements</h2>
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-                            We use the community to share:
-                        </p>
-                        <ul className="space-y-3">
-                            {[
-                                'New feature releases',
-                                'Security and privacy updates',
-                                'Important changes or maintenance notices',
-                                'Early access opportunities'
-                            ].map((item, index) => (
-                                <li key={index} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full mt-2.5 flex-shrink-0"></div>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-6 font-medium">
-                            All major announcements are posted publicly for transparency.
-                        </p>
-                    </div>
-
-                    {/* Feature Requests */}
-                    <div>
-                        <div className="flex items-center gap-3 mb-6">
-                            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400 rounded-xl flex items-center justify-center">
-                                <Lightbulb size={24} />
-                            </div>
-                            <h2 className="text-3xl font-black text-slate-900 dark:text-white">Feature Requests & Feedback</h2>
-                        </div>
-                        <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
-                            Have an idea that could improve Chttrix?
-                        </p>
-                        <ul className="space-y-3">
-                            {[
-                                'Submit feature requests',
-                                'Vote on ideas from other users',
-                                'Participate in early discussions before features are built'
-                            ].map((item, index) => (
-                                <li key={index} className="flex items-start gap-3 text-slate-700 dark:text-slate-300">
-                                    <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-2.5 flex-shrink-0"></div>
-                                    <span>{item}</span>
-                                </li>
-                            ))}
-                        </ul>
-                        <div className="mt-8 p-6 bg-yellow-50 dark:bg-yellow-900/10 border border-yellow-200 dark:border-yellow-500/20 rounded-2xl">
-                            <p className="text-slate-700 dark:text-slate-300 font-bold">
-                                💡 Many Chttrix features are shaped directly by community feedback.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Events & Meetups */}
-            <section className="py-20 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-[#0B0F19] dark:to-[#0F1623] border-y border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6 max-w-4xl text-center">
-                    <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-8 mx-auto">
-                        <Calendar size={32} />
-                    </div>
-                    <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-6">Events & Meetups</h2>
-                    <p className="text-lg text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-                        At this stage, Chttrix does not host large conferences.
-                    </p>
-                    <p className="text-slate-600 dark:text-slate-400 mb-6">
-                        However, we may organize:
-                    </p>
-                    <div className="flex flex-wrap justify-center gap-4 mb-8">
-                        {['Online community sessions', 'Product walkthroughs', 'Feedback calls with early users'].map((event, index) => (
-                            <span key={index} className="px-6 py-3 bg-white dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl text-slate-700 dark:text-slate-300 font-medium">
-                                {event}
-                            </span>
                         ))}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">
-                        Upcoming events, when available, will be announced here.
-                    </p>
                 </div>
-            </section>
+            </div>
 
-            {/* Community Guidelines */}
-            <section className="py-20 container mx-auto px-6 max-w-4xl">
-                <div className="text-center mb-12">
-                    <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-4">Community Guidelines</h2>
-                    <p className="text-lg text-slate-500 dark:text-slate-400">
-                        To keep the community helpful and respectful
-                    </p>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                    {[
-                        { text: 'Be constructive and respectful', icon: '✅' },
-                        { text: 'No spam or self-promotion', icon: '🚫' },
-                        { text: 'No harassment or abusive behavior', icon: '⛔' },
-                        { text: 'Respect privacy and confidentiality', icon: '🔒' }
-                    ].map((guideline, index) => (
-                        <div key={index} className="flex items-center gap-4 p-6 bg-white dark:bg-[#0B0F19] border border-slate-200 dark:border-white/5 rounded-2xl">
-                            <span className="text-3xl">{guideline.icon}</span>
-                            <p className="text-slate-700 dark:text-slate-300 font-medium">{guideline.text}</p>
-                        </div>
-                    ))}
-                </div>
-
-                <p className="text-center text-slate-600 dark:text-slate-400 mt-10 font-medium">
-                    We want this to be a safe and welcoming space for everyone.
-                </p>
-            </section>
-
-            {/* Get Involved CTA */}
-            <section className="py-20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white">
-                <div className="container mx-auto px-6 text-center max-w-3xl">
-                    <h2 className="text-4xl font-black mb-6">Want to Get Involved?</h2>
-                    <p className="text-xl opacity-90 mb-10 leading-relaxed">
-                        If you're interested in contributing, testing new features, or collaborating with the Chttrix team, we'd love to hear from you.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <button
-                            onClick={() => navigate('/contact')}
-                            className="px-8 py-4 bg-white text-indigo-600 font-bold rounded-xl hover:bg-indigo-50 transition-all shadow-lg flex items-center justify-center gap-2"
-                        >
-                            <Mail size={20} />
-                            Contact Us
-                        </button>
-                        <button
-                            onClick={() => navigate('/help')}
-                            className="px-8 py-4 bg-transparent border-2 border-white text-white font-bold rounded-xl hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-                        >
-                            Visit Help Center
-                        </button>
+            {/* Community channels */}
+            <div style={{ padding: '64px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Community Channels</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        {CHANNELS.map(ch => (
+                            <div key={ch.name} style={{ background: '#111', padding: '18px 20px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
+                                <div style={{ width: '32px', height: '32px', background: `${ch.color}12`, border: `1px solid ${ch.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Hash size={13} style={{ color: ch.color }} />
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'monospace' }}>{ch.name}</span>
+                                        {ch.locked && <span style={{ fontSize: '9px', padding: '1px 5px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', color: '#b8956a', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Read-only</span>}
+                                    </div>
+                                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', marginBottom: '4px' }}>{ch.desc}</p>
+                                    <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.25)' }}>{ch.members} members</p>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
-            </section>
+            </div>
 
-            {/* Footer */}
-            <footer className="py-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-400">
-                <p>© 2026 Chttrix Inc. All rights reserved.</p>
-            </footer>
-        </div>
+            {/* Community spotlights */}
+            <div style={{ padding: '64px 0' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Community Spotlights</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '40px' }}>
+                        {SPOTLIGHTS.map(s => (
+                            <div key={s.name} style={{ background: '#111', padding: '24px 22px' }}>
+                                <Star5 />
+                                <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.6)', lineHeight: '1.8', margin: '14px 0 16px', fontStyle: 'italic' }}>"{s.quote}"</p>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ width: '34px', height: '34px', background: 'rgba(184,149,106,0.15)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#b8956a' }}>{s.user}</div>
+                                    <div>
+                                        <p style={{ fontSize: '12px', fontWeight: 700, color: '#e4e4e4' }}>{s.name}</p>
+                                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)' }}>{s.role}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* CTA */}
+                    <div style={{ padding: '32px', background: 'rgba(184,149,106,0.05)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                        <div>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '5px' }}>Ready to join?</h3>
+                            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)' }}>Jump in, ask questions, share your setup, and help others.</p>
+                        </div>
+                        <a href="https://discord.gg/chttrix" target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '10px 22px', background: '#b8956a', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, textDecoration: 'none' }}>
+                            Join Community <ArrowRight size={13} />
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </PublicPageShell>
     );
-};
-
-export default Community;
+}

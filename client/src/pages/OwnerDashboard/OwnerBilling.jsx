@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     CreditCard, Download, TrendingUp, AlertCircle,
-    Users, DollarSign, RefreshCw, Crown, CheckCircle, XCircle,
+    Users, DollarSign, RefreshCw, CheckCircle, XCircle,
     Clock, ArrowUpRight, ArrowDownRight, FileText
 } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
@@ -13,7 +12,6 @@ import api from '@services/api';
 const OwnerBilling = () => {
     const { isCompanyOwner } = useCompany();
     const { showToast } = useToast();
-    const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -28,14 +26,11 @@ const OwnerBilling = () => {
                 api.get('/api/owner-dashboard/invoices?limit=10'),
                 api.get('/api/owner-dashboard/payment-methods')
             ]);
-
             setBillingData(billing);
             setInvoices(invoicesRes.data.invoices || []);
             setPaymentMethod(paymentRes.data.paymentMethod || { type: 'card', last4: '4242', brand: 'visa' });
-        } catch (error) {
-            console.error("Error fetching billing data:", error);
-            showToast("Failed to load billing data", "error");
-            // Set defaults on error
+        } catch {
+            showToast('Failed to load billing data', 'error');
             setInvoices([]);
             setPaymentMethod({ type: 'card', last4: '4242', brand: 'visa' });
         }
@@ -43,14 +38,8 @@ const OwnerBilling = () => {
 
     useEffect(() => {
         if (!isCompanyOwner()) return;
-
-        const loadInitialData = async () => {
-            setLoading(true);
-            await fetchData();
-            setLoading(false);
-        };
-
-        loadInitialData();
+        const load = async () => { setLoading(true); await fetchData(); setLoading(false); };
+        load();
     }, [isCompanyOwner, fetchData]);
 
     const handleRefresh = async () => {
@@ -58,358 +47,305 @@ const OwnerBilling = () => {
         setRefreshing(true);
         await fetchData();
         setRefreshing(false);
-        showToast("Billing data refreshed", "success");
+        showToast('Billing data refreshed', 'success');
     };
 
-    const handleUpgradePlan = () => {
-        showToast("Upgrade functionality coming soon", "info");
-    };
+    const handleUpgradePlan = () => showToast('Upgrade functionality coming soon', 'info');
+    const handleDownloadInvoice = (id) => showToast(`Downloading invoice ${id}...`, 'info');
 
-    const handleDownloadInvoice = (invoiceId) => {
-        showToast(`Downloading invoice ${invoiceId}...`, "info");
-    };
-
-    if (!isCompanyOwner()) {
-        return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-                <div className="text-center">
-                    <Crown className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">Only the Company Owner can view billing information.</p>
-                    <button
-                        onClick={() => navigate('/admin/dashboard')}
-                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                        Go to Admin Dashboard
-                    </button>
-                </div>
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '130px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '240px' }} /></div>
+                <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '30px', width: '100px' }} /><div className="sk" style={{ height: '30px', width: '80px' }} /></div>
             </div>
-        );
-    }
-
-    if (loading) {
-        return (
-            <div className="h-screen bg-gray-50 dark:bg-gray-900 p-8 animate-pulse space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                        <div className="h-6 w-44 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-                        <div className="h-3 w-60 bg-gray-100 dark:bg-gray-800 rounded" />
-                    </div>
-                    <div className="h-9 w-28 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl" />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+                {/* 3 billing stat tiles */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
                     {[1,2,3].map(i => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-                            <div className="h-10 w-16 bg-gray-300 dark:bg-gray-600 rounded-xl" />
+                        <div key={i} style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div className="sk" style={{ width: '14px', height: '14px' }} /><div className="sk" style={{ height: '9px', width: '100px' }} /></div>
+                            <div className="sk" style={{ height: '32px', width: '100px', marginBottom: '8px' }} />
+                            <div className="sk" style={{ height: '9px', width: '140px' }} />
                         </div>
                     ))}
                 </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                    {[75,55,85,60,70].map((w,i) => (
-                        <div key={i} className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-20}%`}} />
-                            </div>
-                            <div className="h-7 w-20 bg-gray-100 dark:bg-gray-700 rounded-xl" />
+                {/* Plan + payment row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    {[1,2].map(i => (
+                        <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                            <div className="sk" style={{ height: '12px', width: '120px', marginBottom: '16px' }} />
+                            <div className="sk" style={{ height: '24px', width: '160px', marginBottom: '10px' }} />
+                            <div className="sk" style={{ height: '9px', width: '200px', marginBottom: '6px' }} />
+                            <div className="sk" style={{ height: '9px', width: '160px', marginBottom: '16px' }} />
+                            <div className="sk" style={{ height: '30px', width: '120px' }} />
+                        </div>
+                    ))}
+                </div>
+                {/* Invoice table */}
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)' }}><div className="sk" style={{ height: '12px', width: '100px' }} /></div>
+                    {[1,2,3,4].map(i => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 80px', padding: '12px 20px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
+                            <div className="sk" style={{ height: '10px', width: '80%' }} />
+                            <div className="sk" style={{ height: '10px', width: '70%' }} />
+                            <div className="sk" style={{ height: '10px', width: '60%' }} />
+                            <div className="sk" style={{ height: '18px', width: '60px' }} />
+                            <div className="sk" style={{ height: '26px', width: '100%' }} />
                         </div>
                     ))}
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
+
+    const seatPct = billingData?.seatUsage?.percentage || 0;
+    const renewalDate = billingData?.renewalDate
+        ? new Date(billingData.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+        : 'N/A';
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+
             {/* Header */}
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
+            <header style={{
+                height: '56px', padding: '0 28px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0, zIndex: 5,
+            }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        <CreditCard className="text-indigo-500" size={24} />
-                        Billing & Plan Management
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <CreditCard size={16} style={{ color: 'var(--accent)' }} />
+                        Billing &amp; Plan Management
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>
                         Subscription, invoices, and payment history
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={handleRefresh}
-                        disabled={refreshing}
-                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                        {refreshing ? 'Refreshing...' : 'Refresh'}
-                    </button>
-                </div>
+                <HBtn onClick={handleRefresh} disabled={refreshing} label={refreshing ? 'Refreshing...' : 'Refresh'}
+                    icon={<RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />} />
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
-                <div className="space-y-8 max-w-7xl mx-auto">
-                    {/* Current Plan Section */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {/* Plan Card */}
-                        <div className="lg:col-span-2 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-2xl p-8 text-white shadow-2xl relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32"></div>
-                            <div className="relative z-10">
-                                <div className="flex items-center justify-between mb-6">
-                                    <div>
-                                        <p className="text-indigo-200 text-sm font-medium mb-1">CURRENT PLAN</p>
-                                        <h3 className="text-4xl font-black">{billingData?.currentPlan || 'Free'}</h3>
-                                    </div>
-                                    <CreditCard className="w-16 h-16 opacity-20" />
-                                </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                                <div className="grid grid-cols-2 gap-6 mb-8">
-                                    <div>
-                                        <p className="text-indigo-200 text-xs mb-1">Monthly Cost</p>
-                                        <p className="text-3xl font-bold">${billingData?.monthlyCost || 0}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-indigo-200 text-xs mb-1">Renewal Date</p>
-                                        <p className="text-lg font-semibold">
-                                            {billingData?.renewalDate
-                                                ? new Date(billingData.renewalDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-                                                : 'N/A'}
-                                        </p>
-                                    </div>
+                    {/* Plan + Seat */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1px', background: 'var(--border-subtle)' }}>
+                        {/* Plan Card — accent-tinted */}
+                        <div style={{ background: 'var(--bg-surface)', padding: '28px 32px', position: 'relative', overflow: 'hidden' }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                                <div>
+                                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--accent)', marginBottom: '6px' }}>Current Plan</p>
+                                    <h3 style={{ fontSize: '32px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em' }}>
+                                        {billingData?.currentPlan || 'Free'}
+                                    </h3>
                                 </div>
-
-                                <button
-                                    onClick={handleUpgradePlan}
-                                    className="w-full py-3 bg-white text-indigo-600 rounded-lg font-bold hover:bg-indigo-50 transition-colors shadow-lg"
-                                >
-                                    Upgrade Plan
-                                </button>
+                                <CreditCard size={32} style={{ color: 'var(--text-muted)', opacity: 0.35 }} />
                             </div>
-                        </div>
-
-                        {/* Seat Usage Card */}
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center">
-                                    <Users className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+                                <div>
+                                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Monthly Cost</p>
+                                    <p style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)' }}>${billingData?.monthlyCost || 0}</p>
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Seat Usage</p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-500">Active users</p>
+                                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Renewal Date</p>
+                                    <p style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)' }}>{renewalDate}</p>
                                 </div>
                             </div>
+                            <UpgradeBtn onClick={handleUpgradePlan} />
+                        </div>
 
-                            <div className="mb-4">
-                                <div className="flex items-end justify-between mb-2">
-                                    <span className="text-3xl font-black text-gray-900 dark:text-white">
-                                        {billingData?.seatUsage?.used || 0}
-                                    </span>
-                                    <span className="text-lg font-medium text-gray-500 dark:text-gray-400">
-                                        / {billingData?.seatUsage?.total || 10}
-                                    </span>
-                                </div>
-                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div
-                                        className={`h-full rounded-full transition-all ${(billingData?.seatUsage?.percentage || 0) > 80
-                                            ? 'bg-red-500'
-                                            : 'bg-indigo-600'
-                                            }`}
-                                        style={{ width: `${billingData?.seatUsage?.percentage || 0}%` }}
-                                    ></div>
+                        {/* Seat Usage */}
+                        <div style={{ background: 'var(--bg-surface)', padding: '28px 24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                <Users size={16} style={{ color: 'var(--accent)' }} />
+                                <div>
+                                    <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>Seat Usage</p>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Active users</p>
                                 </div>
                             </div>
-
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-gray-600 dark:text-gray-400">Utilization</span>
-                                <span className="font-bold text-gray-900 dark:text-white">
-                                    {billingData?.seatUsage?.percentage || 0}%
-                                </span>
+                            <div style={{ marginBottom: '12px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)' }}>{billingData?.seatUsage?.used || 0}</span>
+                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>/ {billingData?.seatUsage?.total || 10}</span>
+                                </div>
+                                <div style={{ height: '6px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                                    <div style={{ height: '100%', width: `${seatPct}%`, background: seatPct > 80 ? 'var(--state-danger)' : 'var(--accent)', transition: 'width 400ms ease' }} />
+                                </div>
                             </div>
-
-                            {(billingData?.seatUsage?.percentage || 0) > 80 && (
-                                <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                                    <div className="flex gap-2">
-                                        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
-                                        <p className="text-xs text-amber-700 dark:text-amber-400">
-                                            You're approaching your seat limit. Consider upgrading.
-                                        </p>
-                                    </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Utilization</span>
+                                <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{seatPct}%</span>
+                            </div>
+                            {seatPct > 80 && (
+                                <div style={{ marginTop: '12px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--state-danger)', display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                    <AlertCircle size={13} style={{ color: 'var(--state-danger)', flexShrink: 0, marginTop: '1px' }} />
+                                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>Approaching seat limit. Consider upgrading.</p>
                                 </div>
                             )}
                         </div>
                     </div>
 
                     {/* Spending Overview */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                            Spending Overview
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">This Month</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">${billingData?.monthlyCost || 0}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                    <ArrowUpRight className="w-3 h-3 text-green-500" />
-                                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">+0%</span>
-                                </div>
-                            </div>
-
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Last 3 Months</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">${(billingData?.monthlyCost || 0) * 3}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                    <ArrowDownRight className="w-3 h-3 text-red-500" />
-                                    <span className="text-xs text-red-600 dark:text-red-400 font-medium">-5%</span>
-                                </div>
-                            </div>
-
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">This Year</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">${(billingData?.monthlyCost || 0) * 12}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                    <ArrowUpRight className="w-3 h-3 text-green-500" />
-                                    <span className="text-xs text-green-600 dark:text-green-400 font-medium">+12%</span>
-                                </div>
-                            </div>
-
-                            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Projected (Annual)</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white">${(billingData?.monthlyCost || 0) * 12}</p>
-                                <div className="flex items-center gap-1 mt-1">
-                                    <DollarSign className="w-3 h-3 text-blue-500" />
-                                    <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">Estimate</span>
-                                </div>
-                            </div>
+                    <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <TrendingUp size={14} style={{ color: 'var(--accent)' }} />
+                            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Spending Overview</h3>
                         </div>
-                    </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0' }}>
+                            {[
+                                { label: 'This Month', value: billingData?.monthlyCost || 0, delta: '+0%', up: true },
+                                { label: 'Last 3 Months', value: (billingData?.monthlyCost || 0) * 3, delta: '-5%', up: false },
+                                { label: 'This Year', value: (billingData?.monthlyCost || 0) * 12, delta: '+12%', up: true },
+                                { label: 'Projected (Annual)', value: (billingData?.monthlyCost || 0) * 12, delta: 'Estimate', up: null },
+                            ].map((item, i) => (
+                                <div key={i} style={{ padding: '20px', borderRight: i < 3 ? '1px solid var(--border-subtle)' : 'none' }}>
+                                    <p style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>{item.label}</p>
+                                    <p style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)' }}>${item.value}</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', marginTop: '4px' }}>
+                                        {item.up === true && <ArrowUpRight size={11} style={{ color: 'var(--state-success)' }} />}
+                                        {item.up === false && <ArrowDownRight size={11} style={{ color: 'var(--state-danger)' }} />}
+                                        {item.up === null && <DollarSign size={11} style={{ color: 'var(--text-muted)' }} />}
+                                        <span style={{ fontSize: '11px', color: item.up === true ? 'var(--state-success)' : item.up === false ? 'var(--state-danger)' : 'var(--text-muted)', fontWeight: 600 }}>{item.delta}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
 
                     {/* Payment History */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                Payment History & Invoices
-                            </h3>
-                            <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                                View All
-                            </button>
+                    <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <FileText size={14} style={{ color: 'var(--accent)' }} />
+                                <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Payment History &amp; Invoices</h3>
+                            </div>
                         </div>
-
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead>
-                                    <tr className="border-b border-gray-200 dark:border-gray-700">
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Invoice</th>
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Date</th>
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Plan</th>
-                                        <th className="text-left py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Seats</th>
-                                        <th className="text-right py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Amount</th>
-                                        <th className="text-center py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Status</th>
-                                        <th className="text-right py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400 uppercase">Actions</th>
+                                    <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                        {['Invoice', 'Date', 'Plan', 'Seats', 'Amount', 'Status', 'Actions'].map(col => (
+                                            <th key={col} style={{ padding: '10px 16px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', textAlign: col === 'Amount' || col === 'Actions' ? 'right' : col === 'Status' ? 'center' : 'left' }}>{col}</th>
+                                        ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                                    {invoices.map((invoice) => (
-                                        <tr key={invoice._id || invoice.invoiceNumber} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                            <td className="py-4 px-4 text-sm font-medium text-gray-900 dark:text-white">
-                                                {invoice.invoiceNumber || 'N/A'}
-                                            </td>
-                                            <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                {new Date(invoice.issueDate || invoice.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                            </td>
-                                            <td className="py-4 px-4 text-sm text-gray-900 dark:text-white font-medium">
-                                                {invoice.planName || 'N/A'}
-                                            </td>
-                                            <td className="py-4 px-4 text-sm text-gray-600 dark:text-gray-400">
-                                                {invoice.seatsUsed || 0} seats
-                                            </td>
-                                            <td className="py-4 px-4 text-sm text-right font-bold text-gray-900 dark:text-white">
-                                                ${invoice.total || invoice.amount || 0}
-                                            </td>
-                                            <td className="py-4 px-4 text-center">
-                                                {invoice.status === 'paid' ? (
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                        <CheckCircle size={12} />
-                                                        Paid
-                                                    </span>
-                                                ) : invoice.status === 'pending' ? (
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
-                                                        <Clock size={12} />
-                                                        Pending
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                                        <XCircle size={12} />
-                                                        {invoice.status}
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="py-4 px-4 text-right">
-                                                <button
-                                                    onClick={() => handleDownloadInvoice(invoice.invoiceNumber)}
-                                                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium flex items-center gap-1 ml-auto"
-                                                >
-                                                    <Download size={14} />
-                                                    Download
-                                                </button>
-                                            </td>
-                                        </tr>
+                                <tbody>
+                                    {invoices.length === 0 ? (
+                                        <tr><td colSpan={7} style={{ padding: '32px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No invoices found</td></tr>
+                                    ) : invoices.map(inv => (
+                                        <InvoiceRow key={inv._id || inv.invoiceNumber} inv={inv} onDownload={handleDownloadInvoice} />
                                     ))}
                                 </tbody>
                             </table>
                         </div>
-                    </div>
+                    </section>
 
-                    {/* Billing Settings */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Payment Method</h3>
-                            <div className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                                    <CreditCard className="w-6 h-6 text-white" />
+                    {/* Payment Method + Billing Contact */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
+                        <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px' }}>Payment Method</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-default)' }}>
+                                <div style={{ width: '40px', height: '40px', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <CreditCard size={18} style={{ color: 'var(--accent)' }} />
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-bold text-gray-900 dark:text-white">
-                                        **** **** **** {paymentMethod?.last4 || '4242'}
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                                        Expires {paymentMethod?.expiryMonth || 12}/{paymentMethod?.expiryYear || 2027}
-                                    </p>
+                                <div style={{ flex: 1 }}>
+                                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>**** **** **** {paymentMethod?.last4 || '4242'}</p>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Expires {paymentMethod?.expiryMonth || 12}/{paymentMethod?.expiryYear || 2027}</p>
                                 </div>
-                                <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                                    Update
-                                </button>
+                                <TextBtn label="Update" />
                             </div>
                         </div>
-
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Billing Contact</h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-600 dark:text-gray-400">Email</span>
-                                    <span className="font-medium text-gray-900 dark:text-white">
-                                        {billingData?.billingContact?.email || 'Not configured'}
-                                    </span>
+                        <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px' }}>Billing Contact</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Email</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{billingData?.billingContact?.email || 'Not configured'}</span>
                                 </div>
                                 {billingData?.billingContact?.address && (
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-gray-600 dark:text-gray-400">Address</span>
-                                        <span className="font-medium text-gray-900 dark:text-white">
-                                            {billingData.billingContact.address}
-                                        </span>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Address</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{billingData.billingContact.address}</span>
                                     </div>
                                 )}
-                                <button className="w-full mt-2 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-lg font-medium transition-colors">
-                                    Update Details
-                                </button>
+                                <TextBtn label="Update Details" />
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+    );
+};
+
+// ─ Sub-components ────────────────────────────────────────────────────────────
+
+const InvoiceRow = ({ inv, onDownload }) => {
+    const [hov, setHov] = React.useState(false);
+    const statusBadge = (status) => {
+        const map = {
+            paid: { bg: 'rgba(90,186,138,0.12)', border: 'var(--state-success)', color: 'var(--state-success)', icon: <CheckCircle size={10} />, label: 'Paid' },
+            pending: { bg: 'rgba(184,149,106,0.12)', border: 'var(--accent)', color: 'var(--accent)', icon: <Clock size={10} />, label: 'Pending' },
+        };
+        const s = map[status] || { bg: 'rgba(224,82,82,0.12)', border: 'var(--state-danger)', color: 'var(--state-danger)', icon: <XCircle size={10} />, label: status };
+        return (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: s.bg, border: `1px solid ${s.border}`, color: s.color, fontSize: '10px', fontWeight: 700 }}>
+                {s.icon}{s.label}
+            </span>
+        );
+    };
+    return (
+        <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: hov ? 'var(--bg-hover)' : 'transparent', transition: 'background 150ms ease' }}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
+            <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{inv.invoiceNumber || 'N/A'}</td>
+            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {new Date(inv.issueDate || inv.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </td>
+            <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{inv.planName || 'N/A'}</td>
+            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>{inv.seatsUsed || 0} seats</td>
+            <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', textAlign: 'right' }}>${inv.total || inv.amount || 0}</td>
+            <td style={{ padding: '12px 16px', textAlign: 'center' }}>{statusBadge(inv.status)}</td>
+            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                <button onClick={() => onDownload(inv.invoiceNumber)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', padding: '4px 0' }}>
+                    <Download size={12} /> Download
+                </button>
+            </td>
+        </tr>
+    );
+};
+
+const UpgradeBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ width: '100%', padding: '10px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'background 150ms ease', borderRadius: '0' }}>
+            Upgrade Plan
+        </button>
+    );
+};
+
+const TextBtn = ({ label }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ background: 'none', border: 'none', color: hov ? 'var(--accent-hover)' : 'var(--accent)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: '2px 0', transition: 'color 150ms ease' }}>
+            {label}
+        </button>
+    );
+};
+
+const HBtn = ({ onClick, disabled, label, icon }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={disabled} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '5px', background: hov && !disabled ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: disabled ? 'var(--text-muted)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'all 150ms ease', borderRadius: '0' }}>
+            {icon}{label}
+        </button>
     );
 };
 

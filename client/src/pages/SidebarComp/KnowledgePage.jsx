@@ -12,21 +12,21 @@ import { useToast } from '../../contexts/ToastContext';
 function MarkdownPreview({ content }) {
     const html = content
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-        .replace(/^### (.+)$/gm, '<h3 class="text-base font-bold mt-4 mb-1 text-gray-900 dark:text-white">$1</h3>')
-        .replace(/^## (.+)$/gm, '<h2 class="text-lg font-bold mt-5 mb-2 text-gray-900 dark:text-white">$1</h2>')
-        .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold mt-6 mb-3 text-gray-900 dark:text-white">$1</h1>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em class="italic">$1</em>')
-        .replace(/`(.+?)`/g, '<code class="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded font-mono text-sm text-rose-600 dark:text-rose-400">$1</code>')
-        .replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-indigo-400 pl-4 text-gray-600 dark:text-gray-400 italic my-2">$1</blockquote>')
-        .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-gray-700 dark:text-gray-300">$1</li>')
-        .replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal text-gray-700 dark:text-gray-300">$2</li>')
-        .replace(/\n\n/g, '</p><p class="mb-3 text-gray-700 dark:text-gray-300">')
+        .replace(/^### (.+)$/gm, '<h3 style="font-size:14px;font-weight:700;margin:16px 0 4px;color:#e4e4e4;font-family:Inter,system-ui,sans-serif">$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2 style="font-size:16px;font-weight:700;margin:20px 0 8px;color:#e4e4e4;font-family:Inter,system-ui,sans-serif">$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1 style="font-size:22px;font-weight:800;margin:24px 0 12px;color:#e4e4e4;font-family:Inter,system-ui,sans-serif">$1</h1>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong style="font-weight:700">$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em style="font-style:italic">$1</em>')
+        .replace(/`(.+?)`/g, '<code style="padding:1px 6px;background:rgba(255,255,255,0.08);font-family:monospace;font-size:12px;color:#b8956a">$1</code>')
+        .replace(/^> (.+)$/gm, '<blockquote style="border-left:3px solid rgba(184,149,106,0.4);padding-left:12px;color:rgba(228,228,228,0.55);font-style:italic;margin:8px 0">$1</blockquote>')
+        .replace(/^- (.+)$/gm, '<li style="margin-left:16px;list-style:disc;color:rgba(228,228,228,0.8)">$1</li>')
+        .replace(/^(\d+)\. (.+)$/gm, '<li style="margin-left:16px;list-style:decimal;color:rgba(228,228,228,0.8)">$2</li>')
+        .replace(/\n\n/g, '</p><p style="margin-bottom:12px;color:rgba(228,228,228,0.8);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.7">')
         .replace(/\n/g, '<br/>');
     return (
         <div
-            className="prose prose-sm max-w-none leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: `<p class="mb-3 text-gray-700 dark:text-gray-300">${html}</p>` }}
+            style={{ lineHeight: 1.7, fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px', color: 'rgba(228,228,228,0.8)' }}
+            dangerouslySetInnerHTML={{ __html: `<p style="margin-bottom:12px;color:rgba(228,228,228,0.8);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.7">${html}</p>` }}
         />
     );
 }
@@ -36,24 +36,36 @@ function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }
     const [search, setSearch] = useState('');
     const options = allPages.filter(p => p._id !== currentPageId && (!search || p.title.toLowerCase().includes(search.toLowerCase())));
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-                <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700">
-                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Link a Page</h3>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+            <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)', width: '100%', maxWidth: '360px', margin: '0 16px', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                    <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>Link a Page</h3>
                 </div>
-                <div className="p-4">
-                    <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search pages..." className="w-full px-3 py-2 text-sm bg-gray-100 dark:bg-gray-800 rounded-lg border-none outline-none text-gray-800 dark:text-gray-200 mb-3" />
-                    <div className="space-y-1 max-h-52 overflow-y-auto">
-                        {options.length === 0 && <p className="text-xs text-gray-400 text-center py-4">No pages found</p>}
+                <div style={{ padding: '14px 18px' }}>
+                    <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search pages..."
+                        style={{ width: '100%', padding: '8px 12px', fontSize: '12px', background: '#111', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark' }}
+                        onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.4)'}
+                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
+                    />
+                    <div style={{ maxHeight: '210px', overflowY: 'auto' }}>
+                        {options.length === 0 && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', textAlign: 'center', padding: '16px 0', fontFamily: 'monospace' }}>No pages found</p>}
                         {options.map(p => (
-                            <button key={p._id} onClick={() => onLink(p._id)} className="w-full flex items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                            <button key={p._id} onClick={() => onLink(p._id)}
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', textAlign: 'left', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
                                 <span>{p.icon || '📄'}</span> {p.title}
                             </button>
                         ))}
                     </div>
                 </div>
-                <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-700 flex justify-end">
-                    <button onClick={onClose} className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">Cancel</button>
+                <div style={{ padding: '10px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button onClick={onClose}
+                        style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+                    >Cancel</button>
                 </div>
             </div>
         </div>
@@ -64,15 +76,15 @@ function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }
 function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
     const handbookPages = pages.filter(p => p.isHandbook);
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900">
-            <div className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
-                <h1 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <span className="text-lg">📘</span> Company Handbook
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
+            <div style={{ height: '52px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+                <h1 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>📘</span> Company Handbook
                 </h1>
                 <button
                     onClick={onCreate}
                     disabled={creating}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-60"
+                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '11px', fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.6 : 1, fontFamily: 'Inter,system-ui,sans-serif', transition: 'opacity 150ms ease' }}
                 >
                     {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
                     New handbook page
@@ -83,7 +95,7 @@ function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
                     <div className="flex flex-col items-center py-16">
                         <span className="text-5xl mb-4">📘</span>
                         <p className="text-gray-400 text-sm mb-4 text-center max-w-xs">No handbook pages yet. Create the first page to start documenting your company processes.</p>
-                        <button onClick={onCreate} disabled={creating} className="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors">
+                        <button onClick={onCreate} disabled={creating} style={{ padding: '7px 20px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: creating ? 'not-allowed' : 'pointer', opacity: creating ? 0.6 : 1, fontFamily: 'Inter,system-ui,sans-serif' }}>
                             {creating ? 'Creating…' : 'Create first handbook page'}
                         </button>
                     </div>
@@ -93,7 +105,7 @@ function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
                             <button
                                 key={p._id}
                                 onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${p._id}`)}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-all text-left group"
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'left', transition: 'border-color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                             >
                                 <span className="text-xl">{p.icon || '📄'}</span>
                                 <div className="flex-1 min-w-0">
@@ -122,7 +134,7 @@ function EmptyKnowledge({ onCreate, loading }) {
             {loading ? (
                 <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
             ) : (
-                <button onClick={onCreate} className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-md">
+                <button onClick={onCreate} style={{ padding: '8px 24px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif' }}>
                     Create first page
                 </button>
             )}
@@ -280,7 +292,7 @@ const KnowledgePage = () => {
     if (!pageData) return null;
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
             {/* Toolbar */}
             <div className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
                 <div className="flex items-center gap-3">
@@ -289,7 +301,7 @@ const KnowledgePage = () => {
                         {/* Edit / Preview toggle */}
                         <button
                             onClick={() => setViewMode(v => v === 'edit' ? 'preview' : 'edit')}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${viewMode === 'preview' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, background: viewMode === 'preview' ? 'rgba(184,149,106,0.1)' : 'transparent', border: `1px solid ${viewMode === 'preview' ? 'rgba(184,149,106,0.25)' : 'transparent'}`, color: viewMode === 'preview' ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'all 150ms ease' }}
                         >
                             {viewMode === 'edit' ? <Eye size={13} /> : <Edit3 size={13} />}
                             {viewMode === 'edit' ? 'Preview' : 'Edit'}
@@ -299,7 +311,7 @@ const KnowledgePage = () => {
                         <button
                             onClick={handleSummarize}
                             disabled={summarizing}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-sm hover:shadow-md transition-all disabled:opacity-60"
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 700, background: '#b8956a', border: 'none', color: '#0c0c0c', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', opacity: 1, transition: 'opacity 150ms ease' }} onMouseEnter={e => e.currentTarget.style.opacity = '0.85'} onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                         >
                             {summarizing ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
                             AI Summary
@@ -308,7 +320,7 @@ const KnowledgePage = () => {
                         {/* Link */}
                         <button
                             onClick={() => setShowLinkModal(true)}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif' }} onMouseEnter={e => e.currentTarget.style.color = '#b8956a'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
                         >
                             <Link2 size={13} /> Link page
                         </button>
@@ -339,13 +351,19 @@ const KnowledgePage = () => {
                         value={title}
                         onChange={handleTitleChange}
                         placeholder="Untitled Page"
-                        className="text-4xl font-bold text-gray-900 dark:text-white placeholder-gray-200 dark:placeholder-gray-700 border-none focus:ring-0 p-0 mb-3 w-full bg-transparent outline-none"
+                        style={{
+                            fontSize: '2.25rem', fontWeight: 800, color: '#e4e4e4',
+                            border: 'none', outline: 'none', padding: 0, marginBottom: '12px',
+                            width: '100%', background: 'transparent', fontFamily: 'Inter, system-ui, sans-serif',
+                            lineHeight: 1.15,
+                        }}
+                        className="placeholder-gray-700"
                     />
 
                     {/* Tags */}
                     <div className="flex flex-wrap items-center gap-2 mb-6 min-h-[28px]">
                         {tags.map(tag => (
-                            <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-medium">
+                            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '1px 8px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.22)', color: '#b8956a', fontSize: '11px', fontWeight: 500, fontFamily: 'Inter,system-ui,sans-serif' }}>
                                 #{tag}
                                 <button onClick={() => removeTag(tag)} className="ml-0.5 hover:text-red-500 transition-colors"><X size={10} /></button>
                             </span>
@@ -358,10 +376,15 @@ const KnowledgePage = () => {
                                 onKeyDown={e => { if (e.key === 'Enter') addTag(); if (e.key === 'Escape') { setShowTagInput(false); setTagInput(''); } }}
                                 onBlur={addTag}
                                 placeholder="tag name…"
-                                className="px-2 py-0.5 border border-indigo-300 dark:border-indigo-600 rounded-full text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 outline-none focus:ring-1 focus:ring-indigo-400 w-28"
+                                style={{ padding: '3px 10px', border: '1px solid rgba(184,149,106,0.35)', background: 'rgba(184,149,106,0.08)', color: '#b8956a', fontSize: '11px', fontFamily: 'monospace', outline: 'none', width: '112px', colorScheme: 'dark' }}
+                                onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.6)'}
                             />
                         ) : (
-                            <button onClick={() => setShowTagInput(true)} className="inline-flex items-center gap-1 px-2 py-0.5 text-xs text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 rounded-full transition-colors">
+                            <button onClick={() => setShowTagInput(true)}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'rgba(228,228,228,0.3)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
+                            >
                                 <Tag size={10} /><Plus size={9} /> tag
                             </button>
                         )}
@@ -369,7 +392,7 @@ const KnowledgePage = () => {
 
                     {/* AI Summary box */}
                     {summary && (
-                        <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-violet-50 to-indigo-50 dark:from-violet-900/10 dark:to-indigo-900/10 border border-violet-200 dark:border-violet-800">
+                        <div style={{ marginBottom: '24px', padding: '14px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
                             <div className="flex items-center gap-1.5 mb-2">
                                 <Sparkles size={13} className="text-violet-600 dark:text-violet-400" />
                                 <span className="text-xs font-semibold text-violet-700 dark:text-violet-300">AI Summary</span>
@@ -412,11 +435,13 @@ const KnowledgePage = () => {
                                     <button
                                         key={bl._id}
                                         onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${bl._id}`)}
-                                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors w-full text-left"
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#161616', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 150ms ease', marginBottom: '6px' }}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                        onMouseLeave={e => e.currentTarget.style.background = '#161616'}
                                     >
-                                        <span className="text-sm">{bl.icon || '📄'}</span>
-                                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{bl.title}</span>
-                                        <ChevronRight size={13} className="ml-auto text-gray-400" />
+                                        <span style={{ fontSize: '13px' }}>{bl.icon || '📄'}</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(228,228,228,0.7)', fontFamily: 'Inter, system-ui, sans-serif' }}>{bl.title}</span>
+                                        <ChevronRight size={11} style={{ marginLeft: 'auto', color: 'rgba(228,228,228,0.25)' }} />
                                     </button>
                                 ))}
                             </div>

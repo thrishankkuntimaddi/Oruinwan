@@ -4,18 +4,50 @@ import api from '@services/api';
 import { Check, Info } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 
+const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
+
 const Toggle = ({ label, description, checked, onChange, disabled }) => (
-    <div className="flex items-center justify-between py-3">
-        <div className="pr-6">
-            <div className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">{label}</div>
-            {description && <div className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-0.5">{description}</div>}
+    <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 0',
+        borderBottom: '1px solid var(--border-subtle)',
+    }}>
+        <div style={{ paddingRight: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', ...S.font }}>{label}</div>
+            {description && (
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 3, lineHeight: 1.5, ...S.font }}>{description}</div>
+            )}
         </div>
         <button
             onClick={() => !disabled && onChange(!checked)}
             disabled={disabled}
-            className={`relative flex-shrink-0 inline-flex h-5 w-9 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${checked ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`}
+            style={{
+                position: 'relative',
+                flexShrink: 0,
+                display: 'inline-flex',
+                height: 20,
+                width: 36,
+                borderRadius: 10,
+                border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-default)'}`,
+                backgroundColor: checked ? 'var(--accent)' : 'var(--bg-active)',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                opacity: disabled ? 0.4 : 1,
+                transition: 'background-color 150ms ease, border-color 150ms ease',
+                outline: 'none',
+            }}
         >
-            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+            <span style={{
+                display: 'inline-block',
+                height: 14,
+                width: 14,
+                borderRadius: '50%',
+                backgroundColor: checked ? '#0c0c0c' : 'var(--text-muted)',
+                transform: checked ? 'translateX(17px)' : 'translateX(2px)',
+                marginTop: 2,
+                transition: 'transform 150ms ease, background-color 150ms ease',
+            }} />
         </button>
     </div>
 );
@@ -42,34 +74,59 @@ const PrivacyTab = ({ privacy, setPrivacy }) => {
     };
 
     return (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Card title="Messaging Visibility" subtitle="What others can see when chatting with you">
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    <Toggle label="Read Receipts" description="Let others see when you've read their messages." checked={privacy.readReceipts} onChange={v => update('readReceipts', v)} />
-                    <Toggle label="Typing Indicators" description="Show '…' while composing a message." checked={privacy.typingIndicators} onChange={v => update('typingIndicators', v)} />
-                </div>
+                <Toggle label="Read Receipts" description="Let others see when you've read their messages." checked={privacy.readReceipts} onChange={v => update('readReceipts', v)} />
+                <Toggle label="Typing Indicators" description="Show '…' while composing a message." checked={privacy.typingIndicators} onChange={v => update('typingIndicators', v)} />
             </Card>
 
             <Card title="Discovery & Data" subtitle="How others find you and how data is used">
-                <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                    <Toggle label="Allow Discovery by Email" description="Others can find you via your email address." checked={privacy.allowDiscovery} onChange={v => update('allowDiscovery', v)} />
-                    <Toggle label="Share Anonymous Usage Data" description="Help improve Chttrix with aggregated, anonymized stats." checked={privacy.dataSharing} onChange={v => update('dataSharing', v)} />
-                </div>
-                <div className="flex items-start gap-2 mt-4 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg">
-                    <Info size={13} className="text-gray-400 mt-0.5 flex-shrink-0" />
-                    <p className="text-[11.5px] text-gray-500 dark:text-gray-400">
+                <Toggle label="Allow Discovery by Email" description="Others can find you via your email address." checked={privacy.allowDiscovery} onChange={v => update('allowDiscovery', v)} />
+                <Toggle label="Share Anonymous Usage Data" description="Help improve Chttrix with aggregated, anonymized stats." checked={privacy.dataSharing} onChange={v => update('dataSharing', v)} />
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 8,
+                    marginTop: 16,
+                    padding: 12,
+                    backgroundColor: 'var(--bg-active)',
+                    border: '1px solid var(--border-default)',
+                    borderRadius: 2,
+                }}>
+                    <Info size={13} style={{ color: 'var(--text-muted)', marginTop: 1, flexShrink: 0 }} />
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, ...S.font }}>
                         We never sell personal data. Read our{' '}
-                        <a href="#" className="text-blue-600 dark:text-blue-400 hover:underline">Privacy Policy</a>.
+                        <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                            onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                            onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+                        >Privacy Policy</a>.
                     </p>
                 </div>
             </Card>
 
             {hasChanges && (
-                <div className="flex justify-end">
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <button
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '7px 16px',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: '#0c0c0c',
+                            backgroundColor: 'var(--accent)',
+                            border: 'none',
+                            borderRadius: 2,
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            opacity: saving ? 0.5 : 1,
+                            transition: 'background-color 150ms ease',
+                            ...S.font,
+                        }}
+                        onMouseEnter={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                        onMouseLeave={e => { if (!saving) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                     >
                         <Check size={13} />
                         {saving ? 'Saving…' : 'Save Settings'}

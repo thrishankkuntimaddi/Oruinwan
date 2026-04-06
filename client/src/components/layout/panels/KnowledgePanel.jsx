@@ -13,21 +13,17 @@ function PageTreeItem({ page, depth = 0, workspaceId, allPages, onNavigate, acti
         <div>
             <button
                 onClick={() => onNavigate(page._id)}
-                className={`w-full flex items-center gap-1.5 px-3 py-1.5 text-left transition-colors group rounded-sm mx-1 ${isActive ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300' : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300'}`}
-                style={{ paddingLeft: `${12 + depth * 14}px` }}
-            >
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '6px', paddingBottom: '6px', paddingRight: '12px', textAlign: 'left', background: isActive ? 'rgba(184,149,106,0.1)' : 'transparent', borderLeft: isActive ? '2px solid #b8956a' : '2px solid transparent', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease', paddingLeft: `${12 + depth * 14}px` }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
                 {children.length > 0 ? (
-                    <span
-                        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                    >
+                    <span onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+                        style={{ color: 'rgba(228,228,228,0.3)', cursor: 'pointer' }}>
                         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     </span>
-                ) : (
-                    <span className="w-[11px]" />
-                )}
-                <span className="text-sm mr-1">{page.icon || '📄'}</span>
-                <span className="text-xs font-medium truncate">{page.title}</span>
+                ) : <span style={{ width: '11px', display: 'inline-block' }} />}
+                <span style={{ fontSize: '13px', marginRight: '2px' }}>{page.icon || '📄'}</span>
+                <span style={{ fontSize: '12px', fontWeight: isActive ? 600 : 400, color: isActive ? '#e4e4e4' : 'rgba(228,228,228,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.title}</span>
             </button>
             {open && children.map(child => (
                 <PageTreeItem
@@ -73,104 +69,87 @@ const KnowledgePanel = ({ title }) => {
         : rootPages;
 
     return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
             {/* Header */}
-            <div className="px-3 py-3 border-b border-gray-200 dark:border-gray-800">
-                <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                        <BookOpen size={13} /> Knowledge
+            <div style={{ padding: '12px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <BookOpen size={12} /> Knowledge
                     </span>
-                    <div className="flex gap-1">
-                        <button
-                            onClick={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
-                            className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors"
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                        <button onClick={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
+                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'color 150ms ease' }}
                             title="Knowledge Graph"
-                        >
+                            onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
                             <Network size={13} />
                         </button>
-                        <button
-                            onClick={handleCreatePage}
-                            disabled={creating}
-                            className="p-1 text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded transition-colors"
+                        <button onClick={handleCreatePage} disabled={creating}
+                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'color 150ms ease' }}
                             title="New page"
-                        >
+                            onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
                             <Plus size={13} />
                         </button>
                     </div>
                 </div>
-                {/* Search */}
-                <div className="relative">
-                    <Search size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                        value={search}
-                        onChange={e => setSearch(e.target.value)}
-                        placeholder="Find page..."
-                        className="w-full pl-6 pr-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 rounded border-none outline-none text-gray-800 dark:text-gray-200 placeholder-gray-400"
-                    />
+                <div style={{ position: 'relative' }}>
+                    <Search size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)' }} />
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Find page..."
+                        style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
                 </div>
             </div>
 
             {/* Special sections */}
-            <div className="px-2 py-1.5 border-b border-gray-100 dark:border-gray-800">
-                <button
-                    onClick={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}
-                    className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors"
-                >
-                    <Book size={13} className="text-amber-500" />
-                    <span className="font-medium">Company Handbook</span>
+            <div style={{ padding: '4px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <button onClick={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 8px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                    <Book size={13} style={{ color: '#b8956a', flexShrink: 0 }} />
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(228,228,228,0.55)', fontFamily: 'Inter, system-ui, sans-serif' }}>Company Handbook</span>
                 </button>
             </div>
 
             {/* Page tree */}
-            <div className="flex-1 overflow-y-auto py-1">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
                 {loading && (
-                    <div className="flex items-center justify-center py-8">
-                        <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
+                        <div style={{ width: '16px', height: '16px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                     </div>
                 )}
                 {!loading && filtered.length === 0 && (
-                    <div className="flex flex-col items-center py-10 px-4 text-center">
-                        <BookOpen size={32} className="text-gray-200 dark:text-gray-700 mb-2" />
-                        <p className="text-xs text-gray-400">No pages yet</p>
-                        <button onClick={handleCreatePage} className="mt-3 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                            Create first page
-                        </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', textAlign: 'center' }}>
+                        <BookOpen size={28} style={{ color: 'rgba(228,228,228,0.12)', marginBottom: '8px' }} />
+                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>No pages yet</p>
+                        <button onClick={handleCreatePage}
+                            style={{ marginTop: '10px', fontSize: '12px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>Create first page</button>
                     </div>
                 )}
                 {search
                     ? filtered.map(page => (
-                        <button
-                            key={page._id}
-                            onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${page._id}`)}
-                            className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                        >
-                            <span className="text-sm">{page.icon || '📄'}</span>
-                            <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{page.title}</span>
+                        <button key={page._id} onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${page._id}`)}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <span style={{ fontSize: '13px' }}>{page.icon || '📄'}</span>
+                            <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.title}</span>
                         </button>
                     ))
                     : filtered.map(page => (
-                        <PageTreeItem
-                            key={page._id}
-                            page={page}
-                            depth={0}
-                            workspaceId={workspaceId}
-                            allPages={pages}
-                            onNavigate={(pid) => navigate(`/workspace/${workspaceId}/knowledge/${pid}`)}
-                            activePath={id}
-                        />
+                        <PageTreeItem key={page._id} page={page} depth={0} workspaceId={workspaceId} allPages={pages}
+                            onNavigate={(pid) => navigate(`/workspace/${workspaceId}/knowledge/${pid}`)} activePath={id} />
                     ))
                 }
             </div>
 
             {/* Footer */}
-            <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-2">
-                <button
-                    onClick={handleCreatePage}
-                    disabled={creating}
-                    className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded transition-colors"
-                >
-                    <Plus size={12} />
-                    {creating ? 'Creating…' : 'New page'}
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '8px 12px' }}>
+                <button onClick={handleCreatePage} disabled={creating}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px', background: 'transparent', border: 'none', fontSize: '12px', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
+                    <Plus size={12} />{creating ? 'Creating…' : 'New page'}
                 </button>
             </div>
         </div>

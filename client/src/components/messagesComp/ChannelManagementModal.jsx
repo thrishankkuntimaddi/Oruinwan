@@ -335,8 +335,8 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
 
     return (
         <>
-            <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm animate-fade-in">
-                <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800">
+            <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, backdropFilter: 'blur(4px)', fontFamily: 'var(--font)' }}>
+                <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '680px', maxHeight: '85vh', overflow: 'hidden', boxShadow: '0 16px 48px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column' }}>
                     <ModalHeader
                         channel={channel}
                         members={members}
@@ -352,7 +352,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                         isAdmin={isAdmin}
                     />
 
-                    <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }} className="custom-scrollbar">
                         {activeTab === "members" && (
                             <MembersTab
                                 members={members}

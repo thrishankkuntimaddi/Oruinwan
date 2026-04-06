@@ -14,27 +14,37 @@ export default function VideoMessage({ msg }) {
     if (!proxyUrl) return null;
 
     return (
-        <div className="mt-1 max-w-sm rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div style={{
+            marginTop: '6px', maxWidth: '320px',
+            borderRadius: '2px', overflow: 'hidden',
+            border: '1px solid var(--border-default)',
+        }}>
             <video
                 src={proxyUrl}
                 controls
                 preload="metadata"
-                className="w-full max-h-64 bg-black block"
+                style={{ width: '100%', maxHeight: '200px', backgroundColor: '#000', display: 'block' }}
             >
                 Your browser does not support the video element.
             </video>
-            <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                <span className="truncate max-w-[200px]">{name}</span>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            <div style={{
+                padding: '6px 10px',
+                backgroundColor: 'var(--bg-active)',
+                borderTop: '1px solid var(--border-subtle)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                fontSize: '11px', color: 'var(--text-muted)',
+            }}>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>{name}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
                     {sizeFormatted && <span>{sizeFormatted}</span>}
                     <a
                         href={proxyUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-600 dark:text-blue-400"
+                        style={{ color: 'var(--accent)', display: 'flex' }}
                         title="Open in new tab"
                     >
-                        <ExternalLink size={13} />
+                        <ExternalLink size={12} />
                     </a>
                 </div>
             </div>

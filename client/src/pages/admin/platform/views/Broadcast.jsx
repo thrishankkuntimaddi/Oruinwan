@@ -4,314 +4,256 @@ import { Megaphone, Send, Calendar, Users, Check } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
 const Broadcast = () => {
-    const [activeTab, setActiveTab] = useState('compose'); // 'compose' or 'history'
-    const [formData, setFormData] = useState({
-        subject: '',
-        message: '',
-        targetType: 'all', // 'all', 'active', 'pending', 'specific'
-        targetCompanies: [],
-        scheduleType: 'now' // 'now' or 'schedule'
-    });
+    const [activeTab, setActiveTab] = useState('compose');
+    const [formData, setFormData] = useState({ subject: '', message: '', targetType: 'all', targetCompanies: [], scheduleType: 'now' });
     const [companies, setCompanies] = useState([]);
     const [broadcastHistory, setBroadcastHistory] = useState([]);
     const [sending, setSending] = useState(false);
     const { showToast } = useToast();
 
     useEffect(() => {
-        if (formData.targetType === 'specific') {
-            fetchCompanies();
-        }
-        if (activeTab === 'history') {
-            fetchHistory();
-        }
+        if (formData.targetType === 'specific') fetchCompanies();
+        if (activeTab === 'history') fetchHistory();
     }, [formData.targetType, activeTab]);
 
     const fetchCompanies = async () => {
-        try {
-            const res = await api.get(`/api/admin/active-companies`);
-            setCompanies(res.data);
-        } catch (err) {
-            console.error('Failed to fetch companies:', err);
-        }
+        try { const res = await api.get('/api/admin/active-companies'); setCompanies(res.data); }
+        catch (err) { console.error('Failed to fetch companies:', err); }
     };
-
     const fetchHistory = async () => {
-        try {
-            const res = await api.get(`/api/admin/broadcast/history`);
-            setBroadcastHistory(res.data);
-        } catch (err) {
-            console.error('Failed to fetch broadcast history:', err);
-        }
+        try { const res = await api.get('/api/admin/broadcast/history'); setBroadcastHistory(res.data); }
+        catch (err) { console.error('Failed to fetch history:', err); }
     };
-
-    const handleCompanyToggle = (companyId) => {
-        setFormData(prev => ({
-            ...prev,
-            targetCompanies: prev.targetCompanies.includes(companyId)
-                ? prev.targetCompanies.filter(id => id !== companyId)
-                : [...prev.targetCompanies, companyId]
-        }));
+    const handleCompanyToggle = (id) => {
+        setFormData(prev => ({ ...prev, targetCompanies: prev.targetCompanies.includes(id) ? prev.targetCompanies.filter(x => x !== id) : [...prev.targetCompanies, id] }));
     };
-
     const handleSend = async () => {
-        if (!formData.subject.trim() || !formData.message.trim()) {
-            showToast('Please fill in subject and message', 'error');
-            return;
-        }
-
-        if (formData.targetType === 'specific' && formData.targetCompanies.length === 0) {
-            showToast('Please select at least one company', 'error');
-            return;
-        }
-
+        if (!formData.subject.trim() || !formData.message.trim()) { showToast('Please fill in subject and message', 'error'); return; }
+        if (formData.targetType === 'specific' && formData.targetCompanies.length === 0) { showToast('Please select at least one company', 'error'); return; }
         setSending(true);
         try {
-            await api.post(`/api/admin/broadcast/send`, formData);
+            await api.post('/api/admin/broadcast/send', formData);
             showToast('Broadcast sent successfully!', 'success');
-            setFormData({
-                subject: '',
-                message: '',
-                targetType: 'all',
-                targetCompanies: [],
-                scheduleType: 'now'
-            });
+            setFormData({ subject: '', message: '', targetType: 'all', targetCompanies: [], scheduleType: 'now' });
             setActiveTab('history');
-        } catch (err) {
-            showToast(err.response?.data?.message || 'Failed to send broadcast', 'error');
-        } finally {
-            setSending(false);
-        }
+        } catch (err) { showToast(err.response?.data?.message || 'Failed to send broadcast', 'error'); }
+        finally { setSending(false); }
     };
-
-    const getTargetCount = () => {
-        switch (formData.targetType) {
-            case 'specific':
-                return formData.targetCompanies.length;
-            case 'all':
-                return companies.length;
-            default:
-                return '?';
-        }
-    };
+    const getTargetCount = () => formData.targetType === 'specific' ? formData.targetCompanies.length : formData.targetType === 'all' ? companies.length : '?';
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-                        <Megaphone size={32} />
-                        Broadcast Messages
-                    </h1>
-                    <p className="text-gray-500 dark:text-gray-400">
-                        Send announcements to companies
-                    </p>
-                </div>
+            <div>
+                <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Megaphone size={18} style={{ color: 'var(--accent)' }} />
+                    Broadcast Messages
+                </h1>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Send announcements to companies</p>
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
-                <button
-                    onClick={() => setActiveTab('compose')}
-                    className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'compose'
-                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                        }`}
-                >
-                    Compose
-                </button>
-                <button
-                    onClick={() => setActiveTab('history')}
-                    className={`px-6 py-3 font-bold text-sm transition-all border-b-2 ${activeTab === 'history'
-                        ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
-                        : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                        }`}
-                >
-                    History
-                </button>
+            <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border-subtle)' }}>
+                {['compose', 'history'].map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        style={{
+                            padding: '10px 20px',
+                            background: 'none', border: 'none',
+                            borderBottom: activeTab === tab ? '2px solid var(--accent)' : '2px solid transparent',
+                            color: activeTab === tab ? 'var(--accent)' : 'var(--text-muted)',
+                            fontSize: '13px', fontWeight: activeTab === tab ? 700 : 400,
+                            cursor: 'pointer', textTransform: 'capitalize',
+                            transition: 'color 150ms ease'
+                        }}
+                    >
+                        {tab}
+                    </button>
+                ))}
             </div>
 
             {/* Compose Tab */}
             {activeTab === 'compose' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Main Form */}
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 space-y-6">
-                            {/* Subject */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                                    Subject *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.subject}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
-                                    placeholder="e.g., New Feature Announcement"
-                                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900"
-                                />
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', alignItems: 'start' }}>
+                    {/* Form */}
+                    <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <FormField label="Subject *">
+                            <input
+                                type="text"
+                                value={formData.subject}
+                                onChange={e => setFormData(p => ({ ...p, subject: e.target.value }))}
+                                placeholder="e.g., New Feature Announcement"
+                                style={inputStyle}
+                            />
+                        </FormField>
+                        <FormField label="Message *">
+                            <textarea
+                                value={formData.message}
+                                onChange={e => setFormData(p => ({ ...p, message: e.target.value }))}
+                                placeholder="Write your broadcast message here..."
+                                rows={8}
+                                style={{ ...inputStyle, resize: 'none' }}
+                            />
+                        </FormField>
+                        <FormField label="Send To *">
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                {[
+                                    { value: 'all', label: 'All Companies', icon: Users },
+                                    { value: 'active', label: 'Active Only', icon: Check },
+                                    { value: 'pending', label: 'Pending Only', icon: Calendar },
+                                    { value: 'specific', label: 'Specific Companies', icon: Users },
+                                ].map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => setFormData(p => ({ ...p, targetType: opt.value }))}
+                                        style={{
+                                            padding: '12px',
+                                            background: formData.targetType === opt.value ? 'var(--bg-active)' : 'transparent',
+                                            border: `1px solid ${formData.targetType === opt.value ? 'var(--accent)' : 'var(--border-default)'}`,
+                                            cursor: 'pointer', textAlign: 'left',
+                                            transition: 'all 150ms ease'
+                                        }}
+                                    >
+                                        <opt.icon size={14} style={{ color: formData.targetType === opt.value ? 'var(--accent)' : 'var(--text-muted)', marginBottom: '6px' }} />
+                                        <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{opt.label}</p>
+                                    </button>
+                                ))}
                             </div>
-
-                            {/* Message */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                                    Message *
-                                </label>
-                                <textarea
-                                    value={formData.message}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-                                    placeholder="Write your broadcast message here..."
-                                    rows={10}
-                                    className="w-full px-4 py-3 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none"
-                                />
-                            </div>
-
-                            {/* Target Selection */}
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                                    Send To *
-                                </label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    {[
-                                        { value: 'all', label: 'All Companies', icon: Users },
-                                        { value: 'active', label: 'Active Only', icon: Check },
-                                        { value: 'pending', label: 'Pending Only', icon: Calendar },
-                                        { value: 'specific', label: 'Specific Companies', icon: Users }
-                                    ].map(option => (
-                                        <button
-                                            key={option.value}
-                                            onClick={() => setFormData(prev => ({ ...prev, targetType: option.value }))}
-                                            className={`p-4 rounded-xl border-2 transition-all text-left ${formData.targetType === option.value
-                                                ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-900/20'
-                                                : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
-                                                }`}
+                        </FormField>
+                        {formData.targetType === 'specific' && (
+                            <FormField label={`Select Companies (${formData.targetCompanies.length} selected)`}>
+                                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-default)', padding: '8px' }} className="custom-scrollbar">
+                                    {companies.map(company => (
+                                        <label
+                                            key={company._id}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px', cursor: 'pointer', transition: 'background 150ms ease' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
-                                            <option.icon size={20} className={formData.targetType === option.value ? 'text-indigo-600' : 'text-gray-400'} />
-                                            <p className="font-bold text-sm mt-2 text-gray-900 dark:text-white">{option.label}</p>
-                                        </button>
+                                            <input type="checkbox" checked={formData.targetCompanies.includes(company._id)} onChange={() => handleCompanyToggle(company._id)} style={{ accentColor: 'var(--accent)' }} />
+                                            <div>
+                                                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{company.name}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>{company.domain}</p>
+                                            </div>
+                                        </label>
                                     ))}
                                 </div>
-                            </div>
-
-                            {/* Specific Companies Selection */}
-                            {formData.targetType === 'specific' && (
-                                <div>
-                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
-                                        Select Companies ({formData.targetCompanies.length} selected)
-                                    </label>
-                                    <div className="max-h-64 overflow-y-auto space-y-2 border border-gray-200 dark:border-gray-600 rounded-xl p-4">
-                                        {companies.map(company => (
-                                            <label
-                                                key={company._id}
-                                                className="flex items-center gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg cursor-pointer transition-colors"
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    checked={formData.targetCompanies.includes(company._id)}
-                                                    onChange={() => handleCompanyToggle(company._id)}
-                                                    className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
-                                                />
-                                                <div className="flex-1">
-                                                    <p className="font-bold text-sm text-gray-900 dark:text-white">{company.name}</p>
-                                                    <p className="text-xs text-gray-500">{company.domain}</p>
-                                                </div>
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                            </FormField>
+                        )}
                     </div>
 
-                    {/* Preview & Actions */}
-                    <div className="space-y-6">
-                        {/* Preview */}
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6">
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-4">Preview</h3>
-                            <div className="space-y-4">
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-1">SUBJECT</p>
-                                    <p className="font-bold text-gray-900 dark:text-white">
-                                        {formData.subject || 'No subject'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-1">MESSAGE</p>
-                                    <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
-                                        {formData.message || 'No message'}
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-400 mb-1">RECIPIENTS</p>
-                                    <p className="font-bold text-indigo-600 dark:text-indigo-400">
-                                        {getTargetCount()} companies
-                                    </p>
-                                </div>
+                    {/* Preview & Send */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
+                            <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px' }}>Preview</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <PreviewField label="Subject" value={formData.subject || 'No subject'} />
+                                <PreviewField label="Message" value={formData.message || 'No message'} />
+                                <PreviewField label="Recipients" value={`${getTargetCount()} companies`} accent />
                             </div>
                         </div>
-
-                        {/* Send Button */}
-                        <button
-                            onClick={handleSend}
-                            disabled={sending}
-                            className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-lg"
-                        >
-                            {sending ? (
-                                <>
-                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    Sending...
-                                </>
-                            ) : (
-                                <>
-                                    <Send size={20} />
-                                    Send Broadcast
-                                </>
-                            )}
-                        </button>
+                        <SendBtn sending={sending} onClick={handleSend} />
                     </div>
                 </div>
             )}
 
             {/* History Tab */}
             {activeTab === 'history' && (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-100 dark:border-gray-700">
-                                <tr>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Subject</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Recipients</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Sent</th>
-                                    <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-50 dark:divide-gray-700">
-                                {broadcastHistory.map(broadcast => (
-                                    <tr key={broadcast._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                        <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">{broadcast.subject}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600 dark:text-gray-300">
-                                            {broadcast.recipientCount} companies
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-                                            {new Date(broadcast.sentAt).toLocaleString()}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-full text-xs font-bold">
-                                                Sent
-                                            </span>
-                                        </td>
-                                    </tr>
+                <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                            <tr style={{ background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
+                                {['Subject', 'Recipients', 'Sent', 'Status'].map(col => (
+                                    <th key={col} style={{ padding: '10px 16px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'left' }}>{col}</th>
                                 ))}
-                            </tbody>
-                        </table>
-                        {broadcastHistory.length === 0 && (
-                            <div className="p-12 text-center text-gray-400">
-                                No broadcast history yet
-                            </div>
-                        )}
-                    </div>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {broadcastHistory.map(b => (
+                                <HistoryRow key={b._id} broadcast={b} />
+                            ))}
+                        </tbody>
+                    </table>
+                    {broadcastHistory.length === 0 && (
+                        <div style={{ padding: '48px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>No broadcast history yet</div>
+                    )}
                 </div>
             )}
         </div>
+    );
+};
+
+const inputStyle = {
+    width: '100%', padding: '10px 12px',
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '13px',
+    outline: 'none', fontFamily: 'Inter, system-ui, sans-serif',
+    boxSizing: 'border-box'
+};
+
+const FormField = ({ label, children }) => (
+    <div>
+        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
+            {label}
+        </label>
+        {children}
+    </div>
+);
+
+const PreviewField = ({ label, value, accent }) => (
+    <div>
+        <p style={{ fontSize: '10px', color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>{label}</p>
+        <p style={{ fontSize: '13px', color: accent ? 'var(--accent)' : 'var(--text-primary)', fontWeight: accent ? 600 : 400, whiteSpace: 'pre-wrap', margin: 0 }}>{value}</p>
+    </div>
+);
+
+const SendBtn = ({ sending, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            disabled={sending}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                width: '100%', padding: '14px',
+                background: hov ? 'var(--accent-hover)' : 'var(--accent)',
+                border: 'none', color: 'var(--bg-base)',
+                fontSize: '14px', fontWeight: 700,
+                cursor: sending ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                borderRadius: '2px', opacity: sending ? 0.6 : 1,
+                transition: 'background 150ms ease'
+            }}
+        >
+            {sending ? (
+                <>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid var(--bg-base)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    Sending...
+                </>
+            ) : (
+                <><Send size={16} /> Send Broadcast</>
+            )}
+        </button>
+    );
+};
+
+const HistoryRow = ({ broadcast }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <tr
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{ background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', transition: 'background 150ms ease' }}
+        >
+            <td style={{ padding: '14px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{broadcast.subject}</td>
+            <td style={{ padding: '14px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>{broadcast.recipientCount} companies</td>
+            <td style={{ padding: '14px 16px', fontSize: '12px', color: 'var(--text-muted)' }}>{new Date(broadcast.sentAt).toLocaleString()}</td>
+            <td style={{ padding: '14px 16px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--state-success)', padding: '2px 6px', border: '1px solid var(--state-success)' }}>Sent</span>
+            </td>
+        </tr>
     );
 };
 

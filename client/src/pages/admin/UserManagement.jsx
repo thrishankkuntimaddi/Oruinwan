@@ -10,7 +10,15 @@ import { useToast } from '../../contexts/ToastContext';
 import { usePermissions } from '../../hooks/usePermissions';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981', '#f59e0b'];
+const COLORS = ['#b8956a', '#c9a87c', '#5aba8a', '#e05252', '#7a7a7a', '#383838'];
+
+const inputSt = {
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '12px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', padding: '7px 10px',
+};
+
+const roleBg = { owner: '#b8956a', admin: 'var(--accent)', manager: 'var(--text-secondary)', member: 'var(--text-muted)', guest: 'var(--border-accent)' };
 
 const UserManagement = () => {
     const { company } = useCompany();
@@ -21,535 +29,305 @@ const UserManagement = () => {
     const [departments, setDepartments] = useState([]);
     const [workspaces, setWorkspaces] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [showStats, setShowStats] = useState(false); // Hidden by default
-
-    // Filters
-    const [tab, setTab] = useState('all'); // all, admins, managers, members, guests
+    const [showStats, setShowStats] = useState(false);
+    const [tab, setTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [deptFilter, setDeptFilter] = useState('all');
     const [roleFilter] = useState('all');
     const [workspaceFilter, setWorkspaceFilter] = useState('all');
-
-    // Selection
     const [selectedUsers, setSelectedUsers] = useState([]);
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-
-    // Bulk Action Modal
     const [isBulkDeptOpen, setIsBulkDeptOpen] = useState(false);
     const [selectedBulkDept, setSelectedBulkDept] = useState('');
     const [bulkProcessing, setBulkProcessing] = useState(false);
 
     const fetchData = React.useCallback(async () => {
-        if (!company?._id) {
-            setLoading(false);
-            return;
-        }
+        if (!company?._id) { setLoading(false); return; }
         try {
             setLoading(true);
             const [membersRes, deptsRes, workspacesRes] = await Promise.all([
-                getCompanyMembers(company._id),
-                getDepartments(company._id),
-                workspaceService.getWorkspaces(company._id)
+                getCompanyMembers(company._id), getDepartments(company._id), workspaceService.getWorkspaces(company._id)
             ]);
             setAllMembers(membersRes.members || []);
             setDepartments(deptsRes.departments || []);
             setWorkspaces(Array.isArray(workspacesRes.data?.workspaces) ? workspacesRes.data.workspaces : []);
-        } catch (err) {
-            console.error("Failed to fetch data", err);
-            showToast("Failed to load users", "error");
-        } finally {
-            setLoading(false);
-        }
+        } catch { showToast('Failed to load users', 'error'); } finally { setLoading(false); }
     }, [company?._id, showToast]);
 
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    // Filtering Logic
     useEffect(() => {
         let result = allMembers;
-
-        // 1. Tab Filter
-        if (tab === 'admins') {
-            result = result.filter(m => ['owner', 'admin'].includes(m.companyRole));
-        } else if (tab === 'managers') {
-            result = result.filter(m => m.companyRole === 'manager');
-        } else if (tab === 'members') {
-            result = result.filter(m => m.companyRole === 'member');
-        } else if (tab === 'guests') {
-            result = result.filter(m => m.companyRole === 'guest');
-        }
-
-        // 2. Search
-        if (searchQuery) {
-            const q = searchQuery.toLowerCase();
-            result = result.filter(m =>
-                m.username?.toLowerCase().includes(q) ||
-                m.email?.toLowerCase().includes(q) ||
-                m.companyEmail?.toLowerCase().includes(q) ||
-                m.jobTitle?.toLowerCase().includes(q)
-            );
-        }
-
-        // 3. Department Filter
-        if (deptFilter !== 'all') {
-            result = result.filter(m =>
-                m.departments && m.departments.some(d => d._id === deptFilter || d === deptFilter)
-            );
-        }
-
-        // 4. Workspace Filter
-        if (workspaceFilter !== 'all') {
-            result = result.filter(m =>
-                m.workspaces && m.workspaces.some(ws =>
-                    ws.workspace?._id === workspaceFilter || ws.workspace === workspaceFilter
-                )
-            );
-        }
-
-        // 5. Role Filter (Specific)
-        if (roleFilter !== 'all') {
-            result = result.filter(m => m.companyRole === roleFilter);
-        }
-
+        if (tab === 'admins') result = result.filter(m => ['owner', 'admin'].includes(m.companyRole));
+        else if (tab === 'managers') result = result.filter(m => m.companyRole === 'manager');
+        else if (tab === 'members') result = result.filter(m => m.companyRole === 'member');
+        else if (tab === 'guests') result = result.filter(m => m.companyRole === 'guest');
+        if (searchQuery) { const q = searchQuery.toLowerCase(); result = result.filter(m => m.username?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q) || m.jobTitle?.toLowerCase().includes(q)); }
+        if (deptFilter !== 'all') result = result.filter(m => m.departments?.some(d => d._id === deptFilter || d === deptFilter));
+        if (workspaceFilter !== 'all') result = result.filter(m => m.workspaces?.some(ws => ws.workspace?._id === workspaceFilter || ws.workspace === workspaceFilter));
+        if (roleFilter !== 'all') result = result.filter(m => m.companyRole === roleFilter);
         setFilteredMembers(result);
     }, [allMembers, tab, searchQuery, deptFilter, roleFilter, workspaceFilter]);
 
-
-    const handleSelectAll = (e) => {
-        if (e.target.checked) {
-            setSelectedUsers(filteredMembers.map(m => m._id));
-        } else {
-            setSelectedUsers([]);
-        }
-    };
-
-    const handleSelectUser = (id) => {
-        if (selectedUsers.includes(id)) {
-            setSelectedUsers(selectedUsers.filter(uid => uid !== id));
-        } else {
-            setSelectedUsers([...selectedUsers, id]);
-        }
-    };
+    const handleSelectAll = (e) => setSelectedUsers(e.target.checked ? filteredMembers.map(m => m._id) : []);
+    const handleSelectUser = (id) => setSelectedUsers(selectedUsers.includes(id) ? selectedUsers.filter(u => u !== id) : [...selectedUsers, id]);
 
     const handleBulkAssign = async () => {
         if (!selectedBulkDept) return;
-
         try {
             setBulkProcessing(true);
-            const promises = selectedUsers.map(userId =>
-                assignUserToDepartment(userId, selectedBulkDept)
-            );
-            await Promise.all(promises);
+            await Promise.all(selectedUsers.map(uid => assignUserToDepartment(uid, selectedBulkDept)));
             showToast(`Assigned ${selectedUsers.length} users to department`, 'success');
-            setIsBulkDeptOpen(false);
-            setSelectedUsers([]);
-            fetchData(); // Refresh to show new deps
-        } catch (error) {
-            console.error(error);
-            showToast("Failed to assign users", "error");
-        } finally {
-            setBulkProcessing(false);
-        }
+            setIsBulkDeptOpen(false); setSelectedUsers([]); fetchData();
+        } catch { showToast('Failed to assign users', 'error'); } finally { setBulkProcessing(false); }
     };
 
-    // --- Statistics Calculations ---
     const roleStats = React.useMemo(() => {
         const stats = {};
-        // Use filteredMembers for dynamic updates
-        filteredMembers.forEach(m => {
-            const role = m.companyRole || 'Unknown';
-            stats[role] = (stats[role] || 0) + 1;
-        });
-        return Object.keys(stats).map(key => ({
-            name: key.charAt(0).toUpperCase() + key.slice(1),
-            value: stats[key]
-        }));
+        filteredMembers.forEach(m => { const r = m.companyRole || 'Unknown'; stats[r] = (stats[r] || 0) + 1; });
+        return Object.keys(stats).map(k => ({ name: k.charAt(0).toUpperCase() + k.slice(1), value: stats[k] }));
     }, [filteredMembers]);
 
-    // Dynamic Chart: Departments OR Workspaces
     const chartStats = React.useMemo(() => {
         const stats = {};
-        const isDeptSelected = deptFilter !== 'all';
-
+        const isDept = deptFilter !== 'all';
         filteredMembers.forEach(m => {
-            if (isDeptSelected) {
-                // Show Workspaces if Department is selected
-                if (m.workspaces && m.workspaces.length > 0) {
-                    m.workspaces.forEach(wsItem => {
-                        // wsItem = { workspace: { name: 'Foo' }, ... }
-                        // Ensure optional chaining/existence
-                        const name = wsItem.workspace?.name || 'Unknown';
-                        stats[name] = (stats[name] || 0) + 1;
-                    });
-                } else {
-                    stats['No Workspace'] = (stats['No Workspace'] || 0) + 1;
-                }
+            if (isDept) {
+                m.workspaces?.length > 0 ? m.workspaces.forEach(w => { const n = w.workspace?.name || 'Unknown'; stats[n] = (stats[n] || 0) + 1; }) : (stats['No Workspace'] = (stats['No Workspace'] || 0) + 1);
             } else {
-                // Show Departments
-                if (m.departments && m.departments.length > 0) {
-                    m.departments.forEach(d => {
-                        const name = d.name || 'Unknown';
-                        stats[name] = (stats[name] || 0) + 1;
-                    });
-                } else {
-                    stats['No Dept'] = (stats['No Dept'] || 0) + 1;
-                }
+                m.departments?.length > 0 ? m.departments.forEach(d => { stats[d.name || 'Unknown'] = (stats[d.name || 'Unknown'] || 0) + 1; }) : (stats['No Dept'] = (stats['No Dept'] || 0) + 1);
             }
         });
-
-        return {
-            title: isDeptSelected ? 'Workspace Distribution' : 'Department Breakdown',
-            data: Object.keys(stats).map(key => ({
-                name: key,
-                value: stats[key]
-            })).sort((a, b) => b.value - a.value).slice(0, 5) // Top 5
-        };
+        return { title: isDept ? 'Workspace Distribution' : 'Department Breakdown', data: Object.keys(stats).map(k => ({ name: k, value: stats[k] })).sort((a, b) => b.value - a.value).slice(0, 5) };
     }, [filteredMembers, deptFilter]);
 
     return (
         <React.Fragment>
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 transition-colors duration-200">
+            <header style={{ height: '56px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white">People</h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">Team & Access</p>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>People</h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Team & Access</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => setShowStats(!showStats)}
-                        className={`p-2 rounded-lg transition-colors ${showStats
-                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                            : 'text-slate-400 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-700'
-                            }`}
-                        title={showStats ? 'Hide Statistics' : 'Show Statistics'}
-                    >
-                        <BarChart2 size={20} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <button onClick={() => setShowStats(!showStats)} title={showStats ? 'Hide Statistics' : 'Show Statistics'}
+                        style={{ padding: '7px', background: showStats ? 'var(--bg-active)' : 'none', border: showStats ? '1px solid var(--border-accent)' : '1px solid transparent', color: showStats ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+                        <BarChart2 size={16} />
                     </button>
                     {canInviteUsers && (
-                        <button
-                            onClick={() => setIsInviteModalOpen(true)}
-                            className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 transition-colors shadow-sm flex items-center gap-2"
-                        >
-                            <Mail size={16} /> Invite People
-                        </button>
+                        <ActionBtn onClick={() => setIsInviteModalOpen(true)} icon={Mail} label="Invite People" />
                     )}
                 </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto w-full px-8 py-6 z-10 custom-scrollbar bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-
-                {/* --- Visual Statistics Section --- */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', background: 'var(--bg-base)' }} className="custom-scrollbar">
+                {/* Stats section */}
                 {showStats && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-slideDown">
-                        {/* Card 1: Totals */}
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
-                            <div>
-                                <h3 className="text-slate-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Filtered Users</h3>
-                                <div className="text-4xl font-black text-slate-800 dark:text-white">{filteredMembers.length}</div>
-                                <div className="text-sm text-green-600 dark:text-green-400 font-bold mt-1.5 flex items-center gap-1">
-                                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                                    {filteredMembers.filter(m => m.isOnline).length} in view are Online
-                                </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                        {/* Card 1 */}
+                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
+                            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px' }}>Filtered Users</p>
+                            <div style={{ fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>{filteredMembers.length}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--state-success)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--state-success)' }} />
+                                {filteredMembers.filter(m => m.isOnline).length} online
                             </div>
-                            <div className="mt-4 pt-4 border-t border-slate-50 dark:border-gray-700 space-y-2">
-                                <div className="flex justify-between text-xs font-medium text-slate-600 dark:text-gray-400">
-                                    <span>Total in Company:</span>
-                                    <span className="font-bold text-slate-800 dark:text-white">{allMembers.length}</span>
+                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    <span>Total in Company:</span><span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{allMembers.length}</span>
                                 </div>
-                                <div className="flex justify-between text-xs font-medium text-slate-600 dark:text-gray-400">
-                                    <span>Selected:</span>
-                                    <span className={`font-bold ${selectedUsers.length > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-gray-600'}`}>{selectedUsers.length}</span>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                    <span>Selected:</span><span style={{ fontWeight: 600, color: selectedUsers.length > 0 ? 'var(--accent)' : 'var(--text-muted)' }}>{selectedUsers.length}</span>
                                 </div>
                             </div>
                         </div>
-
-                        {/* Card 2: Role Distribution (Dynamic) */}
-                        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all">
-                            <h3 className="text-slate-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-2">Role Distribution</h3>
-                            <div className="h-32 flex items-center">
+                        {/* Card 2: Role Distribution */}
+                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
+                            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px' }}>Role Distribution</p>
+                            <div style={{ height: '100px', display: 'flex', alignItems: 'center' }}>
                                 <ResponsiveContainer width="40%" height="100%">
                                     <PieChart>
-                                        <Pie
-                                            data={roleStats}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={30}
-                                            outerRadius={50}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {roleStats.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
+                                        <Pie data={roleStats} cx="50%" cy="50%" innerRadius={22} outerRadius={40} paddingAngle={4} dataKey="value" stroke="none">
+                                            {roleStats.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                         </Pie>
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: '#1f2937', color: '#f3f4f6' }}
-                                            itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#f3f4f6' }}
-                                        />
+                                        <Tooltip contentStyle={{ backgroundColor: '#111111', border: '1px solid #222222', borderRadius: '2px', color: '#e4e4e4', fontSize: '11px' }} />
                                     </PieChart>
                                 </ResponsiveContainer>
-                                <div className="ml-4 flex-1 flex flex-col gap-1 overflow-y-auto max-h-32 pr-2 custom-scrollbar">
-                                    {roleStats.map((entry, index) => (
-                                        <div key={index} className="flex items-center justify-between text-xs font-medium w-full">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                                <span className="text-slate-600 dark:text-gray-300">{entry.name}</span>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                    {roleStats.map((e, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: COLORS[i % COLORS.length] }} />
+                                                <span style={{ color: 'var(--text-secondary)' }}>{e.name}</span>
                                             </div>
-                                            <span className="text-slate-400 dark:text-gray-500 font-bold">{entry.value}</span>
+                                            <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{e.value}</span>
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         </div>
-
-                        {/* Card 3: Dynamic Context (Dept or Workspace) */}
-                        <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-slate-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all relative">
-                            <h3 className="text-slate-500 dark:text-gray-400 text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2">
-                                {deptFilter !== 'all' && <Briefcase size={12} />}
-                                {chartStats.title}
-                            </h3>
-                            <div className="h-32">
+                        {/* Card 3: Dynamic Chart */}
+                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px', position: 'relative' }}>
+                            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                {deptFilter !== 'all' && <Briefcase size={10} />}{chartStats.title}
+                            </p>
+                            <div style={{ height: '100px' }}>
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={chartStats.data} layout="vertical" margin={{ left: 0, right: 20 }}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#374151" strokeOpacity={0.1} />
+                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#222222" />
                                         <XAxis type="number" hide />
-                                        <YAxis dataKey="name" type="category" width={80} tick={{ fontSize: 10, fill: '#9ca3af' }} interval={0} />
-                                        <Tooltip
-                                            cursor={{ fill: 'rgba(255,255,255,0.05)' }}
-                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: '#1f2937', color: '#f3f4f6' }}
-                                            itemStyle={{ fontSize: '12px', fontWeight: 'bold', color: '#f3f4f6' }}
-                                        />
-                                        <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} barSize={15}>
-                                            {chartStats.data.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                            ))}
+                                        <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 10, fill: '#7a7a7a' }} interval={0} />
+                                        <Tooltip contentStyle={{ backgroundColor: '#111111', border: '1px solid #222222', borderRadius: '2px', color: '#e4e4e4', fontSize: '11px' }} />
+                                        <Bar dataKey="value" fill="#b8956a" radius={[0, 2, 2, 0]} barSize={10}>
+                                            {chartStats.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                         </Bar>
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
-                            {deptFilter !== 'all' && (
-                                <div className="absolute top-4 right-4 text-[10px] text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded-full">
-                                    Filtered by Dept
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
 
                 {/* Tabs & Actions */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                    <div className="flex p-1 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg transition-colors">
-                        {['all', 'admins', 'managers', 'members', 'guests'].map((t) => (
-                            <button
-                                key={t}
-                                onClick={() => setTab(t)}
-                                className={`px-4 py-1.5 text-sm font-bold rounded-md transition-all ${tab === t
-                                    ? 'bg-slate-100 dark:bg-gray-700 text-slate-900 dark:text-white shadow-sm'
-                                    : 'text-slate-500 dark:text-gray-400 hover:text-slate-700 dark:hover:text-gray-200'
-                                    }`}
-                            >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '2px' }}>
+                        {['all', 'admins', 'managers', 'members', 'guests'].map(t => (
+                            <button key={t} onClick={() => setTab(t)}
+                                style={{ padding: '5px 12px', fontSize: '12px', fontWeight: tab === t ? 600 : 400, background: tab === t ? 'var(--bg-active)' : 'none', border: tab === t ? '1px solid var(--border-accent)' : '1px solid transparent', color: tab === t ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}>
                                 {t.charAt(0).toUpperCase() + t.slice(1)}
                             </button>
                         ))}
                     </div>
-
-                    <div className="flex items-center gap-3">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {selectedUsers.length > 0 && canSuspendUsers && (
-                            <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-lg border border-indigo-100 dark:border-indigo-800 animate-fadeIn transition-colors">
-                                <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400">{selectedUsers.length} selected</span>
-                                <button
-                                    onClick={() => setIsBulkDeptOpen(true)}
-                                    className="text-xs font-bold text-white bg-indigo-600 px-2 py-1 rounded hover:bg-indigo-700"
-                                >
-                                    Assign Dept
-                                </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)' }}>
+                                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--accent)' }}>{selectedUsers.length} selected</span>
+                                <button onClick={() => setIsBulkDeptOpen(true)} style={{ fontSize: '11px', fontWeight: 700, color: 'var(--bg-base)', background: 'var(--accent)', border: 'none', padding: '2px 8px', cursor: 'pointer', borderRadius: '2px' }}>Assign Dept</button>
                             </div>
                         )}
-
-                        <div className="relative">
-                            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500" />
-                            <input
-                                type="text"
-                                placeholder="Search..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-sm text-gray-900 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 w-48 lg:w-64 transition-colors"
-                            />
+                        <div style={{ position: 'relative' }}>
+                            <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                            <input type="text" placeholder="Search..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                                style={{ ...inputSt, paddingLeft: '26px', width: '180px' }} />
                         </div>
-
-                        <div className="flex items-center gap-2">
-                            <select
-                                value={deptFilter}
-                                onChange={(e) => setDeptFilter(e.target.value)}
-                                className="px-3 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-300 focus:outline-none transition-colors"
-                            >
-                                <option value="all">All Departments</option>
-                                {departments.map(d => (
-                                    <option key={d._id} value={d._id}>{d.name}</option>
-                                ))}
-                            </select>
-                            <select
-                                value={workspaceFilter}
-                                onChange={(e) => setWorkspaceFilter(e.target.value)}
-                                className="px-3 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700 rounded-lg text-sm font-medium text-slate-600 dark:text-gray-300 focus:outline-none transition-colors"
-                            >
-                                <option value="all">All Workspaces</option>
-                                {workspaces.map(ws => (
-                                    <option key={ws._id} value={ws._id}>{ws.name}</option>
-                                ))}
-                            </select>
-                        </div>
+                        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} style={inputSt}>
+                            <option value="all">All Departments</option>
+                            {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
+                        </select>
+                        <select value={workspaceFilter} onChange={e => setWorkspaceFilter(e.target.value)} style={inputSt}>
+                            <option value="all">All Workspaces</option>
+                            {workspaces.map(ws => <option key={ws._id} value={ws._id}>{ws.name}</option>)}
+                        </select>
                     </div>
                 </div>
 
                 {/* Table */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-100 dark:border-gray-700 overflow-hidden transition-colors">
-                    <table className="w-full border-collapse">
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-gray-700/50 border-b border-slate-100 dark:border-gray-700">
-                                <th className="px-4 py-4 w-12 text-center">
-                                    <input
-                                        type="checkbox"
-                                        className="rounded border-slate-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-gray-700"
-                                        onChange={handleSelectAll}
-                                        checked={filteredMembers.length > 0 && selectedUsers.length === filteredMembers.length}
-                                    />
+                            <tr style={{ background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
+                                <th style={{ padding: '10px 14px', width: '40px', textAlign: 'center' }}>
+                                    <input type="checkbox" onChange={handleSelectAll} checked={filteredMembers.length > 0 && selectedUsers.length === filteredMembers.length} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
                                 </th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">User</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Role</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Departments</th>
-                                <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
-                                <th className="px-6 py-4 text-right text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                                {['User', 'Role', 'Departments', 'Status', 'Actions'].map((h, i) => (
+                                    <th key={h} style={{ padding: '10px 14px', textAlign: i === 4 ? 'right' : 'left', fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{h}</th>
+                                ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-gray-700/50">
+                        <tbody>
                             {loading ? (
-                                <tr><td colSpan="6" className="text-center py-12 text-slate-500 dark:text-gray-400">Loading members...</td></tr>
-                            ) : filteredMembers.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center py-12 text-slate-500 dark:text-gray-400">No members found</td></tr>
-                            ) : (
-                                filteredMembers.map(member => (
-                                    <tr key={member._id} className={`hover:bg-slate-50/50 dark:hover:bg-gray-700/30 transition-colors group ${selectedUsers.includes(member._id) ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : ''}`}>
-                                        <td className="px-4 py-4 text-center">
-                                            <input
-                                                type="checkbox"
-                                                className="rounded border-slate-300 dark:border-gray-600 text-indigo-600 focus:ring-indigo-500 bg-white dark:bg-gray-700"
-                                                checked={selectedUsers.includes(member._id)}
-                                                onChange={() => handleSelectUser(member._id)}
-                                            />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                {member.profilePicture ? (
-                                                    <img src={member.profilePicture} alt="" className="w-8 h-8 rounded-full object-cover" />
-                                                ) : (
-                                                    <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-gray-700 flex items-center justify-center font-bold text-slate-500 dark:text-gray-400 text-xs">
-                                                        {member.username?.charAt(0).toUpperCase()}
+                                <>
+                                    {[1,2,3,4,5].map(i => (
+                                        <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                                            <td style={{ padding: '10px 14px', textAlign: 'center' }}><div className="sk" style={{ width: '14px', height: '14px', margin: '0 auto' }} /></td>
+                                            <td style={{ padding: '10px 14px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <div className="sk" style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0 }} />
+                                                    <div>
+                                                        <div className="sk" style={{ height: '11px', width: '110px', marginBottom: '3px' }} />
+                                                        <div className="sk" style={{ height: '9px', width: '80px', marginBottom: '2px' }} />
+                                                        <div className="sk" style={{ height: '9px', width: '140px' }} />
                                                     </div>
-                                                )}
-                                                <div>
-                                                    <div className="font-bold text-slate-800 dark:text-white text-sm">{member.username}</div>
-                                                    {member.jobTitle && (
-                                                        <div className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">{member.jobTitle}</div>
-                                                    )}
-                                                    {/* Company email = primary; personal email shown below if different */}
-                                                    <div className="text-xs text-slate-400 dark:text-gray-500 truncate">
-                                                        {member.companyEmail || member.email}
-                                                    </div>
-                                                    {member.companyEmail && member.email && member.companyEmail !== member.email && (
-                                                        <div className="text-xs text-slate-300 dark:text-gray-600 truncate">
-                                                            {member.email}
-                                                        </div>
-                                                    )}
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border capitalize ${member.companyRole === 'owner' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 border-purple-100 dark:border-purple-900/30' :
-                                                member.companyRole === 'admin' ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/30' :
-                                                    member.companyRole === 'manager' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border-blue-100 dark:border-blue-900/30' :
-                                                        'bg-slate-50 dark:bg-gray-700/50 text-slate-600 dark:text-gray-400 border-slate-100 dark:border-gray-600'
-                                                }`}>
-                                                {member.companyRole}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-wrap gap-1">
-                                                {member.departments && member.departments.length > 0 ? (
-                                                    member.departments.map((d, i) => (
-                                                        <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-slate-100 dark:bg-gray-700 text-slate-600 dark:text-gray-300">
-                                                            {d.name || 'Unknown'}
-                                                        </span>
-                                                    ))
-                                                ) : (
-                                                    <span className="text-slate-300 dark:text-gray-600 text-xs italic">No Dept</span>
-                                                )}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-1.5">
-                                                <div className={`w-2 h-2 rounded-full ${member.isOnline ? 'bg-green-500' : 'bg-slate-300 dark:bg-gray-600'}`}></div>
-                                                <span className="text-xs text-slate-500 dark:text-gray-400 font-medium">{member.isOnline ? 'Online' : 'Offline'}</span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            {canSuspendUsers && (
-                                                <EmployeeActionsMenu
-                                                    employee={member}
-                                                    departments={departments}
-                                                    onUpdate={fetchData}
-                                                    viewerRole={companyRole}
-                                                />
+                                            </td>
+                                            <td style={{ padding: '10px 14px' }}><div className="sk" style={{ height: '18px', width: '60px' }} /></td>
+                                            <td style={{ padding: '10px 14px' }}><div style={{ display: 'flex', gap: '4px' }}><div className="sk" style={{ height: '18px', width: '70px' }} /><div className="sk" style={{ height: '18px', width: '60px' }} /></div></td>
+                                            <td style={{ padding: '10px 14px' }}><div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div className="sk" style={{ width: '6px', height: '6px', borderRadius: '50%' }} /><div className="sk" style={{ height: '9px', width: '45px' }} /></div></td>
+                                            <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                                                    <div className="sk" style={{ height: '26px', width: '26px' }} />
+                                                    <div className="sk" style={{ height: '26px', width: '26px' }} />
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </>
+                            ) : filteredMembers.length === 0 ? (
+                                <tr><td colSpan="6" style={{ textAlign: 'center', padding: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>No members found</td></tr>
+                            ) : filteredMembers.map(m => (
+                                <tr key={m._id} style={{ borderBottom: '1px solid var(--border-subtle)', background: selectedUsers.includes(m._id) ? 'var(--bg-hover)' : 'transparent', transition: 'background 150ms ease' }}
+                                    onMouseEnter={e => { if (!selectedUsers.includes(m._id)) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                    onMouseLeave={e => { if (!selectedUsers.includes(m._id)) e.currentTarget.style.background = 'transparent'; }}>
+                                    <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                        <input type="checkbox" checked={selectedUsers.includes(m._id)} onChange={() => handleSelectUser(m._id)} style={{ accentColor: 'var(--accent)', cursor: 'pointer' }} />
+                                    </td>
+                                    <td style={{ padding: '10px 14px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            {m.profilePicture ? (
+                                                <img src={m.profilePicture} alt="" style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div style={{ width: '30px', height: '30px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+                                                    {m.username?.charAt(0).toUpperCase()}
+                                                </div>
                                             )}
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
+                                            <div>
+                                                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{m.username}</div>
+                                                {m.jobTitle && <div style={{ fontSize: '11px', color: 'var(--accent)' }}>{m.jobTitle}</div>}
+                                                <div style={{ fontSize: '11px', color: 'var(--text-muted)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.companyEmail || m.email}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '10px 14px' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', padding: '2px 7px', fontSize: '10px', fontWeight: 700, textTransform: 'capitalize', border: `1px solid ${roleBg[m.companyRole] || 'var(--border-default)'}`, color: roleBg[m.companyRole] || 'var(--text-muted)' }}>
+                                            {m.companyRole}
+                                        </span>
+                                    </td>
+                                    <td style={{ padding: '10px 14px' }}>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px' }}>
+                                            {m.departments?.length > 0 ? m.departments.map((d, i) => (
+                                                <span key={i} style={{ fontSize: '10px', fontWeight: 500, padding: '1px 6px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>{d.name || 'Unknown'}</span>
+                                            )) : <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>—</span>}
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '10px 14px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: m.isOnline ? 'var(--state-success)' : 'var(--border-accent)' }} />
+                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>{m.isOnline ? 'Online' : 'Offline'}</span>
+                                        </div>
+                                    </td>
+                                    <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                                        {canSuspendUsers && <EmployeeActionsMenu employee={m} departments={departments} onUpdate={fetchData} viewerRole={companyRole} />}
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <InviteUserModal
-                isOpen={isInviteModalOpen}
-                onClose={() => setIsInviteModalOpen(false)}
-                companyId={company?._id}
-            />
+            <InviteUserModal isOpen={isInviteModalOpen} onClose={() => setIsInviteModalOpen(false)} companyId={company?._id} />
 
-            {/* Bulk Assign Modal */}
             {isBulkDeptOpen && (
-                <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm p-6 shadow-2xl animate-scaleIn border border-transparent dark:border-gray-700">
-                        <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Assign Department</h3>
-                        <p className="text-sm text-slate-500 dark:text-gray-400 mb-4">
-                            Add {selectedUsers.length} selected users to:
-                        </p>
-
-                        <select
-                            className="w-full p-3 border border-slate-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg mb-4 text-sm focus:ring-2 focus:ring-indigo-500/20 outline-none"
-                            value={selectedBulkDept}
-                            onChange={(e) => setSelectedBulkDept(e.target.value)}
-                        >
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '360px', padding: '24px' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>Assign Department</h3>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>Add {selectedUsers.length} selected users to:</p>
+                        <select value={selectedBulkDept} onChange={e => setSelectedBulkDept(e.target.value)} style={{ ...inputSt, width: '100%', marginBottom: '16px', boxSizing: 'border-box' }}>
                             <option value="">Select Department...</option>
-                            {departments.map(d => (
-                                <option key={d._id} value={d._id}>{d.name}</option>
-                            ))}
+                            {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
                         </select>
-
-                        <div className="flex justify-end gap-2">
-                            <button
-                                onClick={() => setIsBulkDeptOpen(false)}
-                                className="px-4 py-2 text-slate-600 dark:text-gray-400 text-sm font-bold hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleBulkAssign}
-                                disabled={!selectedBulkDept || bulkProcessing}
-                                className="px-4 py-2 bg-indigo-600 text-white text-sm font-bold rounded-lg hover:bg-indigo-700 disabled:opacity-50"
-                            >
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                            <button onClick={() => setIsBulkDeptOpen(false)} style={{ padding: '8px 14px', background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', borderRadius: '2px' }}>Cancel</button>
+                            <button onClick={handleBulkAssign} disabled={!selectedBulkDept || bulkProcessing} style={{ padding: '8px 14px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', opacity: (!selectedBulkDept || bulkProcessing) ? 0.5 : 1 }}>
                                 {bulkProcessing ? 'Assigning...' : 'Confirm Assignment'}
                             </button>
                         </div>
@@ -557,6 +335,16 @@ const UserManagement = () => {
                 </div>
             )}
         </React.Fragment>
+    );
+};
+
+const ActionBtn = ({ onClick, icon: Icon, label }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
+            <Icon size={13} /> {label}
+        </button>
     );
 };
 

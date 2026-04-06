@@ -1,10 +1,9 @@
-// client/src/pages/settingsTabs/SecurityTab.jsx
-// Security settings: password change + full 2FA (TOTP) flow
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { Eye, EyeOff, Shield, ShieldCheck, ShieldOff, Check, X, AlertCircle, Key, Loader, QrCode, Copy } from 'lucide-react';
+import { Eye, EyeOff, Shield, ShieldCheck, ShieldOff, Check, X, AlertCircle, Key, Loader, Copy } from 'lucide-react';
 import Card from './Card';
 import api from '@services/api';
+
+const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 
 // ── Password strength calculator ─────────────────────────────────────────────
 const calculatePasswordStrength = (password) => {
@@ -17,64 +16,101 @@ const calculatePasswordStrength = (password) => {
         special: /[^A-Za-z0-9]/.test(password),
     };
     const score = Object.values(checks).filter(Boolean).length * 20;
-    let label = 'Weak', color = 'bg-red-500';
-    if (score >= 80) { label = 'Strong'; color = 'bg-green-500'; }
-    else if (score >= 60) { label = 'Good'; color = 'bg-yellow-500'; }
-    else if (score >= 40) { label = 'Fair'; color = 'bg-orange-500'; }
+    let label = 'Weak', color = 'var(--state-danger)';
+    if (score >= 80) { label = 'Strong'; color = 'var(--state-success)'; }
+    else if (score >= 60) { label = 'Good'; color = '#c9a840'; }
+    else if (score >= 40) { label = 'Fair'; color = '#c97c40'; }
     return { score, label, color, checks };
 };
 
-const inputClass = "w-full px-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[12.5px] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all";
-const labelClass = "block text-[10.5px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5";
+const inputStyle = {
+    width: '100%',
+    padding: '8px 10px',
+    backgroundColor: 'var(--bg-input)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 2,
+    fontSize: 13,
+    color: 'var(--text-primary)',
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 150ms ease',
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+};
 
-// ── 2FA Step states ───────────────────────────────────────────────────────────
+const labelStyle = {
+    display: 'block',
+    fontSize: 10,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+    color: 'var(--text-muted)',
+    marginBottom: 6,
+    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+};
+
 const STEP = { IDLE: 'idle', SETUP: 'setup', CONFIRMING: 'confirming', DISABLING: 'disabling' };
 
-// ── SecurityTab component ─────────────────────────────────────────────────────
 const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setShowCurrentPassword, loading, handlePasswordChange }) => {
     const [showNew, setShowNew] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const strength = calculatePasswordStrength(passwordData.newPassword);
 
-    // 2FA state
     const [tfaEnabled, setTfaEnabled] = useState(false);
     const [tfaStep, setTfaStep] = useState(STEP.IDLE);
-    const [tfaSetup, setTfaSetup] = useState(null); // { secret, otpauthUrl }
+    const [tfaSetup, setTfaSetup] = useState(null);
     const [otpInput, setOtpInput] = useState('');
     const [tfaLoading, setTfaLoading] = useState(false);
     const [tfaError, setTfaError] = useState('');
     const [copied, setCopied] = useState(false);
 
-    // Load 2FA status on mount
     const load2FAStatus = useCallback(async () => {
         try {
             const { data } = await api.get('/api/auth/2fa/status');
             setTfaEnabled(data.twoFactorEnabled);
-        } catch { /* non-critical */ }
+        } catch { }
     }, []);
 
     useEffect(() => { load2FAStatus(); }, [load2FAStatus]);
 
     const PasswordInput = ({ label, fieldKey, show, setShow, placeholder }) => (
         <div>
-            <label className={labelClass}>{label}</label>
-            <div className="relative">
+            <label style={labelStyle}>{label}</label>
+            <div style={{ position: 'relative' }}>
                 <input
                     type={show ? 'text' : 'password'}
                     value={passwordData[fieldKey]}
                     onChange={e => setPasswordData({ ...passwordData, [fieldKey]: e.target.value })}
-                    className={`${inputClass} pr-9`}
+                    style={{ ...inputStyle, paddingRight: 36 }}
                     placeholder={placeholder}
+                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                 />
-                <button type="button" onClick={() => setShow(!show)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors">
+                <button
+                    type="button"
+                    onClick={() => setShow(!show)}
+                    style={{
+                        position: 'absolute',
+                        right: 10,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--text-muted)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: 0,
+                        transition: 'color 150ms ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                >
                     {show ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
             </div>
         </div>
     );
 
-    // 2FA: Start setup — call backend to get secret + QR URI
     const handleStartSetup = async () => {
         setTfaLoading(true);
         setTfaError('');
@@ -84,57 +120,33 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
             setTfaStep(STEP.SETUP);
         } catch (err) {
             setTfaError(err.response?.data?.message || 'Failed to start setup');
-        } finally {
-            setTfaLoading(false);
-        }
+        } finally { setTfaLoading(false); }
     };
 
-    // 2FA: Confirm OTP to enable
     const handleVerifySetup = async () => {
-        if (!otpInput || otpInput.length < 6) {
-            setTfaError('Enter the 6-digit code from your authenticator app');
-            return;
-        }
-        setTfaLoading(true);
-        setTfaError('');
+        if (!otpInput || otpInput.length < 6) { setTfaError('Enter the 6-digit code from your authenticator app'); return; }
+        setTfaLoading(true); setTfaError('');
         try {
             await api.post('/api/auth/2fa/verify-setup', { otp: otpInput });
-            setTfaEnabled(true);
-            setTfaStep(STEP.IDLE);
-            setTfaSetup(null);
-            setOtpInput('');
+            setTfaEnabled(true); setTfaStep(STEP.IDLE); setTfaSetup(null); setOtpInput('');
         } catch (err) {
             setTfaError(err.response?.data?.message || 'Invalid OTP. Try again.');
-        } finally {
-            setTfaLoading(false);
-        }
+        } finally { setTfaLoading(false); }
     };
 
-    // 2FA: Disable with OTP gate
     const handleDisable = async () => {
-        if (!otpInput || otpInput.length < 6) {
-            setTfaError('Enter your 6-digit OTP to disable 2FA');
-            return;
-        }
-        setTfaLoading(true);
-        setTfaError('');
+        if (!otpInput || otpInput.length < 6) { setTfaError('Enter your 6-digit OTP to disable 2FA'); return; }
+        setTfaLoading(true); setTfaError('');
         try {
             await api.post('/api/auth/2fa/disable', { otp: otpInput });
-            setTfaEnabled(false);
-            setTfaStep(STEP.IDLE);
-            setOtpInput('');
+            setTfaEnabled(false); setTfaStep(STEP.IDLE); setOtpInput('');
         } catch (err) {
             setTfaError(err.response?.data?.message || 'Failed to disable 2FA');
-        } finally {
-            setTfaLoading(false);
-        }
+        } finally { setTfaLoading(false); }
     };
 
     const handleCancelTfa = () => {
-        setTfaStep(STEP.IDLE);
-        setTfaSetup(null);
-        setOtpInput('');
-        setTfaError('');
+        setTfaStep(STEP.IDLE); setTfaSetup(null); setOtpInput(''); setTfaError('');
     };
 
     const copySecret = () => {
@@ -145,29 +157,74 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
         }
     };
 
+    const btnPrimary = (disabled) => ({
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '7px 16px', fontSize: 13, fontWeight: 500,
+        color: '#0c0c0c', backgroundColor: 'var(--accent)',
+        border: 'none', borderRadius: 2,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        transition: 'background-color 150ms ease',
+        ...S.font,
+    });
+
+    const btnGhost = {
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '7px 16px', fontSize: 13, fontWeight: 500,
+        color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)',
+        border: '1px solid var(--border-default)', borderRadius: 2,
+        cursor: 'pointer',
+        transition: 'color 150ms ease, border-color 150ms ease',
+        ...S.font,
+    };
+
+    const btnDanger = (disabled) => ({
+        display: 'flex', alignItems: 'center', gap: 6,
+        padding: '7px 16px', fontSize: 13, fontWeight: 500,
+        color: '#fff', backgroundColor: 'var(--state-danger)',
+        border: 'none', borderRadius: 2,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
+        transition: 'opacity 150ms ease',
+        ...S.font,
+    });
+
+    const isPasswordDisabled = loading
+        || !passwordData.currentPassword
+        || !passwordData.newPassword
+        || passwordData.newPassword !== passwordData.confirmPassword;
+
     return (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* ── Password Section ──────────────────────────────────────── */}
             <Card title="Change Password" subtitle="Update your account password">
-                <div className="space-y-4 max-w-lg">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
                     <PasswordInput label="Current Password" fieldKey="currentPassword" show={showCurrentPassword} setShow={setShowCurrentPassword} placeholder="Enter current password" />
-                    <div className="grid grid-cols-2 gap-3">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <PasswordInput label="New Password" fieldKey="newPassword" show={showNew} setShow={setShowNew} placeholder="New password" />
                         <PasswordInput label="Confirm Password" fieldKey="confirmPassword" show={showConfirm} setShow={setShowConfirm} placeholder="Confirm password" />
                     </div>
 
                     {passwordData.newPassword && (
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[10.5px] font-bold uppercase tracking-widest text-gray-400">Strength</span>
-                                <span className={`text-[11px] font-bold ${strength.score < 40 ? 'text-red-500' : strength.score < 60 ? 'text-orange-500' : strength.score < 80 ? 'text-yellow-600' : 'text-green-600'}`}>{strength.label}</span>
+                        <div style={{
+                            padding: 12,
+                            backgroundColor: 'var(--bg-active)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: 2,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 8,
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', ...S.font }}>Strength</span>
+                                <span style={{ fontSize: 11, fontWeight: 700, color: strength.color, ...S.font }}>{strength.label}</span>
                             </div>
-                            <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                                <div className={`h-full ${strength.color} transition-all duration-300 rounded-full`} style={{ width: `${strength.score}%` }} />
+                            <div style={{ width: '100%', height: 3, backgroundColor: 'var(--bg-hover)', borderRadius: 2, overflow: 'hidden' }}>
+                                <div style={{ height: '100%', backgroundColor: strength.color, width: `${strength.score}%`, transition: 'width 300ms ease' }} />
                             </div>
-                            <div className="grid grid-cols-3 gap-x-3 gap-y-1">
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px 12px' }}>
                                 {[['length', '8+ chars'], ['uppercase', 'Uppercase'], ['lowercase', 'Lowercase'], ['number', 'Number'], ['special', 'Symbol']].map(([k, l]) => (
-                                    <div key={k} className={`flex items-center gap-1 text-[11px] ${strength.checks?.[k] ? 'text-green-600' : 'text-gray-400'}`}>
+                                    <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: strength.checks?.[k] ? 'var(--state-success)' : 'var(--text-muted)', ...S.font }}>
                                         {strength.checks?.[k] ? <Check size={10} /> : <X size={10} />}
                                         {l}
                                     </div>
@@ -177,16 +234,18 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                     )}
 
                     {passwordData.newPassword && passwordData.confirmPassword && passwordData.newPassword !== passwordData.confirmPassword && (
-                        <div className="flex items-center gap-2 text-[12px] text-red-500">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--state-danger)', ...S.font }}>
                             <AlertCircle size={13} /> Passwords do not match
                         </div>
                     )}
 
-                    <div className="flex justify-end">
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                         <button
                             onClick={handlePasswordChange}
-                            disabled={loading || !passwordData.currentPassword || !passwordData.newPassword || passwordData.newPassword !== passwordData.confirmPassword}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={isPasswordDisabled}
+                            style={btnPrimary(isPasswordDisabled)}
+                            onMouseEnter={e => { if (!isPasswordDisabled) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                            onMouseLeave={e => { if (!isPasswordDisabled) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                         >
                             {loading ? 'Updating…' : 'Update Password'}
                         </button>
@@ -197,20 +256,38 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
             {/* ── 2FA Section ───────────────────────────────────────────── */}
             <Card title="Two-Factor Authentication" subtitle="Add extra security with a one-time password app">
                 {/* Status header */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${tfaEnabled ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: tfaEnabled ? 'rgba(90,186,138,0.12)' : 'var(--bg-active)',
+                            border: `1px solid ${tfaEnabled ? 'rgba(90,186,138,0.3)' : 'var(--border-default)'}`,
+                        }}>
                             {tfaEnabled
-                                ? <ShieldCheck size={16} className="text-green-600 dark:text-green-400" />
-                                : <Shield size={16} className="text-gray-400" />}
+                                ? <ShieldCheck size={16} style={{ color: 'var(--state-success)' }} />
+                                : <Shield size={16} style={{ color: 'var(--text-muted)' }} />}
                         </div>
                         <div>
-                            <div className="text-[13px] font-semibold text-gray-800 dark:text-gray-100">
-                                Authenticator App (TOTP)
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                                <span className={`inline-flex h-1.5 w-1.5 rounded-full ${tfaEnabled ? 'bg-green-500' : 'bg-gray-400'}`} />
-                                <span className={`text-[11.5px] font-medium ${tfaEnabled ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', ...S.font }}>Authenticator App (TOTP)</div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                                <span style={{
+                                    display: 'inline-block',
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    backgroundColor: tfaEnabled ? 'var(--state-success)' : 'var(--text-muted)',
+                                }} />
+                                <span style={{
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    color: tfaEnabled ? 'var(--state-success)' : 'var(--text-muted)',
+                                    ...S.font,
+                                }}>
                                     {tfaEnabled ? '2FA Enabled' : '2FA Disabled'}
                                 </span>
                             </div>
@@ -221,56 +298,94 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                         <button
                             onClick={tfaEnabled ? () => setTfaStep(STEP.DISABLING) : handleStartSetup}
                             disabled={tfaLoading}
-                            className={`flex items-center gap-2 px-3 py-1.5 text-[12px] font-semibold rounded-lg transition-colors ${tfaEnabled
-                                ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30'
-                                : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                }`}
+                            style={tfaEnabled ? {
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: '6px 14px', fontSize: 12, fontWeight: 500,
+                                color: 'var(--state-danger)',
+                                backgroundColor: 'rgba(224,82,82,0.08)',
+                                border: '1px solid rgba(224,82,82,0.3)',
+                                borderRadius: 2, cursor: 'pointer',
+                                transition: 'background-color 150ms ease',
+                                ...S.font,
+                            } : {
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: '6px 14px', fontSize: 12, fontWeight: 500,
+                                color: '#0c0c0c', backgroundColor: 'var(--accent)',
+                                border: 'none', borderRadius: 2, cursor: tfaLoading ? 'not-allowed' : 'pointer',
+                                opacity: tfaLoading ? 0.5 : 1,
+                                transition: 'background-color 150ms ease',
+                                ...S.font,
+                            }}
                         >
-                            {tfaLoading ? <Loader size={13} className="animate-spin" /> : null}
-                            {tfaEnabled ? <><ShieldOff size={13} />Disable 2FA</> : <><Key size={13} />Enable 2FA</>}
+                            {tfaLoading ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : null}
+                            {tfaEnabled ? <><ShieldOff size={13} /> Disable 2FA</> : <><Key size={13} /> Enable 2FA</>}
                         </button>
                     )}
                 </div>
 
-                {/* Error message */}
+                {/* Error */}
                 {tfaError && (
-                    <div className="mb-3 flex items-center gap-2 p-2.5 bg-red-50 dark:bg-red-900/20 rounded-lg text-[12px] text-red-600 dark:text-red-400">
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        marginBottom: 12, padding: 10,
+                        backgroundColor: 'rgba(224,82,82,0.08)',
+                        border: '1px solid rgba(224,82,82,0.25)',
+                        borderRadius: 2, fontSize: 12, color: 'var(--state-danger)',
+                        ...S.font,
+                    }}>
                         <AlertCircle size={13} />{tfaError}
                     </div>
                 )}
 
-                {/* ── SETUP STEP 1: Show QR code ───────────── */}
+                {/* Setup step */}
                 {tfaStep === STEP.SETUP && tfaSetup && (
-                    <div className="space-y-4 border border-gray-200 dark:border-gray-700 rounded-xl p-4 bg-gray-50 dark:bg-gray-800/50">
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', gap: 16,
+                        padding: 16,
+                        backgroundColor: 'var(--bg-active)',
+                        border: '1px solid var(--border-default)',
+                        borderRadius: 2,
+                    }}>
                         <div>
-                            <p className="text-[12.5px] font-semibold text-gray-700 dark:text-gray-200 mb-1">Step 1 — Scan with your authenticator app</p>
-                            <p className="text-[11.5px] text-gray-500 dark:text-gray-400">Open Google Authenticator, Authy, or any TOTP app and scan the QR code below.</p>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4, ...S.font }}>Step 1 — Scan with your authenticator app</p>
+                            <p style={{ fontSize: 12, color: 'var(--text-secondary)', ...S.font }}>Open Google Authenticator, Authy, or any TOTP app and scan the QR code below.</p>
                         </div>
 
-                        {/* QR Code rendered via Google Charts (no extra library) */}
-                        <div className="flex flex-col sm:flex-row gap-4 items-start">
-                            <div className="border-4 border-white dark:border-gray-700 rounded-xl overflow-hidden shadow-md flex-shrink-0">
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                            <div style={{ border: '2px solid var(--border-accent)', borderRadius: 2, overflow: 'hidden', flexShrink: 0 }}>
                                 <img
                                     src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(tfaSetup.otpauthUrl)}`}
                                     alt="2FA QR Code"
-                                    className="w-40 h-40"
+                                    style={{ width: 140, height: 140, display: 'block' }}
                                 />
                             </div>
-                            <div className="flex-1 space-y-2.5">
-                                <p className="text-[11.5px] text-gray-500 dark:text-gray-400">Can't scan? Enter this key manually:</p>
-                                <div className="flex items-center gap-2 p-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg">
-                                    <code className="flex-1 text-[11px] font-mono text-gray-700 dark:text-gray-200 break-all select-all">
+                            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <p style={{ fontSize: 12, color: 'var(--text-secondary)', ...S.font }}>Can't scan? Enter this key manually:</p>
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    padding: 8,
+                                    backgroundColor: 'var(--bg-surface)',
+                                    border: '1px solid var(--border-default)',
+                                    borderRadius: 2,
+                                }}>
+                                    <code style={{ flex: 1, fontSize: 11, color: 'var(--text-primary)', wordBreak: 'break-all', userSelect: 'all', fontFamily: 'monospace' }}>
                                         {tfaSetup.secret}
                                     </code>
-                                    <button onClick={copySecret} className="text-gray-400 hover:text-blue-500 transition-colors flex-shrink-0" title="Copy">
-                                        {copied ? <Check size={13} className="text-green-500" /> : <Copy size={13} />}
+                                    <button
+                                        onClick={copySecret}
+                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: 2, transition: 'color 150ms ease', flexShrink: 0 }}
+                                        title="Copy"
+                                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                                    >
+                                        {copied ? <Check size={13} style={{ color: 'var(--state-success)' }} /> : <Copy size={13} />}
                                     </button>
                                 </div>
                             </div>
                         </div>
 
                         <div>
-                            <p className="text-[12.5px] font-semibold text-gray-700 dark:text-gray-200 mb-2">Step 2 — Enter the 6-digit OTP to confirm</p>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8, ...S.font }}>Step 2 — Enter the 6-digit OTP to confirm</p>
                             <input
                                 type="text"
                                 inputMode="numeric"
@@ -279,32 +394,43 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                                 value={otpInput}
                                 onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
                                 placeholder="000000"
-                                className={`${inputClass} max-w-[140px] text-center font-mono text-lg tracking-[0.5em]`}
+                                style={{ ...inputStyle, maxWidth: 140, textAlign: 'center', fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.4em' }}
+                                onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                             />
                         </div>
 
-                        <div className="flex gap-2">
+                        <div style={{ display: 'flex', gap: 8 }}>
                             <button
                                 onClick={handleVerifySetup}
                                 disabled={tfaLoading || otpInput.length < 6}
-                                className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50"
+                                style={{
+                                    ...btnPrimary(tfaLoading || otpInput.length < 6),
+                                    backgroundColor: 'var(--state-success)',
+                                }}
+                                onMouseEnter={e => { if (otpInput.length >= 6 && !tfaLoading) e.currentTarget.style.opacity = '0.85'; }}
+                                onMouseLeave={e => e.currentTarget.style.opacity = (tfaLoading || otpInput.length < 6) ? '0.5' : '1'}
                             >
-                                {tfaLoading ? <Loader size={13} className="animate-spin" /> : <Check size={13} />}
+                                {tfaLoading ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={13} />}
                                 Confirm & Enable 2FA
                             </button>
-                            <button onClick={handleCancelTfa} className="px-4 py-2 text-gray-500 text-[12.5px] font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                                Cancel
-                            </button>
+                            <button onClick={handleCancelTfa} style={btnGhost}>Cancel</button>
                         </div>
                     </div>
                 )}
 
-                {/* ── DISABLING STEP: OTP gate ──────────────── */}
+                {/* Disabling step */}
                 {tfaStep === STEP.DISABLING && (
-                    <div className="space-y-3 border border-red-200 dark:border-red-800 rounded-xl p-4 bg-red-50 dark:bg-red-900/10">
-                        <div className="flex items-start gap-2">
-                            <AlertCircle size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-[12px] text-red-700 dark:text-red-400">
+                    <div style={{
+                        display: 'flex', flexDirection: 'column', gap: 12,
+                        padding: 16,
+                        backgroundColor: 'rgba(224,82,82,0.06)',
+                        border: '1px solid rgba(224,82,82,0.25)',
+                        borderRadius: 2,
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <AlertCircle size={14} style={{ color: 'var(--state-danger)', marginTop: 1, flexShrink: 0 }} />
+                            <p style={{ fontSize: 12, color: 'var(--state-danger)', margin: 0, ...S.font }}>
                                 Disabling 2FA reduces your account security. Enter your current OTP to confirm.
                             </p>
                         </div>
@@ -315,38 +441,48 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                             value={otpInput}
                             onChange={e => setOtpInput(e.target.value.replace(/\D/g, '').slice(0, 6))}
                             placeholder="000000"
-                            className={`${inputClass} max-w-[140px] text-center font-mono text-lg tracking-[0.5em]`}
+                            style={{ ...inputStyle, maxWidth: 140, textAlign: 'center', fontFamily: 'monospace', fontSize: 18, letterSpacing: '0.4em' }}
+                            onFocus={e => e.target.style.borderColor = 'var(--state-danger)'}
+                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                         />
-                        <div className="flex gap-2">
+                        <div style={{ display: 'flex', gap: 8 }}>
                             <button
                                 onClick={handleDisable}
                                 disabled={tfaLoading || otpInput.length < 6}
-                                className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50"
+                                style={btnDanger(tfaLoading || otpInput.length < 6)}
                             >
-                                {tfaLoading ? <Loader size={13} className="animate-spin" /> : <ShieldOff size={13} />}
+                                {tfaLoading ? <Loader size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <ShieldOff size={13} />}
                                 Disable 2FA
                             </button>
-                            <button onClick={handleCancelTfa} className="px-4 py-2 text-gray-500 text-[12.5px] font-semibold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-                                Cancel
-                            </button>
+                            <button onClick={handleCancelTfa} style={btnGhost}>Cancel</button>
                         </div>
                     </div>
                 )}
 
-                {/* If idle and enabled, show info box */}
+                {/* Idle + enabled info */}
                 {tfaStep === STEP.IDLE && tfaEnabled && (
-                    <div className="mt-2 p-3 bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800 rounded-lg">
-                        <p className="text-[12px] text-green-700 dark:text-green-400">
-                            ✅ Your account is protected with two-factor authentication. You'll be asked for a 6-digit OTP at login on new devices.
+                    <div style={{
+                        padding: 12,
+                        backgroundColor: 'rgba(90,186,138,0.06)',
+                        border: '1px solid rgba(90,186,138,0.25)',
+                        borderRadius: 2,
+                    }}>
+                        <p style={{ fontSize: 12, color: 'var(--state-success)', margin: 0, ...S.font }}>
+                            ✓ Your account is protected with two-factor authentication. You'll be asked for a 6-digit OTP at login on new devices.
                         </p>
                     </div>
                 )}
 
-                {/* If idle and disabled, show benefit description */}
+                {/* Idle + disabled warning */}
                 {tfaStep === STEP.IDLE && !tfaEnabled && (
-                    <div className="mt-2 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-lg">
-                        <p className="text-[12px] text-amber-700 dark:text-amber-400">
-                            ⚠️ 2FA is not enabled. Enable it to protect your account even if your password is compromised.
+                    <div style={{
+                        padding: 12,
+                        backgroundColor: 'rgba(184,149,106,0.06)',
+                        border: '1px solid rgba(184,149,106,0.25)',
+                        borderRadius: 2,
+                    }}>
+                        <p style={{ fontSize: 12, color: 'var(--accent)', margin: 0, ...S.font }}>
+                            ⚠ 2FA is not enabled. Enable it to protect your account even if your password is compromised.
                         </p>
                     </div>
                 )}

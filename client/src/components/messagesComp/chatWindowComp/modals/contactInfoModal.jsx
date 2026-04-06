@@ -2,163 +2,206 @@ import React, { useState, useEffect } from "react";
 import { Mail, Phone, Info, X } from "lucide-react";
 import api from '@services/api';
 
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+
+const STATUS_COLORS = {
+    active:  { dot: 'var(--state-success)', text: 'var(--state-success)' },
+    away:    { dot: 'var(--state-warning)', text: 'var(--state-warning)' },
+    dnd:     { dot: 'var(--state-danger)',  text: 'var(--state-danger)'  },
+    default: { dot: 'var(--text-muted)',    text: 'var(--text-muted)'    },
+};
+
+function getStatusColor(userStatus, isOnline) {
+    if (userStatus === 'active' || (isOnline && !userStatus)) return STATUS_COLORS.active;
+    if (userStatus === 'away') return STATUS_COLORS.away;
+    if (userStatus === 'dnd')  return STATUS_COLORS.dnd;
+    return STATUS_COLORS.default;
+}
+
 export default function ContactInfoModal({ chat, onClose }) {
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
+    const [userData, setUserData] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                setLoading(true);
+                const workspaceId = chat.workspaceId;
+                if (!workspaceId) throw new Error('No workspace ID');
 
-        const workspaceId = chat.workspaceId;
-        if (!workspaceId) {
-          throw new Error('No workspace ID');
-        }
+                const res = await api.get(`/api/workspaces/${workspaceId}/members`);
+                const members = res.data.members || [];
+                const userId = chat.userId || chat.id;
+                const user = members.find(m => String(m._id || m.id) === String(userId));
 
-        const res = await api.get(`/api/workspaces/${workspaceId}/members`);
-        const members = res.data.members || [];
+                setUserData(user || {
+                    username: chat.name || chat.username,
+                    email: chat.email, phone: chat.phone,
+                    profilePicture: chat.image, isOnline: chat.status === 'online',
+                    profile: chat.profile || {}
+                });
+            } catch {
+                setUserData({
+                    username: chat.name || chat.username, email: chat.email,
+                    phone: chat.phone, profilePicture: chat.image,
+                    isOnline: chat.status === 'online', profile: {}
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        if (chat) fetchUserData();
+    }, [chat]);
 
-        const userId = chat.userId || chat.id;
+    if (!chat) return null;
 
-        const user = members.find(m => String(m._id || m.id) === String(userId));
+    const displayData = userData || chat;
+    const displayName   = displayData.username || displayData.name || 'Unknown User';
+    const displayEmail  = displayData.email  || 'No email provided';
+    const displayPhone  = displayData.phone  || 'No phone provided';
+    const displayAbout  = displayData.profile?.about || displayData.about || "Hey there! I'm using Chttrix.";
+    const isOnline      = displayData.isOnline || chat.status === 'online';
+    const statusColor   = getStatusColor(displayData.userStatus, isOnline);
+    const statusLabel   = displayData.userStatus ? displayData.userStatus.toUpperCase() : (isOnline ? 'ONLINE' : 'OFFLINE');
 
-        if (user) {
-          setUserData(user);
-        } else {
-          setUserData({
-            username: chat.name || chat.username,
-            email: chat.email,
-            phone: chat.phone,
-            profilePicture: chat.image,
-            isOnline: chat.status === "online",
-            profile: chat.profile || {}
-          });
-        }
-      } catch (err) {
-        setUserData({
-          username: chat.name || chat.username,
-          email: chat.email,
-          phone: chat.phone,
-          profilePicture: chat.image,
-          isOnline: chat.status === "online",
-          profile: {}
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: FONT,
+        }}>
+            {/* Backdrop */}
+            <div
+                style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }}
+                onClick={onClose}
+            />
 
-    if (chat) {
-      fetchUserData();
-    }
-  }, [chat]);
+            {/* Modal */}
+            <div style={{
+                position: 'relative', zIndex: 10,
+                width: '360px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)',
+                borderRadius: '4px',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                overflow: 'hidden',
+                animation: 'fadeIn 180ms ease',
+            }}>
+                {/* Close Button */}
+                <CloseBtn onClick={onClose} />
 
-  if (!chat) return null;
-
-  const displayData = userData || chat;
-  const displayName = displayData.username || displayData.name || "Unknown User";
-  const displayEmail = displayData.email || "No email provided";
-  const displayPhone = displayData.phone || "No phone provided";
-  const displayAbout = displayData.profile?.about || displayData.about || "Hey there! I'm using Chttrix.";
-  const isOnline = displayData.isOnline || chat.status === "online";
-
-  // Get initials for avatar
-  const getInitials = (name) => {
-    return name?.charAt(0)?.toUpperCase() || "U";
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center animate-fade-in">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose}></div>
-      <div className="bg-white dark:bg-gray-800 w-[360px] rounded-xl shadow-2xl overflow-hidden relative z-10 border border-gray-200 dark:border-gray-700 animate-in zoom-in-95 duration-200">
-
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors z-10"
-        >
-          <X size={18} />
-        </button>
-
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <>
-            {/* Compact Header with Inline Profile */}
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className="relative flex-shrink-0">
-                  {displayData.profilePicture ? (
-                    <img
-                      src={displayData.profilePicture}
-                      alt={displayName}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-gray-200 dark:border-gray-600"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center border-2 border-gray-200 dark:border-gray-600">
-                      <span className="text-white font-bold text-lg">{getInitials(displayName)}</span>
+                {loading ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+                        <div style={{
+                            width: '28px', height: '28px', borderRadius: '50%',
+                            border: '2px solid var(--accent)', borderTopColor: 'transparent',
+                            animation: 'spin 0.8s linear infinite',
+                        }} />
                     </div>
-                  )}
-                  {/* Status Indicator */}
-                  <span
-                    className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white dark:border-gray-800 ${displayData.userStatus === "active" || (isOnline && !displayData.userStatus) ? "bg-green-500" :
-                      displayData.userStatus === "away" ? "bg-yellow-500" :
-                        displayData.userStatus === "dnd" ? "bg-red-500" :
-                          "bg-gray-400"
-                      }`}
-                  ></span>
-                </div>
+                ) : (
+                    <>
+                        {/* Profile Header */}
+                        <div style={{
+                            padding: '16px',
+                            borderBottom: '1px solid var(--border-default)',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {/* Avatar */}
+                                <div style={{ position: 'relative', flexShrink: 0 }}>
+                                    {displayData.profilePicture ? (
+                                        <img
+                                            src={displayData.profilePicture}
+                                            alt={displayName}
+                                            style={{ width: '52px', height: '52px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--border-accent)' }}
+                                        />
+                                    ) : (
+                                        <div style={{
+                                            width: '52px', height: '52px', borderRadius: '50%',
+                                            backgroundColor: 'var(--accent)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            border: '2px solid var(--border-accent)',
+                                        }}>
+                                            <span style={{ color: '#0c0c0c', fontWeight: 700, fontSize: '18px' }}>
+                                                {displayName.charAt(0).toUpperCase()}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {/* Status dot */}
+                                    <span style={{
+                                        position: 'absolute', bottom: 1, right: 1,
+                                        width: '12px', height: '12px', borderRadius: '50%',
+                                        backgroundColor: statusColor.dot,
+                                        border: '2px solid var(--bg-surface)',
+                                    }} />
+                                </div>
+                                {/* Name + status */}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <h2 style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>
+                                        {displayName}
+                                    </h2>
+                                    <p style={{ margin: '2px 0 0', fontSize: '10px', fontWeight: 600, color: statusColor.text, fontFamily: FONT, letterSpacing: '0.06em' }}>
+                                        {statusLabel}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Name and Status */}
-                <div className="flex-1 min-w-0">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">{displayName}</h2>
-                  <p className={`text-xs font-medium ${displayData.userStatus === "active" || (isOnline && !displayData.userStatus) ? "text-green-600 dark:text-green-400" :
-                    displayData.userStatus === "away" ? "text-yellow-600 dark:text-yellow-400" :
-                      displayData.userStatus === "dnd" ? "text-red-600 dark:text-red-400" :
-                        "text-gray-500 dark:text-gray-400"
-                    }`}>
-                    {displayData.userStatus ? displayData.userStatus.toUpperCase() : (isOnline ? 'ONLINE' : 'OFFLINE')}
-                  </p>
-                </div>
-              </div>
+                        {/* Info Rows */}
+                        <div>
+                            <InfoRow icon={<Mail size={15} />} label="Email"   value={displayEmail} />
+                            <InfoRow icon={<Phone size={15} />} label="Phone"   value={displayPhone} />
+                            <InfoRow icon={<Info  size={15} />} label="About"   value={displayAbout} last />
+                        </div>
+                    </>
+                )}
             </div>
+        </div>
+    );
+}
 
-            {/* Info Sections - Compact List */}
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {/* Email */}
-              <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <Mail size={18} className="text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Email</div>
-                  <div className="text-sm text-gray-900 dark:text-gray-100 break-all">{displayEmail}</div>
-                </div>
-              </div>
+function CloseBtn({ onClick }) {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                position: 'absolute', top: '10px', right: '10px', zIndex: 10,
+                padding: '5px', border: 'none', outline: 'none', background: 'none',
+                cursor: 'pointer', borderRadius: '2px',
+                color: hovered ? 'var(--state-danger)' : 'var(--text-muted)',
+                transition: '100ms ease', display: 'flex',
+            }}
+        >
+            <X size={16} />
+        </button>
+    );
+}
 
-              {/* Phone */}
-              <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <Phone size={18} className="text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">Phone</div>
-                  <div className="text-sm text-gray-900 dark:text-gray-100">{displayPhone}</div>
+function InfoRow({ icon, label, value, last }) {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                padding: '11px 16px',
+                borderBottom: last ? 'none' : '1px solid var(--border-subtle)',
+                backgroundColor: hovered ? 'var(--bg-hover)' : 'transparent',
+                transition: '100ms ease',
+            }}
+        >
+            <span style={{ color: 'var(--accent)', marginTop: '1px', flexShrink: 0 }}>{icon}</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '2px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    {label}
                 </div>
-              </div>
-
-              {/* About */}
-              <div className="flex items-start gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                <Info size={18} className="text-purple-600 dark:text-purple-400 mt-0.5 flex-shrink-0" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5">About</div>
-                  <div className="text-sm text-gray-900 dark:text-gray-100 leading-relaxed">{displayAbout}</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-primary)', wordBreak: 'break-all', fontFamily: 'Inter, system-ui, sans-serif', lineHeight: 1.5 }}>
+                    {value}
                 </div>
-              </div>
             </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 }

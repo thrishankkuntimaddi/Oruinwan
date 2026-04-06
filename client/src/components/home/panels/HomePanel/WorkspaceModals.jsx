@@ -1,66 +1,90 @@
 import React from 'react';
 import InvitePeopleModal from "../../../InvitePeopleModal";
+import { X } from 'lucide-react';
+
+// Shared modal shell styles
+const modalOverlay = {
+    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+    zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: 'var(--font)',
+};
+const modalBox = {
+    background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+    borderRadius: '2px', width: '380px', padding: '24px', position: 'relative',
+};
+const labelStyle = {
+    display: 'block', fontSize: '10px', fontWeight: 700,
+    color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px',
+};
+const inputStyle = {
+    width: '100%', padding: '9px 12px', background: 'var(--bg-input)',
+    border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px',
+    color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box',
+};
 
 const WorkspaceModals = ({
-    // Rename Modal
-    showRenameModal,
-    setShowRenameModal,
-    newName,
-    setNewName,
-    handleRename,
-    // Invite Modal props passed through to InvitePeopleModal
-    showInviteModal,
-    setShowInviteModal,
-    workspaceName,
-    activeWorkspace
-}) => {
-    // Unused variables removed for cleaner code
+    showRenameModal, setShowRenameModal, newName, setNewName, handleRename,
+    showInviteModal, setShowInviteModal, workspaceName, activeWorkspace,
+}) => (
+    <>
+        {/* Rename Modal */}
+        {showRenameModal && (
+            <div style={modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowRenameModal(false); }}>
+                <div style={modalBox}>
+                    {/* Close */}
+                    <button onClick={() => setShowRenameModal(false)}
+                        style={{ position: 'absolute', top: '14px', right: '14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '3px', borderRadius: '2px', transition: '150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    >
+                        <X size={16} />
+                    </button>
 
-    return (
-        <>
-            {/* Rename Modal */}
-            {showRenameModal && (
-                <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center animate-fade-in backdrop-blur-md">
-                    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-[420px] p-8 transform transition-all scale-100 border border-gray-100 dark:border-gray-700">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Rename Workspace</h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">Choose a new name for your team's workspace. This will be visible to everyone.</p>
+                    <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>
+                        Rename Workspace
+                    </h3>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.6 }}>
+                        Choose a new name for your team&apos;s workspace. This will be visible to everyone.
+                    </p>
 
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Workspace Name</label>
-                        <input
-                            type="text"
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all mb-6 text-gray-900 dark:text-white placeholder-gray-400"
-                            placeholder="e.g. Chttrix"
-                            autoFocus
-                        />
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => setShowRenameModal(false)}
-                                className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleRename}
-                                className="px-6 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all"
-                            >
-                                Save Changes
-                            </button>
-                        </div>
+                    <label style={labelStyle}>Workspace Name</label>
+                    <input
+                        type="text" value={newName}
+                        onChange={e => setNewName(e.target.value)}
+                        style={{ ...inputStyle, marginBottom: '20px' }}
+                        placeholder="e.g. Chttrix" autoFocus
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                    />
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button onClick={() => setShowRenameModal(false)}
+                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        >
+                            Cancel
+                        </button>
+                        <button onClick={handleRename}
+                            style={{ padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--text-muted)'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                        >
+                            Save Changes
+                        </button>
                     </div>
                 </div>
-            )}
+            </div>
+        )}
 
-            {/* Invite Modal - Now using the polished horizontal component */}
-            <InvitePeopleModal
-                isOpen={showInviteModal}
-                onClose={() => setShowInviteModal(false)}
-                workspaceId={activeWorkspace?.id}
-                workspaceName={workspaceName}
-            />
-        </>
-    );
-};
+        {/* Invite Modal */}
+        <InvitePeopleModal
+            isOpen={showInviteModal}
+            onClose={() => setShowInviteModal(false)}
+            workspaceId={activeWorkspace?.id}
+            workspaceName={workspaceName}
+        />
+    </>
+);
 
 export default WorkspaceModals;

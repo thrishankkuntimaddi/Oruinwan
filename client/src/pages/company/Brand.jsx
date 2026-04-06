@@ -1,149 +1,145 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Download, Palette, Image as ImageIcon, LayoutTemplate, ShieldAlert, Mail } from 'lucide-react';
+// Brand.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import PublicPageShell from '../../components/layout/PublicPageShell';
+import { Palette, Type, Download, Copy, CheckCircle2 } from 'lucide-react';
 
-const Brand = () => {
-    const navigate = useNavigate();
+const COLORS = [
+    { name: 'Amber (Accent)',     hex: '#b8956a', dark: true },
+    { name: 'Background Base',    hex: '#0c0c0c', dark: true },
+    { name: 'Surface',            hex: '#111111', dark: true },
+    { name: 'Text Primary',       hex: '#e4e4e4', dark: true },
+    { name: 'Text Muted',         hex: '#404040', dark: true },
+    { name: 'Success Green',      hex: '#5aba8a', dark: true },
+    { name: 'Border Subtle',      hex: '#191919', dark: true },
+    { name: 'Border Default',     hex: '#222222', dark: true },
+];
 
+const CopyHex = ({ hex }) => {
+    const [copied, setCopied] = useState(false);
+    const copy = () => {
+        navigator.clipboard.writeText(hex);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
     return (
-        <div className="min-h-screen bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
-            {/* Navbar */}
-            <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
-                        <span className="font-black text-2xl tracking-tighter">Chttrix</span>
-                    </div>
-                    <button onClick={() => navigate("/")} className="text-sm font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-white transition-colors flex items-center gap-2">
-                        <ArrowLeft size={16} /> Back to Home
-                    </button>
-                </div>
-            </nav>
-
-            {/* Hero */}
-            <header className="pt-40 pb-20 container mx-auto px-6 text-center max-w-4xl">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-pink-50 dark:bg-pink-900/20 border border-pink-100 dark:border-pink-500/20 rounded-full text-pink-600 dark:text-pink-400 font-bold mb-8">
-                    <LayoutTemplate size={16} />
-                    Media Kit
-                </div>
-                <h1 className="text-5xl md:text-7xl font-black mb-8 tracking-tight">
-                    Brand & Media
-                </h1>
-                <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                    Official Chttrix brand assets, guidelines, and press resources.
-                </p>
-            </header>
-
-            {/* Assets */}
-            <section className="py-20 bg-slate-50 dark:bg-[#0B0F19] border-y border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6 max-w-6xl">
-                    <h2 className="text-3xl font-black mb-12">Brand Assets</h2>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        <AssetCard
-                            title="Logomark"
-                            desc="Light and dark variants"
-                            icon={<ImageIcon />}
-                            preview="/chttrix-logo.jpg"
-                        />
-                        <AssetCard
-                            title="Brand Colors"
-                            desc="Official color palette"
-                            icon={<Palette />}
-                            previewColor="bg-indigo-600"
-                        />
-                        <AssetCard
-                            title="Product Screenshots"
-                            desc="High-res interface shots"
-                            icon={<LayoutTemplate />}
-                            previewColor="bg-slate-800"
-                        />
-                    </div>
-
-                    <div className="mt-12 text-center">
-                        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest mb-4">Assets may be used for</p>
-                        <div className="flex flex-wrap justify-center gap-4">
-                            {['Articles and reviews', 'Partnerships', 'Presentations'].map(tag => (
-                                <span key={tag} className="px-4 py-2 bg-white dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10 text-sm font-medium">
-                                    {tag}
-                                </span>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Guidelines */}
-            <section className="py-24 container mx-auto px-6 max-w-4xl">
-                <div className="grid md:grid-cols-2 gap-12 items-center">
-                    <div>
-                        <h2 className="text-3xl font-black mb-6">Brand Guidelines</h2>
-                        <p className="text-slate-600 dark:text-slate-400 mb-8">
-                            Please help us protect our brand by following these simple rules:
-                        </p>
-                        <ul className="space-y-4">
-                            <GuidelineItem text="Do not modify or distort the logo" />
-                            <GuidelineItem text="Do not change colors outside official palettes" />
-                            <GuidelineItem text="Do not imply endorsement without permission" />
-                            <GuidelineItem text="Use “Chttrix” exactly as written" />
-                        </ul>
-                    </div>
-                    <div className="bg-slate-100 dark:bg-[#111827] p-8 rounded-3xl border border-slate-200 dark:border-slate-800 flex items-center justify-center">
-                        <div className="text-center">
-                            <ShieldAlert size={48} className="mx-auto text-slate-300 mb-4" />
-                            <p className="font-bold text-slate-500">Respect the Brand</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Contact */}
-            <section className="py-20 bg-indigo-900 dark:bg-[#0F1623] text-white">
-                <div className="container mx-auto px-6 text-center">
-                    <Mail className="mx-auto w-12 h-12 text-indigo-300 mb-6" />
-                    <h2 className="text-3xl font-black mb-4">Media & Press</h2>
-                    <p className="text-indigo-200 mb-8">
-                        For media inquiries, interviews, or press materials:
-                    </p>
-                    <a href="mailto:chttrixchat@gmail.com" className="inline-block px-8 py-4 bg-white text-indigo-900 font-bold rounded-xl hover:bg-indigo-50 transition-colors">
-                        chttrixchat@gmail.com
-                    </a>
-                </div>
-            </section>
-
-            {/* Footer */}
-            <footer className="py-12 bg-slate-50 dark:bg-black text-center text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-white/10">
-                <p>© 2026 Chttrix Inc.</p>
-            </footer>
-        </div>
+        <button onClick={copy} style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#5aba8a' : 'rgba(228,228,228,0.35)', fontFamily: 'monospace', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', padding: 0, transition: 'color 150ms ease' }}>
+            {copied ? <CheckCircle2 size={11} /> : <Copy size={11} />}
+            {hex}
+        </button>
     );
 };
 
-const AssetCard = ({ title, desc, icon, preview, previewColor }) => (
-    <div className="group bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-white/5 overflow-hidden hover:shadow-xl transition-all">
-        <div className={`h-40 flex items-center justify-center bg-slate-100 dark:bg-black/20 ${previewColor || ''}`}>
-            {preview ? (
-                <img src={preview} alt={title} className="w-20 h-20 rounded-xl shadow-lg group-hover:scale-110 transition-transform" />
-            ) : (
-                <div className="w-20 h-20 rounded-xl bg-white/10 flex items-center justify-center">
-                    {React.cloneElement(icon, { size: 32, className: "opacity-50" })}
+export default function Brand() {
+    return (
+        <PublicPageShell title="Brand">
+            {/* Hero */}
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '80px 0 56px' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
+                        <Palette size={11} style={{ color: '#b8956a' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Brand & Media</span>
+                    </div>
+                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Brand Guidelines</h1>
+                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.75', maxWidth: '520px' }}>
+                        Everything you need to represent Chttrix correctly — logos, colors, typography, and usage rules.
+                    </p>
                 </div>
-            )}
-        </div>
-        <div className="p-6">
-            <h3 className="text-xl font-bold mb-1">{title}</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{desc}</p>
-            <button className="w-full py-3 border border-slate-200 dark:border-white/10 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-white/5 transition-colors flex items-center justify-center gap-2">
-                <Download size={16} /> Download
-            </button>
-        </div>
-    </div>
-);
+            </div>
 
-const GuidelineItem = ({ text }) => (
-    <li className="flex items-center gap-3 text-slate-700 dark:text-slate-300 font-medium">
-        <div className="w-2 h-2 rounded-full bg-red-500"></div>
-        {text}
-    </li>
-);
+            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '64px 24px' }}>
 
-export default Brand;
+                {/* Logo */}
+                <div style={{ marginBottom: '64px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Logo</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        {/* Dark BG */}
+                        <div style={{ background: '#111', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
+                                <span style={{ fontSize: '20px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
+                            </div>
+                            <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', textAlign: 'center' }}>Dark background (preferred)</p>
+                        </div>
+                        {/* Light BG */}
+                        <div style={{ background: '#f5f5f5', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
+                                <span style={{ fontSize: '20px', fontWeight: 700, color: '#0c0c0c', letterSpacing: '-0.02em' }}>Chttrix</span>
+                            </div>
+                            <p style={{ fontSize: '11px', color: 'rgba(12,12,12,0.4)', textAlign: 'center' }}>Light backgrounds</p>
+                        </div>
+                        {/* Mark only */}
+                        <div style={{ background: '#111', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+                            <img src="/chttrix-logo.jpg" alt="Chttrix mark" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
+                            <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', textAlign: 'center' }}>Mark only (app icons, favicons)</p>
+                        </div>
+                    </div>
+
+                    {/* Logo rules */}
+                    <div style={{ marginTop: '20px', padding: '18px 20px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
+                        <p style={{ fontSize: '13px', fontWeight: 700, color: '#b8956a', marginBottom: '8px' }}>Usage Rules</p>
+                        <ul style={{ paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {['Do not stretch, rotate, or alter the logo proportions', 'Maintain minimum clear space equal to the height of the "C" in Chttrix', 'Do not use the logo on low-contrast backgrounds', 'Do not recreate the logo using a different font', 'For press use, always download the official assets below'].map(r => (
+                                <li key={r} style={{ fontSize: '12px', color: 'rgba(228,228,228,0.5)', display: 'flex', gap: '8px' }}>
+                                    <span style={{ color: '#b8956a', flexShrink: 0 }}>·</span>{r}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+
+                {/* Colors */}
+                <div style={{ marginBottom: '64px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Color Palette</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        {COLORS.map(c => (
+                            <div key={c.hex} style={{ background: '#111', padding: '0' }}>
+                                <div style={{ height: '80px', background: c.hex }} />
+                                <div style={{ padding: '12px 14px' }}>
+                                    <p style={{ fontSize: '12px', fontWeight: 600, color: '#e4e4e4', marginBottom: '4px' }}>{c.name}</p>
+                                    <CopyHex hex={c.hex} />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Typography */}
+                <div style={{ marginBottom: '64px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Typography</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        {[
+                            { label: 'Display', style: { fontSize: '40px', fontWeight: 700, letterSpacing: '-0.03em' }, sample: 'Workspace OS' },
+                            { label: 'Heading 1', style: { fontSize: '28px', fontWeight: 700, letterSpacing: '-0.025em' }, sample: 'One workspace. Every conversation.' },
+                            { label: 'Heading 2', style: { fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em' }, sample: 'Built for teams that move fast.' },
+                            { label: 'Body',    style: { fontSize: '14px', lineHeight: '1.8', color: 'rgba(228,228,228,0.55)' }, sample: 'Chttrix keeps conversations, tasks, and AI in one place so your team never loses context between tools.' },
+                            { label: 'Caption', style: { fontSize: '11px', color: 'rgba(228,228,228,0.35)', letterSpacing: '0.04em' }, sample: 'v1.0 · Workspace OS · © 2026 Chttrix Inc.' },
+                        ].map(t => (
+                            <div key={t.label} style={{ background: '#111', padding: '20px 24px', display: 'flex', gap: '20px', alignItems: 'baseline', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.25)', width: '80px', flexShrink: 0 }}>{t.label}</span>
+                                <span style={{ ...t.style, color: t.style.color || '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>{t.sample}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', marginTop: '12px' }}>Primary typeface: <span style={{ color: '#b8956a', fontFamily: 'monospace' }}>Inter</span> · Monospace: <span style={{ color: '#b8956a', fontFamily: 'monospace' }}>JetBrains Mono</span></p>
+                </div>
+
+                {/* Download */}
+                <div>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Media & Press Kit</p>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {['Logo Pack (PNG + SVG)', 'Brand Guidelines PDF', 'Press Kit ZIP'].map(item => (
+                            <button key={item} onClick={() => alert('Coming soon')}
+                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', color: 'rgba(228,228,228,0.6)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 150ms ease' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e4e4e4'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}>
+                                <Download size={13} /> {item}
+                            </button>
+                        ))}
+                    </div>
+                    <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', marginTop: '14px' }}>For press inquiries, email <a href="mailto:press@chttrix.io" style={{ color: '#b8956a', textDecoration: 'none' }}>press@chttrix.io</a></p>
+                </div>
+            </div>
+        </PublicPageShell>
+    );
+}

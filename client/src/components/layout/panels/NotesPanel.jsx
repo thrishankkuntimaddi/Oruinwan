@@ -15,7 +15,7 @@ import NoteTemplateModal from "../../../pages/SidebarComp/notesComponents/ui/Not
 
 // ─── Note types (Lucide icon components) ──────────────────────────────────────
 const NOTE_TYPES = [
-    { id: "note", Icon: FileText, color: "text-blue-500", label: "Document" },
+    { id: "note", Icon: FileText, color: "text-sky-400", label: "Document" },
     { id: "brainstorm", Icon: Lightbulb, color: "text-amber-500", label: "Brainstorm" },
     { id: "meeting", Icon: Users, color: "text-emerald-500", label: "Meeting Notes" },
     { id: "sop", Icon: ClipboardList, color: "text-orange-500", label: "SOP" },
@@ -79,27 +79,18 @@ function getPreview(content) {
 // ─── Bottom accordion (VS Code style) ────────────────────────────────────────
 function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
     return (
-        <div className="border-t border-gray-200 dark:border-gray-800 flex-shrink-0">
-            <button
-                onClick={onToggle}
-                className={`w-full flex items-center gap-2 px-3 py-2.5 text-left transition-colors
-                    ${isOpen ? "bg-gray-50 dark:bg-gray-800/50" : "hover:bg-gray-50 dark:hover:bg-gray-800/30"}`}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+            <button onClick={onToggle}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', textAlign: 'left', background: isOpen ? 'rgba(255,255,255,0.04)' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
             >
-                {isOpen
-                    ? <ChevronDown size={11} className="text-gray-400 flex-shrink-0" />
-                    : <ChevronRight size={11} className="text-gray-400 flex-shrink-0" />
-                }
-                {Icon && <Icon size={12} className="text-gray-400 flex-shrink-0" />}
-                <span className="text-[10.5px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex-1">{label}</span>
-                {count > 0 && (
-                    <span className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-400 px-1.5 py-0.5 rounded tabular-nums">{count}</span>
-                )}
+                {isOpen ? <ChevronDown size={10} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} /> : <ChevronRight size={10} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />}
+                {Icon && <Icon size={11} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />}
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.35)', flex: 1, fontFamily: 'monospace' }}>{label}</span>
+                {count > 0 && <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.06)', color: 'rgba(228,228,228,0.35)', padding: '1px 6px', fontWeight: 700, fontFamily: 'monospace' }}>{count}</span>}
             </button>
-            {isOpen && (
-                <div className="max-h-64 overflow-y-auto">
-                    {children}
-                </div>
-            )}
+            {isOpen && <div style={{ maxHeight: '256px', overflowY: 'auto', scrollbarWidth: 'thin' }}>{children}</div>}
         </div>
     );
 }
@@ -107,24 +98,22 @@ function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
 // ─── Delete confirm dialog ────────────────────────────────────────────────────
 function DeleteDialog({ note, onConfirm, onCancel }) {
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-80 p-6 mx-4">
-                <div className="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
-                    <Trash2 size={18} className="text-red-500" />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+            <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.1)', width: '320px', padding: '24px', margin: '0 16px', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+                <div style={{ width: '40px', height: '40px', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+                    <Trash2 size={18} style={{ color: '#f87171' }} />
                 </div>
-                <h3 className="text-[15px] font-bold text-gray-900 dark:text-white mb-1">Delete Note?</h3>
-                <p className="text-[13px] text-gray-500 dark:text-gray-400 mb-6">
-                    "{note?.title || "Untitled"}" will be permanently deleted. This cannot be undone.
-                </p>
-                <div className="flex gap-2">
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', marginBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>Delete Note?</h3>
+                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', marginBottom: '20px', lineHeight: 1.5 }}>"{note?.title || 'Untitled'}" will be permanently deleted. This cannot be undone.</p>
+                <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={onCancel}
-                        className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors">
-                        Cancel
-                    </button>
+                        style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 500, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                    >Cancel</button>
                     <button onClick={onConfirm}
-                        className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors">
-                        Delete
-                    </button>
+                        style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 700, color: '#0c0c0c', background: '#f87171', border: 'none', cursor: 'pointer' }}
+                    >Delete</button>
                 </div>
             </div>
         </div>
@@ -134,21 +123,21 @@ function DeleteDialog({ note, onConfirm, onCancel }) {
 // ─── Move-to picker (inline submenu) ─────────────────────────────────────────
 function MovePicker({ groups, noteGroup, onMove, onClose }) {
     return (
-        <div className="absolute right-full top-0 mr-1 w-44 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-[70]">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 px-3 py-1.5">Move to group</p>
-            <button
-                onClick={() => onMove(null)}
-                className={`w-full text-left px-3 py-1.5 text-[12.5px] flex items-center justify-between transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${!noteGroup ? "text-blue-600 font-semibold" : "text-gray-700 dark:text-gray-200"}`}
-            >
-                No group {!noteGroup && <Check size={12} />}
-            </button>
+        <div style={{ position: 'absolute', right: '100%', top: 0, marginRight: '4px', width: '176px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', padding: '4px 0', zIndex: 70 }}>
+            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.3)', padding: '6px 12px', fontFamily: 'monospace' }}>Move to group</p>
+            <button onClick={() => onMove(null)}
+                style={{ width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: !noteGroup ? 'rgba(184,149,106,0.1)' : 'transparent', color: !noteGroup ? '#b8956a' : 'rgba(228,228,228,0.6)', fontWeight: !noteGroup ? 700 : 400, border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                onMouseEnter={e => { if (noteGroup) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseLeave={e => { if (noteGroup) e.currentTarget.style.background = 'transparent'; }}
+            >No group {!noteGroup && <Check size={12} />}</button>
             {groups.map(g => (
-                <button key={g}
-                    onClick={() => onMove(g)}
-                    className={`w-full text-left px-3 py-1.5 text-[12.5px] flex items-center justify-between transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 ${noteGroup === g ? "text-blue-600 font-semibold" : "text-gray-700 dark:text-gray-200"}`}
+                <button key={g} onClick={() => onMove(g)}
+                    style={{ width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: noteGroup === g ? 'rgba(184,149,106,0.1)' : 'transparent', color: noteGroup === g ? '#b8956a' : 'rgba(228,228,228,0.6)', fontWeight: noteGroup === g ? 700 : 400, border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                    onMouseEnter={e => { if (noteGroup !== g) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                    onMouseLeave={e => { if (noteGroup !== g) e.currentTarget.style.background = 'transparent'; }}
                 >
-                    <span className="flex items-center gap-1.5"><FolderOpen size={11} className="text-gray-400" />{g}</span>
-                    {noteGroup === g && <Check size={12} />}
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FolderOpen size={11} style={{ color: 'rgba(228,228,228,0.3)' }} />{g}</span>
+                    {noteGroup === g && <Check size={12} style={{ color: '#b8956a' }} />}
                 </button>
             ))}
         </div>
@@ -339,44 +328,32 @@ const NotesPanel = () => {
         const noteGroup_ = (note.tags || []).find(t => groups.includes(t)) || null;
 
         return (
-            <div
-                key={note.id}
-                onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
-                className={`group relative cursor-pointer rounded-xl transition-all select-none
-                    ${isActive
-                        ? "bg-blue-50 dark:bg-blue-950/30 ring-1 ring-blue-200 dark:ring-blue-800/50"
-                        : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}`}
+            <div key={note.id} onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
+                style={{ position: 'relative', cursor: 'pointer', background: isActive ? 'rgba(184,149,106,0.08)' : 'transparent', borderLeft: isActive ? '2px solid #b8956a' : '2px solid transparent', transition: 'all 150ms ease', userSelect: 'none' }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
             >
-                {isActive && <span className="absolute left-0 top-2 bottom-2 w-[3px] bg-blue-500 rounded-full" />}
-                <div className={`flex items-start gap-2.5 px-3 py-2.5 ${isActive ? "pl-4" : ""}`}>
-                    <typeConf.Icon size={14} className={`mt-1 flex-shrink-0 ${typeConf.color}`} />
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-1">
-                            <span className={`text-[12.5px] font-semibold leading-snug line-clamp-1
-                                ${isActive ? "text-blue-700 dark:text-blue-300" : "text-gray-800 dark:text-gray-100"}`}>
-                                {note.title || "Untitled"}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 12px', paddingLeft: isActive ? '14px' : '12px' }}>
+                    <typeConf.Icon size={13} style={{ marginTop: '2px', flexShrink: 0 }} className={typeConf.color} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: isActive ? 700 : 500, color: isActive ? '#b8956a' : '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                {note.title || 'Untitled'}
                             </span>
-                            <span className="text-[10px] text-gray-400 tabular-nums flex-shrink-0 mt-0.5">{formatDate(note.updatedAt)}</span>
+                            <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', flexShrink: 0, marginTop: '1px', fontFamily: 'monospace' }}>{formatDate(note.updatedAt)}</span>
                         </div>
-                        {preview && <p className="text-[11px] text-gray-400 truncate mt-0.5">{preview}</p>}
-                        <div className="flex items-center gap-2 mt-0.5">
-                            {note.isPinned && (
-                                <span className="inline-flex items-center gap-0.5 text-[10px] text-amber-500 font-medium">
-                                    <Star size={8} className="fill-current" /> Starred
-                                </span>
-                            )}
-                            {noteGroup_ && (
-                                <span className="inline-flex items-center gap-0.5 text-[10px] text-indigo-500 font-medium">
-                                    <FolderOpen size={8} /> {noteGroup_}
-                                </span>
-                            )}
+                        {preview && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{preview}</p>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                            {note.isPinned && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', color: '#b8956a', fontWeight: 500 }}><Star size={8} style={{ fill: 'currentColor' }} /> Starred</span>}
+                            {noteGroup_ && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', color: 'rgba(167,139,250,0.7)', fontWeight: 500 }}><FolderOpen size={8} /> {noteGroup_}</span>}
                         </div>
                     </div>
-                    {/* ⋯ three-dot button */}
-                    <button
-                        onClick={e => openNoteMenu(e, note.id)}
-                        className="opacity-0 group-hover:opacity-100 flex-shrink-0 p-1 mt-0.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700 rounded-md transition-all"
+                    <button onClick={e => openNoteMenu(e, note.id)}
+                        style={{ opacity: 0, flexShrink: 0, padding: '3px', marginTop: '2px', color: 'rgba(228,228,228,0.35)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        className="group-hover-show"
                         title="Options"
+                        onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#e4e4e4'; }}
+                        onMouseLeave={e => { e.currentTarget.style.opacity = '0'; }}
                     >
                         <MoreHorizontal size={13} />
                     </button>
@@ -387,26 +364,27 @@ const NotesPanel = () => {
 
     return (
         <>
-            <div className="flex flex-col h-full bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
 
                 {/* ── Header ── */}
-                <div className="h-13 px-4 py-2.5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-2">
-                        <BookOpen size={15} className="text-gray-500 dark:text-gray-400" />
-                        <span className="font-bold text-[14.5px] text-gray-900 dark:text-white tracking-tight">Notes</span>
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <BookOpen size={14} style={{ color: 'rgba(228,228,228,0.4)' }} />
+                        <span style={{ fontWeight: 700, fontSize: '15px', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>Notes</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                        <div className="relative" ref={sortMenuRef}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ position: 'relative' }} ref={sortMenuRef}>
                             <button onClick={() => setShowSortMenu(v => !v)}
-                                className={`p-1.5 rounded-lg transition-colors ${showSortMenu ? "bg-gray-100 dark:bg-gray-800 text-gray-700" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}>
+                                style={{ padding: '5px', background: showSortMenu ? 'rgba(255,255,255,0.08)' : 'transparent', border: 'none', color: showSortMenu ? '#e4e4e4' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                                onMouseLeave={e => { if (!showSortMenu) e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}>
                                 <ArrowUpDown size={13} />
                             </button>
                             {showSortMenu && (
-                                <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 z-30">
-                                    {[["newest", "Newest"], ["oldest", "Oldest"], ["a-z", "A–Z"], ["z-a", "Z–A"]].map(([v, l]) => (
+                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '4px', width: '120px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 0', zIndex: 30 }}>
+                                    {[['newest', 'Newest'], ['oldest', 'Oldest'], ['a-z', 'A–Z'], ['z-a', 'Z–A']].map(([v, l]) => (
                                         <button key={v} onClick={() => { setSortOrder(v); setShowSortMenu(false); }}
-                                            className={`w-full text-left px-3 py-1.5 text-xs font-medium transition-colors
-                                            ${sortOrder === v ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}>
+                                            style={{ width: '100%', textAlign: 'left', padding: '6px 12px', fontSize: '12px', fontWeight: sortOrder === v ? 600 : 400, color: sortOrder === v ? '#b8956a' : 'rgba(228,228,228,0.6)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
                                             {l}
                                         </button>
                                     ))}
@@ -414,47 +392,41 @@ const NotesPanel = () => {
                             )}
                         </div>
                         <button onClick={() => setShowTemplateModal(true)}
-                            className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold shadow-sm transition-all hover:scale-105 active:scale-95">
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px', background: '#b8956a', border: 'none', color: '#0c0c0c', padding: '5px 10px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
                             <Plus size={12} strokeWidth={2.5} /> New
                         </button>
                     </div>
                 </div>
 
                 {/* ── Tab strip: Workspace | Channel Canvas ── */}
-                <div className="flex border-b border-gray-200 dark:border-gray-800 shrink-0">
+                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
                     {[
-                        { id: "workspace", label: "Workspace", count: activeNotes.length },
-                        { id: "canvas", label: "Channel Canvas", count: totalCanvas },
+                        { id: 'workspace', label: 'Workspace', count: activeNotes.length },
+                        { id: 'canvas', label: 'Channel Canvas', count: totalCanvas },
                     ].map(tab => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[12px] font-semibold transition-all relative
-                            ${activeTab === tab.id
-                                    ? "text-blue-600 dark:text-blue-400"
-                                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"}`}
-                        >
+                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px 4px', fontSize: '11px', fontWeight: activeTab === tab.id ? 700 : 400, color: activeTab === tab.id ? '#b8956a' : 'rgba(228,228,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}>
                             {tab.label}
-                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold tabular-nums
-                            ${activeTab === tab.id ? "bg-blue-100 dark:bg-blue-900/40 text-blue-600" : "bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>
+                            <span style={{ fontSize: '10px', padding: '1px 5px', fontWeight: 700, background: activeTab === tab.id ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.06)', color: activeTab === tab.id ? '#b8956a' : 'rgba(228,228,228,0.3)' }}>
                                 {tab.count}
                             </span>
                             {activeTab === tab.id && (
-                                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
+                                <span style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '2px', background: '#b8956a' }} />
                             )}
                         </button>
                     ))}
                 </div>
 
                 {/* ── Search ── */}
-                <div className="px-3 pt-2.5 pb-2 shrink-0">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={12} />
-                        <input type="text" placeholder="Search…" value={searchQuery}
-                            onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[12px] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all" />
+                <div style={{ padding: '8px 12px', flexShrink: 0 }}>
+                    <div style={{ position: 'relative' }}>
+                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} size={11} />
+                        <input type="text" placeholder="Search…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                            style={{ width: '100%', paddingLeft: '28px', paddingRight: '28px', paddingTop: '6px', paddingBottom: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
                         {searchQuery && (
-                            <button onClick={() => setSearchQuery("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer' }}>
                                 <X size={11} />
                             </button>
                         )}
@@ -467,59 +439,42 @@ const NotesPanel = () => {
 
                 {activeTab === "workspace" ? (
                     <>
-                        {/* ── Filter bar: All | Favorites | + Group ── */}
-                        {/* ── Filter bar: All | Starred | group pills | + ── */}
-                        <div className="px-3 pb-2.5 flex items-center gap-2 shrink-0">
-                            {/* Scrollable pill strip */}
-                            <div className="flex items-center gap-2 overflow-x-auto flex-1 min-w-0 no-scrollbar">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px 10px', flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: 0 }}>
                                 {/* All pill */}
-                                <button
-                                    onClick={() => { setWsFilter("all"); setActiveGroup(null); }}
-                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-bold transition-all border
-                        ${wsFilter === "all" && !activeGroup
-                                            ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
+                                <button onClick={() => { setWsFilter('all'); setActiveGroup(null); }}
+                                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'rgba(255,255,255,0.08)'}`, color: wsFilter === 'all' && !activeGroup ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    onMouseEnter={e => { if (!(wsFilter === 'all' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                    onMouseLeave={e => { if (!(wsFilter === 'all' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                                 >
                                     All
-                                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full tabular-nums
-                        ${wsFilter === "all" && !activeGroup ? "bg-blue-500 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-400"}`}>
-                                        {activeNotes.length}
-                                    </span>
+                                    <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 5px', background: wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.2)' : 'rgba(255,255,255,0.07)', color: wsFilter === 'all' && !activeGroup ? '#b8956a' : 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>{activeNotes.length}</span>
                                 </button>
 
                                 {/* Starred pill */}
-                                <button
-                                    onClick={() => { setWsFilter("favorites"); setActiveGroup(null); }}
-                                    className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-bold transition-all border
-                        ${wsFilter === "favorites" && !activeGroup
-                                            ? "bg-amber-500 text-white border-amber-500 shadow-sm"
-                                            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-gray-300"}`}
+                                <button onClick={() => { setWsFilter('favorites'); setActiveGroup(null); }}
+                                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'rgba(255,255,255,0.08)'}`, color: wsFilter === 'favorites' && !activeGroup ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    onMouseEnter={e => { if (!(wsFilter === 'favorites' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                    onMouseLeave={e => { if (!(wsFilter === 'favorites' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                                 >
-                                    <Star size={11} className={wsFilter === "favorites" && !activeGroup ? "fill-current" : ""} />
-                                    Starred
+                                    <Star size={11} style={{ fill: wsFilter === 'favorites' && !activeGroup ? 'currentColor' : 'none' }} /> Starred
                                 </button>
 
-                                {/* Group pills — inline, same weight as All/Starred */}
+                                {/* Group pills */}
                                 {groups.map(g => (
-                                    <button key={g}
-                                        onClick={() => setActiveGroup(activeGroup === g ? null : g)}
-                                        className={`flex-shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[12px] font-bold transition-all border
-                            ${activeGroup === g
-                                                ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                                                : "bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:border-indigo-400"}`}
+                                    <button key={g} onClick={() => setActiveGroup(activeGroup === g ? null : g)}
+                                        style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: activeGroup === g ? 'rgba(167,139,250,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${activeGroup === g ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.08)'}`, color: activeGroup === g ? '#a78bfa' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                        onMouseEnter={e => { if (activeGroup !== g) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                        onMouseLeave={e => { if (activeGroup !== g) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                                     >
                                         <FolderOpen size={11} /> {g}
                                     </button>
                                 ))}
                             </div>
 
-                            {/* + create group — pinned right */}
-                            <button
-                                onClick={() => setShowGroupInput(v => !v)}
-                                className={`flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-lg border transition-colors
-                    ${showGroupInput
-                                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-600"
-                                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-500 hover:border-gray-300 hover:text-gray-700"}`}
+                            {/* + create group */}
+                            <button onClick={() => setShowGroupInput(v => !v)}
+                                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: showGroupInput ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${showGroupInput ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, color: showGroupInput ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
                                 title="Create group"
                             >
                                 <Plus size={13} strokeWidth={2.5} />
@@ -528,21 +483,16 @@ const NotesPanel = () => {
 
                         {/* Group name input */}
                         {showGroupInput && (
-                            <div className="px-3 pb-2 shrink-0">
-                                <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1.5">
-                                    <FolderPlus size={12} className="text-gray-400 flex-shrink-0" />
-                                    <input
-                                        ref={groupInputRef}
-                                        value={newGroupName}
-                                        onChange={e => setNewGroupName(e.target.value)}
-                                        onKeyDown={e => { if (e.key === "Enter") handleCreateGroup(); if (e.key === "Escape") setShowGroupInput(false); }}
+                            <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#161616', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 10px' }}>
+                                    <FolderPlus size={12} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                                    <input ref={groupInputRef} value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Enter') handleCreateGroup(); if (e.key === 'Escape') setShowGroupInput(false); }}
                                         placeholder="Group name…"
-                                        className="flex-1 bg-transparent text-[12px] text-gray-800 dark:text-gray-100 placeholder-gray-400 outline-none"
+                                        style={{ flex: 1, background: 'transparent', fontSize: '12px', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}
                                     />
                                     <button onClick={handleCreateGroup}
-                                        className="text-blue-600 text-[11px] font-semibold hover:text-blue-700 flex-shrink-0">
-                                        Create
-                                    </button>
+                                        style={{ fontSize: '11px', fontWeight: 700, color: '#b8956a', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0 }}>Create</button>
                                 </div>
                             </div>
                         )}
@@ -570,7 +520,7 @@ const NotesPanel = () => {
                                     </p>
                                     {!searchQuery && wsFilter === "all" && !activeGroup && (
                                         <button onClick={() => setShowTemplateModal(true)}
-                                            className="text-[11px] text-blue-600 font-semibold hover:underline">
+                                            style={{ fontSize: '11px', fontWeight: 700, color: '#b8956a', background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', textUnderlineOffset: '3px' }}>
                                             + Create first note
                                         </button>
                                     )}
@@ -606,15 +556,15 @@ const NotesPanel = () => {
 
                                     return (
                                         <div key={ch._id}>
-                                            <button
-                                                onClick={() => setOpenChannelId(isOpen ? null : ch._id)}
-                                                className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-left transition-all
-                                                ${isOpen ? "bg-gray-50 dark:bg-gray-800/60" : "hover:bg-gray-50 dark:hover:bg-gray-800/40"}`}
+                                            <button onClick={() => setOpenChannelId(isOpen ? null : ch._id)}
+                                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', textAlign: 'left', background: isOpen ? 'rgba(255,255,255,0.05)' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                                                onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                                                onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = isOpen ? 'rgba(255,255,255,0.05)' : 'transparent'; }}
                                             >
-                                                {isOpen ? <ChevronDown size={10} className="text-gray-400" /> : <ChevronRight size={10} className="text-gray-400" />}
-                                                <Hash size={11} className="text-gray-400 flex-shrink-0" />
-                                                <span className="flex-1 text-[12.5px] font-semibold text-gray-700 dark:text-gray-200 truncate">{chName}</span>
-                                                <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-1.5 tabular-nums">{ch.canvasTabs.length}</span>
+                                                {isOpen ? <ChevronDown size={10} style={{ color: 'rgba(228,228,228,0.3)' }} /> : <ChevronRight size={10} style={{ color: 'rgba(228,228,228,0.3)' }} />}
+                                                <Hash size={11} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                                                <span style={{ flex: 1, fontSize: '12px', fontWeight: 600, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{chName}</span>
+                                                <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', background: 'rgba(255,255,255,0.07)', padding: '1px 6px', fontFamily: 'monospace' }}>{ch.canvasTabs.length}</span>
                                             </button>
 
                                             {isOpen && (
@@ -624,20 +574,17 @@ const NotesPanel = () => {
                                                         return (
                                                             <button key={tab._id}
                                                                 onClick={() => navigate(`/workspace/${workspaceId}/channel/${ch._id}`, { state: { openTabId: tab._id } })}
-                                                                className={`w-full text-left flex items-start gap-2 px-2 py-2 rounded-lg transition-all relative
-                                                                ${isTabActive
-                                                                        ? "bg-indigo-50 dark:bg-indigo-950/30 ring-1 ring-indigo-200 dark:ring-indigo-800/50"
-                                                                        : "hover:bg-gray-50 dark:hover:bg-gray-800/60"}`}
+                                                                style={{ position: 'relative', width: '100%', textAlign: 'left', display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '7px 10px', background: isTabActive ? 'rgba(184,149,106,0.08)' : 'transparent', borderLeft: isTabActive ? '2px solid #b8956a' : '2px solid transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease' }}
+                                                                onMouseEnter={e => { if (!isTabActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                                                                onMouseLeave={e => { if (!isTabActive) e.currentTarget.style.background = 'transparent'; }}
                                                             >
-                                                                {isTabActive && <span className="absolute left-0 top-2 bottom-2 w-[3px] bg-indigo-500 rounded-full" />}
-                                                                <span className="text-[12px] flex-shrink-0 mt-0.5">{tab.emoji || "📄"}</span>
-                                                                <div className="min-w-0 flex-1">
-                                                                    <p className={`text-[12px] font-medium truncate leading-tight
-                                                                    ${isTabActive ? "text-indigo-700 dark:text-indigo-300" : "text-gray-700 dark:text-gray-200"}`}>
-                                                                        {tab.name || "Untitled Canvas"}
+                                                                <span style={{ fontSize: '12px', flexShrink: 0, marginTop: '1px' }}>{tab.emoji || '📄'}</span>
+                                                                <div style={{ minWidth: 0, flex: 1 }}>
+                                                                    <p style={{ fontSize: '12px', fontWeight: isTabActive ? 700 : 500, color: isTabActive ? '#b8956a' : '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+                                                                        {tab.name || 'Untitled Canvas'}
                                                                     </p>
                                                                     {tab.lastEditedAt && (
-                                                                        <p className="text-[10px] text-gray-400 mt-0.5">{formatDate(tab.lastEditedAt)}</p>
+                                                                        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginTop: '2px', fontFamily: 'monospace' }}>{formatDate(tab.lastEditedAt)}</p>
                                                                     )}
                                                                 </div>
                                                             </button>
@@ -672,17 +619,16 @@ const NotesPanel = () => {
                                 const tNotes = notesByType(t.id);
                                 return (
                                     <div key={t.id}>
-                                        <button
-                                            onClick={() => setActiveTypeId(isOpen ? null : t.id)}
-                                            className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-lg text-left transition-all
-                                            ${isOpen ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700" : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60"}`}
+                                        <button onClick={() => setActiveTypeId(isOpen ? null : t.id)}
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', textAlign: 'left', background: isOpen ? 'rgba(184,149,106,0.08)' : 'transparent', borderLeft: isOpen ? '2px solid #b8956a' : '2px solid transparent', border: 'none', cursor: 'pointer', color: isOpen ? '#b8956a' : 'rgba(228,228,228,0.5)', transition: 'all 150ms ease' }}
+                                            onMouseEnter={e => { if (!isOpen) e.currentTarget.style.color = '#e4e4e4'; }}
+                                            onMouseLeave={e => { if (!isOpen) e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; }}
                                         >
                                             {isOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                                            <t.Icon size={13} className={`flex-shrink-0 ${isOpen ? "text-blue-500" : t.color}`} />
-                                            <span className={`flex-1 text-[12px] font-medium ${isOpen ? "text-blue-700 dark:text-blue-400" : ""}`}>{t.label}</span>
+                                            <t.Icon size={13} className={`flex-shrink-0 ${t.color}`} />
+                                            <span style={{ flex: 1, fontSize: '12px', fontWeight: isOpen ? 700 : 500, fontFamily: 'Inter, system-ui, sans-serif' }}>{t.label}</span>
                                             {cnt > 0 && (
-                                                <span className={`text-[10px] px-1.5 py-0.5 rounded tabular-nums font-semibold
-                                                ${isOpen ? "bg-blue-100 text-blue-600" : "bg-gray-100 dark:bg-gray-800 text-gray-400"}`}>{cnt}</span>
+                                                <span style={{ fontSize: '10px', padding: '1px 6px', fontWeight: 700, background: isOpen ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.07)', color: isOpen ? '#b8956a' : 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>{cnt}</span>
                                             )}
                                         </button>
 
@@ -714,12 +660,18 @@ const NotesPanel = () => {
                                     const typeConf = NOTE_TYPES.find(t => t.id === note.type) || NOTE_TYPES[0];
                                     return (
                                         <div key={note.id}
-                                            className="group flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer"
-                                            onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}>
-                                            <typeConf.Icon size={13} className={`flex-shrink-0 opacity-50 ${typeConf.color}`} />
-                                            <span className="flex-1 text-[12px] text-gray-400 truncate">{note.title || "Untitled"}</span>
+                                            style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', cursor: 'pointer', transition: 'background 150ms ease' }}
+                                            onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <typeConf.Icon size={12} className={`flex-shrink-0 ${typeConf.color}`} style={{ opacity: 0.5 }} />
+                                            <span style={{ flex: 1, fontSize: '12px', color: 'rgba(228,228,228,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{note.title || 'Untitled'}</span>
                                             <button onClick={e => { e.stopPropagation(); toggleArchive(note.id); }}
-                                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-blue-600 transition-all" title="Restore">
+                                                style={{ padding: '4px', color: 'rgba(228,228,228,0.25)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', flexShrink: 0 }}
+                                                title="Restore"
+                                                onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}>
                                                 <ArchiveRestore size={12} />
                                             </button>
                                         </div>
@@ -733,62 +685,52 @@ const NotesPanel = () => {
 
             {/* ── Three-dot context menu (horizontal ⋯) ── */}
             {noteMenu && ctxNote && (
-                <div
-                    ref={noteMenuRef}
-                    className="fixed z-50 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 py-1 w-48"
-                    style={{
-                        left: Math.min(noteMenu.x, window.innerWidth - 200),
-                        top: Math.min(noteMenu.y, window.innerHeight - 200),
-                    }}
+                <div ref={noteMenuRef}
+                    style={{ position: 'fixed', zIndex: 50, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', width: '192px', left: Math.min(noteMenu.x, window.innerWidth - 200), top: Math.min(noteMenu.y, window.innerHeight - 220) }}
                 >
-                    <button onClick={() => { navigate(`/workspace/${workspaceId}/notes/${ctxNote.id}`); setNoteMenu(null); }}
-                        className="w-full text-left px-3 py-2 text-[12.5px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors">
-                        <FileText size={13} className="text-gray-400" /> Open
-                    </button>
-                    <button onClick={() => { togglePin(ctxNote.id); setNoteMenu(null); }}
-                        className="w-full text-left px-3 py-2 text-[12.5px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors">
-                        <Star size={13} className={ctxNote.isPinned ? "text-amber-500 fill-current" : "text-gray-400"} />
-                        {ctxNote.isPinned ? "Unstar" : "Star"}
-                    </button>
+                    {[{ label: 'Open', Icon: FileText, action: () => { navigate(`/workspace/${workspaceId}/notes/${ctxNote.id}`); setNoteMenu(null); } },
+                      { label: ctxNote.isPinned ? 'Unstar' : 'Star', Icon: Star, action: () => { togglePin(ctxNote.id); setNoteMenu(null); }, amber: ctxNote.isPinned }]
+                      .map(({ label, Icon: Ic, action, amber }) => (
+                        <button key={label} onClick={action}
+                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: amber ? '#b8956a' : 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        ><Ic size={13} style={{ color: amber ? '#b8956a' : 'rgba(228,228,228,0.35)' }} /> {label}</button>
+                    ))}
 
-                    <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
+                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
 
                     {/* Move to ▶ */}
-                    <div className="relative">
-                        <button
-                            onClick={() => setShowMovePicker(v => !v)}
-                            className="w-full text-left px-3 py-2 text-[12.5px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors"
+                    <div style={{ position: 'relative' }}>
+                        <button onClick={() => setShowMovePicker(v => !v)}
+                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
-                            <Move size={13} className="text-gray-400" /> Move to…
-                            <ChevronRight size={11} className="ml-auto text-gray-400" />
+                            <Move size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Move to…
+                            <ChevronRight size={11} style={{ marginLeft: 'auto', color: 'rgba(228,228,228,0.3)' }} />
                         </button>
-                        {showMovePicker && (
-                            <MovePicker
-                                groups={groups}
-                                noteGroup={(ctxNote.tags || []).find(t => groups.includes(t)) || null}
-                                onMove={handleMove}
-                                onClose={() => setShowMovePicker(false)}
-                            />
-                        )}
+                        {showMovePicker && <MovePicker groups={groups} noteGroup={(ctxNote.tags || []).find(t => groups.includes(t)) || null} onMove={handleMove} onClose={() => setShowMovePicker(false)} />}
                     </div>
 
                     {/* Archive */}
                     <button onClick={() => { toggleArchive(ctxNote.id); setNoteMenu(null); }}
-                        className="w-full text-left px-3 py-2 text-[12.5px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2.5 transition-colors">
-                        {ctxNote.isArchived
-                            ? <><ArchiveRestore size={13} className="text-gray-400" /> Restore</>
-                            : <><Archive size={13} className="text-gray-400" /> Archive</>
-                        }
+                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                    >
+                        {ctxNote.isArchived ? <><ArchiveRestore size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Restore</> : <><Archive size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Archive</>}
                     </button>
 
-                    <div className="h-px bg-gray-100 dark:bg-gray-700 my-1" />
+                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
 
                     {/* Delete */}
-                    <button
-                        onClick={() => { setDeleteTarget(ctxNote); setNoteMenu(null); }}
-                        className="w-full text-left px-3 py-2 text-[12.5px] text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2.5 transition-colors"
+                    <button onClick={() => { setDeleteTarget(ctxNote); setNoteMenu(null); }}
+                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: '#f87171', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                        <Trash2 size={13} /> Delete
+                        <Trash2 size={13} style={{ color: '#f87171' }} /> Delete
                     </button>
                 </div>
             )}

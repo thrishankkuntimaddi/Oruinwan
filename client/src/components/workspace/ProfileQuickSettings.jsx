@@ -1,6 +1,4 @@
 // client/src/components/workspace/ProfileQuickSettings.jsx
-// Quick profile settings widget for workspaces page
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,6 +12,27 @@ import { useToast } from '../../contexts/ToastContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 
+/* ── Shared style tokens ──────────────────────────────────────── */
+const inp = {
+    width: '100%', padding: '8px 10px',
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)',
+    outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box',
+    transition: '150ms ease',
+};
+const lbl = {
+    display: 'block', fontSize: '11px', fontWeight: 700,
+    color: 'var(--text-muted)', letterSpacing: '0.12em',
+    textTransform: 'uppercase', marginBottom: '6px',
+};
+const rowBtn = {
+    width: '100%', display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', padding: '10px 12px',
+    borderRadius: '2px', background: 'none', border: 'none',
+    cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease',
+};
+const divider = { borderTop: '1px solid var(--border-subtle)', margin: '6px 0' };
+
 const ProfileQuickSettings = ({ onClose }) => {
     const { user, updateProfile, logout } = useAuth();
     const { theme, setTheme } = useTheme();
@@ -21,7 +40,7 @@ const ProfileQuickSettings = ({ onClose }) => {
     const { company } = useCompany();
     const navigate = useNavigate();
 
-    const [view, setView] = useState('main'); // main, edit, theme, security
+    const [view, setView] = useState('main');
     const [, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -34,7 +53,6 @@ const ProfileQuickSettings = ({ onClose }) => {
         about: user?.profile?.about || ''
     });
 
-    // Reset form when user changes
     useEffect(() => {
         if (user) {
             setFormData({
@@ -67,358 +85,297 @@ const ProfileQuickSettings = ({ onClose }) => {
         window.location.href = '/login';
     };
 
-    // Main View
+    /* Role badge color — accent only for owner, neutral for rest */
+    const getRoleBadge = () => {
+        const role = user?.companyRole;
+        const label = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Member';
+        const isOwner = role === 'owner';
+        return (
+            <span style={{
+                padding: '3px 10px', borderRadius: '2px', fontSize: '11px', fontWeight: 700,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                background: isOwner ? 'var(--accent-dim)' : 'var(--bg-active)',
+                color: isOwner ? 'var(--accent)' : 'var(--text-secondary)',
+                border: `1px solid ${isOwner ? 'var(--border-accent)' : 'var(--border-default)'}`,
+            }}>{label}</span>
+        );
+    };
+
+    /* ── Main View ─────────────────────────────────────────────── */
     const renderMainView = () => (
-        <div className="space-y-4">
-            {/* User Header */}
-            <div className="text-center">
-                <div className="relative inline-block mb-4">
-                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black shadow-lg overflow-hidden">
-                        <img
-                            src={getAvatarUrl(user)}
-                            alt="Profile"
-                            className="w-full h-full rounded-full object-cover"
-                        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Avatar + name */}
+            <div style={{ textAlign: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <div style={{ position: 'relative', display: 'inline-block', marginBottom: '12px' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-accent)', margin: '0 auto' }}>
+                        <img src={getAvatarUrl(user)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <button
-                        onClick={() => setView('edit')}
-                        className="absolute bottom-0 right-0 w-7 h-7 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors border-2 border-gray-100"
-                    >
-                        <Edit3 size={14} className="text-gray-600" />
+                    <button onClick={() => setView('edit')} style={{ position: 'absolute', bottom: 0, right: 0, width: '22px', height: '22px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                        <Edit3 size={11} />
                     </button>
                 </div>
-                <h3 className="text-lg font-black text-gray-900 dark:text-slate-100">{user?.username}</h3>
-                <p className="text-sm text-gray-500 dark:text-slate-400">{user?.email}</p>
-
-                {/* Role Badge */}
-                <div className="mt-2 flex items-center justify-center gap-2">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${user?.companyRole === 'owner' ? 'bg-purple-100 text-purple-700' :
-                        user?.companyRole === 'admin' ? 'bg-blue-100 text-blue-700' :
-                            user?.companyRole === 'manager' ? 'bg-green-100 text-green-700' :
-                                'bg-slate-100 text-slate-700'
-                        }`}>
-                        {user?.companyRole?.charAt(0).toUpperCase() + user?.companyRole?.slice(1) || 'Member'}
-                    </span>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 3px', letterSpacing: '-0.01em' }}>{user?.username}</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 10px' }}>{user?.email}</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    {getRoleBadge()}
                     {company?.name && (
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                            <Building size={12} />
-                            {company.name}
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Building size={11} /> {company.name}
                         </span>
                     )}
                 </div>
             </div>
 
-            {/* Quick Info Cards */}
-            <div className="space-y-2">
+            {/* Info rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {user?.phone && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                        <Phone size={16} className="text-gray-400" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                        <Phone size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <div>
-                            <p className="text-xs text-gray-500 font-medium">Phone</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{user.phoneCode} {user.phone}</p>
+                            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 2px' }}>Phone</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{user.phoneCode} {user.phone}</p>
                         </div>
                     </div>
                 )}
 
                 {formData.dob && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                        <Calendar size={16} className="text-gray-400" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                        <Calendar size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <div>
-                            <p className="text-xs text-gray-500 font-medium">Birthday</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-                                {new Date(formData.dob).toLocaleDateString('en-US', {
-                                    month: 'long',
-                                    day: 'numeric',
-                                    year: 'numeric'
-                                })}
+                            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 2px' }}>Birthday</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+                                {new Date(formData.dob).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                             </p>
                         </div>
                     </div>
                 )}
 
                 {user?.createdAt && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                        <Calendar size={16} className="text-gray-400" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                        <Calendar size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <div>
-                            <p className="text-xs text-gray-500 font-medium">Member Since</p>
-                            <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">
-                                {new Date(user.createdAt).toLocaleDateString('en-US', {
-                                    month: 'long',
-                                    year: 'numeric'
-                                })}
+                            <p style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', margin: '0 0 2px' }}>Member Since</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>
+                                {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                             </p>
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                <button
-                    onClick={() => { onClose(); navigate('/settings', { state: { from: '/workspaces' } }); }}
-                    className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors group"
+            {/* Action rows */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                <button onClick={() => { onClose(); navigate('/settings', { state: { from: '/workspaces' } }); }}
+                    style={rowBtn}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
                 >
-                    <div className="flex items-center gap-3">
-                        <Settings size={18} className="text-gray-400 group-hover:text-indigo-600 transition-colors" />
-                        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">All Settings</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <Settings size={16} style={{ color: 'var(--text-muted)' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>All Settings</span>
                     </div>
-                    <ChevronRight size={16} className="text-gray-400" />
+                    <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
                 </button>
 
                 {(user?.companyRole === 'admin' || user?.companyRole === 'owner') && (
                     <>
-                        <div className="border-t border-gray-100 my-2"></div>
-                        <button
-                            onClick={() => window.location.href = '/admin/dashboard'}
-                            className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-indigo-50 transition-colors group"
+                        <div style={divider} />
+                        <button onClick={() => window.location.href = '/admin/dashboard'}
+                            style={rowBtn}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
                         >
-                            <div className="flex items-center gap-3">
-                                <Shield size={18} className="text-indigo-600" />
-                                <span className="text-sm font-bold text-indigo-600">Admin Dashboard</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Shield size={16} style={{ color: 'var(--text-secondary)' }} />
+                                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>Admin Dashboard</span>
                             </div>
-                            <ChevronRight size={16} className="text-indigo-600" />
+                            <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
                         </button>
                     </>
                 )}
 
-                <div className="border-t border-gray-100 my-2"></div>
+                <div style={divider} />
 
-                <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors text-red-600 dark:text-red-400"
+                <button onClick={handleLogout} style={rowBtn}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.querySelector('span').style.color = 'var(--state-danger)'; e.currentTarget.querySelector('svg').style.color = 'var(--state-danger)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.querySelector('span').style.color = 'var(--text-secondary)'; e.currentTarget.querySelector('svg').style.color = 'var(--text-muted)'; }}
                 >
-                    <LogOut size={18} />
-                    <span className="text-sm font-medium">Sign Out</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <LogOut size={16} style={{ color: 'var(--text-muted)', transition: '150ms ease' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', transition: '150ms ease' }}>Sign Out</span>
+                    </div>
                 </button>
             </div>
         </div>
     );
 
-    // Edit Profile View
+    /* ── Edit View ─────────────────────────────────────────────── */
     const renderEditView = () => (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
-                <button
-                    onClick={() => setView('main')}
-                    className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 font-medium"
-                >
-                    ← Back
-                </button>
-                <h4 className="text-sm font-bold text-gray-900 dark:text-slate-100">Edit Profile</h4>
-                <div className="w-12"></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <button onClick={() => setView('main')} style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                >← Back</button>
+                <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Edit Profile</h4>
+                <div style={{ width: '40px' }} />
             </div>
 
-            <div className="space-y-4 max-h-96 overflow-y-auto custom-scrollbar pr-2">
-                {/* Profile Picture */}
-                <div className="flex justify-center">
-                    <div className="relative group">
-                        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-black overflow-hidden">
-                            <img src={getAvatarUrl(user)} alt="Profile" className="w-full h-full rounded-full object-cover" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '320px', overflowY: 'auto' }}>
+                {/* Avatar */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ position: 'relative' }} className="group">
+                        <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-accent)' }}>
+                            <img src={getAvatarUrl(user)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
-                        <button className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Camera size={20} className="text-white" />
+                        <button className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity" style={{ border: 'none', cursor: 'pointer' }}>
+                            <Camera size={16} style={{ color: '#fff' }} />
                         </button>
                     </div>
                 </div>
 
-                {/* Form Fields */}
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Full Name</label>
-                    <input
-                        type="text"
-                        value={formData.username}
-                        onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                    <label style={lbl}>Full Name</label>
+                    <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })}
+                        style={inp}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Email</label>
-                    <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg">
-                        <Mail size={16} className="text-gray-400" />
-                        <span className="text-sm text-gray-500 dark:text-gray-400">{user?.email}</span>
+                    <label style={lbl}>Email</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                        <Mail size={13} style={{ color: 'var(--text-muted)' }} />
+                        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{user?.email}</span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Email cannot be changed here</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Email cannot be changed here</p>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Phone Number</label>
-                    <div className="flex gap-2">
-                        <select
-                            value={formData.phoneCode}
-                            onChange={(e) => setFormData({ ...formData, phoneCode: e.target.value })}
-                            className="w-24 px-2 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                        >
+                    <label style={lbl}>Phone Number</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <select value={formData.phoneCode} onChange={e => setFormData({ ...formData, phoneCode: e.target.value })}
+                            style={{ ...inp, width: '72px', flexShrink: 0 }}>
                             <option value="+1">+1</option>
                             <option value="+44">+44</option>
                             <option value="+91">+91</option>
                         </select>
-                        <input
-                            type="tel"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
-                            placeholder="123-456-7890"
+                        <input type="tel" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            style={inp} placeholder="123-456-7890"
+                            onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                         />
                     </div>
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Date of Birth</label>
-                    <input
-                        type="date"
-                        value={formData.dob}
-                        onChange={(e) => setFormData({ ...formData, dob: e.target.value })}
+                    <label style={lbl}>Date of Birth</label>
+                    <input type="date" value={formData.dob} onChange={e => setFormData({ ...formData, dob: e.target.value })}
                         max={new Date().toISOString().split('T')[0]}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                        style={inp}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">Address</label>
-                    <textarea
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none"
-                        placeholder="123 Main St, City, State, ZIP"
+                    <label style={lbl}>Address</label>
+                    <textarea value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })}
+                        rows={2} placeholder="123 Main St, City, State"
+                        style={{ ...inp, resize: 'vertical', lineHeight: 1.6 }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                     />
                 </div>
 
                 <div>
-                    <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-1">About</label>
-                    <textarea
-                        value={formData.about}
-                        onChange={(e) => setFormData({ ...formData, about: e.target.value })}
-                        rows={3}
-                        maxLength={500}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 dark:bg-slate-700 dark:text-slate-100 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none resize-none"
-                        placeholder="Tell us about yourself..."
+                    <label style={lbl}>About</label>
+                    <textarea value={formData.about} onChange={e => setFormData({ ...formData, about: e.target.value })}
+                        rows={3} maxLength={500} placeholder="Tell us about yourself..."
+                        style={{ ...inp, resize: 'vertical', lineHeight: 1.6 }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                     />
-                    <p className="text-xs text-gray-400 mt-1 text-right">{formData.about?.length || 0}/500</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', textAlign: 'right' }}>{formData.about?.length || 0}/500</p>
                 </div>
             </div>
 
-            <div className="flex gap-2 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <button
-                    onClick={() => setView('main')}
-                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-slate-300 dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
+            <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
+                <button onClick={() => setView('main')}
+                    style={{ flex: 1, padding: '8px', background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                >Cancel</button>
+                <button onClick={handleSave} disabled={isSaving}
+                    style={{ flex: 1, padding: '8px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: isSaving ? 0.6 : 1, transition: '150ms ease' }}
                 >
-                    Cancel
-                </button>
-                <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                    {isSaving ? (
-                        <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Saving...
-                        </>
-                    ) : (
-                        <>
-                            <Save size={16} /> Save Changes
-                        </>
-                    )}
+                    {isSaving ? <><div style={{ width: '14px', height: '14px', border: '2px solid var(--text-muted)', borderTopColor: 'var(--text-primary)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />Saving...</> : <><Save size={14} />Save Changes</>}
                 </button>
             </div>
         </div>
     );
 
-    // Theme View
+    /* ── Theme View ────────────────────────────────────────────── */
     const renderThemeView = () => (
-        <div className="space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
-                <button
-                    onClick={() => setView('main')}
-                    className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-slate-100 font-medium"
-                >
-                    ← Back
-                </button>
-                <h4 className="text-sm font-bold text-gray-900 dark:text-slate-100">Appearance</h4>
-                <div className="w-12"></div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                <button onClick={() => setView('main')} style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                >← Back</button>
+                <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Appearance</h4>
+                <div style={{ width: '40px' }} />
             </div>
 
             <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wide mb-3">Theme</label>
-                <div className="grid grid-cols-3 gap-3">
-                    <button
-                        onClick={() => {
-                            setTheme('light');
-                            showToast('Theme changed to Light', 'success');
-                        }}
-                        className={`p-4 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${theme === 'light'
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                    >
-                        <Sun size={24} className={theme === 'light' ? 'text-indigo-600' : 'text-gray-400'} />
-                        <span className={`text-xs font-bold ${theme === 'light' ? 'text-indigo-600' : 'text-gray-600'}`}>
-                            Light
-                        </span>
-                        {theme === 'light' && <Check size={16} className="text-indigo-600" />}
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            setTheme('dark');
-                            showToast('Theme changed to Dark', 'success');
-                        }}
-                        className={`p-4 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${theme === 'dark'
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                    >
-                        <Moon size={24} className={theme === 'dark' ? 'text-indigo-600' : 'text-gray-400'} />
-                        <span className={`text-xs font-bold ${theme === 'dark' ? 'text-indigo-600' : 'text-gray-600'}`}>
-                            Dark
-                        </span>
-                        {theme === 'dark' && <Check size={16} className="text-indigo-600" />}
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            setTheme('auto');
-                            showToast('Theme set to Auto', 'success');
-                        }}
-                        className={`p-4 border-2 rounded-xl flex flex-col items-center gap-2 transition-all ${theme === 'auto'
-                            ? 'border-indigo-500 bg-indigo-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                            }`}
-                    >
-                        <Monitor size={24} className={theme === 'auto' ? 'text-indigo-600' : 'text-gray-400'} />
-                        <span className={`text-xs font-bold ${theme === 'auto' ? 'text-indigo-600' : 'text-gray-600'}`}>
-                            Auto
-                        </span>
-                        {theme === 'auto' && <Check size={16} className="text-indigo-600" />}
-                    </button>
+                <label style={lbl}>Theme</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    {[
+                        { value: 'light', label: 'Light', icon: Sun },
+                        { value: 'dark', label: 'Dark', icon: Moon },
+                        { value: 'auto', label: 'Auto', icon: Monitor },
+                    ].map(({ value, label, icon: Icon }) => {
+                        const active = theme === value;
+                        return (
+                            <button key={value}
+                                onClick={() => { setTheme(value); showToast(`Theme changed to ${label}`, 'success'); }}
+                                style={{ padding: '12px 8px', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: '2px', background: active ? 'var(--accent-dim)' : 'var(--bg-surface)', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', transition: '150ms ease', fontFamily: 'var(--font)' }}
+                                onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                                onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'var(--bg-surface)'; }}
+                            >
+                                <Icon size={20} style={{ color: active ? 'var(--accent)' : 'var(--text-muted)' }} />
+                                <span style={{ fontSize: '11px', fontWeight: 600, color: active ? 'var(--accent)' : 'var(--text-secondary)' }}>{label}</span>
+                                {active && <Check size={12} style={{ color: 'var(--accent)' }} />}
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         </div>
     );
 
     return (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden animate-slide-up">
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', fontFamily: 'var(--font)' }}>
+            <div style={{ width: '100%', maxWidth: '400px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-slate-700 dark:to-slate-700">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-slate-100">My Profile</h3>
-                    <button
-                        onClick={onClose}
-                        className="w-8 h-8 rounded-full hover:bg-gray-200 dark:hover:bg-slate-600 flex items-center justify-center transition-colors"
-                    >
-                        <X size={18} className="text-gray-600 dark:text-slate-300" />
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>My Profile</h3>
+                    <button onClick={onClose}
+                        style={{ width: '28px', height: '28px', borderRadius: '2px', background: 'none', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-muted)', transition: '150ms ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+                    ><X size={16} /></button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6">
+                <div style={{ padding: '20px' }}>
                     {view === 'main' && renderMainView()}
                     {view === 'edit' && renderEditView()}
                     {view === 'theme' && renderThemeView()}
                 </div>
             </div>
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     );
 };

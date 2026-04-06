@@ -1,66 +1,52 @@
 import React from 'react';
 import { Trash2, Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
 
+// All callout variants use dark surface with colored left bar — no light-mode bg classes
 const CALLOUT_TYPES = {
     info: {
         label: 'Info',
         icon: Info,
-        accent: '#3b82f6',
-        bg: 'bg-blue-50 dark:bg-blue-950/40',
-        border: 'border-blue-200 dark:border-blue-800/60',
-        iconBg: 'bg-blue-100 dark:bg-blue-900/50',
-        iconColor: 'text-blue-600 dark:text-blue-400',
-        textColor: 'text-blue-900 dark:text-blue-100',
-        labelColor: 'text-blue-500 dark:text-blue-400',
-        barColor: 'bg-blue-500',
+        bar: '#3b82f6',
+        iconColor: '#60a5fa',
+        labelColor: '#60a5fa',
+        bg: 'rgba(59,130,246,0.06)',
+        border: 'rgba(59,130,246,0.2)',
     },
     warning: {
         label: 'Warning',
         icon: AlertTriangle,
-        accent: '#f59e0b',
-        bg: 'bg-amber-50 dark:bg-amber-950/40',
-        border: 'border-amber-200 dark:border-amber-800/60',
-        iconBg: 'bg-amber-100 dark:bg-amber-900/50',
-        iconColor: 'text-amber-600 dark:text-amber-400',
-        textColor: 'text-amber-900 dark:text-amber-100',
-        labelColor: 'text-amber-500 dark:text-amber-400',
-        barColor: 'bg-amber-500',
+        bar: '#f59e0b',
+        iconColor: '#fbbf24',
+        labelColor: '#fbbf24',
+        bg: 'rgba(245,158,11,0.06)',
+        border: 'rgba(245,158,11,0.2)',
     },
     success: {
         label: 'Success',
         icon: CheckCircle,
-        accent: '#10b981',
-        bg: 'bg-emerald-50 dark:bg-emerald-950/40',
-        border: 'border-emerald-200 dark:border-emerald-800/60',
-        iconBg: 'bg-emerald-100 dark:bg-emerald-900/50',
-        iconColor: 'text-emerald-600 dark:text-emerald-400',
-        textColor: 'text-emerald-900 dark:text-emerald-100',
-        labelColor: 'text-emerald-500 dark:text-emerald-400',
-        barColor: 'bg-emerald-500',
+        bar: '#10b981',
+        iconColor: '#34d399',
+        labelColor: '#34d399',
+        bg: 'rgba(16,185,129,0.06)',
+        border: 'rgba(16,185,129,0.2)',
     },
     error: {
         label: 'Error',
         icon: XCircle,
-        accent: '#ef4444',
-        bg: 'bg-red-50 dark:bg-red-950/40',
-        border: 'border-red-200 dark:border-red-800/60',
-        iconBg: 'bg-red-100 dark:bg-red-900/50',
-        iconColor: 'text-red-600 dark:text-red-400',
-        textColor: 'text-red-900 dark:text-red-100',
-        labelColor: 'text-red-500 dark:text-red-400',
-        barColor: 'bg-red-500',
+        bar: '#ef4444',
+        iconColor: '#f87171',
+        labelColor: '#f87171',
+        bg: 'rgba(239,68,68,0.06)',
+        border: 'rgba(239,68,68,0.2)',
     },
     tip: {
         label: 'Tip',
         icon: Lightbulb,
-        accent: '#8b5cf6',
-        bg: 'bg-violet-50 dark:bg-violet-950/40',
-        border: 'border-violet-200 dark:border-violet-800/60',
-        iconBg: 'bg-violet-100 dark:bg-violet-900/50',
-        iconColor: 'text-violet-600 dark:text-violet-400',
-        textColor: 'text-violet-900 dark:text-violet-100',
-        labelColor: 'text-violet-500 dark:text-violet-400',
-        barColor: 'bg-violet-500',
+        bar: '#8b5cf6',
+        iconColor: '#a78bfa',
+        labelColor: '#a78bfa',
+        bg: 'rgba(139,92,246,0.06)',
+        border: 'rgba(139,92,246,0.2)',
     },
 };
 
@@ -77,29 +63,40 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-3">
-            <div className={`relative flex gap-3.5 p-4 rounded-xl border ${style.bg} ${style.border} transition-all`}>
+            <div style={{
+                position: 'relative', display: 'flex', gap: '12px', padding: '14px 16px',
+                background: style.bg, border: `1px solid ${style.border}`,
+                transition: 'all 150ms ease', paddingLeft: '20px',
+            }}>
                 {/* Accent left bar */}
-                <div className={`absolute left-0 top-3 bottom-3 w-[3px] rounded-full ${style.barColor}`} />
+                <div style={{ position: 'absolute', left: 0, top: '10px', bottom: '10px', width: '3px', background: style.bar }} />
 
                 {/* Icon button */}
                 <button
                     onClick={cycleVariant}
-                    className={`mt-0.5 flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg ${style.iconBg} ${style.iconColor} hover:scale-110 transition-all shadow-sm`}
+                    style={{
+                        marginTop: '2px', flexShrink: 0, width: '28px', height: '28px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: `${style.bg}`, border: `1px solid ${style.border}`,
+                        color: style.iconColor, cursor: 'pointer', transition: 'all 150ms ease',
+                    }}
                     title={`Type: ${style.label} — click to change`}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                 >
-                    <Icon size={15} strokeWidth={2} />
+                    <Icon size={14} strokeWidth={2} />
                 </button>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
-                    <div className={`text-[10px] font-bold uppercase tracking-widest mb-1 ${style.labelColor}`}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', color: style.labelColor, fontFamily: 'monospace' }}>
                         {style.label}
                     </div>
                     <textarea
                         value={block.content}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                         placeholder={`Add a ${style.label.toLowerCase()} note...`}
-                        className={`w-full bg-transparent border-none focus:ring-0 outline-none resize-none text-sm leading-relaxed font-medium ${style.textColor} placeholder-current placeholder-opacity-30 min-h-[1.4em]`}
+                        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', lineHeight: 1.6, fontWeight: 450, color: '#e4e4e4', minHeight: '1.6em', fontFamily: 'Inter, system-ui, sans-serif' }}
                         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     />
                 </div>
@@ -107,9 +104,12 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 {/* Delete */}
                 <button
                     onClick={() => onRemoveBlock(block.id)}
-                    className="self-start p-1.5 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
+                    style={{ alignSelf: 'flex-start', padding: '5px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                    className="group-hover:!opacity-100"
+                    onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
                 >
-                    <Trash2 size={13} />
+                    <Trash2 size={12} />
                 </button>
             </div>
         </div>

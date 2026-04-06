@@ -71,14 +71,14 @@ const ImageBlock = ({
 
     return (
         <div className="group relative mb-4">
-            <div className="w-full max-w-2xl rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 relative group-hover:shadow-sm transition-all">
+            <div style={{ width: '100%', maxWidth: '672px', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)', position: 'relative' }} className="group">
                 <div className="min-h-64 flex items-center justify-center text-gray-400 dark:text-gray-500 relative">
                     {block.content ? (
                         <img src={block.content} alt="Note" className="w-full h-full object-contain max-h-96" />
                     ) : (
                         <div className="flex flex-col items-center p-8">
                             <ImageIcon size={48} className="mb-4 text-gray-300" />
-                            <p className="text-sm font-medium text-gray-600 mb-4">Add an image</p>
+                            <p style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(228,228,228,0.35)', marginBottom: '16px' }}>Add an image</p>
                             <div className="flex flex-col gap-3 w-full max-w-md">
                                 <input
                                     type="file"
@@ -89,7 +89,9 @@ const ImageBlock = ({
                                 />
                                 <label
                                     htmlFor={`img-upload-${block.id}`}
-                                    className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center"
+                                    style={{ display: 'block', width: '100%', padding: '8px 20px', background: '#b8956a', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, textAlign: 'center', cursor: 'pointer', border: 'none', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                                 >
                                     Upload from device
                                 </label>
@@ -111,7 +113,10 @@ const ImageBlock = ({
                     )}
                     <button
                         onClick={() => onRemoveBlock(block.id)}
-                        className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                        style={{ position: 'absolute', top: '8px', right: '8px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'rgba(228,228,228,0.6)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
+                        className="group-hover:!opacity-100"
+                        onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.6)'}
                         title="Delete image"
                     >
                         <Trash2 size={16} />
@@ -119,7 +124,10 @@ const ImageBlock = ({
                     {block.content && !block.content.startsWith('data:') && (
                         <button
                             onClick={handleDownload}
-                            className="absolute top-2 right-12 p-1.5 bg-white/80 hover:bg-green-50 text-gray-500 hover:text-green-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                        style={{ position: 'absolute', top: '8px', right: '44px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'rgba(228,228,228,0.6)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
+                        className="group-hover:!opacity-100"
+                        onMouseEnter={e => e.currentTarget.style.color = '#34d399'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.6)'}
                             title="Download image"
                         >
                             <Download size={16} />
@@ -128,7 +136,10 @@ const ImageBlock = ({
                     {block.content && (
                         <button
                             onClick={() => onBlockChange(block.id, '')}
-                            className="absolute top-2 left-2 p-1.5 bg-white/80 hover:bg-blue-50 text-gray-500 hover:text-blue-600 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                        style={{ position: 'absolute', top: '8px', left: '8px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'rgba(228,228,228,0.6)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
+                        className="group-hover:!opacity-100"
+                        onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
                             title="Change image"
                         >
                             <ImageIcon size={16} />
@@ -140,8 +151,8 @@ const ImageBlock = ({
                                 <div className="mb-2">Uploading...</div>
                                 <div className="w-48 h-2 bg-gray-700 rounded-full overflow-hidden">
                                     <div
-                                        className="h-full bg-blue-500 transition-all duration-300"
-                                        style={{ width: `${uploadProgress[block.id]}%` }}
+                                        className="h-full transition-all duration-300"
+                                        style={{ width: `${uploadProgress[block.id]}%`, background: '#b8956a' }}
                                     />
                                 </div>
                                 <div className="mt-2 text-sm">{uploadProgress[block.id]}%</div>

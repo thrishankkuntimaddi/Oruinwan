@@ -1,35 +1,35 @@
 import React from 'react';
-import { Users } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+
+const S = {
+    overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110, backdropFilter: 'blur(4px)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' },
+    box:     { backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', padding: '24px', maxWidth: '420px', width: '100%', margin: '0 16px', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' },
+    iconWrap:{ width: '36px', height: '36px', borderRadius: '2px', backgroundColor: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+    title:   { fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px' },
+    body:    { fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.6 },
+    cancel:  { padding: '7px 16px', fontSize: '13px', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', transition: '150ms ease' },
+    confirm: { padding: '7px 16px', fontSize: '13px', fontWeight: 600, color: '#0c0c0c', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer', transition: '150ms ease' },
+};
 
 export default function PromoteAdminModal({ isOpen, onClose, onConfirm, loading }) {
     if (!isOpen) return null;
-
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[110]" onClick={onClose}>
-            <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        <Users size={20} className="text-blue-600" />
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Promote to Admin</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                            Are you sure you want to promote this member to admin? They will be able to manage channel settings and members.
-                        </p>
-                        <div className="flex gap-3 justify-end">
-                            <button
-                                onClick={onClose}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={onConfirm}
-                                disabled={loading}
-                                className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                            >
-                                Promote to Admin
-                            </button>
+        <div style={S.overlay} onClick={onClose}>
+            <div style={S.box} onClick={e => e.stopPropagation()}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+                    <div style={S.iconWrap}><ShieldCheck size={18} style={{ color: 'var(--accent)' }} /></div>
+                    <div style={{ flex: 1 }}>
+                        <h3 style={S.title}>Promote to Admin</h3>
+                        <p style={S.body}>Are you sure you want to promote this member to admin? They will be able to manage channel settings and members.</p>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button onClick={onClose} style={S.cancel}
+                                onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+                                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--bg-active)'}
+                            >Cancel</button>
+                            <button onClick={onConfirm} disabled={loading} style={{ ...S.confirm, opacity: loading ? 0.6 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
+                                onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.85'; }}
+                                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                            >Promote to Admin</button>
                         </div>
                     </div>
                 </div>

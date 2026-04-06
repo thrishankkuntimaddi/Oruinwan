@@ -5,6 +5,9 @@ import { getErrorMessage } from "../../utils/apiHelpers";
 import { useChannels } from "../../hooks/useChannels";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from '@services/api';
+import { Hash, Loader2, X } from 'lucide-react';
+
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     const { showToast } = useToast();
@@ -65,48 +68,147 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     };
 
     return (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded w-full max-w-md max-h-[80vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Join Public Channel</h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-700">✕</button>
+        <div style={{
+            position: 'fixed', inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100, fontFamily: FONT,
+        }}>
+            <div style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)',
+                borderRadius: '2px',
+                width: '100%', maxWidth: '440px',
+                maxHeight: '80vh', overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            }}>
+                {/* Header */}
+                <div style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '14px 20px', borderBottom: '1px solid var(--border-default)',
+                    flexShrink: 0,
+                }}>
+                    <h3 style={{
+                        margin: 0, fontSize: '14px', fontWeight: 600,
+                        color: 'var(--text-primary)', fontFamily: FONT,
+                    }}>
+                        Join Public Channel
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
+                            color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px',
+                            transition: '100ms ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    >
+                        <X size={16} />
+                    </button>
                 </div>
 
-                {loadingList ? (
-                    <p className="text-sm text-gray-500 text-center py-8">Loading channels...</p>
-                ) : (
-                    <div className="space-y-2">
-                        {publicChannels.length === 0 ? (
-                            <p className="text-sm text-gray-500 text-center py-8">
-                                No public channels available to join
-                            </p>
-                        ) : (
-                            publicChannels.map((channel) => (
-                                <div key={channel._id} className="p-3 bg-gray-50 rounded hover:bg-gray-100">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex-1">
-                                            <p className="font-medium">#{channel.name}</p>
+                {/* Body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
+                    {loadingList ? (
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            gap: '8px', padding: '32px 16px',
+                            fontSize: '13px', color: 'var(--text-muted)', fontFamily: FONT,
+                        }}>
+                            <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite', color: 'var(--accent)' }} />
+                            Loading channels...
+                        </div>
+                    ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {publicChannels.length === 0 ? (
+                                <div style={{
+                                    textAlign: 'center', color: 'var(--text-muted)',
+                                    padding: '32px 16px', fontSize: '13px', fontFamily: FONT,
+                                }}>
+                                    No public channels available to join
+                                </div>
+                            ) : (
+                                publicChannels.map((channel) => (
+                                    <div
+                                        key={channel._id}
+                                        style={{
+                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                            padding: '10px 12px', borderRadius: '2px',
+                                            backgroundColor: 'var(--bg-active)',
+                                            border: '1px solid var(--border-default)',
+                                            transition: '150ms ease',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--bg-active)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+                                    >
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{
+                                                margin: 0, fontWeight: 500, fontSize: '13px',
+                                                color: 'var(--text-primary)', fontFamily: FONT,
+                                                display: 'flex', alignItems: 'center', gap: '4px',
+                                            }}>
+                                                <Hash size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                                {channel.name}
+                                            </p>
                                             {channel.description && (
-                                                <p className="text-sm text-gray-600 mt-1">{channel.description}</p>
+                                                <p style={{
+                                                    margin: '2px 0 0 16px', fontSize: '12px',
+                                                    color: 'var(--text-muted)', fontFamily: FONT,
+                                                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                }}>
+                                                    {channel.description}
+                                                </p>
                                             )}
                                         </div>
 
                                         <button
                                             onClick={() => handleJoin(channel._id)}
                                             disabled={joiningId !== null}
-                                            className="ml-4 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
+                                            style={{
+                                                marginLeft: '12px', flexShrink: 0,
+                                                padding: '5px 14px',
+                                                backgroundColor: joiningId === channel._id ? 'var(--bg-active)' : 'var(--accent)',
+                                                color: joiningId === channel._id ? 'var(--text-muted)' : '#0c0c0c',
+                                                border: 'none', borderRadius: '2px', outline: 'none',
+                                                fontSize: '12px', fontWeight: 600, cursor: joiningId !== null ? 'not-allowed' : 'pointer',
+                                                fontFamily: FONT, transition: '150ms ease',
+                                                display: 'flex', alignItems: 'center', gap: '6px',
+                                                opacity: joiningId !== null && joiningId !== channel._id ? 0.5 : 1,
+                                            }}
+                                            onMouseEnter={e => { if (!joiningId) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                                            onMouseLeave={e => { if (!joiningId) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                                         >
-                                            {joiningId === channel._id ? "Joining…" : "Join"}
+                                            {joiningId === channel._id
+                                                ? <><Loader2 size={12} style={{ animation: 'spin 0.8s linear infinite' }} /> Joining…</>
+                                                : 'Join'
+                                            }
                                         </button>
                                     </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
 
-                <div className="mt-6 flex justify-end">
-                    <button onClick={onClose} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">
+                {/* Footer */}
+                <div style={{
+                    padding: '12px 20px', borderTop: '1px solid var(--border-default)',
+                    display: 'flex', justifyContent: 'flex-end', flexShrink: 0,
+                }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            padding: '7px 16px', fontSize: '13px', fontWeight: 500,
+                            color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)',
+                            border: '1px solid var(--border-default)', borderRadius: '2px',
+                            outline: 'none', cursor: 'pointer', fontFamily: FONT, transition: '150ms ease',
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--bg-active)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                    >
                         Close
                     </button>
                 </div>

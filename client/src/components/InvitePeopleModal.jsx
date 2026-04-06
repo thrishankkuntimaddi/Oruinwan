@@ -2,62 +2,51 @@ import React, { useState, useEffect } from "react";
 import { X, Link as LinkIcon, Mail, Copy, Check, Send, AlertCircle } from "lucide-react";
 import { useToast } from "../contexts/ToastContext";
 
-// Use backend URL for production (Vercel frontend + separate backend)
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
-/**
- * InvitePeopleModal - Complete Admin Invite Management
- * 
- * Sections:
- * A. Email Invites (Primary)
- * B. Link Invites (Secondary)
- * C. Pending Invites (Admin-only list with revoke)
- */
+// ── Design tokens ──────────────────────────────────────────────────────────
+const T = {
+    bg: '#0c0c0c',
+    sidebar: '#111111',
+    surface: '#141414',
+    border: 'rgba(255,255,255,0.06)',
+    borderHover: 'rgba(255,255,255,0.12)',
+    accent: '#b8956a',
+    accentBg: 'rgba(184,149,106,0.1)',
+    accentBorder: 'rgba(184,149,106,0.3)',
+    text: '#e4e4e4',
+    muted: 'rgba(228,228,228,0.4)',
+    dim: 'rgba(228,228,228,0.2)',
+    font: 'Inter, system-ui, sans-serif',
+    input: 'rgba(255,255,255,0.04)',
+};
+
 const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
     const { showToast } = useToast();
 
-    // Tab state
-    const [inviteMethod, setInviteMethod] = useState("email"); // "link" or "email"
-
-    // Email invite state
-    const [emails, setEmails] = useState("");
-    const [role, setRole] = useState("member"); // "member" or "admin"
-
-    // Link invite state
+    const [inviteMethod, setInviteMethod] = useState("email");
+    const [emails, setEmails]     = useState("");
+    const [role, setRole]         = useState("member");
     const [inviteLink, setInviteLink] = useState(null);
-    const [copied, setCopied] = useState(false);
-
-    // Pending invites state (Section C)
+    const [copied, setCopied]     = useState(false);
     const [pendingInvites, setPendingInvites] = useState([]);
-    // loadingInvites removed as per unused var warning
+    const [loading, setLoading]   = useState(false);
+    const [sent, setSent]         = useState(false);
 
-    // Loading states
-    const [loading, setLoading] = useState(false);
-    const [sent, setSent] = useState(false);
-
-    // 🔒 ADMIN-ONLY: Fetch pending invites when modal opens
     useEffect(() => {
         if (!isOpen || !workspaceId) return;
-
         const fetchPendingInvites = async () => {
-            // Loading state removed
             try {
                 const token = localStorage.getItem('accessToken');
                 const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invites`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-
                 if (response.ok) {
                     const data = await response.json();
                     setPendingInvites(data.pending || []);
                 }
-            } catch (err) {
-                console.error('Failed to fetch invites:', err);
-            }
+            } catch (err) { console.error('Failed to fetch invites:', err); }
         };
-
         fetchPendingInvites();
     }, [isOpen, workspaceId]);
 
@@ -69,27 +58,15 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
             const token = localStorage.getItem('accessToken');
             const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invite`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    inviteType: 'link',
-                    role: 'member'
-                })
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ inviteType: 'link', role: 'member' })
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to generate invite link');
-            }
-
+            if (!response.ok) throw new Error('Failed to generate invite link');
             const data = await response.json();
             setInviteLink(data.inviteLink);
         } catch (err) {
             showToast(err.message || 'Failed to generate invite link', 'error');
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     };
 
     const handleCopyLink = () => {
@@ -101,152 +78,130 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
     };
 
     const handleSendEmails = async () => {
-        if (!emails.trim()) {
-            showToast('Please enter at least one email address', 'warning');
-            return;
-        }
-
+        if (!emails.trim()) { showToast('Please enter at least one email address', 'warning'); return; }
         setLoading(true);
         try {
             const token = localStorage.getItem('accessToken');
             const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invite`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    emails,
-                    inviteType: 'email',
-                    role // Use selected role
-                })
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ emails, inviteType: 'email', role })
             });
-
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.message || 'Failed to send invites');
-            }
-
+            if (!response.ok) { const error = await response.json(); throw new Error(error.message || 'Failed to send invites'); }
             setSent(true);
             showToast('Invitations sent successfully!', 'success');
-
-            // Refresh pending invites
             const refreshResponse = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invites`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (refreshResponse.ok) {
-                const data = await refreshResponse.json();
-                setPendingInvites(data.pending || []);
-            }
-
-            setTimeout(() => {
-                setSent(false);
-                setEmails("");
-            }, 2000);
-        } catch (err) {
-            showToast(err.message || 'Failed to send invites', 'error');
-        } finally {
-            setLoading(false);
-        }
+            if (refreshResponse.ok) { const data = await refreshResponse.json(); setPendingInvites(data.pending || []); }
+            setTimeout(() => { setSent(false); setEmails(""); }, 2000);
+        } catch (err) { showToast(err.message || 'Failed to send invites', 'error'); }
+        finally { setLoading(false); }
     };
 
-    // 🔒 ADMIN-ONLY: Revoke invite handler
     const handleRevokeInvite = async (inviteId) => {
         if (!window.confirm('Are you sure you want to revoke this invite?')) return;
-
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(
-                `${API_BASE}/api/workspaces/${workspaceId}/invites/${inviteId}/revoke`,
-                {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ reason: 'Revoked by admin' })
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error('Failed to revoke invite');
-            }
-
-            // Remove from list
+            const response = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/invites/${inviteId}/revoke`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reason: 'Revoked by admin' })
+            });
+            if (!response.ok) throw new Error('Failed to revoke invite');
             setPendingInvites(prev => prev.filter(inv => inv._id !== inviteId));
             showToast('Invite revoked successfully', 'success');
-        } catch (err) {
-            showToast(err.message || 'Failed to revoke invite', 'error');
-        }
+        } catch (err) { showToast(err.message || 'Failed to revoke invite', 'error'); }
     };
 
     return (
-        <div className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center backdrop-blur-sm animate-fade-in p-4">
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col md:flex-row border border-gray-100 dark:border-gray-800">
+        <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', backdropFilter: 'blur(4px)' }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '100%', maxWidth: '820px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'row', fontFamily: T.font, position: 'relative' }}>
 
-                {/* LEFT SIDEBAR - Navigation */}
-                <div className="w-full md:w-64 bg-gray-50 dark:bg-gray-800/50 border-b md:border-b-0 md:border-r border-gray-100 dark:border-gray-800 flex flex-col flex-shrink-0">
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-800">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">Invite People</h2>
-                        <p className="text-xs text-gray-500 mt-1 truncate">to {workspaceName}</p>
+                {/* ── LEFT SIDEBAR ── */}
+                <div style={{ width: '220px', flexShrink: 0, background: T.sidebar, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column' }}>
+                    {/* Title */}
+                    <div style={{ padding: '20px 16px', borderBottom: `1px solid ${T.border}` }}>
+                        <h2 style={{ fontSize: '15px', fontWeight: 700, color: T.text, margin: 0 }}>Invite People</h2>
+                        <p style={{ fontSize: '11px', color: T.muted, marginTop: '2px', marginBottom: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>to {workspaceName}</p>
                     </div>
 
-                    <div className="p-4 space-y-2 flex-1 overflow-y-auto">
-                        <div className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-2 mb-2">Invite Via</div>
+                    {/* Nav */}
+                    <div style={{ padding: '12px 8px', flex: 1, overflowY: 'auto' }}>
+                        <div style={{ fontSize: '9px', fontWeight: 700, color: T.dim, textTransform: 'uppercase', letterSpacing: '0.12em', padding: '0 8px', marginBottom: '6px' }}>Invite Via</div>
+
+                        {/* Email */}
                         <button
                             onClick={() => setInviteMethod("email")}
-                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${inviteMethod === "email"
-                                ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-md ring-1 ring-black/5 dark:ring-white/5"
-                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
-                                }`}
+                            style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '8px 10px', fontSize: '13px', fontWeight: inviteMethod === 'email' ? 600 : 400,
+                                color: inviteMethod === 'email' ? T.accent : T.muted,
+                                background: inviteMethod === 'email' ? T.accentBg : 'transparent',
+                                border: `1px solid ${inviteMethod === 'email' ? T.accentBorder : 'transparent'}`,
+                                cursor: 'pointer', fontFamily: T.font, textAlign: 'left', transition: 'all 150ms ease',
+                            }}
+                            onMouseEnter={e => { if (inviteMethod !== 'email') { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; } }}
+                            onMouseLeave={e => { if (inviteMethod !== 'email') { e.currentTarget.style.color = T.muted; e.currentTarget.style.background = 'transparent'; } }}
                         >
-                            <div className={`p-2 rounded-lg ${inviteMethod === "email" ? "bg-blue-50 dark:bg-blue-900/30" : "bg-gray-100 dark:bg-gray-800"}`}>
-                                <Mail className="w-4 h-4" />
+                            <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: inviteMethod === 'email' ? T.accentBg : 'rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                                <Mail size={13} />
                             </div>
-                            <span className="flex-1 text-left">Email Address</span>
+                            <span>Email Address</span>
                         </button>
 
+                        {/* Link */}
                         <button
                             onClick={() => setInviteMethod("link")}
-                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all ${inviteMethod === "link"
-                                ? "bg-white dark:bg-gray-700 text-purple-600 dark:text-purple-400 shadow-md ring-1 ring-black/5 dark:ring-white/5"
-                                : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200"
-                                }`}
+                            style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '8px 10px', marginTop: '4px', fontSize: '13px', fontWeight: inviteMethod === 'link' ? 600 : 400,
+                                color: inviteMethod === 'link' ? T.accent : T.muted,
+                                background: inviteMethod === 'link' ? T.accentBg : 'transparent',
+                                border: `1px solid ${inviteMethod === 'link' ? T.accentBorder : 'transparent'}`,
+                                cursor: 'pointer', fontFamily: T.font, textAlign: 'left', transition: 'all 150ms ease',
+                            }}
+                            onMouseEnter={e => { if (inviteMethod !== 'link') { e.currentTarget.style.color = T.text; e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; } }}
+                            onMouseLeave={e => { if (inviteMethod !== 'link') { e.currentTarget.style.color = T.muted; e.currentTarget.style.background = 'transparent'; } }}
                         >
-                            <div className={`p-2 rounded-lg ${inviteMethod === "link" ? "bg-purple-50 dark:bg-purple-900/30" : "bg-gray-100 dark:bg-gray-800"}`}>
-                                <LinkIcon className="w-4 h-4" />
+                            <div style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: inviteMethod === 'link' ? T.accentBg : 'rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                                <LinkIcon size={13} />
                             </div>
-                            <span className="flex-1 text-left">Shareable Link</span>
+                            <span>Shareable Link</span>
                         </button>
 
-                        {/* Admin Section Divider */}
+                        {/* Pending invites */}
                         {pendingInvites.length > 0 && (
                             <>
-                                <div className="h-px bg-gray-200 dark:bg-gray-700 my-4 mx-2"></div>
-                                <div className="flex items-center justify-between px-2 mb-2">
-                                    <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Pending</span>
-                                    <span className="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{pendingInvites.length}</span>
+                                <div style={{ height: '1px', background: T.border, margin: '12px 8px' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '9px', fontWeight: 700, color: T.dim, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Pending</span>
+                                    <span style={{ fontSize: '9px', fontWeight: 700, color: T.muted, background: 'rgba(255,255,255,0.06)', padding: '1px 5px' }}>{pendingInvites.length}</span>
                                 </div>
-
-                                <div className="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
                                     {pendingInvites.map(invite => {
                                         const inviteId = invite._id || invite.id;
                                         return (
-                                            <div key={inviteId} className="group flex items-center justify-between p-2 rounded-lg hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm border border-transparent hover:border-gray-100 dark:hover:border-gray-600 transition-all">
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate max-w-[120px]">
+                                            <div key={inviteId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '5px 8px', borderRadius: 0 }}
+                                                className="group"
+                                            >
+                                                <div style={{ minWidth: 0 }}>
+                                                    <p style={{ fontSize: '11px', fontWeight: 500, color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px', margin: 0 }}>
                                                         {invite.email || 'Link invite'}
                                                     </p>
-                                                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
-                                                        {invite.role}
-                                                    </p>
+                                                    <p style={{ fontSize: '10px', color: T.dim, margin: 0 }}>{invite.role}</p>
                                                 </div>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); handleRevokeInvite(inviteId); }}
-                                                    className="opacity-0 group-hover:opacity-100 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 p-1 rounded-md transition-all"
+                                                    onClick={e => { e.stopPropagation(); handleRevokeInvite(inviteId); }}
                                                     title="Revoke"
+                                                    style={{ padding: '3px', background: 'none', border: 'none', color: T.dim, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
+                                                    onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                                                    onMouseLeave={e => e.currentTarget.style.color = T.dim}
                                                 >
-                                                    <X className="w-3 h-3" />
+                                                    <X size={11} />
                                                 </button>
                                             </div>
                                         );
@@ -257,103 +212,119 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                     </div>
                 </div>
 
-                {/* RIGHT CONTENT - Forms */}
-                <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-gray-900 relative">
-                    {/* Close Button Absolute */}
+                {/* ── RIGHT CONTENT ── */}
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: T.bg, position: 'relative', overflowY: 'auto' }}>
+                    {/* Close */}
                     <button
                         onClick={onClose}
-                        className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors z-10"
+                        style={{ position: 'absolute', top: '14px', right: '14px', padding: '5px', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', zIndex: 10, transition: '150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = T.text}
+                        onMouseLeave={e => e.currentTarget.style.color = T.muted}
                     >
-                        <X className="w-5 h-5" />
+                        <X size={16} />
                     </button>
 
-                    <div className="p-8 h-full overflow-y-auto">
+                    <div style={{ padding: '32px 28px', flex: 1 }}>
+
+                        {/* ── EMAIL VIEW ── */}
                         {inviteMethod === "email" ? (
-                            <div className="space-y-6 max-w-lg mx-auto pt-4 animate-fade-in">
-                                <div className="text-center mb-6">
-                                    <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                        <Mail className="w-6 h-6" />
+                            <div style={{ maxWidth: '440px', margin: '0 auto' }}>
+                                {/* Icon + Header */}
+                                <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+                                    <div style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.accentBg, border: `1px solid ${T.accentBorder}`, margin: '0 auto 12px' }}>
+                                        <Mail size={18} style={{ color: T.accent }} />
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Invite by Email</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Send invitations directly to their inbox</p>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: T.text, margin: '0 0 4px' }}>Invite by Email</h3>
+                                    <p style={{ fontSize: '12px', color: T.muted, margin: 0 }}>Send invitations directly to their inbox</p>
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">
+                                {/* Email textarea */}
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>
                                         Email Addresses
                                     </label>
                                     <textarea
                                         value={emails}
-                                        onChange={(e) => setEmails(e.target.value)}
+                                        onChange={e => setEmails(e.target.value)}
                                         placeholder="colleague@example.com, partner@agency.com"
-                                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 dark:text-white transition-all h-32 resize-none text-sm placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                                        rows={4}
+                                        style={{
+                                            width: '100%', padding: '10px 12px', background: T.input,
+                                            border: `1px solid ${T.border}`, color: T.text, fontSize: '13px',
+                                            outline: 'none', resize: 'none', fontFamily: T.font,
+                                            boxSizing: 'border-box', transition: 'border-color 150ms ease',
+                                        }}
+                                        onFocus={e => e.currentTarget.style.borderColor = T.accentBorder}
+                                        onBlur={e => e.currentTarget.style.borderColor = T.border}
                                     />
-                                    <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
-                                        <AlertCircle className="w-3 h-3" />
-                                        Comma separated emails
+                                    <p style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: T.dim, marginTop: '4px' }}>
+                                        <AlertCircle size={11} /> Comma separated emails
                                     </p>
                                 </div>
 
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">
+                                {/* Role picker */}
+                                <div style={{ marginBottom: '24px' }}>
+                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
                                         Assign Role
                                     </label>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button
-                                            onClick={() => setRole("member")}
-                                            className={`p-3 rounded-xl border-2 text-left transition-all relative ${role === "member" ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20" : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"}`}
-                                        >
-                                            {role === "member" && <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full"></div>}
-                                            <span className="block text-sm font-bold text-gray-900 dark:text-white mb-0.5">Member</span>
-                                            <span className="block text-xs text-gray-500 dark:text-gray-400">Can view and participate</span>
-                                        </button>
-                                        <button
-                                            onClick={() => setRole("admin")}
-                                            className={`p-3 rounded-xl border-2 text-left transition-all relative ${role === "admin" ? "border-blue-500 bg-blue-50/50 dark:bg-blue-900/20" : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"}`}
-                                        >
-                                            {role === "admin" && <div className="absolute top-2 right-2 w-2 h-2 bg-blue-500 rounded-full"></div>}
-                                            <span className="block text-sm font-bold text-gray-900 dark:text-white mb-0.5">Admin</span>
-                                            <span className="block text-xs text-gray-500 dark:text-gray-400">Full workspace access</span>
-                                        </button>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        {[
+                                            { key: 'member', title: 'Member', desc: 'Can view and participate' },
+                                            { key: 'admin',  title: 'Admin',  desc: 'Full workspace access' },
+                                        ].map(r => (
+                                            <button
+                                                key={r.key}
+                                                onClick={() => setRole(r.key)}
+                                                style={{
+                                                    padding: '12px', textAlign: 'left', position: 'relative',
+                                                    background: role === r.key ? T.accentBg : T.input,
+                                                    border: `1px solid ${role === r.key ? T.accent : T.border}`,
+                                                    cursor: 'pointer', fontFamily: T.font, transition: 'all 150ms ease',
+                                                }}
+                                                onMouseEnter={e => { if (role !== r.key) e.currentTarget.style.borderColor = T.borderHover; }}
+                                                onMouseLeave={e => { if (role !== r.key) e.currentTarget.style.borderColor = T.border; }}
+                                            >
+                                                {role === r.key && (
+                                                    <div style={{ position: 'absolute', top: '8px', right: '8px', width: '6px', height: '6px', borderRadius: '50%', background: T.accent }} />
+                                                )}
+                                                <span style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: role === r.key ? T.accent : T.text, marginBottom: '2px' }}>{r.title}</span>
+                                                <span style={{ display: 'block', fontSize: '11px', color: T.muted }}>{r.desc}</span>
+                                            </button>
+                                        ))}
                                     </div>
                                 </div>
 
+                                {/* Send CTA */}
                                 <button
                                     onClick={handleSendEmails}
                                     disabled={loading || !emails.trim()}
-                                    className={`w-full py-3.5 font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20 ${sent
-                                        ? "bg-green-500 text-white"
-                                        : "bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
-                                        }`}
+                                    style={{
+                                        width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                                        fontSize: '13px', fontWeight: 700, fontFamily: T.font, cursor: (loading || !emails.trim()) ? 'not-allowed' : 'pointer',
+                                        background: sent ? '#22c55e' : (loading || !emails.trim()) ? 'rgba(184,149,106,0.3)' : T.accent,
+                                        color: '#0c0c0c', border: 'none', transition: 'all 150ms ease',
+                                        opacity: (loading || !emails.trim()) ? 0.6 : 1,
+                                    }}
                                 >
-                                    {loading ? (
-                                        <>Sending...</>
-                                    ) : sent ? (
-                                        <>
-                                            <Check className="w-5 h-5" />
-                                            Sent Successfully
-                                        </>
-                                    ) : (
-                                        <>
-                                            Send Invitations
-                                            <Send className="w-4 h-4" />
-                                        </>
-                                    )}
+                                    {loading ? 'Sending…' : sent ? <><Check size={15} /> Sent Successfully</> : <>Send Invitations <Send size={14} /></>}
                                 </button>
                             </div>
+
                         ) : (
-                            <div className="space-y-6 max-w-lg mx-auto pt-4 animate-fade-in">
-                                <div className="text-center mb-8">
-                                    <div className="w-12 h-12 bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                                        <LinkIcon className="w-6 h-6" />
+                            /* ── LINK VIEW ── */
+                            <div style={{ maxWidth: '440px', margin: '0 auto' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+                                    <div style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.2)', margin: '0 auto 12px' }}>
+                                        <LinkIcon size={18} style={{ color: '#c084fc' }} />
                                     </div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Share Invite Link</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">Anyone with this link can join instantly</p>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: T.text, margin: '0 0 4px' }}>Share Invite Link</h3>
+                                    <p style={{ fontSize: '12px', color: T.muted, margin: 0 }}>Anyone with this link can join instantly</p>
                                 </div>
 
-                                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 rounded-xl p-4 flex gap-3 items-start">
-                                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
-                                    <p className="text-sm text-yellow-800 dark:text-yellow-200 leading-relaxed">
+                                {/* Warning */}
+                                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '12px 14px', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', marginBottom: '24px' }}>
+                                    <AlertCircle size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: '1px' }} />
+                                    <p style={{ fontSize: '12px', color: 'rgba(251,191,36,0.8)', margin: 0, lineHeight: 1.5 }}>
                                         For security, this link is valid for <strong>one-time use</strong> only. Create a new link for each person you want to invite.
                                     </p>
                                 </div>
@@ -362,43 +333,31 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                     <button
                                         onClick={handleGenerateLink}
                                         disabled={loading}
-                                        className="w-full py-4 bg-purple-600 text-white font-bold rounded-xl hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20 hover:shadow-purple-500/30 disabled:opacity-50 flex items-center justify-center gap-2"
-                                    >
-                                        {loading ? (
-                                            <>Generating...</>
-                                        ) : (
-                                            <>
-                                                <LinkIcon className="w-5 h-5" />
-                                                Generate New Link
-                                            </>
-                                        )}
+                                        style={{ width: '100%', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px', fontWeight: 700, fontFamily: T.font, background: 'rgba(192,132,252,0.15)', border: '1px solid rgba(192,132,252,0.3)', color: '#c084fc', cursor: loading ? 'not-allowed' : 'pointer', transition: 'all 150ms ease', opacity: loading ? 0.6 : 1 }}>
+                                        <LinkIcon size={14} />
+                                        {loading ? 'Generating…' : 'Generate New Link'}
                                     </button>
                                 ) : (
-                                    <div className="space-y-4">
-                                        <div className="relative">
-                                            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-                                                Your Invite Link
-                                            </label>
-                                            <div className="flex bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden p-1">
-                                                <div className="flex-1 p-2 font-mono text-sm text-gray-600 dark:text-gray-300 truncate flex items-center select-all">
-                                                    {inviteLink}
-                                                </div>
-                                                <button
-                                                    onClick={handleCopyLink}
-                                                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${copied
-                                                        ? "bg-green-500 text-white"
-                                                        : "bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-500 shadow-sm"
-                                                        }`}
-                                                >
-                                                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                                                    {copied ? "Copied" : "Copy"}
-                                                </button>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>
+                                            Your Invite Link
+                                        </label>
+                                        <div style={{ display: 'flex', background: T.input, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
+                                            <div style={{ flex: 1, padding: '10px 12px', fontSize: '12px', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>
+                                                {inviteLink}
                                             </div>
+                                            <button
+                                                onClick={handleCopyLink}
+                                                style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: 700, background: copied ? '#22c55e' : T.accentBg, border: 'none', borderLeft: `1px solid ${T.border}`, color: copied ? '#fff' : T.accent, cursor: 'pointer', fontFamily: T.font, transition: 'all 150ms ease', whiteSpace: 'nowrap' }}>
+                                                {copied ? <Check size={13} /> : <Copy size={13} />}
+                                                {copied ? 'Copied' : 'Copy'}
+                                            </button>
                                         </div>
-
                                         <button
                                             onClick={() => setInviteLink(null)}
-                                            className="w-full py-3 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                                            style={{ width: '100%', marginTop: '12px', padding: '8px', fontSize: '12px', color: T.muted, background: 'none', border: 'none', cursor: 'pointer', fontFamily: T.font, transition: '150ms ease' }}
+                                            onMouseEnter={e => e.currentTarget.style.color = T.text}
+                                            onMouseLeave={e => e.currentTarget.style.color = T.muted}
                                         >
                                             Generate a different link
                                         </button>

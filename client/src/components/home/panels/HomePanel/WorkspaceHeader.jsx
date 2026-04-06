@@ -1,154 +1,153 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ChevronDown, Settings2, SquarePen, UserPlus, Settings, Edit3, LogOut, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy } from 'lucide-react';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
 import { useToast } from '../../../../contexts/ToastContext';
 
-/**
- * WorkspaceHeader Component
- * 
- * Shows workspace name + actions
- * 
- * 👉 PRIMARY ACTION: "Invite +" button
- *    - Only visible to admins/owners
- *    - Opens InvitePeopleModal
- *    - This is THE entry point for inviting
- */
+const ICON_MAP = {
+    rocket: <Rocket size={18} />, briefcase: <Briefcase size={18} />, zap: <Zap size={18} />,
+    palette: <Palette size={18} />, microscope: <Microscope size={18} />, globe: <Globe size={18} />,
+    shield: <Shield size={18} />, trend: <TrendingUp size={18} />, bulb: <Lightbulb size={18} />,
+    flame: <Flame size={18} />, target: <Target size={18} />, trophy: <Trophy size={18} />,
+};
+
 const WorkspaceHeader = ({
-    workspaceName,
-    showWorkspaceMenu,
-    setShowWorkspaceMenu,
-    isSelectionMode,
-    setIsSelectionMode,
-    setShowNewDMModal,
-    setShowInviteModal,
-    setShowSettingsModal,
-    setShowRenameModal,
-    setNewName
+    workspaceName, showWorkspaceMenu, setShowWorkspaceMenu,
+    isSelectionMode, setIsSelectionMode, setShowNewDMModal,
+    setShowInviteModal, setShowSettingsModal, setShowRenameModal, setNewName,
 }) => {
     const navigate = useNavigate();
     const { activeWorkspace } = useWorkspace();
     const { showToast } = useToast();
 
-
-    // 🔒 Check if current user is admin/owner (using role from activeWorkspace)
-    // The role field comes from the user's workspaces array and indicates current user's role
     const userRole = activeWorkspace?.role?.toLowerCase() || '';
     const isAdmin = userRole === 'admin' || userRole === 'owner';
 
+    const iconBtn = {
+        width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'none', border: 'none', cursor: 'pointer', borderRadius: '2px',
+        color: 'var(--text-muted)', transition: '150ms ease', flexShrink: 0,
+    };
+    const iconBtnActive = { ...iconBtn, background: 'var(--bg-hover)', color: 'var(--accent)' };
 
     return (
-        <div className="h-16 flex items-center justify-between px-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors group relative select-none border-b border-gray-200 dark:border-gray-800">
+        <div style={{
+            height: '52px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '0 10px 0 14px', borderBottom: '1px solid var(--border-subtle)',
+            position: 'relative', userSelect: 'none', fontFamily: 'var(--font)', flexShrink: 0,
+            transition: 'background 150ms ease',
+        }}>
+            {/* Workspace name + chevron */}
             <div
-                className="flex items-center font-bold text-lg text-gray-900 dark:text-white cursor-pointer flex-1"
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, cursor: 'pointer', minWidth: 0 }}
                 onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
             >
-                <span className="truncate max-w-[150px]">{workspaceName}</span>
-                <span className={`ml-2 text-gray-500 dark:text-gray-400 transition-transform duration-200 ${showWorkspaceMenu ? "rotate-180" : ""}`}>
-                    <ChevronDown size={14} />
+                <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>
+                    {workspaceName}
                 </span>
+                <ChevronDown
+                    size={13}
+                    style={{ color: 'var(--text-muted)', flexShrink: 0, transition: 'transform 200ms ease', transform: showWorkspaceMenu ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                />
             </div>
 
-            <div className="flex items-center gap-1">
+            {/* Action buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                 <button
-                    className={`text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 p-2 rounded-full transition-colors ${isSelectionMode ? "bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400" : ""}`}
+                    style={isSelectionMode ? iconBtnActive : iconBtn}
                     title="Manage Chats"
-                    onClick={(e) => { e.stopPropagation(); setIsSelectionMode(!isSelectionMode); }}
+                    onClick={e => { e.stopPropagation(); setIsSelectionMode(!isSelectionMode); }}
+                    onMouseEnter={e => { if (!isSelectionMode) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                    onMouseLeave={e => { if (!isSelectionMode) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; } }}
                 >
-                    <Settings2 size={18} />
+                    <Settings2 size={16} />
                 </button>
                 <button
-                    className="text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 p-2 rounded-full transition-colors"
+                    style={iconBtn}
                     title="New Message"
-                    onClick={(e) => { e.stopPropagation(); setShowNewDMModal(true); }}
+                    onClick={e => { e.stopPropagation(); setShowNewDMModal(true); }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                 >
-                    <SquarePen size={18} />
+                    <SquarePen size={16} />
                 </button>
             </div>
 
             {/* Dropdown Menu */}
             {showWorkspaceMenu && (
                 <>
-                    <div className="fixed inset-0 z-40" onClick={() => setShowWorkspaceMenu(false)}></div>
-                    <div className="absolute top-10 left-2 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50 py-1 animate-fade-in origin-top-left">
-                        <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className="w-10 h-10 rounded-xl text-white flex items-center justify-center font-bold text-lg"
-                                    style={{ backgroundColor: activeWorkspace?.color || '#2563eb' }}
-                                >
-                                    {(() => {
-                                        const iconMap = {
-                                            'rocket': <Rocket size={20} />,
-                                            'briefcase': <Briefcase size={20} />,
-                                            'zap': <Zap size={20} />,
-                                            'palette': <Palette size={20} />,
-                                            'microscope': <Microscope size={20} />,
-                                            'globe': <Globe size={20} />,
-                                            'shield': <Shield size={20} />,
-                                            'trend': <TrendingUp size={20} />,
-                                            'bulb': <Lightbulb size={20} />,
-                                            'flame': <Flame size={20} />,
-                                            'target': <Target size={20} />,
-                                            'trophy': <Trophy size={20} />
-                                        };
-                                        // Get the icon string and render the corresponding component
-                                        const iconKey = activeWorkspace?.icon?.toLowerCase() || 'rocket';
-                                        return iconMap[iconKey] || <Rocket size={20} />;
-                                    })()}
+                    <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowWorkspaceMenu(false)} />
+                    <div style={{
+                        position: 'absolute', top: '48px', left: '8px', width: '220px',
+                        background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+                        borderRadius: '2px', zIndex: 50, overflow: 'hidden',
+                        animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)',
+                    }}>
+                        {/* Workspace identity */}
+                        <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-active)' }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', backgroundColor: activeWorkspace?.color || '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
+                                {ICON_MAP[activeWorkspace?.icon?.toLowerCase()] || ICON_MAP.rocket}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {workspaceName}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="font-bold text-gray-900 dark:text-white truncate">{workspaceName}</div>
+                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '1px', textTransform: 'capitalize' }}>
+                                    {userRole || 'Member'}
                                 </div>
                             </div>
                         </div>
 
-                        <div className="py-1">
+                        {/* Actions */}
+                        <div style={{ padding: '4px 0' }}>
                             {isAdmin && (
                                 <button
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-700"
+                                    style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '9px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                                     onClick={() => {
-                                        // ✅ Check permission before allowing invites
                                         const canInvite = isAdmin || activeWorkspace?.settings?.allowMemberInvite !== false;
-
-                                        if (!canInvite) {
-                                            showToast('Member invitations are disabled for non-admins in this workspace', 'warning');
-                                            return;
-                                        }
-                                        setShowInviteModal(true);
-                                        setShowWorkspaceMenu(false);
+                                        if (!canInvite) { showToast('Member invitations are disabled', 'warning'); return; }
+                                        setShowInviteModal(true); setShowWorkspaceMenu(false);
                                     }}
                                     disabled={!isAdmin && activeWorkspace?.settings?.allowMemberInvite === false}
-                                    title={(() => {
-                                        const canInvite = isAdmin || activeWorkspace?.settings?.allowMemberInvite !== false;
-                                        return canInvite ? `Invite people to ${workspaceName}` : "Member invitations disabled";
-                                    })()}
                                 >
-                                    <UserPlus size={16} /> Invite people to {workspaceName}
+                                    <UserPlus size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                    Invite people
                                 </button>
                             )}
                             <button
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
+                                style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '9px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                                 onClick={() => { setShowSettingsModal(true); setShowWorkspaceMenu(false); }}
                             >
-                                <Settings size={16} /> Workspace Settings
+                                <Settings size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                Workspace Settings
                             </button>
                             {isAdmin && (
                                 <button
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2"
+                                    style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '9px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                                     onClick={() => { setShowRenameModal(true); setShowWorkspaceMenu(false); setNewName(workspaceName); }}
                                 >
-                                    <Edit3 size={16} /> Rename Workspace
+                                    <Edit3 size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                    Rename Workspace
                                 </button>
                             )}
                         </div>
 
-                        <div className="border-t border-gray-100 dark:border-gray-700 py-1">
+                        {/* Danger zone */}
+                        <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '4px 0' }}>
                             <button
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                                onClick={() => navigate("/workspaces")}
+                                style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--state-danger)', display: 'flex', alignItems: 'center', gap: '9px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                onClick={() => navigate('/workspaces')}
                             >
-                                <LogOut size={16} /> Sign out of {workspaceName}
+                                <LogOut size={14} style={{ flexShrink: 0 }} />
+                                Sign out of {workspaceName}
                             </button>
                         </div>
                     </div>

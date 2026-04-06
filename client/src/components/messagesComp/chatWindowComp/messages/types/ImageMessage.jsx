@@ -18,19 +18,31 @@ export default function ImageMessage({ msg }) {
         <>
             {/* Thumbnail */}
             <div
-                className="mt-1 cursor-zoom-in inline-block max-w-xs rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow"
+                style={{
+                    marginTop: '6px', display: 'inline-block', maxWidth: '280px',
+                    borderRadius: '2px', overflow: 'hidden',
+                    border: '1px solid var(--border-default)',
+                    cursor: 'zoom-in',
+                    transition: 'border-color 100ms ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                 onClick={() => setLightbox(true)}
             >
                 <img
                     src={proxyUrl}
                     alt={name || "Image"}
-                    className="max-w-full max-h-64 object-cover block"
+                    style={{ maxWidth: '100%', maxHeight: '220px', objectFit: 'cover', display: 'block' }}
                     loading="lazy"
                 />
                 {sizeFormatted && (
-                    <div className="px-3 py-1.5 bg-gray-50 dark:bg-gray-800 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                        <span className="truncate max-w-[180px]">{name}</span>
-                        <span className="ml-2 flex-shrink-0">{sizeFormatted}</span>
+                    <div style={{
+                        padding: '4px 10px', display: 'flex', justifyContent: 'space-between',
+                        backgroundColor: 'var(--bg-active)', borderTop: '1px solid var(--border-subtle)',
+                        fontSize: '10px', color: 'var(--text-muted)',
+                    }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '160px' }}>{name}</span>
+                        <span style={{ flexShrink: 0, marginLeft: '8px' }}>{sizeFormatted}</span>
                     </div>
                 )}
             </div>
@@ -38,35 +50,31 @@ export default function ImageMessage({ msg }) {
             {/* Lightbox */}
             {lightbox && (
                 <div
-                    className="fixed inset-0 z-[9999] bg-black/80 flex items-center justify-center p-4 animate-fade-in"
+                    style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
                     onClick={() => setLightbox(false)}
                 >
                     <div
-                        className="relative max-w-5xl max-h-[90vh] flex flex-col items-center"
-                        onClick={(e) => e.stopPropagation()}
+                        style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh', display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+                        onClick={e => e.stopPropagation()}
                     >
                         <img
                             src={proxyUrl}
                             alt={name}
-                            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                            style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', borderRadius: '2px' }}
                         />
-                        <div className="mt-3 flex items-center gap-3">
-                            <span className="text-white/80 text-sm">{name}</span>
-                            <a
-                                href={proxyUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-white/70 hover:text-white transition-colors"
-                                title="Open in new tab"
-                            >
-                                <ExternalLink size={16} />
+                        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '12px' }}>{name}</span>
+                            <a href={proxyUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.55)', display: 'flex' }} title="Open in new tab">
+                                <ExternalLink size={14} />
                             </a>
                         </div>
                         <button
                             onClick={() => setLightbox(false)}
-                            className="absolute -top-4 -right-4 w-8 h-8 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-colors"
+                            style={{ position: 'absolute', top: '-12px', right: '-12px', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.12)', border: 'none', outline: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', transition: '100ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.22)'}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.12)'}
                         >
-                            <X size={16} />
+                            <X size={14} />
                         </button>
                     </div>
                 </div>

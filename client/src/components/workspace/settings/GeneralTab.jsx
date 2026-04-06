@@ -5,93 +5,100 @@ import { useToast } from '../../../contexts/ToastContext';
 
 // Icon options for workspace customization
 const iconOptions = [
-    { id: 'rocket', name: 'Rocket', Icon: Rocket },
-    { id: 'briefcase', name: 'Briefcase', Icon: Briefcase },
-    { id: 'zap', name: 'Zap', Icon: Zap },
-    { id: 'palette', name: 'Palette', Icon: Palette },
-    { id: 'flask', name: 'Flask', Icon: FlaskConical },
-    { id: 'globe', name: 'Globe', Icon: Globe },
-    { id: 'shield', name: 'Shield', Icon: ShieldCheck },
-    { id: 'trending', name: 'Trending', Icon: TrendingUp },
-    { id: 'lightbulb', name: 'Lightbulb', Icon: Lightbulb },
-    { id: 'flame', name: 'Flame', Icon: Flame },
-    { id: 'target', name: 'Target', Icon: Target },
-    { id: 'trophy', name: 'Trophy', Icon: Trophy }
+    { id: 'rocket',    name: 'Rocket',    Icon: Rocket     },
+    { id: 'briefcase', name: 'Briefcase', Icon: Briefcase  },
+    { id: 'zap',       name: 'Zap',       Icon: Zap        },
+    { id: 'palette',   name: 'Palette',   Icon: Palette    },
+    { id: 'flask',     name: 'Flask',     Icon: FlaskConical },
+    { id: 'globe',     name: 'Globe',     Icon: Globe      },
+    { id: 'shield',    name: 'Shield',    Icon: ShieldCheck },
+    { id: 'trending',  name: 'Trending',  Icon: TrendingUp },
+    { id: 'lightbulb', name: 'Lightbulb', Icon: Lightbulb  },
+    { id: 'flame',     name: 'Flame',     Icon: Flame      },
+    { id: 'target',    name: 'Target',    Icon: Target     },
+    { id: 'trophy',    name: 'Trophy',    Icon: Trophy     },
 ];
 
-/**
- * GeneralTab Component
- * Manages workspace general settings: name, icon, color, and rules
- */
+// ── Shared token shortcuts ──────────────────────────────────────
+const border  = 'rgba(255,255,255,0.07)';
+const surface = 'rgba(255,255,255,0.04)';
+const accent  = '#b8956a';
+const accentBg     = 'rgba(184,149,106,0.1)';
+const accentBorder = 'rgba(184,149,106,0.3)';
+const text    = '#e4e4e4';
+const muted   = 'rgba(228,228,228,0.4)';
+const font    = 'Inter, system-ui, sans-serif';
+
+const inputStyle = {
+    width: '100%', padding: '9px 12px', background: surface,
+    border: `1px solid ${border}`, color: text, fontSize: '13px',
+    outline: 'none', fontFamily: font, boxSizing: 'border-box', transition: 'border-color 150ms ease',
+};
+const labelStyle = { display: 'block', fontSize: '10px', fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' };
+const btnSecondary = { padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: muted, background: 'transparent', border: `1px solid ${border}`, cursor: 'pointer', fontFamily: font, transition: '150ms ease' };
+const btnPrimary   = { padding: '8px 16px', fontSize: '13px', fontWeight: 700, color: '#0c0c0c', background: accent, border: 'none', cursor: 'pointer', fontFamily: font, transition: '150ms ease' };
+
 const GeneralTab = ({
-    activeWorkspace,
-    isAdmin,
-    workspaceName,
-    setWorkspaceName,
-    newWorkspaceName,
-    setNewWorkspaceName,
-    editingIcon,
-    setEditingIcon,
-    selectedIcon,
-    setSelectedIcon,
-    selectedColor,
-    setSelectedColor,
-    savingIcon,
-    setSavingIcon,
-    savingName,
-    setSavingName,
-    workspaceRules,
-    setWorkspaceRules,
-    editingRules,
-    setEditingRules,
-    savingRules,
-    setSavingRules,
-    stats,
-    loadingStats,
-    refreshWorkspace
+    activeWorkspace, isAdmin,
+    workspaceName, setWorkspaceName,
+    newWorkspaceName, setNewWorkspaceName,
+    editingIcon, setEditingIcon,
+    selectedIcon, setSelectedIcon,
+    selectedColor, setSelectedColor,
+    savingIcon, setSavingIcon,
+    savingName, setSavingName,
+    workspaceRules, setWorkspaceRules,
+    editingRules, setEditingRules,
+    savingRules, setSavingRules,
+    stats, loadingStats,
+    refreshWorkspace,
 }) => {
     const { showToast } = useToast();
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontFamily: font }}>
+
             {editingIcon ? (
-                /* EDIT MODE */
-                <div className="space-y-8 bg-blue-50/30 dark:bg-blue-900/10 rounded-2xl p-6 border border-blue-100 dark:border-blue-800">
-                    <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-gray-900 dark:text-white">Edit Workspace Settings</h3>
-                        <span className="text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-3 py-1 rounded-full font-semibold">Editing</span>
+                /* ── EDIT MODE ── */
+                <div style={{ padding: '20px', background: accentBg, border: `1px solid ${accentBorder}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: 700, color: text, margin: 0 }}>Edit Workspace Settings</h3>
+                        <span style={{ fontSize: '9px', fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.12em', padding: '2px 8px', background: accentBg, border: `1px solid ${accentBorder}` }}>Editing</span>
                     </div>
 
-                    {/* Workspace Name */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Workspace Name</label>
+                    {/* Name */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={labelStyle}>Workspace Name</label>
                         <input
-                            type="text"
-                            value={newWorkspaceName}
-                            onChange={(e) => setNewWorkspaceName(e.target.value)}
-                            className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400"
+                            type="text" value={newWorkspaceName}
+                            onChange={e => setNewWorkspaceName(e.target.value)}
                             placeholder="Enter workspace name"
+                            style={inputStyle}
+                            onFocus={e => e.currentTarget.style.borderColor = accentBorder}
+                            onBlur={e => e.currentTarget.style.borderColor = border}
                         />
                     </div>
 
-                    {/* Icon Selection */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Choose Icon</label>
-                        <div className="grid grid-cols-6 gap-3">
-                            {iconOptions.map((option) => {
-                                const IconComponent = option.Icon;
+                    {/* Icon picker */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={labelStyle}>Choose Icon</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                            {iconOptions.map(option => {
+                                const IconComp = option.Icon;
                                 const isSelected = selectedIcon === option.id;
                                 return (
                                     <button
                                         key={option.id}
                                         onClick={() => setSelectedIcon(option.id)}
-                                        className={`relative p-4 rounded-xl flex items-center justify-center transition-all bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border-2 ${isSelected ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-200 dark:border-gray-700'}`}
                                         title={option.name}
+                                        style={{ position: 'relative', padding: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSelected ? accentBg : surface, border: `1px solid ${isSelected ? accent : border}`, cursor: 'pointer', transition: 'all 150ms ease' }}
+                                        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                                        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = border; }}
                                     >
-                                        <IconComponent size={24} className="text-gray-700 dark:text-gray-300" />
+                                        <IconComp size={20} style={{ color: isSelected ? accent : muted }} />
                                         {isSelected && (
-                                            <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center shadow-sm">
-                                                <svg className="w-3.5 h-3.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                            <div style={{ position: 'absolute', top: '-4px', right: '-4px', width: '14px', height: '14px', borderRadius: '50%', background: accent, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <svg width="8" height="8" viewBox="0 0 20 20" fill="#0c0c0c">
                                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                 </svg>
                                             </div>
@@ -102,40 +109,31 @@ const GeneralTab = ({
                         </div>
                     </div>
 
-                    {/* Color Selection */}
-                    <div>
-                        <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Choose Color</label>
-                        <div className="grid grid-cols-8 gap-3">
+                    {/* Color picker */}
+                    <div style={{ marginBottom: '20px' }}>
+                        <label style={labelStyle}>Choose Color</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px' }}>
                             {[
-                                { name: 'Blue', color: '#3b82f6' },
-                                { name: 'Red', color: '#ef4444' },
-                                { name: 'Orange', color: '#ea580c' },
-                                { name: 'Yellow', color: '#eab308' },
-                                { name: 'Green', color: '#16a34a' },
-                                { name: 'Teal', color: '#14b8a6' },
-                                { name: 'Purple', color: '#a855f7' },
-                                { name: 'Pink', color: '#ec4899' },
-                                { name: 'Cyan', color: '#06b6d4' },
-                                { name: 'Lime', color: '#84cc16' },
-                                { name: 'Amber', color: '#f59e0b' },
-                                { name: 'Emerald', color: '#10b981' },
-                                { name: 'Violet', color: '#8b5cf6' },
-                                { name: 'Fuchsia', color: '#d946ef' },
-                                { name: 'Indigo', color: '#6366f1' },
-                                { name: 'Rose', color: '#f43f5e' }
-                            ].map((colorOption) => {
-                                const isSelected = selectedColor === colorOption.color;
+                                { name: 'Blue',    color: '#3b82f6' }, { name: 'Red',     color: '#ef4444' },
+                                { name: 'Orange',  color: '#ea580c' }, { name: 'Yellow',  color: '#eab308' },
+                                { name: 'Green',   color: '#16a34a' }, { name: 'Teal',    color: '#14b8a6' },
+                                { name: 'Purple',  color: '#a855f7' }, { name: 'Pink',    color: '#ec4899' },
+                                { name: 'Cyan',    color: '#06b6d4' }, { name: 'Lime',    color: '#84cc16' },
+                                { name: 'Amber',   color: '#f59e0b' }, { name: 'Emerald', color: '#10b981' },
+                                { name: 'Violet',  color: '#8b5cf6' }, { name: 'Fuchsia', color: '#d946ef' },
+                                { name: 'Indigo',  color: '#6366f1' }, { name: 'Rose',    color: '#f43f5e' },
+                            ].map(colorOpt => {
+                                const isSelected = selectedColor === colorOpt.color;
                                 return (
                                     <button
-                                        key={colorOption.color}
-                                        onClick={() => setSelectedColor(colorOption.color)}
-                                        className={`relative w-12 h-12 rounded-xl transition-all hover:scale-110 border-2 ${isSelected ? 'border-blue-500 scale-105 shadow-lg' : 'border-transparent'}`}
-                                        style={{ backgroundColor: colorOption.color }}
-                                        title={colorOption.name}
+                                        key={colorOpt.color}
+                                        onClick={() => setSelectedColor(colorOpt.color)}
+                                        title={colorOpt.name}
+                                        style={{ width: '36px', height: '36px', borderRadius: 0, border: `2px solid ${isSelected ? text : 'transparent'}`, backgroundColor: colorOpt.color, cursor: 'pointer', position: 'relative', transition: 'all 150ms ease', transform: isSelected ? 'scale(1.1)' : 'scale(1)' }}
                                     >
                                         {isSelected && (
-                                            <div className="absolute inset-0 flex items-center justify-center">
-                                                <svg className="w-6 h-6 text-white drop-shadow-lg" fill="currentColor" viewBox="0 0 20 20">
+                                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <svg width="14" height="14" viewBox="0 0 20 20" fill="white">
                                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                                 </svg>
                                             </div>
@@ -147,129 +145,95 @@ const GeneralTab = ({
                     </div>
 
                     {/* Preview */}
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">Preview</h4>
-                        <div className="flex items-center gap-4">
-                            <div
-                                className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg"
-                                style={{ backgroundColor: selectedColor }}
-                            >
+                    <div style={{ padding: '16px', background: surface, border: `1px solid ${border}`, marginBottom: '16px' }}>
+                        <p style={{ fontSize: '10px', fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>Preview</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                            <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: selectedColor, flexShrink: 0 }}>
                                 {(() => {
-                                    const option = iconOptions.find(opt => opt.id === selectedIcon);
-                                    const IconComponent = option?.Icon || Rocket;
-                                    return <IconComponent size={40} className="text-white" />;
+                                    const option = iconOptions.find(o => o.id === selectedIcon);
+                                    const IC = option?.Icon || Rocket;
+                                    return <IC size={28} style={{ color: '#fff' }} />;
                                 })()}
                             </div>
                             <div>
-                                <p className="text-lg font-bold text-gray-900 dark:text-white mb-1">
-                                    {newWorkspaceName || 'Workspace Name'}
-                                </p>
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    {iconOptions.find(opt => opt.id === selectedIcon)?.name || 'Rocket'} · {selectedColor}
+                                <p style={{ fontSize: '15px', fontWeight: 700, color: text, margin: '0 0 4px' }}>{newWorkspaceName || 'Workspace Name'}</p>
+                                <p style={{ fontSize: '11px', color: muted, margin: 0 }}>
+                                    Icon: {iconOptions.find(o => o.id === selectedIcon)?.name || 'Rocket'} &nbsp;·&nbsp; Color: {selectedColor}
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex justify-end gap-3 pt-2">
+                    {/* Actions */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button
-                            onClick={() => {
-                                setEditingIcon(false);
-                                setSelectedIcon(activeWorkspace?.icon || 'rocket');
-                                setSelectedColor(activeWorkspace?.color || '#2563eb');
-                                setNewWorkspaceName(workspaceName);
-                            }}
-                            className="px-6 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                            onClick={() => { setEditingIcon(false); setSelectedIcon(activeWorkspace?.icon || 'rocket'); setSelectedColor(activeWorkspace?.color || '#2563eb'); setNewWorkspaceName(workspaceName); }}
+                            style={btnSecondary}
+                            onMouseEnter={e => e.currentTarget.style.background = surface}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                             Cancel
                         </button>
                         <button
                             onClick={async () => {
                                 try {
-                                    setSavingIcon(true);
-                                    setSavingName(true);
-
-                                    // Update everything in one call
-                                    await api.put(`/api/workspaces/${activeWorkspace.id}`, {
-                                        icon: selectedIcon,
-                                        color: selectedColor
-                                    });
-
-                                    // Update name separately
+                                    setSavingIcon(true); setSavingName(true);
+                                    await api.put(`/api/workspaces/${activeWorkspace.id}`, { icon: selectedIcon, color: selectedColor });
                                     if (newWorkspaceName.trim() !== workspaceName) {
-                                        await api.put(`/api/workspaces/${activeWorkspace.id}/rename`, {
-                                            name: newWorkspaceName.trim()
-                                        });
+                                        await api.put(`/api/workspaces/${activeWorkspace.id}/rename`, { name: newWorkspaceName.trim() });
                                         setWorkspaceName(newWorkspaceName.trim());
                                     }
-
                                     setEditingIcon(false);
                                     showToast('Workspace updated successfully');
-
-                                    // Refresh to update everywhere
                                     window.location.reload();
                                 } catch (error) {
                                     console.error('Error updating workspace:', error);
                                     showToast(error.response?.data?.message || 'Failed to update workspace', 'error');
-                                } finally {
-                                    setSavingIcon(false);
-                                    setSavingName(false);
-                                }
+                                } finally { setSavingIcon(false); setSavingName(false); }
                             }}
                             disabled={savingIcon || savingName || !newWorkspaceName.trim()}
-                            className="px-6 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50 shadow-sm"
+                            style={{ ...btnPrimary, opacity: (savingIcon || savingName || !newWorkspaceName.trim()) ? 0.5 : 1 }}
+                            onMouseEnter={e => { if (!savingIcon && !savingName) e.currentTarget.style.background = '#a07a58'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = accent; }}
                         >
-                            {(savingIcon || savingName) ? 'Saving...' : 'Save All Changes'}
+                            {(savingIcon || savingName) ? 'Saving…' : 'Save All Changes'}
                         </button>
                     </div>
                 </div>
+
             ) : (
-                /* VIEW MODE */
+                /* ── VIEW MODE ── */
                 <>
-                    {/* Current Settings Display */}
-                    <div className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-800 dark:to-gray-900 rounded-2xl p-6 border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-start justify-between mb-4">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Workspace Details</h3>
+                    {/* Workspace Details card */}
+                    <div style={{ padding: '18px 20px', background: surface, border: `1px solid ${border}` }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+                            <h3 style={{ fontSize: '13px', fontWeight: 700, color: text, margin: 0 }}>Workspace Details</h3>
                             {isAdmin && (
                                 <button
-                                    onClick={() => {
-                                        setEditingIcon(true);
-                                        setSelectedIcon(activeWorkspace?.icon || 'rocket');
-                                        setSelectedColor(activeWorkspace?.color || '#2563eb');
-                                        setNewWorkspaceName(workspaceName);
-                                    }}
-                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                                    onClick={() => { setEditingIcon(true); setSelectedIcon(activeWorkspace?.icon || 'rocket'); setSelectedColor(activeWorkspace?.color || '#2563eb'); setNewWorkspaceName(workspaceName); }}
+                                    style={{ padding: '5px 12px', fontSize: '11px', fontWeight: 700, color: accent, background: accentBg, border: `1px solid ${accentBorder}`, cursor: 'pointer', fontFamily: font, transition: '150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(184,149,106,0.18)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = accentBg}
                                 >
                                     Edit Workspace
                                 </button>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-6">
-                            <div
-                                className="w-24 h-24 rounded-2xl flex items-center justify-center shadow-lg"
-                                style={{ backgroundColor: activeWorkspace?.color || '#2563eb' }}
-                            >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <div style={{ width: '60px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: activeWorkspace?.color || '#2563eb', flexShrink: 0 }}>
                                 {(() => {
-                                    const currentOption = iconOptions.find(opt => opt.id === (activeWorkspace?.icon || 'rocket'));
-                                    const IconComponent = currentOption?.Icon || Rocket;
-                                    return <IconComponent size={48} className="text-white" />;
+                                    const opt = iconOptions.find(o => o.id === (activeWorkspace?.icon || 'rocket'));
+                                    const IC = opt?.Icon || Rocket;
+                                    return <IC size={30} style={{ color: '#fff' }} />;
                                 })()}
                             </div>
-
-                            <div className="flex-1">
-                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{workspaceName}</h3>
-                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                                    <span className="flex items-center gap-1">
-                                        <span className="font-semibold">Icon:</span>
-                                        {iconOptions.find(opt => opt.id === (activeWorkspace?.icon || 'rocket'))?.name || 'Rocket'}
-                                    </span>
-                                    <span className="text-gray-400 dark:text-gray-600">•</span>
-                                    <span className="flex items-center gap-1">
-                                        <span className="font-semibold">Color:</span>
-                                        {activeWorkspace?.color || '#2563eb'}
-                                    </span>
+                            <div>
+                                <h3 style={{ fontSize: '17px', fontWeight: 700, color: text, margin: '0 0 4px' }}>{workspaceName}</h3>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: muted }}>
+                                    <span>Icon: <strong style={{ color: text }}>{iconOptions.find(o => o.id === (activeWorkspace?.icon || 'rocket'))?.name || 'Rocket'}</strong></span>
+                                    <span style={{ color: 'rgba(255,255,255,0.2)' }}>•</span>
+                                    <span>Color: <strong style={{ color: text }}>{activeWorkspace?.color || '#2563eb'}</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -277,44 +241,38 @@ const GeneralTab = ({
 
                     {/* Workspace Information */}
                     {loadingStats ? (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">Loading workspace info...</div>
+                        <p style={{ fontSize: '12px', color: muted }}>Loading workspace info…</p>
                     ) : stats && (
-                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4">Workspace Information</h4>
-                            <div className="space-y-3 text-sm">
-                                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                                    <span className="text-gray-600 dark:text-gray-400">Created by</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{stats.creator?.username || 'Unknown'}</span>
-                                </div>
-                                <div className="flex justify-between py-2 border-b border-gray-100 dark:border-gray-700">
-                                    <span className="text-gray-600 dark:text-gray-400">Created on</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">
-                                        {new Date(stats.createdAt).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric'
-                                        })}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between py-2">
-                                    <span className="text-gray-600 dark:text-gray-400">Total members</span>
-                                    <span className="font-semibold text-gray-900 dark:text-white">{stats.memberCount}</span>
-                                </div>
+                        <div style={{ padding: '16px 20px', background: surface, border: `1px solid ${border}` }}>
+                            <p style={{ fontSize: '10px', fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>Workspace Information</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                                {[
+                                    { label: 'Created by',    value: stats.creator?.username || 'Unknown' },
+                                    { label: 'Created on',    value: new Date(stats.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) },
+                                    { label: 'Total members', value: stats.memberCount },
+                                ].map((row, i, arr) => (
+                                    <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: i < arr.length - 1 ? `1px solid ${border}` : 'none' }}>
+                                        <span style={{ fontSize: '12px', color: muted }}>{row.label}</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 700, color: text }}>{row.value}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
 
-                    {/* Workspace Rules & Guidelines */}
-                    <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Shield size={16} className="text-blue-600 dark:text-blue-400" />
-                                Rules & Guidelines
+                    {/* Rules & Guidelines */}
+                    <div style={{ padding: '16px 20px', background: surface, border: `1px solid ${border}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                            <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: text, margin: 0 }}>
+                                <Shield size={14} style={{ color: accent }} />
+                                Rules &amp; Guidelines
                             </h4>
                             {isAdmin && !editingRules && (
                                 <button
                                     onClick={() => setEditingRules(true)}
-                                    className="px-3 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                                    style={{ padding: '3px 10px', fontSize: '11px', fontWeight: 600, color: accent, background: 'transparent', border: `1px solid ${accentBorder}`, cursor: 'pointer', fontFamily: font, transition: '150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = accentBg}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                 >
                                     Edit Rules
                                 </button>
@@ -322,20 +280,22 @@ const GeneralTab = ({
                         </div>
 
                         {editingRules ? (
-                            <div className="space-y-4">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 <textarea
                                     value={workspaceRules}
-                                    onChange={(e) => setWorkspaceRules(e.target.value)}
-                                    placeholder="Set the tone for your workspace. E.g., 'Be respectful', 'No spam', 'Updates every Friday'..."
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white placeholder-gray-400 text-sm h-32 resize-none"
+                                    onChange={e => setWorkspaceRules(e.target.value)}
+                                    placeholder="Set the tone for your workspace. E.g., 'Be respectful', 'No spam'..."
+                                    rows={5}
+                                    style={{ ...inputStyle, resize: 'none' }}
+                                    onFocus={e => e.currentTarget.style.borderColor = accentBorder}
+                                    onBlur={e => e.currentTarget.style.borderColor = border}
                                 />
-                                <div className="flex justify-end gap-2">
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                                     <button
-                                        onClick={() => {
-                                            setWorkspaceRules(activeWorkspace?.rules || "");
-                                            setEditingRules(false);
-                                        }}
-                                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 text-sm font-semibold rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                                        onClick={() => { setWorkspaceRules(activeWorkspace?.rules || ""); setEditingRules(false); }}
+                                        style={btnSecondary}
+                                        onMouseEnter={e => e.currentTarget.style.background = surface}
+                                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     >
                                         Cancel
                                     </button>
@@ -343,42 +303,34 @@ const GeneralTab = ({
                                         onClick={async () => {
                                             try {
                                                 setSavingRules(true);
-                                                await api.put(`/api/workspaces/${activeWorkspace.id}`, {
-                                                    rules: workspaceRules
-                                                });
+                                                await api.put(`/api/workspaces/${activeWorkspace.id}`, { rules: workspaceRules });
                                                 showToast('✅ Workspace rules updated successfully', 'success');
                                                 setEditingRules(false);
                                                 await refreshWorkspace();
                                             } catch (error) {
                                                 console.error('Error updating rules:', error);
                                                 showToast(error.response?.data?.message || 'Failed to update rules', 'error');
-                                            } finally {
-                                                setSavingRules(false);
-                                            }
+                                            } finally { setSavingRules(false); }
                                         }}
                                         disabled={savingRules}
-                                        className="px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                                        style={{ ...btnPrimary, opacity: savingRules ? 0.6 : 1 }}
                                     >
-                                        {savingRules ? 'Saving...' : 'Save Rules'}
+                                        {savingRules ? 'Saving…' : 'Save Rules'}
                                     </button>
                                 </div>
                             </div>
                         ) : (
-                            <div>
-                                {workspaceRules && workspaceRules.trim() ? (
-                                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                                        <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-4 rounded-lg border border-gray-200 dark:border-gray-700 font-sans">{workspaceRules}</pre>
-                                    </div>
-                                ) : (
-                                    <div className="text-center py-8">
-                                        <Shield className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">No rules set for this workspace</p>
-                                        {isAdmin && (
-                                            <p className="text-xs text-gray-400 dark:text-gray-500">Click "Edit Rules" to add guidelines for your team</p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                            workspaceRules?.trim() ? (
+                                <pre style={{ whiteSpace: 'pre-wrap', fontSize: '12px', color: muted, background: 'rgba(255,255,255,0.02)', padding: '12px', border: `1px solid ${border}`, fontFamily: font, margin: 0, lineHeight: 1.6 }}>
+                                    {workspaceRules}
+                                </pre>
+                            ) : (
+                                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                                    <Shield size={28} style={{ color: border, margin: '0 auto 8px', display: 'block' }} />
+                                    <p style={{ fontSize: '12px', color: muted, margin: '0 0 4px' }}>No rules set for this workspace</p>
+                                    {isAdmin && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', margin: 0 }}>Click "Edit Rules" to add guidelines for your team</p>}
+                                </div>
+                            )
                         )}
                     </div>
                 </>

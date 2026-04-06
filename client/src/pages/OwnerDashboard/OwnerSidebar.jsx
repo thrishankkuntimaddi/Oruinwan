@@ -4,19 +4,16 @@ import {
     LayoutDashboard, Users, Settings,
     Globe, LogOut, Building, Shield, Activity, CreditCard,
     UserPlus, HelpCircle, Briefcase, GitBranch, LayoutTemplate, Lock, UsersRound,
-    BarChart2, ClipboardList, ShieldCheck
+    BarChart2, ClipboardList, ShieldCheck, ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-
 
 const OwnerSidebar = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user, logout } = useAuth();
-    // const { company } = useCompany(); // Unused
     const [showUserMenu, setShowUserMenu] = useState(false);
 
-    // Check if user has any workspaces to show "Go to App"
     const hasWorkspaces = user?.workspaces?.length > 0;
 
     const navGroups = [
@@ -62,7 +59,6 @@ const OwnerSidebar = () => {
             items: [
                 { path: '/owner/settings', label: 'Settings', icon: Settings },
                 { path: '/contact-admin', label: 'Contact Admin', icon: HelpCircle },
-                // Conditional Go to App
                 ...(hasWorkspaces ? [{ path: '/workspaces', label: 'Go to App', icon: Globe }] : [])
             ]
         }
@@ -76,47 +72,85 @@ const OwnerSidebar = () => {
     };
 
     return (
-        <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col z-20 shadow-lg shadow-indigo-100/20 dark:shadow-none h-screen sticky top-0 transition-colors duration-200">
+        <aside style={{
+            width: '240px',
+            background: 'var(--bg-surface)',
+            borderRight: '1px solid var(--border-subtle)',
+            display: 'flex',
+            flexDirection: 'column',
+            height: '100vh',
+            position: 'sticky',
+            top: 0,
+            zIndex: 20,
+            flexShrink: 0,
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+        }}>
             {/* Header */}
-            <div className="h-20 flex items-center gap-3 px-6 border-b border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <div style={{
+                height: '64px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '0 20px',
+                borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0
+            }}>
                 <img
                     src="/chttrix-logo.jpg"
                     alt="Chttrix Logo"
-                    className="w-10 h-10 rounded-xl shadow-md object-cover flex-shrink-0"
+                    style={{ width: '28px', height: '28px', objectFit: 'cover', flexShrink: 0 }}
                 />
-                <div className="flex flex-col justify-center min-w-0">
-                    <span className="font-black text-xl leading-none text-slate-800 dark:text-white tracking-tighter">
+                <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                    <span style={{
+                        fontSize: '14px', fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        letterSpacing: '-0.015em',
+                        lineHeight: 1.2
+                    }}>
                         Chttrix
                     </span>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest leading-tight mt-1">
+                    <span style={{
+                        fontSize: '10px', fontWeight: 700,
+                        color: 'var(--text-muted)',
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        lineHeight: 1.4,
+                        marginTop: '2px'
+                    }}>
                         Owner Console
                     </span>
                 </div>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
-                <div className="space-y-8">
+            <nav style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px 12px'
+            }} className="custom-scrollbar">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {navGroups.map((group) => (
                         <div key={group.group}>
-                            <h3 className="px-4 text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                            <h3 style={{
+                                fontSize: '10px', fontWeight: 700,
+                                color: 'var(--text-muted)',
+                                letterSpacing: '0.13em',
+                                textTransform: 'uppercase',
+                                padding: '0 8px',
+                                marginBottom: '4px'
+                            }}>
                                 {group.group}
                             </h3>
-                            <div className="space-y-1">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                                 {group.items.map((item) => {
                                     const active = isActive(item.path);
                                     return (
-                                        <button
+                                        <NavItem
                                             key={item.path}
+                                            item={item}
+                                            active={active}
                                             onClick={() => navigate(item.path)}
-                                            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all duration-200 ${active
-                                                ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold shadow-sm translate-x-1'
-                                                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 hover:text-gray-900 dark:hover:text-gray-200 font-medium'
-                                                }`}
-                                        >
-                                            <item.icon size={18} className={active ? 'stroke-2' : 'stroke-[1.5]'} />
-                                            <span className="text-sm">{item.label}</span>
-                                        </button>
+                                        />
                                     );
                                 })}
                             </div>
@@ -126,32 +160,129 @@ const OwnerSidebar = () => {
             </nav>
 
             {/* Footer / Profile */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 relative bg-white dark:bg-gray-800">
-                <button
-                    onClick={() => setShowUserMenu(!showUserMenu)}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-                >
-                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-400 text-sm shadow-sm border-2 border-white dark:border-gray-600">
-                        {user?.username?.charAt(0)?.toUpperCase() || 'O'}
+            <div style={{ padding: '12px', borderTop: '1px solid var(--border-subtle)', position: 'relative', flexShrink: 0 }}>
+                {showUserMenu && (
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '100%',
+                        left: '12px',
+                        right: '12px',
+                        marginBottom: '4px',
+                        background: 'var(--bg-surface)',
+                        border: '1px solid var(--border-default)',
+                        overflow: 'hidden',
+                        animation: 'slideUp 220ms cubic-bezier(0.16,1,0.3,1)',
+                        zIndex: 50
+                    }}>
+                        <LogoutBtn onClick={handleLogout} />
                     </div>
-                    <div className="flex-1 overflow-hidden text-left">
-                        <p className="text-sm font-bold truncate text-gray-900 dark:text-white">{user?.username}</p>
-                        <p className="text-xs text-indigo-500 font-bold truncate">Workspace Owner</p>
-                    </div>
-                    {showUserMenu && (
-                        <div className="absolute bottom-full left-4 right-4 mb-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl overflow-hidden z-50">
-                            <button
-                                onClick={handleLogout}
-                                className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center gap-3"
-                            >
-                                <LogOut size={16} />
-                                <span className="font-medium">Logout</span>
-                            </button>
-                        </div>
-                    )}
-                </button>
+                )}
+                <ProfileBtn
+                    user={user}
+                    showUserMenu={showUserMenu}
+                    onToggle={() => setShowUserMenu(!showUserMenu)}
+                    role="Workspace Owner"
+                />
             </div>
         </aside>
+    );
+};
+
+const NavItem = ({ item, active, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px',
+                background: active ? 'var(--bg-active)' : (hov ? 'var(--bg-hover)' : 'transparent'),
+                border: active ? '1px solid var(--border-accent)' : '1px solid transparent',
+                borderLeft: active ? `2px solid var(--accent)` : '2px solid transparent',
+                color: active ? 'var(--text-primary)' : (hov ? 'var(--text-primary)' : 'var(--text-secondary)'),
+                fontSize: '13px', fontWeight: active ? 500 : 400,
+                textAlign: 'left', cursor: 'pointer',
+                transition: 'color 150ms ease, background 150ms ease'
+            }}
+        >
+            <item.icon size={14} style={{ color: active ? 'var(--accent)' : (hov ? 'var(--text-primary)' : 'var(--text-muted)'), flexShrink: 0 }} />
+            <span>{item.label}</span>
+        </button>
+    );
+};
+
+const ProfileBtn = ({ user, showUserMenu, onToggle, role }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onToggle}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                width: '100%',
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '8px',
+                background: hov ? 'var(--bg-hover)' : 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background 150ms ease'
+            }}
+        >
+            <div style={{
+                width: '32px', height: '32px',
+                background: 'var(--bg-active)',
+                border: '1px solid var(--border-accent)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '12px', fontWeight: 700, color: 'var(--accent)',
+                flexShrink: 0
+            }}>
+                {user?.username?.charAt(0)?.toUpperCase() || 'O'}
+            </div>
+            <div style={{ flex: 1, overflow: 'hidden', textAlign: 'left' }}>
+                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.username}
+                </p>
+                <p style={{ fontSize: '11px', color: 'var(--accent)', margin: 0, fontWeight: 700, letterSpacing: '0.04em' }}>
+                    {role}
+                </p>
+            </div>
+            <ChevronUp size={14} style={{
+                color: 'var(--text-muted)',
+                transform: showUserMenu ? 'rotate(0deg)' : 'rotate(180deg)',
+                transition: 'transform 150ms ease',
+                flexShrink: 0
+            }} />
+        </button>
+    );
+};
+
+const LogoutBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                width: '100%', padding: '12px 16px',
+                background: hov ? 'var(--bg-hover)' : 'transparent',
+                border: 'none',
+                color: 'var(--state-danger)',
+                fontSize: '13px', fontWeight: 500,
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                textAlign: 'left',
+                transition: 'background 150ms ease'
+            }}
+        >
+            <LogOut size={14} />
+            Logout
+        </button>
     );
 };
 

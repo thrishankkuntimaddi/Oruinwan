@@ -1,83 +1,118 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, BookOpen, PenTool, Hash, Clock, FileText } from 'lucide-react';
+// Blog.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import PublicPageShell from '../../components/layout/PublicPageShell';
+import { BookOpen, Tag, Clock, ArrowRight, Sparkles, Shield, Users } from 'lucide-react';
 
-const Blog = () => {
-    const navigate = useNavigate();
+const POSTS = [
+    {
+        id: 1, tag: 'Product', tagColor: '#b8956a',
+        title: 'Introducing Chttrix AI: Your workspace-aware teammate',
+        excerpt: 'Today we\'re announcing the public beta of Chttrix Intelligence — the AI layer that understands your entire workspace context, not just the message you sent.',
+        author: 'Chttrix Team', date: 'Apr 1, 2026', readTime: '4 min', featured: true,
+        icon: Sparkles,
+    },
+    {
+        id: 2, tag: 'Security', tagColor: '#5aba8a',
+        title: 'How we built end-to-end encryption without sacrificing search',
+        excerpt: 'Building E2E encryption for a searchable, AI-powered workspace is a hard problem. Here\'s how we solved it without compromising on either.',
+        author: 'Security Team', date: 'Mar 22, 2026', readTime: '7 min', featured: false,
+        icon: Shield,
+    },
+    {
+        id: 3, tag: 'Engineering', tagColor: '#6ea8fe',
+        title: 'The real-time architecture powering Chttrix channels',
+        excerpt: 'Inside the WebSocket infrastructure that handles sub-50ms message delivery at scale — including how we implemented presence, typing indicators, and read receipts.',
+        author: 'Platform Team', date: 'Mar 10, 2026', readTime: '10 min', featured: false,
+        icon: BookOpen,
+    },
+    {
+        id: 4, tag: 'Company', tagColor: '#a78bfa',
+        title: 'Why we built Chttrix instead of integrating with existing tools',
+        excerpt: 'The honest answer to the most common question we get: "Why not just build a Slack integration?" The answer has everything to do with context loss.',
+        author: 'Thrishank K.', date: 'Feb 28, 2026', readTime: '5 min', featured: false,
+        icon: Users,
+    },
+];
+
+const TAGS = ['All', 'Product', 'Engineering', 'Security', 'Company'];
+
+export default function Blog() {
+    const [active, setActive] = useState('All');
+    const filtered = active === 'All' ? POSTS : POSTS.filter(p => p.tag === active);
+    const [featured, ...rest] = filtered;
 
     return (
-        <div className="min-h-screen bg-white dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
-            {/* Navbar */}
-            <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
-                        <span className="font-black text-2xl tracking-tighter">Chttrix</span>
-                    </div>
-                    <button onClick={() => navigate("/")} className="text-sm font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-white transition-colors flex items-center gap-2">
-                        <ArrowLeft size={16} /> Back to Home
-                    </button>
-                </div>
-            </nav>
-
+        <PublicPageShell title="Blog">
             {/* Hero */}
-            <header className="pt-40 pb-20 container mx-auto px-6 text-center max-w-4xl">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-50 dark:bg-orange-900/20 border border-orange-100 dark:border-orange-500/20 rounded-full text-orange-600 dark:text-orange-400 font-bold mb-8">
-                    <PenTool size={16} />
-                    Thoughts & Updates
-                </div>
-                <h1 className="text-5xl md:text-7xl font-black mb-8 tracking-tight">
-                    Chttrix Blog
-                </h1>
-                <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                    Sharing thoughts on building secure communication tools, product decisions, and lessons learned along the way.
-                </p>
-            </header>
-
-            {/* Topics */}
-            <section className="py-20 bg-slate-50 dark:bg-[#0B0F19] border-y border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6 max-w-5xl">
-                    <h2 className="text-2xl font-bold mb-12 text-center uppercase tracking-widest text-slate-400">What We Write About</h2>
-                    <div className="grid md:grid-cols-4 gap-6">
-                        <TopicCard icon={<Hash />} label="Product Updates" />
-                        <TopicCard icon={<FileText />} label="Security & encryption" />
-                        <TopicCard icon={<BookOpen />} label="Engineering" />
-                        <TopicCard icon={<Clock />} label="Design Philosophy" />
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '72px 0 56px' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
+                        <BookOpen size={11} style={{ color: '#b8956a' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Chttrix Blog</span>
                     </div>
-                </div>
-            </section>
-
-            {/* Coming Soon State */}
-            <section className="py-32 container mx-auto px-6 text-center">
-                <div className="max-w-2xl mx-auto p-12 bg-white dark:bg-[#111827] rounded-3xl shadow-xl border border-slate-100 dark:border-white/5">
-                    <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/20 rounded-full flex items-center justify-center mx-auto mb-8 text-indigo-500">
-                        <PenTool size={40} className="animate-pulse" />
-                    </div>
-                    <h2 className="text-3xl font-black mb-4">Coming Soon</h2>
-                    <p className="text-lg text-slate-600 dark:text-slate-400 mb-8">
-                        Our first posts are in progress. We publish when there’s something meaningful to share — not on a fixed schedule.
+                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Ideas, updates, & engineering.</h1>
+                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.75', maxWidth: '520px', marginBottom: '28px' }}>
+                        Product announcements, behind-the-scenes engineering, and thoughts on the future of work.
                     </p>
-                    <div className="inline-block px-6 py-3 bg-slate-100 dark:bg-black/40 rounded-full text-slate-500 text-sm font-bold">
-                        Stay tuned for updates
+                    {/* Tag filters */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {TAGS.map(t => (
+                            <button key={t} onClick={() => setActive(t)}
+                                style={{ padding: '5px 14px', background: active === t ? '#b8956a' : 'rgba(255,255,255,0.04)', border: `1px solid ${active === t ? '#b8956a' : 'rgba(255,255,255,0.09)'}`, color: active === t ? '#0c0c0c' : 'rgba(228,228,228,0.5)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 150ms ease' }}>
+                                {t}
+                            </button>
+                        ))}
                     </div>
                 </div>
-            </section>
+            </div>
 
-            {/* Footer */}
-            <footer className="py-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-400">
-                <p>© 2026 Chttrix Inc.</p>
-            </footer>
-        </div>
+            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px' }}>
+                {/* Featured post */}
+                {featured && (
+                    <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: '36px', marginBottom: '1px', display: 'flex', gap: '40px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                        <div style={{ width: '56px', height: '56px', background: `${featured.tagColor}12`, border: `1px solid ${featured.tagColor}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <featured.icon size={26} style={{ color: featured.tagColor }} />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
+                                <span style={{ padding: '2px 8px', background: `${featured.tagColor}14`, border: `1px solid ${featured.tagColor}30`, fontSize: '10px', fontWeight: 700, color: featured.tagColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{featured.tag}</span>
+                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', fontFamily: 'monospace' }}>{featured.date} · {featured.readTime} read</span>
+                            </div>
+                            <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '12px', lineHeight: 1.3 }}>{featured.title}</h2>
+                            <p style={{ fontSize: '14px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', marginBottom: '20px' }}>{featured.excerpt}</p>
+                            <button style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                Read article <ArrowRight size={13} />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Rest of posts */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                    {rest.map(post => (
+                        <div key={post.id} style={{ background: '#111', padding: '24px' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px' }}>
+                                <span style={{ padding: '2px 8px', background: `${post.tagColor}12`, border: `1px solid ${post.tagColor}25`, fontSize: '10px', fontWeight: 700, color: post.tagColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{post.tag}</span>
+                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', fontFamily: 'monospace' }}>{post.readTime}</span>
+                            </div>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.01em', marginBottom: '8px', lineHeight: 1.35 }}>{post.title}</h3>
+                            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', lineHeight: '1.75', marginBottom: '18px' }}>{post.excerpt}</p>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)' }}>{post.date}</span>
+                                <button style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
+                                    Read <ArrowRight size={11} />
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {filtered.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '64px 24px', color: 'rgba(228,228,228,0.25)' }}>
+                        <p style={{ fontSize: '14px' }}>No posts in this category yet.</p>
+                    </div>
+                )}
+            </div>
+        </PublicPageShell>
     );
-};
-
-const TopicCard = ({ icon, label }) => (
-    <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-[#111827] rounded-3xl border border-slate-200 dark:border-white/5 shadow-sm hover:-translate-y-1 transition-transform">
-        <div className="text-slate-400 mb-4">
-            {React.cloneElement(icon, { size: 32 })}
-        </div>
-        <span className="font-bold text-slate-700 dark:text-slate-300 text-center">{label}</span>
-    </div>
-);
-
-export default Blog;
+}

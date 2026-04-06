@@ -1,21 +1,15 @@
 // client/src/pages/workspace-os/ComplianceLogViewer.jsx
-// Read-only immutable compliance log viewer for admins.
-// Shows SHA-256 hash integrity verification.
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import {
-    Lock, RefreshCw, ChevronLeft, ChevronRight,
-    ShieldCheck, ShieldAlert, AlertTriangle, Info, Zap
-} from 'lucide-react';
+import { Lock, RefreshCw, ChevronLeft, ChevronRight, ShieldCheck, ShieldAlert, AlertTriangle } from 'lucide-react';
 
-const SEVERITY_STYLES = {
-    info: { color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50 dark:bg-sky-900/20' },
-    warning: { color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
-    critical: { color: 'text-red-600 dark:text-red-400', bg: 'bg-red-50 dark:bg-red-900/20' }
+const SEVERITY_META = {
+    info:     { color: 'var(--text-secondary)', bg: 'var(--bg-active)', border: 'var(--border-accent)' },
+    warning:  { color: 'var(--accent)',         bg: 'rgba(184,149,106,0.1)', border: 'var(--accent)' },
+    critical: { color: 'var(--state-danger)',   bg: 'rgba(224,82,82,0.1)', border: 'var(--state-danger)' },
 };
-
-const CATEGORIES = ['workspace', 'org', 'permissions', 'security', 'auth', 'billing', 'data-export', 'data-import'];
+const CATEGORIES = ['workspace','org','permissions','security','auth','billing','data-export','data-import'];
 
 function timeAgo(date) {
     const diff = Date.now() - new Date(date).getTime();
@@ -27,42 +21,11 @@ function timeAgo(date) {
     return new Date(date).toLocaleString();
 }
 
-const LogRow = ({ log, verify }) => {
-    const sev = SEVERITY_STYLES[log.severity] || SEVERITY_STYLES.info;
-    const actor = log.actorId;
-
-    return (
-        <tr className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-            <td className="px-4 py-3.5">
-                <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-md ${sev.bg} ${sev.color}`}>
-                    {log.severity}
-                </span>
-            </td>
-            <td className="px-4 py-3.5">
-                <code className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded">{log.action}</code>
-            </td>
-            <td className="px-4 py-3.5 text-sm text-slate-700 dark:text-slate-300">
-                {actor?.username || log.actorEmail || 'Unknown'}
-                {log.actorRole && <span className="ml-1 text-xs text-slate-400">({log.actorRole})</span>}
-            </td>
-            <td className="px-4 py-3.5 text-xs text-slate-500 dark:text-slate-400">
-                {log.category && <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">{log.category}</span>}
-            </td>
-            <td className="px-4 py-3.5 text-xs text-slate-400 whitespace-nowrap" title={new Date(log.createdAt).toLocaleString()}>
-                {timeAgo(log.createdAt)}
-            </td>
-            {verify && (
-                <td className="px-4 py-3.5 text-center">
-                    {log._hashValid === true
-                        ? <ShieldCheck size={16} className="text-emerald-500 mx-auto" title="Hash valid" />
-                        : log._hashValid === false
-                        ? <ShieldAlert size={16} className="text-red-500 mx-auto" title="Hash INVALID — possible tampering!" />
-                        : <span className="text-slate-300">—</span>
-                    }
-                </td>
-            )}
-        </tr>
-    );
+const inputBase = {
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '12px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', padding: '7px 12px',
+    transition: 'border-color 150ms ease', cursor: 'pointer',
 };
 
 export default function ComplianceLogViewer({ companyId: propCompanyId }) {
@@ -80,8 +43,7 @@ export default function ComplianceLogViewer({ companyId: propCompanyId }) {
 
     const load = useCallback(async () => {
         if (!companyId) return;
-        setLoading(true);
-        setError(null);
+        setLoading(true); setError(null);
         try {
             const params = { companyId, page, limit: 50, verify: verifyHashes };
             if (category) params.category = category;
@@ -91,100 +53,142 @@ export default function ComplianceLogViewer({ companyId: propCompanyId }) {
             setPagination(res.data.pagination || {});
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to load compliance logs');
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     }, [companyId, page, category, severity, verifyHashes]);
 
     useEffect(() => { load(); }, [load]);
     useEffect(() => { setPage(1); }, [category, severity, verifyHashes]);
 
+    const cols = verifyHashes ? 6 : 5;
+
     return (
-        <div className="space-y-5">
-            <div className="flex items-center justify-between flex-wrap gap-3">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {/* Header */}
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                        <Lock size={22} className="text-emerald-500" />
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <Lock size={16} style={{ color: 'var(--state-success)' }} />
                         Compliance Logs
-                        {pagination.total > 0 && <span className="text-sm font-normal text-slate-500">({pagination.total})</span>}
+                        {pagination.total > 0 && <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)' }}>({pagination.total})</span>}
                     </h2>
-                    <p className="text-sm text-slate-500 mt-1">Immutable audit trail — records cannot be modified or deleted</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Immutable audit trail — records cannot be modified or deleted</p>
                 </div>
-                <div className="flex items-center gap-2">
-                    <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 cursor-pointer">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
                         <input type="checkbox" checked={verifyHashes} onChange={e => setVerifyHashes(e.target.checked)}
-                            className="w-4 h-4 rounded text-indigo-600" />
+                            style={{ width: '13px', height: '13px', accentColor: 'var(--accent)' }} />
                         Verify integrity
                     </label>
-                    <button onClick={load} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-indigo-500 transition-colors">
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                    <button onClick={load}
+                        style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+                        <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                     </button>
                 </div>
-            </div>
+            </header>
 
-            {/* Immutability notice */}
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl px-4 py-3 text-emerald-700 dark:text-emerald-400 text-sm flex items-center gap-2">
-                <ShieldCheck size={14} />
-                All records are signed with SHA-256 hashes at write time. Enable "Verify integrity" to detect any tampered records.
-            </div>
+            {/* Content */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '20px 28px' }}>
+                {/* Immutability notice */}
+                <div style={{ padding: '10px 14px', background: 'rgba(90,186,138,0.08)', border: '1px solid var(--state-success)', color: 'var(--state-success)', fontSize: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <ShieldCheck size={13} style={{ flexShrink: 0 }} />
+                    All records are signed with SHA-256 hashes at write time. Enable "Verify integrity" to detect any tampered records.
+                </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-                <select value={category} onChange={e => setCategory(e.target.value)}
-                    className="px-3 py-2.5 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">All Categories</option>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={severity} onChange={e => setSeverity(e.target.value)}
-                    className="px-3 py-2.5 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">All Severities</option>
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="critical">Critical</option>
-                </select>
-            </div>
+                {/* Filters */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                    <select value={category} onChange={e => setCategory(e.target.value)} style={inputBase}>
+                        <option value="">All Categories</option>
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                    </select>
+                    <select value={severity} onChange={e => setSeverity(e.target.value)} style={inputBase}>
+                        <option value="">All Severities</option>
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
 
-            {error && <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400 text-sm">{error}</div>}
+                {error && <div style={{ padding: '10px 14px', background: 'rgba(224,82,82,0.08)', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '12px', marginBottom: '12px' }}>{error}</div>}
 
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden', flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
-                                {['Severity', 'Action', 'Actor', 'Category', 'Time', ...(verifyHashes ? ['Integrity'] : [])].map(h => (
-                                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
+                            <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
+                                {['Severity','Action','Actor','Category','When',...(verifyHashes ? ['Integrity'] : [])].map(h => (
+                                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {loading
-                                ? <tr><td colSpan={verifyHashes ? 6 : 5} className="py-16 text-center text-slate-400"><RefreshCw size={24} className="animate-spin mx-auto" /></td></tr>
-                                : logs.length === 0
-                                ? <tr><td colSpan={verifyHashes ? 6 : 5} className="py-16 text-center text-slate-400">
-                                    <Lock size={40} className="mx-auto mb-3 opacity-30" />
-                                    <p>No compliance logs found</p>
+                            {loading ? (
+                                <tr><td colSpan={cols} style={{ padding: '48px', textAlign: 'center' }}>
+                                    <RefreshCw size={20} style={{ color: 'var(--text-muted)', margin: '0 auto', animation: 'spin 1s linear infinite' }} />
                                 </td></tr>
-                                : logs.map(log => <LogRow key={log._id} log={log} verify={verifyHashes} />)
-                            }
+                            ) : logs.length === 0 ? (
+                                <tr><td colSpan={cols} style={{ padding: '48px', textAlign: 'center' }}>
+                                    <Lock size={28} style={{ color: 'var(--text-muted)', margin: '0 auto 8px', opacity: 0.4 }} />
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No compliance logs found</p>
+                                </td></tr>
+                            ) : logs.map(log => <CLogRow key={log._id} log={log} verify={verifyHashes} />)}
                         </tbody>
                     </table>
-                </div>
-                {pagination.pages > 1 && (
-                    <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-700">
-                        <span className="text-sm text-slate-500">Page {page} of {pagination.pages}</span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40">
-                                <ChevronLeft size={16} />
-                            </button>
-                            <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40">
-                                <ChevronRight size={16} />
-                            </button>
+                    {pagination.pages > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border-subtle)' }}>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Page {page} of {pagination.pages}</span>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <PagBtn onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} icon={<ChevronLeft size={13} />} />
+                                <PagBtn onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages} icon={<ChevronRight size={13} />} />
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );
 }
+
+const CLogRow = ({ log, verify }) => {
+    const [hov, setHov] = React.useState(false);
+    const sev = SEVERITY_META[log.severity] || SEVERITY_META.info;
+    const actor = log.actorId;
+    return (
+        <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: hov ? 'var(--bg-hover)' : 'transparent', transition: 'background 150ms ease' }}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
+            <td style={{ padding: '10px 14px' }}>
+                <span style={{ display: 'inline-block', padding: '3px 8px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: sev.bg, border: `1px solid ${sev.border}`, color: sev.color }}>{log.severity}</span>
+            </td>
+            <td style={{ padding: '10px 14px' }}>
+                <code style={{ fontSize: '11px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', padding: '2px 6px' }}>{log.action}</code>
+            </td>
+            <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                {actor?.username || log.actorEmail || 'Unknown'}
+                {log.actorRole && <span style={{ marginLeft: '5px', fontSize: '10px', color: 'var(--text-muted)' }}>({log.actorRole})</span>}
+            </td>
+            <td style={{ padding: '10px 14px' }}>
+                {log.category && <span style={{ fontSize: '10px', padding: '2px 7px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>{log.category}</span>}
+            </td>
+            <td style={{ padding: '10px 14px', fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }} title={new Date(log.createdAt).toLocaleString()}>
+                {timeAgo(log.createdAt)}
+            </td>
+            {verify && (
+                <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                    {log._hashValid === true
+                        ? <ShieldCheck size={14} style={{ color: 'var(--state-success)', margin: '0 auto' }} title="Hash valid" />
+                        : log._hashValid === false
+                        ? <ShieldAlert size={14} style={{ color: 'var(--state-danger)', margin: '0 auto' }} title="INVALID — possible tampering!" />
+                        : <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>—</span>}
+                </td>
+            )}
+        </tr>
+    );
+};
+
+const PagBtn = ({ onClick, disabled, icon }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={disabled} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: hov && !disabled ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1, transition: 'all 150ms ease', borderRadius: '2px' }}>
+            {icon}
+        </button>
+    );
+};

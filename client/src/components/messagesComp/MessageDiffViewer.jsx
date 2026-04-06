@@ -2,8 +2,9 @@
 // Phase-8: Modal showing edit history with diff highlighting
 import React, { useState, useEffect } from 'react';
 import api from '@services/api';
+import { X, History } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || '';
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 /**
  * Simple word-level diff between two strings.
@@ -54,50 +55,87 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
     : versionsToShow[sel]?.text?.split(/\s+/).map(w => ({ text: w, type: 'same' })) || [];
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200,
-    }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+    <div
+      style={{
+        position: 'fixed', inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1200, fontFamily: FONT,
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
       <div style={{
-        background: '#1e2124', borderRadius: 12, width: '90vw', maxWidth: 560,
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-accent)',
+        borderRadius: '2px',
+        width: '90vw', maxWidth: '560px',
         maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
-        border: '1px solid #2d3035', fontFamily: 'Inter, sans-serif',
+        boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
       }}>
         {/* Header */}
         <div style={{
-          padding: '18px 24px', borderBottom: '1px solid #2d3035',
+          padding: '14px 20px',
+          borderBottom: '1px solid var(--border-default)',
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
+          <h3 style={{
+            margin: 0, fontSize: '14px', fontWeight: 600,
+            color: 'var(--text-primary)',
+            display: 'flex', alignItems: 'center', gap: '8px', fontFamily: FONT,
+          }}>
+            <History size={16} style={{ color: 'var(--accent)' }} />
             Edit History
           </h3>
-          <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: '#a0a5b0',
-            cursor: 'pointer', fontSize: 20,
-          }}>✕</button>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
+              color: 'var(--text-muted)', display: 'flex', padding: '4px',
+              borderRadius: '2px', transition: '100ms ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          >
+            <X size={16} />
+          </button>
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: 40, color: '#a0a5b0' }}>Loading history…</div>
+          <div style={{
+            textAlign: 'center', padding: '40px 16px',
+            color: 'var(--text-muted)', fontSize: '13px', fontFamily: FONT,
+          }}>
+            Loading history…
+          </div>
         ) : (
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
             {/* Version sidebar */}
             <div style={{
-              width: 140, borderRight: '1px solid #2d3035',
-              overflowY: 'auto', padding: '8px 0',
+              width: '140px', flexShrink: 0,
+              borderRight: '1px solid var(--border-default)',
+              overflowY: 'auto', padding: '6px 0',
             }}>
               {versionsToShow.map((v, idx) => (
-                <button key={idx} onClick={() => setSelectedVersion(idx)} style={{
-                  width: '100%', textAlign: 'left', padding: '10px 16px',
-                  background: sel === idx ? '#5865f220' : 'none',
-                  border: 'none', borderLeft: sel === idx ? '3px solid #5865f2' : '3px solid transparent',
-                  color: v.isCurrent ? '#5865f2' : '#d1d5db',
-                  fontSize: 12, cursor: 'pointer',
-                }}>
+                <button
+                  key={idx}
+                  onClick={() => setSelectedVersion(idx)}
+                  style={{
+                    width: '100%', textAlign: 'left', padding: '9px 14px',
+                    backgroundColor: sel === idx ? 'rgba(184,149,106,0.10)' : 'transparent',
+                    border: 'none', outline: 'none',
+                    borderLeft: `2px solid ${sel === idx ? 'var(--accent)' : 'transparent'}`,
+                    color: v.isCurrent ? 'var(--accent)' : sel === idx ? 'var(--text-primary)' : 'var(--text-secondary)',
+                    fontSize: '12px', fontWeight: v.isCurrent ? 600 : 400,
+                    cursor: 'pointer', transition: '100ms ease', fontFamily: FONT,
+                  }}
+                  onMouseEnter={e => { if (sel !== idx) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+                  onMouseLeave={e => { if (sel !== idx) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                >
                   {v.isCurrent ? '✎ Current' : `Version ${v.version}`}
                   {v.editedAt && (
-                    <div style={{ color: '#6b7280', fontSize: 10, marginTop: 2 }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '10px', marginTop: '2px', fontFamily: FONT }}>
                       {new Date(v.editedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
                     </div>
                   )}
@@ -106,23 +144,28 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
             </div>
 
             {/* Diff view */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
               {versionsToShow[sel]?.isEncrypted ? (
-                <p style={{ color: '#a0a5b0', fontStyle: 'italic' }}>
+                <p style={{
+                  color: 'var(--text-muted)', fontStyle: 'italic',
+                  fontSize: '13px', margin: 0, fontFamily: FONT,
+                }}>
                   🔒 This version was encrypted and cannot be previewed.
                 </p>
               ) : (
-                <p style={{ margin: 0, lineHeight: 1.7, color: '#e5e7eb', fontSize: 14 }}>
+                <p style={{ margin: 0, lineHeight: 1.7, color: 'var(--text-primary)', fontSize: '13px', fontFamily: FONT }}>
                   {diffWords.map((token, i) => (
                     <span key={i} style={{
-                      background:
-                        token.type === 'added' ? 'rgba(34,197,94,0.25)' :
-                          token.type === 'removed' ? 'rgba(239,68,68,0.25)' : 'transparent',
+                      backgroundColor:
+                        token.type === 'added' ? 'rgba(100,180,120,0.20)' :
+                          token.type === 'removed' ? 'rgba(224,82,82,0.20)' : 'transparent',
                       color:
-                        token.type === 'added' ? '#86efac' :
-                          token.type === 'removed' ? '#fca5a5' : 'inherit',
+                        token.type === 'added' ? '#7ecf96' :
+                          token.type === 'removed' ? 'var(--state-danger)' : 'inherit',
                       textDecoration: token.type === 'removed' ? 'line-through' : 'none',
                       marginRight: '0.25em',
+                      borderRadius: '2px',
+                      padding: token.type !== 'same' ? '0 2px' : '0',
                     }}>
                       {token.text}
                     </span>
@@ -130,7 +173,7 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
                 </p>
               )}
               {sel > 0 && (
-                <p style={{ fontSize: 11, color: '#6b7280', marginTop: 12 }}>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '14px', fontFamily: FONT }}>
                   Comparing version {versionsToShow[sel - 1].version} → {versionsToShow[sel].isCurrent ? 'current' : `version ${versionsToShow[sel].version}`}
                 </p>
               )}

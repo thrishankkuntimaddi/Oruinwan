@@ -6,8 +6,14 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-// refactor(consistency): use canonical api.js client (handles auth tokens + 401 refresh)
 import api from '@services/api';
+
+const T = {
+    bg: 'var(--bg-base)', surface: 'var(--bg-surface)', active: 'var(--bg-active)',
+    border: 'var(--border-subtle)', borderDefault: 'var(--border-default)',
+    primary: 'var(--text-primary)', secondary: 'var(--text-secondary)', muted: 'var(--text-muted)',
+    accent: 'var(--accent)', success: 'var(--state-success)', danger: 'var(--state-danger)',
+};
 
 const Analytics = () => {
     const { user } = useAuth();
@@ -19,19 +25,13 @@ const Analytics = () => {
 
     const fetchAnalytics = useCallback(async () => {
         try {
-            const companyId = typeof user.companyId === 'object'
-                ? user.companyId?._id || user.companyId?.id
-                : user.companyId;
-
             const [analyticsRes, activityRes] = await Promise.all([
                 api.get('/api/company/analytics/overview?timeRange=30d'),
                 api.get('/api/company/analytics/activity'),
             ]);
-
             setAnalytics(analyticsRes.data.analytics);
             setActivity(activityRes.data.activity);
-        } catch (error) {
-            // Fallback: try the old endpoint
+        } catch {
             try {
                 const companyId = typeof user.companyId === 'object'
                     ? user.companyId?._id || user.companyId?.id
@@ -39,7 +39,6 @@ const Analytics = () => {
                 const response = await api.get(`/api/companies/${companyId}/analytics`);
                 setAnalytics(response.data);
             } catch (fallbackErr) {
-                console.error('Error fetching analytics:', fallbackErr);
                 showToast('Failed to load analytics', 'error');
             }
         } finally {
@@ -48,192 +47,140 @@ const Analytics = () => {
         }
     }, [user.companyId, showToast]);
 
-    useEffect(() => {
-        if (user?.companyId) {
-            fetchAnalytics();
-        }
-    }, [user?.companyId, fetchAnalytics]);
+    useEffect(() => { if (user?.companyId) fetchAnalytics(); }, [user?.companyId, fetchAnalytics]);
 
-    // Auto-refresh every 30 seconds
     useEffect(() => {
         const interval = setInterval(() => {
-            if (!loading && !refreshing) {
-                setRefreshing(true);
-                fetchAnalytics();
-            }
+            if (!loading && !refreshing) { setRefreshing(true); fetchAnalytics(); }
         }, 30000);
         return () => clearInterval(interval);
     }, [loading, refreshing, fetchAnalytics]);
 
-    const handleRefresh = () => {
-        setRefreshing(true);
-        fetchAnalytics();
-    };
+    const handleRefresh = () => { setRefreshing(true); fetchAnalytics(); };
 
-    // Derive values safely — support both the new company-analytics shape and legacy
-    const totalUsers    = analytics?.employees?.total    ?? analytics?.overview?.totalUsers    ?? 0;
-    const activeUsers   = analytics?.employees?.active   ?? analytics?.overview?.activeUsers   ?? 0;
-    const newHires      = analytics?.employees?.newHires ?? 0;
-    const totalWs       = analytics?.workspaces?.total   ?? analytics?.overview?.totalWorkspaces   ?? 0;
-    const totalDepts    = analytics?.orgStructure?.departments ?? analytics?.overview?.totalDepartments ?? 0;
-    const msgRecent     = analytics?.messages?.recent    ?? analytics?.overview?.messagesCount?.month ?? 0;
-    const msgTotal      = analytics?.messages?.total     ?? 0;
-    const tasksOpen     = analytics?.tasks?.open         ?? analytics?.overview?.tasksStats?.open      ?? 0;
-    const tasksDone     = analytics?.tasks?.completed    ?? analytics?.overview?.tasksStats?.completed  ?? 0;
-    const tasksOverdue  = analytics?.tasks?.overdue      ?? analytics?.overview?.tasksStats?.overdue    ?? 0;
-    const engScore      = analytics?.engagement?.engagementScore ?? 0;
-
+    const totalUsers   = analytics?.employees?.total    ?? analytics?.overview?.totalUsers    ?? 0;
+    const activeUsers  = analytics?.employees?.active   ?? analytics?.overview?.activeUsers   ?? 0;
+    const newHires     = analytics?.employees?.newHires ?? 0;
+    const totalWs      = analytics?.workspaces?.total   ?? analytics?.overview?.totalWorkspaces   ?? 0;
+    const totalDepts   = analytics?.orgStructure?.departments ?? analytics?.overview?.totalDepartments ?? 0;
+    const msgRecent    = analytics?.messages?.recent    ?? analytics?.overview?.messagesCount?.month ?? 0;
+    const msgTotal     = analytics?.messages?.total     ?? 0;
+    const tasksOpen    = analytics?.tasks?.open         ?? analytics?.overview?.tasksStats?.open      ?? 0;
+    const tasksDone    = analytics?.tasks?.completed    ?? analytics?.overview?.tasksStats?.completed  ?? 0;
+    const tasksOverdue = analytics?.tasks?.overdue      ?? analytics?.overview?.tasksStats?.overdue    ?? 0;
+    const engScore     = analytics?.engagement?.engagementScore ?? 0;
     const deptBreakdown = analytics?.orgStructure?.departmentBreakdown ?? analytics?.departmentStats ?? [];
     const topUsers      = analytics?.topUsers ?? [];
     const dailyActivity = activity?.dailyActivity ?? [];
     const wsActivity    = analytics?.workspaces?.workspaceActivity ?? [];
+    const newHiresChange = totalUsers > newHires ? `+${Math.round((newHires / Math.max(totalUsers - newHires, 1)) * 100)}%` : newHires > 0 ? '+∞' : '0%';
 
-    // Compute change % for new hires vs existing
-    const newHiresChange = totalUsers > newHires
-        ? `+${Math.round((newHires / Math.max(totalUsers - newHires, 1)) * 100)}%`
-        : newHires > 0 ? '+∞' : '0%';
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen">
-                <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '180px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '280px' }} /></div>
+                <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '30px', width: '120px' }} /><div className="sk" style={{ height: '30px', width: '80px' }} /></div>
             </div>
-        );
-    }
-
-    return (
-        <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-y-auto">
-            {/* Header */}
-            <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-black text-gray-900 dark:text-white">Analytics</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            Real-time insights and metrics · Last 30 days
-                        </p>
-                    </div>
-                    <button
-                        onClick={handleRefresh}
-                        disabled={refreshing}
-                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                        Refresh
-                    </button>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
+                    {[1,2,3,4].map(i => (
+                        <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div className="sk" style={{ width: '14px', height: '14px' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                            <div className="sk" style={{ height: '32px', width: '70px', marginBottom: '6px' }} />
+                            <div className="sk" style={{ height: '9px', width: '100px' }} />
+                        </div>
+                    ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    {[1,2].map(i => (
+                        <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                            <div className="sk" style={{ height: '12px', width: '140px', marginBottom: '16px' }} />
+                            <div className="sk" style={{ height: '160px', width: '100%' }} />
+                        </div>
+                    ))}
+                </div>
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)' }}><div className="sk" style={{ height: '11px', width: '120px' }} /></div>
+                    {[1,2,3,4,5].map(i => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', padding: '11px 20px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><div className="sk" style={{ width: '28px', height: '28px', flexShrink: 0 }} /><div className="sk" style={{ height: '10px', width: '130px' }} /></div>
+                            <div className="sk" style={{ height: '10px', width: '50px' }} />
+                            <div className="sk" style={{ height: '10px', width: '50px' }} />
+                            <div className="sk" style={{ height: '18px', width: '60px' }} />
+                        </div>
+                    ))}
                 </div>
             </div>
+        </div>
+    );
 
-            <div className="p-8 space-y-8">
+    return (
+        <div style={{ flex: 1, background: T.bg, overflowY: 'auto', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }} className="custom-scrollbar">
+            {/* Header */}
+            <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                    <h1 style={{ fontSize: '18px', fontWeight: 600, color: T.primary, letterSpacing: '-0.015em', marginBottom: '2px' }}>Analytics</h1>
+                    <p style={{ fontSize: '12px', color: T.muted }}>Real-time insights and metrics · Last 30 days</p>
+                </div>
+                <RefreshBtn refreshing={refreshing} onClick={handleRefresh} />
+            </div>
+
+            <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* Key Metrics */}
                 <section>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Key Metrics</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <MetricCard
-                            icon={Users}
-                            label="Total Users"
-                            value={totalUsers}
-                            change={newHires > 0 ? `+${newHires} new` : null}
-                            positive={true}
-                            iconColor="text-blue-600"
-                            bgColor="bg-blue-50 dark:bg-blue-900/20"
-                        />
-                        <MetricCard
-                            icon={Activity}
-                            label="Active Users (30d)"
-                            value={activeUsers}
-                            change={engScore > 0 ? `${engScore}% engaged` : null}
-                            positive={true}
-                            iconColor="text-green-600"
-                            bgColor="bg-green-50 dark:bg-green-900/20"
-                        />
-                        <MetricCard
-                            icon={Briefcase}
-                            label="Workspaces"
-                            value={totalWs}
-                            change={null}
-                            positive={true}
-                            iconColor="text-purple-600"
-                            bgColor="bg-purple-50 dark:bg-purple-900/20"
-                        />
-                        <MetricCard
-                            icon={BarChart3}
-                            label="Departments"
-                            value={totalDepts}
-                            change={null}
-                            positive={true}
-                            iconColor="text-orange-600"
-                            bgColor="bg-orange-50 dark:bg-orange-900/20"
-                        />
+                    <SectionTitle text="Key Metrics" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                        <MetricCard icon={Users} label="Total Users" value={totalUsers} change={newHires > 0 ? `+${newHires} new` : null} positive />
+                        <MetricCard icon={Activity} label="Active Users (30d)" value={activeUsers} change={engScore > 0 ? `${engScore}% engaged` : null} positive />
+                        <MetricCard icon={Briefcase} label="Workspaces" value={totalWs} />
+                        <MetricCard icon={BarChart3} label="Departments" value={totalDepts} />
                     </div>
                 </section>
 
                 {/* Activity Overview */}
                 <section>
-                    <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Activity Overview</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <ActivityCard
-                            icon={MessageSquare}
-                            label="Messages (30d)"
-                            value={msgRecent}
-                            total={msgTotal}
-                            color="blue"
-                        />
-                        <ActivityCard
-                            icon={CheckCircle2}
-                            label="Tasks Completed"
-                            value={tasksDone}
-                            total={tasksDone + tasksOpen}
-                            color="green"
-                        />
-                        <ActivityCard
-                            icon={Calendar}
-                            label="Overdue Tasks"
-                            value={tasksOverdue}
-                            total={tasksDone + tasksOpen + tasksOverdue}
-                            color="red"
-                            negative={true}
-                        />
+                    <SectionTitle text="Activity Overview" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        <ActivityCard icon={MessageSquare} label="Messages (30d)" value={msgRecent} total={msgTotal} />
+                        <ActivityCard icon={CheckCircle2} label="Tasks Completed" value={tasksDone} total={tasksDone + tasksOpen} />
+                        <ActivityCard icon={Calendar} label="Overdue Tasks" value={tasksOverdue} total={tasksDone + tasksOpen + tasksOverdue} negative />
                     </div>
                 </section>
 
                 {/* Daily Activity Chart */}
                 {dailyActivity.length > 0 && (
-                    <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Daily Message Activity</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Messages per day (last 7 days)</p>
-                        <ResponsiveContainer width="100%" height={240}>
+                    <section style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '20px' }}>
+                        <h2 style={{ fontSize: '14px', fontWeight: 600, color: T.primary, marginBottom: '2px' }}>Daily Message Activity</h2>
+                        <p style={{ fontSize: '11px', color: T.muted, marginBottom: '16px' }}>Messages per day (last 7 days)</p>
+                        <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={dailyActivity}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.1} />
-                                <XAxis dataKey="date" stroke="#9ca3af" style={{ fontSize: '12px' }} tickFormatter={d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })} />
-                                <YAxis stroke="#9ca3af" style={{ fontSize: '12px' }} />
-                                <Tooltip
-                                    contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#f3f4f6' }}
-                                    itemStyle={{ color: '#f3f4f6' }}
-                                    labelFormatter={d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-                                />
-                                <Bar dataKey="messageCount" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                                <CartesianGrid strokeDasharray="3 3" stroke="#222222" strokeOpacity={0.8} />
+                                <XAxis dataKey="date" stroke="#404040" style={{ fontSize: '11px' }} tickFormatter={d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })} />
+                                <YAxis stroke="#404040" style={{ fontSize: '11px' }} />
+                                <Tooltip contentStyle={{ backgroundColor: '#111111', border: '1px solid #222222', borderRadius: '2px', color: '#e4e4e4', fontSize: '12px' }} />
+                                <Bar dataKey="messageCount" fill="#b8956a" radius={[2, 2, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </section>
                 )}
 
-                {/* Top Workspaces Activity */}
+                {/* Top Workspaces */}
                 {wsActivity.length > 0 && (
-                    <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Most Active Workspaces</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Ranked by message volume (30d)</p>
-                        <div className="space-y-3">
+                    <section style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '20px' }}>
+                        <h2 style={{ fontSize: '14px', fontWeight: 600, color: T.primary, marginBottom: '2px' }}>Most Active Workspaces</h2>
+                        <p style={{ fontSize: '11px', color: T.muted, marginBottom: '16px' }}>Ranked by message volume (30d)</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {wsActivity.map((ws, i) => {
                                 const max = wsActivity[0]?.messageCount || 1;
                                 const pct = Math.round(((ws.messageCount || 0) / max) * 100);
                                 return (
-                                    <div key={i} className="flex items-center gap-4">
-                                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 w-6 text-right">#{i+1}</span>
-                                        <span className="text-sm font-medium text-gray-900 dark:text-white w-40 truncate">{ws.name}</span>
-                                        <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-2">
-                                            <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ fontSize: '11px', fontWeight: 700, color: T.muted, width: '20px', textAlign: 'right' }}>#{i + 1}</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 500, color: T.primary, width: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ws.name}</span>
+                                        <div style={{ flex: 1, background: 'var(--border-subtle)', height: '3px' }}>
+                                            <div style={{ background: T.accent, height: '3px', width: `${pct}%`, transition: 'width 0.3s ease' }} />
                                         </div>
-                                        <span className="text-xs font-bold text-gray-700 dark:text-gray-300 w-16 text-right">{ws.messageCount?.toLocaleString()} msgs</span>
+                                        <span style={{ fontSize: '11px', fontWeight: 700, color: T.secondary, width: '70px', textAlign: 'right' }}>{ws.messageCount?.toLocaleString()} msgs</span>
                                     </div>
                                 );
                             })}
@@ -241,35 +188,35 @@ const Analytics = () => {
                     </section>
                 )}
 
-                {/* Department Performance */}
+                {/* Department Overview */}
                 {deptBreakdown.length > 0 && (
                     <section>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Department Overview</h2>
-                        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-600">
-                                    <tr>
-                                        <th className="text-left py-3 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Department</th>
-                                        <th className="text-left py-3 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Members</th>
-                                        <th className="text-right py-3 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Size</th>
+                        <SectionTitle text="Department Overview" />
+                        <div style={{ background: T.surface, border: `1px solid ${T.border}`, overflow: 'hidden' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ background: T.active, borderBottom: `1px solid ${T.border}` }}>
+                                        {['Department', 'Members', 'Size'].map((h, i) => (
+                                            <th key={h} style={{ padding: '10px 16px', textAlign: i === 2 ? 'right' : 'left', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: T.muted }}>{h}</th>
+                                        ))}
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                <tbody>
                                     {deptBreakdown.map((dept, idx) => {
                                         const maxCount = deptBreakdown[0]?.memberCount || 1;
                                         const pct = Math.round(((dept.memberCount || 0) / maxCount) * 100);
                                         return (
-                                            <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                                                <td className="py-4 px-6 font-bold text-gray-900 dark:text-white">{dept.name}</td>
-                                                <td className="py-4 px-6 text-gray-600 dark:text-gray-300">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 w-32">
-                                                            <div className="bg-indigo-600 h-2 rounded-full" style={{ width: `${pct}%` }} />
+                                            <tr key={idx} style={{ borderBottom: `1px solid ${T.border}` }}>
+                                                <td style={{ padding: '12px 16px', fontSize: '13px', fontWeight: 500, color: T.primary }}>{dept.name}</td>
+                                                <td style={{ padding: '12px 16px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                        <div style={{ flex: 1, background: T.active, height: '3px', width: '100px' }}>
+                                                            <div style={{ background: T.accent, height: '3px', width: `${pct}%` }} />
                                                         </div>
-                                                        <span>{dept.memberCount}</span>
+                                                        <span style={{ fontSize: '12px', color: T.secondary }}>{dept.memberCount}</span>
                                                     </div>
                                                 </td>
-                                                <td className="py-4 px-6 text-right font-bold text-gray-900 dark:text-white">{pct}%</td>
+                                                <td style={{ padding: '12px 16px', textAlign: 'right', fontSize: '12px', fontWeight: 600, color: T.primary }}>{pct}%</td>
                                             </tr>
                                         );
                                     })}
@@ -282,18 +229,18 @@ const Analytics = () => {
                 {/* Top Contributors */}
                 {topUsers.length > 0 && (
                     <section>
-                        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Top Contributors</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <SectionTitle text="Top Contributors" />
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
                             {topUsers.slice(0, 6).map((u, idx) => (
-                                <div key={idx} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center font-bold text-indigo-600 dark:text-indigo-400">
+                                <div key={idx} style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '36px', height: '36px', background: T.active, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: T.accent, flexShrink: 0 }}>
                                         {u.username?.[0]?.toUpperCase()}
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-bold text-gray-900 dark:text-white">{u.username}</p>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{u.activityCount || 0} activities</p>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ fontSize: '13px', fontWeight: 500, color: T.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</p>
+                                        <p style={{ fontSize: '11px', color: T.muted }}>{u.activityCount || 0} activities</p>
                                     </div>
-                                    <div className="text-2xl font-black text-indigo-600 dark:text-indigo-400">#{idx + 1}</div>
+                                    <div style={{ fontSize: '16px', fontWeight: 700, color: T.muted }}>#{idx + 1}</div>
                                 </div>
                             ))}
                         </div>
@@ -301,14 +248,10 @@ const Analytics = () => {
                 )}
 
                 {!analytics && (
-                    <section>
-                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-xl border-2 border-dashed border-indigo-200 dark:border-indigo-800 p-8 text-center">
-                            <TrendingUp className="w-16 h-16 text-indigo-400 dark:text-indigo-600 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">No Data Available</h3>
-                            <p className="text-gray-600 dark:text-gray-400">
-                                Start adding employees and sending messages to see analytics here.
-                            </p>
-                        </div>
+                    <section style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '48px 24px', textAlign: 'center' }}>
+                        <TrendingUp size={40} style={{ color: T.muted, opacity: 0.4, margin: '0 auto 12px' }} />
+                        <h3 style={{ fontSize: '16px', fontWeight: 600, color: T.primary, marginBottom: '6px' }}>No Data Available</h3>
+                        <p style={{ fontSize: '13px', color: T.muted }}>Start adding employees and sending messages to see analytics here.</p>
                     </section>
                 )}
             </div>
@@ -316,55 +259,49 @@ const Analytics = () => {
     );
 };
 
-// MetricCard Component
-const MetricCard = ({ icon: Icon, label, value, change, positive, iconColor, bgColor }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-            <div className={`p-3 rounded-xl ${bgColor}`}>
-                <Icon className={iconColor} size={24} />
-            </div>
-            {change && (
-                <span className={`text-sm font-bold ${positive ? 'text-green-600' : 'text-red-600'}`}>
-                    {change}
-                </span>
-            )}
+const SectionTitle = ({ text }) => (
+    <h2 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px' }}>{text}</h2>
+);
+
+const MetricCard = ({ icon: Icon, label, value, change, positive }) => (
+    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <Icon size={16} style={{ color: 'var(--text-muted)' }} />
+            {change && <span style={{ fontSize: '11px', fontWeight: 700, color: positive ? 'var(--state-success)' : 'var(--state-danger)' }}>{change}</span>}
         </div>
-        <div className="text-3xl font-black text-gray-900 dark:text-white mb-1">{value}</div>
-        <div className="text-sm text-gray-500 dark:text-gray-400 font-medium">{label}</div>
+        <div style={{ fontSize: '26px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '2px' }}>{value}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400 }}>{label}</div>
     </div>
 );
 
-// ActivityCard Component
-const ActivityCard = ({ icon: Icon, label, value, total, color, negative }) => {
-    const colors = {
-        blue: 'text-blue-600 bg-blue-50 dark:bg-blue-900/20',
-        green: 'text-green-600 bg-green-50 dark:bg-green-900/20',
-        red: 'text-red-600 bg-red-50 dark:bg-red-900/20',
-        purple: 'text-purple-600 bg-purple-50 dark:bg-purple-900/20'
-    };
+const ActivityCard = ({ icon: Icon, label, value, total, negative }) => {
     const pct = total > 0 ? Math.round((value / total) * 100) : 0;
-
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <div className="flex items-center gap-3 mb-4">
-                <div className={`p-2 rounded-lg ${colors[color]}`}>
-                    <Icon size={20} />
-                </div>
-                <h3 className="font-bold text-gray-900 dark:text-white">{label}</h3>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <Icon size={14} style={{ color: negative ? 'var(--state-danger)' : 'var(--accent)' }} />
+                <h3 style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</h3>
             </div>
-            <div className="text-3xl font-black text-gray-900 dark:text-white mb-3">{value.toLocaleString()}</div>
+            <div style={{ fontSize: '26px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '10px' }}>{value.toLocaleString()}</div>
             {total > 0 && (
-                <div className="flex items-center gap-2">
-                    <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-1.5">
-                        <div
-                            className={`h-1.5 rounded-full ${negative ? 'bg-red-500' : 'bg-indigo-500'}`}
-                            style={{ width: `${pct}%` }}
-                        />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, background: 'var(--border-subtle)', height: '3px' }}>
+                        <div style={{ height: '3px', background: negative ? 'var(--state-danger)' : 'var(--accent)', width: `${pct}%` }} />
                     </div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">{pct}%</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{pct}%</span>
                 </div>
             )}
         </div>
+    );
+};
+
+const RefreshBtn = ({ refreshing, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={refreshing} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: hov ? 'var(--bg-active)' : 'var(--bg-surface)', border: '1px solid var(--border-default)', color: hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: refreshing ? 'not-allowed' : 'pointer', borderRadius: '2px', opacity: refreshing ? 0.6 : 1, transition: 'all 150ms ease' }}>
+            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} /> Refresh
+        </button>
     );
 };
 

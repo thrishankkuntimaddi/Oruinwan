@@ -60,7 +60,7 @@ const Avatar = ({ src, username, alt, fallback, size = "md", className = "", sta
                 )}
             </div>
             {status && (
-                <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-secondary-900 ${statusColors[status] || statusColors.offline}`} />
+                <span className={`absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full ring-2 ${statusColors[status] || statusColors.offline}`} style={{ boxShadow: '0 0 0 2px var(--bg-base, #0c0c0c)' }} />
             )}
         </div>
     );

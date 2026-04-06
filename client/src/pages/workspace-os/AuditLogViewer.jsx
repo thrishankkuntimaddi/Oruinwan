@@ -1,27 +1,20 @@
 // client/src/pages/workspace-os/AuditLogViewer.jsx
-// Paginated, filterable audit log viewer for admins.
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import {
-    ClipboardList, Search, Filter, RefreshCw,
-    ChevronLeft, ChevronRight, AlertTriangle, Info, Zap,
-    CheckCircle, XCircle, Clock
-} from 'lucide-react';
+import { ClipboardList, RefreshCw, ChevronLeft, ChevronRight, AlertTriangle, Info, Zap, CheckCircle, XCircle, Clock } from 'lucide-react';
 
-const SEVERITY_STYLES = {
-    info: { icon: Info, color: 'text-sky-500', bg: 'bg-sky-50 dark:bg-sky-900/20', text: 'text-sky-700 dark:text-sky-400' },
-    warning: { icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400' },
-    critical: { icon: Zap, color: 'text-red-500', bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400' }
+const SEVERITY_META = {
+    info:     { Icon: Info,          color: 'var(--text-secondary)', bg: 'var(--bg-active)', border: 'var(--border-accent)' },
+    warning:  { Icon: AlertTriangle, color: 'var(--accent)',         bg: 'rgba(184,149,106,0.1)', border: 'var(--accent)' },
+    critical: { Icon: Zap,           color: 'var(--state-danger)',   bg: 'rgba(224,82,82,0.1)', border: 'var(--state-danger)' },
 };
-
-const STATUS_STYLES = {
-    success: { icon: CheckCircle, color: 'text-emerald-500' },
-    failure: { icon: XCircle, color: 'text-red-500' },
-    pending: { icon: Clock, color: 'text-amber-500' }
+const STATUS_META = {
+    success: { Icon: CheckCircle, color: 'var(--state-success)' },
+    failure: { Icon: XCircle,    color: 'var(--state-danger)' },
+    pending: { Icon: Clock,      color: 'var(--accent)' },
 };
-
-const CATEGORIES = ['workspace', 'org', 'permissions', 'security', 'auth', 'billing', 'messaging', 'system'];
+const CATEGORIES = ['workspace','org','permissions','security','auth','billing','messaging','system'];
 
 function timeAgo(date) {
     const diff = Date.now() - new Date(date).getTime();
@@ -33,47 +26,11 @@ function timeAgo(date) {
     return new Date(date).toLocaleDateString();
 }
 
-const LogRow = ({ log }) => {
-    const sev = SEVERITY_STYLES[log.severity] || SEVERITY_STYLES.info;
-    const SevIcon = sev.icon;
-    const status = STATUS_STYLES[log.status] || STATUS_STYLES.success;
-    const StatusIcon = status.icon;
-    const actor = log.userId;
-
-    return (
-        <tr className="border-b border-slate-100 dark:border-slate-700/60 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-            <td className="px-4 py-3.5">
-                <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-semibold ${sev.bg} ${sev.text}`}>
-                    <SevIcon size={11} />
-                    {log.severity}
-                </div>
-            </td>
-            <td className="px-4 py-3.5">
-                <code className="text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 px-2 py-1 rounded-md">
-                    {log.action}
-                </code>
-            </td>
-            <td className="px-4 py-3.5">
-                <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                        {(actor?.username || '?').slice(0, 1).toUpperCase()}
-                    </div>
-                    <span className="text-sm text-slate-700 dark:text-slate-300">{actor?.username || actor?.email || 'Unknown'}</span>
-                </div>
-            </td>
-            <td className="px-4 py-3.5 text-xs text-slate-500 dark:text-slate-400">
-                {log.category && (
-                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">{log.category}</span>
-                )}
-            </td>
-            <td className="px-4 py-3.5">
-                <StatusIcon size={15} className={status.color} />
-            </td>
-            <td className="px-4 py-3.5 text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap" title={new Date(log.createdAt).toLocaleString()}>
-                {timeAgo(log.createdAt)}
-            </td>
-        </tr>
-    );
+const inputBase = {
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '12px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', padding: '7px 12px',
+    transition: 'border-color 150ms ease', cursor: 'pointer',
 };
 
 export default function AuditLogViewer({ companyId: propCompanyId }) {
@@ -84,15 +41,13 @@ export default function AuditLogViewer({ companyId: propCompanyId }) {
     const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, pages: 1 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
     const [category, setCategory] = useState('');
     const [severity, setSeverity] = useState('');
     const [page, setPage] = useState(1);
 
     const load = useCallback(async () => {
         if (!companyId) return;
-        setLoading(true);
-        setError(null);
+        setLoading(true); setError(null);
         try {
             const params = { companyId, page, limit: 50 };
             if (category) params.category = category;
@@ -102,83 +57,130 @@ export default function AuditLogViewer({ companyId: propCompanyId }) {
             setPagination(res.data.pagination || {});
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to load audit logs');
-        } finally {
-            setLoading(false);
-        }
+        } finally { setLoading(false); }
     }, [companyId, page, category, severity]);
 
     useEffect(() => { load(); }, [load]);
     useEffect(() => { setPage(1); }, [category, severity]);
 
     return (
-        <div className="space-y-5">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                    <ClipboardList size={22} className="text-indigo-500" />
-                    Audit Logs
-                    {pagination.total > 0 && <span className="text-sm font-normal text-slate-500">({pagination.total})</span>}
-                </h2>
-                <button onClick={load} className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-indigo-500 transition-colors">
-                    <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {/* Header */}
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
+                <div>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <ClipboardList size={16} style={{ color: 'var(--accent)' }} />
+                        Audit Logs
+                        {pagination.total > 0 && <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-muted)' }}>({pagination.total})</span>}
+                    </h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Immutable record of all system actions</p>
+                </div>
+                <button onClick={load}
+                    style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+                    <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
                 </button>
-            </div>
+            </header>
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-3">
-                <select value={category} onChange={e => setCategory(e.target.value)}
-                    className="px-3 py-2.5 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">All Categories</option>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={severity} onChange={e => setSeverity(e.target.value)}
-                    className="px-3 py-2.5 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                    <option value="">All Severities</option>
-                    <option value="info">Info</option>
-                    <option value="warning">Warning</option>
-                    <option value="critical">Critical</option>
-                </select>
-            </div>
+            {/* Content */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '20px 28px' }}>
+                {/* Filters */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                    <select value={category} onChange={e => setCategory(e.target.value)} style={inputBase}>
+                        <option value="">All Categories</option>
+                        {CATEGORIES.map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                    </select>
+                    <select value={severity} onChange={e => setSeverity(e.target.value)} style={inputBase}>
+                        <option value="">All Severities</option>
+                        <option value="info">Info</option>
+                        <option value="warning">Warning</option>
+                        <option value="critical">Critical</option>
+                    </select>
+                </div>
 
-            {error && <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 text-red-600 dark:text-red-400 text-sm">{error}</div>}
+                {error && <div style={{ padding: '10px 14px', background: 'rgba(224,82,82,0.08)', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '12px', marginBottom: '12px' }}>{error}</div>}
 
-            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden', flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
-                            <tr className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-200 dark:border-slate-700">
+                            <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                                 {['Severity', 'Action', 'Actor', 'Category', 'Status', 'When'].map(h => (
-                                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">{h}</th>
+                                    <th key={h} style={{ padding: '10px 14px', textAlign: 'left', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
-                                <tr><td colSpan={6} className="py-16 text-center text-slate-400"><RefreshCw size={24} className="animate-spin mx-auto" /></td></tr>
+                                <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center' }}>
+                                    <RefreshCw size={20} style={{ color: 'var(--text-muted)', margin: '0 auto', animation: 'spin 1s linear infinite' }} />
+                                </td></tr>
                             ) : logs.length === 0 ? (
-                                <tr><td colSpan={6} className="py-16 text-center text-slate-400">
-                                    <ClipboardList size={40} className="mx-auto mb-3 opacity-30" />
-                                    <p>No audit logs found</p>
+                                <tr><td colSpan={6} style={{ padding: '48px', textAlign: 'center' }}>
+                                    <ClipboardList size={28} style={{ color: 'var(--text-muted)', margin: '0 auto 8px', opacity: 0.4 }} />
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No audit logs found</p>
                                 </td></tr>
                             ) : logs.map(log => <LogRow key={log._id} log={log} />)}
                         </tbody>
                     </table>
-                </div>
-                {pagination.pages > 1 && (
-                    <div className="flex items-center justify-between px-5 py-3 border-t border-slate-200 dark:border-slate-700">
-                        <span className="text-sm text-slate-500">Page {page} of {pagination.pages}</span>
-                        <div className="flex items-center gap-2">
-                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed">
-                                <ChevronLeft size={16} />
-                            </button>
-                            <button onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages}
-                                className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed">
-                                <ChevronRight size={16} />
-                            </button>
+
+                    {pagination.pages > 1 && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border-subtle)' }}>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Page {page} of {pagination.pages}</span>
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <PagBtn onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} icon={<ChevronLeft size={13} />} />
+                                <PagBtn onClick={() => setPage(p => Math.min(pagination.pages, p + 1))} disabled={page >= pagination.pages} icon={<ChevronRight size={13} />} />
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
         </div>
     );
 }
+
+const LogRow = ({ log }) => {
+    const [hov, setHov] = React.useState(false);
+    const sev = SEVERITY_META[log.severity] || SEVERITY_META.info;
+    const status = STATUS_META[log.status] || STATUS_META.success;
+    const actor = log.userId;
+    return (
+        <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: hov ? 'var(--bg-hover)' : 'transparent', transition: 'background 150ms ease' }}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
+            <td style={{ padding: '10px 14px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: sev.bg, border: `1px solid ${sev.border}`, color: sev.color }}>
+                    <sev.Icon size={10} /> {log.severity}
+                </span>
+            </td>
+            <td style={{ padding: '10px 14px' }}>
+                <code style={{ fontSize: '11px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)', padding: '2px 6px' }}>{log.action}</code>
+            </td>
+            <td style={{ padding: '10px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '24px', height: '24px', background: 'rgba(184,149,106,0.12)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+                        {(actor?.username || '?').charAt(0).toUpperCase()}
+                    </div>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{actor?.username || actor?.email || 'Unknown'}</span>
+                </div>
+            </td>
+            <td style={{ padding: '10px 14px' }}>
+                {log.category && <span style={{ fontSize: '10px', padding: '2px 7px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', color: 'var(--text-secondary)' }}>{log.category}</span>}
+            </td>
+            <td style={{ padding: '10px 14px' }}>
+                <status.Icon size={13} style={{ color: status.color }} />
+            </td>
+            <td style={{ padding: '10px 14px', fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}
+                title={new Date(log.createdAt).toLocaleString()}>
+                {timeAgo(log.createdAt)}
+            </td>
+        </tr>
+    );
+};
+
+const PagBtn = ({ onClick, disabled, icon }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={disabled} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: hov && !disabled ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: disabled ? 'var(--text-muted)' : 'var(--text-secondary)', cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.4 : 1, transition: 'all 150ms ease', borderRadius: '2px' }}>
+            {icon}
+        </button>
+    );
+};

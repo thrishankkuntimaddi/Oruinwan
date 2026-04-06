@@ -1,563 +1,962 @@
+<div align="center">
+
+<img src="client/public/chttrix-logo.jpg" alt="Chttrix Logo" width="80" height="80" style="border-radius: 12px;" />
+
 # Chttrix — AI-Augmented Collaboration Platform
 
-> A full-stack, enterprise-grade real-time collaboration platform with end-to-end encryption, AI assistance, role-based access control, and multi-workspace support.
+**The enterprise workspace OS. Real-time messaging, AI intelligence, E2EE, and an entire operating system for teams — in a single platform.**
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7-brightgreen.svg)](https://mongodb.com/)
+[![Socket.IO](https://img.shields.io/badge/Socket.IO-4-black.svg)](https://socket.io/)
+[![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
+
+[Live Demo](#) · [Documentation](#) · [Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
+
+</div>
 
 ---
 
-## Table of Contents
+## 📖 Table of Contents
 
-- [Overview](#overview)
-- [Tech Stack](#tech-stack)
-- [Architecture](#architecture)
-- [Features](#features)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Environment Variables](#environment-variables)
-  - [Running Locally](#running-locally)
-- [API Overview](#api-overview)
-- [Security](#security)
-- [Deployment](#deployment)
-- [Scripts](#scripts)
-
----
-
-## Overview
-
-Chttrix is a production-ready, real-time collaboration platform built for organizations that need secure internal communication at scale. It supports company workspaces, department-scoped channels, direct messaging with end-to-end encryption, AI-powered features via Google Gemini, rich task and note management, and a full company administration suite.
-
-The platform is structured as a **monorepo** with a `client` (React + Vite) and a `server` (Node.js + Express + Socket.IO), deployed independently to Vercel and Railway respectively.
+- [What is Chttrix?](#-what-is-chttrix)
+- [Feature Overview](#-feature-overview)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Getting Started](#-getting-started)
+- [Environment Variables](#-environment-variables)
+- [API Reference](#-api-reference)
+- [Real-time System](#-real-time-system)
+- [AI System](#-ai-system)
+- [Security & E2EE](#-security--e2ee)
+- [Role & Permission Model](#-role--permission-model)
+- [Mobile Experience](#-mobile-experience)
+- [Desktop App](#-desktop-app)
+- [SDK & Developer Platform](#-sdk--developer-platform)
+- [Deployment](#-deployment)
+- [Design System](#-design-system)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ---
 
-## Tech Stack
+## 🚀 What is Chttrix?
 
-### Frontend (`/client`)
-| Technology | Version | Purpose |
-|---|---|---|
-| React | 19.1.x | UI framework |
-| Vite | 6.x | Build tool & dev server |
-| React Router DOM | 7.x | Client-side routing |
-| Tailwind CSS | 3.4.x | Utility-first styling |
-| Socket.IO Client | 4.8.x | Real-time WebSocket communication |
-| Axios | 1.x | HTTP client |
-| Recharts | 3.x | Analytics dashboards & charts |
-| Lucide React | 0.525.x | Icon library |
-| React Hot Toast | 2.x | Notifications |
-| React Markdown | 10.x | Markdown rendering |
-| React RnD | 10.x | Draggable/resizable UI panels |
-| `@react-oauth/google` | 0.12.x | Google OAuth integration |
-| `jwt-decode` | 4.x | JWT decoding on the client |
-| `turndown` | 7.x | HTML → Markdown conversion |
+Chttrix is a **production-grade, full-stack collaboration platform** built for modern teams. It goes beyond simple messaging — it is a complete **Workspace Operating System** that consolidates:
 
-### Backend (`/server`)
-| Technology | Version | Purpose |
-|---|---|---|
-| Node.js + Express | 5.x | REST API server |
-| Socket.IO | 4.8.x | Real-time bidirectional events |
-| MongoDB + Mongoose | 8.x | Primary database (ODM) |
-| Redis + ioredis | 5.x | Socket.IO horizontal scaling adapter |
-| `@socket.io/redis-adapter` | 8.x | Multi-instance pub/sub for Socket.IO |
-| JSON Web Tokens | 9.x | Access & refresh token authentication |
-| bcryptjs | 3.x | Password hashing |
-| Passport.js | 0.7.x | OAuth strategy middleware |
-| `passport-github2` | 0.1.x | GitHub OAuth |
-| `passport-linkedin-oauth2` | 2.x | LinkedIn OAuth |
-| `google-auth-library` | 10.x | Google ID token verification |
-| Helmet | 8.x | HTTP security headers |
-| `express-rate-limit` | 8.x | Rate limiting |
-| `express-validator` | 7.x | Input validation |
-| Multer | 2.x | File upload handling |
-| Nodemailer | 7.x | Transactional email |
-| Twilio | 5.x | OTP SMS delivery |
-| `@google/generative-ai` | 0.24.x | Gemini AI integration |
+- Team messaging (channels, threads, DMs) with full E2EE
+- AI-powered assistance (Chttrix Intelligence, powered by Gemini AI)
+- Task & project management with sprints, milestones, and boards
+- Document collaboration with a rich note-taking system
+- Knowledge base management
+- Meeting & huddle support
+- File management with GCS integration
+- Workflow automations
+- Developer platform with OAuth apps & webhooks
+- Enterprise-grade admin, compliance, and audit infrastructure
+- Cross-platform: Web, Electron Desktop, React Native Mobile, and SDK
+
+Chttrix is architected as a true **multi-tenant SaaS** platform with workspace isolation, company-level administration, and deep role-based access control.
 
 ---
 
-## Architecture
+## ✨ Feature Overview
+
+### 💬 Messaging & Channels
+- **Public & private channels** with invite links, member roles (owner, admin, member), and descriptions
+- **Direct Messages (DMs)** — 1:1 and multi-person conversations
+- **Thread replies** — in-channel discussion without noise
+- **Message formatting** — Markdown supported, code blocks, rich embeds
+- **Emoji reactions** — per-message reactions with real-time sync
+- **Pinned messages** — pin important content inside any channel
+- **Message editing & deletion** — with audit history
+- **Link previews** — auto-fetched OG metadata for URLs
+- **File & image attachment** — upload via drag-and-drop or button
+- **Broadcasts** — one-way announcement channels
+- **Slash commands** — `/remind`, `/status`, `/task`, and more
+
+### 🔒 End-to-End Encryption (E2EE)
+- Per-workspace **AES-GCM encryption keys**
+- Server Key Encryption Key (KEK) architecture — keys never stored in plaintext
+- **Client-side decryption** only — server sees ciphertext
+- E2EE lock/unlock via password prompt
+- Encrypted DMs using X25519 identity keys
+- Compliance with zero-knowledge architecture
+
+### 🤖 AI — Chttrix Intelligence
+- **Gemini AI** integration (Google `@google/generative-ai`)
+- Context-aware chat assistant embedded in workspace
+- **Screen Context** — AI reads current page to answer contextually
+- **Summarize** — summarize channel/DM conversations
+- **Draft Message** — AI drafts messages from natural language
+- **Add Task** — convert AI chat into a task directly
+- Smart reply suggestions in chat
+- AI Insights Dashboard — workspace-level analytics generated by AI
+- Keyboard shortcut: `Cmd+Shift+A`
+
+### ✅ Tasks & Project Management
+- **My Tasks** — personal task inbox with priority, due dates, and status
+- **Board view** (Kanban), **List view**, **Sprint view**, **Timeline**, **Workload**
+- Task creation from chat messages, AI chat, or manually
+- **Sprints & Milestones** — project structure with burndown tracking
+- **Task Templates** — reusable task blueprints
+- **Assignments** — multi-member assignment with notifications
+- Manager dashboard: team allocation, unassigned members, reports
+
+### 📝 Notes & Knowledge
+- Personal and workspace notes with **rich text editing**
+- Note sharing, pinning, and organization
+- **Knowledge Base** — structured docs with nested pages
+- **Knowledge Graph** — visual relationship map of knowledge nodes
+- Full-text search across all notes and knowledge pages
+
+### 📂 Files & Media
+- **Google Cloud Storage (GCS)** backend for file uploads
+- Per-workspace file library with metadata
+- File preview, download, and sharing
+- Drag-and-drop upload in channels and DMs
+
+### 🔔 Notifications
+- Real-time **push notifications** via Socket.IO
+- Browser **Web Push** (VAPID) support
+- In-app notification center with mark-all-read and dismiss
+- Notification routing for: mentions, DMs, task assignments, reactions, channel pins, huddle starts
+
+### 📅 Meetings & Huddles
+- In-workspace **huddle/meeting** creation and management
+- Meeting detail pages with notes and attendees
+- Integration with the calendar and workspace timeline
+
+### ⚙️ Workflow Automations
+- Visual automation builder — trigger + action model
+- Triggers: message sent, task created, member joined, status changed, etc.
+- Actions: send message, create task, notify channel, call webhook
+- Save and re-run automation rules from the automations library
+
+### 🏢 Workspace OS (Enterprise Infrastructure)
+- **Multi-workspace** — users can belong to multiple workspaces under one company
+- **Workspace templates** — bootstrap new workspaces from templates
+- **Workspace permissions** — granular per-workspace access control
+- **Org chart** — visual company hierarchy
+- **Employee directory** — people management with roles and departments
+- **Teams management** — group teammates into functional squads
+- **Department management** — HR-level department tree
+- **Permission matrix** — fine-grained capability control per role
+- **Audit logs** — full action history for compliance
+- **Compliance logs** — GDPR and data-retention events
+- **SCIM provisioning** support (token-based)
+- **Domain verification** — company domain ownership proof
+- **Onboarding wizard** — guided workspace + company setup
+- **Billing & invoices** — subscription management
+- **Security events** — login anomaly and threat tracking
+- **Active sessions** — view and revoke all user sessions
+
+### 🔌 Integrations & Developer Platform
+- GitHub, Slack, and more via **Integrations** panel
+- **Developer Portal** — build OAuth apps on top of Chttrix
+- Webhook registration and delivery
+- Platform SDK (`/sdk`) — React Native and web SDK for embedding Chttrix
+- REST API + Socket.IO real-time API
+
+---
+
+## 🏗 Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                         CLIENT LAYER                                 │
+│  React 18 SPA (Vite) · Vanilla CSS Design System · Socket.IO Client │
+│  Web / Electron Desktop / React Native Mobile                        │
+└──────────────────────────┬──────────────────────────────────────────┘
+                           │ HTTPS + WSS
+┌──────────────────────────▼──────────────────────────────────────────┐
+│                         SERVER LAYER                                 │
+│  Express.js API Server · Socket.IO Server · JWT Auth · Rate-limiting │
+│  Feature-module architecture (~60 feature modules)                   │
+└──────────┬───────────────────────────────────────────┬──────────────┘
+           │                                           │
+┌──────────▼──────────┐                   ┌───────────▼──────────────┐
+│     MongoDB Atlas   │                   │    Redis (ioredis)        │
+│  Primary datastore  │                   │  Pub/Sub · Session cache  │
+│  Mongoose ODM       │                   │  Socket.IO adapter        │
+└─────────────────────┘                   └──────────────────────────┘
+           │
+┌──────────▼──────────┐
+│  Google Cloud       │
+│  Storage (GCS)      │
+│  File uploads       │
+└─────────────────────┘
+```
+
+### Backend Architecture: Feature Modules
+The server uses a **feature-module pattern** — each domain (channels, tasks, notes, auth, etc.) is a self-contained module under `server/src/features/` with its own:
+- `routes.js` — Express router
+- `controller.js` — request handlers
+- `service.js` — business logic
+- `model.js` (or imported from `/models`)
+- `socket.js` — Socket.IO event handlers (where applicable)
+
+---
+
+## 🛠 Tech Stack
+
+### Frontend
+| Technology | Purpose |
+|---|---|
+| **React 18** | UI framework |
+| **Vite** | Build tool & dev server |
+| **React Router DOM v6** | Client-side routing |
+| **Socket.IO Client** | Real-time events |
+| **Lucide React** | Icon system |
+| **Recharts** | Analytics charts |
+| **React Markdown** | Message rendering |
+| **emoji-picker-react** | Emoji picker |
+| **react-rnd** | Resizable panels |
+| **Vanilla CSS** | Custom design system (Monolith Flow) |
+| **XLSX** | Spreadsheet export |
+
+### Backend
+| Technology | Purpose |
+|---|---|
+| **Node.js 20+** | Runtime |
+| **Express.js** | HTTP server & routing |
+| **Socket.IO 4** | Real-time bidirectional events |
+| **MongoDB + Mongoose** | Primary database & ODM |
+| **Redis (ioredis)** | Pub/Sub, session cache, Socket.IO adapter |
+| **JWT (jsonwebtoken)** | Access & refresh token auth |
+| **bcryptjs** | Password hashing |
+| **Multer** | File upload handling |
+| **Nodemailer** | Transactional email |
+| **Helmet** | HTTP security headers |
+| **express-rate-limit** | API rate limiting |
+| **express-validator** | Request validation |
+| **@google/generative-ai** | Gemini AI integration |
+| **@google-cloud/storage** | GCS file storage |
+| **google-auth-library** | Google OAuth verification |
+| **open-graph-scraper** | Link preview metadata |
+
+### Infrastructure
+| Technology | Purpose |
+|---|---|
+| **MongoDB Atlas** | Managed cloud database |
+| **Redis Cloud / Upstash** | Managed Redis |
+| **Google Cloud Storage** | File & media storage |
+| **Railway / Cloud Run** | Server deployment |
+| **Vercel** | Frontend deployment (optional) |
+| **Electron** | Desktop wrapper |
+| **React Native (Expo)** | Mobile app |
+
+---
+
+## 📁 Project Structure
 
 ```
 ChttrixCollab/
-├── client/          # React + Vite SPA (deployed to Vercel)
-├── server/          # Node.js + Express + Socket.IO API (deployed to Railway)
-├── dist/            # Built client, served by server in production
-├── vercel.json      # Vercel deployment config (client)
-├── railway.json     # Railway deployment config (server)
-├── nixpacks.toml    # Nixpacks build config (Railway)
-└── package.json     # Root workspace (npm workspaces)
-```
-
-The server serves the built client (`dist/`) in production. In development, the Vite dev server runs on port 5173 and the API server runs on port 8080, with Vite proxying `/api` requests to the backend.
-
-### Real-Time Layer
-Socket.IO powers all real-time features (messaging, presence, typing indicators). When `REDIS_URL` is set, the `@socket.io/redis-adapter` enables horizontal scaling across multiple server instances via Redis pub/sub. Without Redis, the server runs in single-instance in-memory mode.
-
-### End-to-End Encryption (E2EE)
-Chttrix implements a layered E2EE architecture:
-- **User identity keys**: ECDH key pairs generated per user (public key stored server-side, private key encrypted client-side with the user's password).
-- **Conversation keys**: Per-conversation symmetric keys, encrypted with recipients' public keys.
-- **Server KEK (Key Encryption Key)**: A 256-bit (32-byte / 64-char hex) AES-256 key (`SERVER_KEK`) used to wrap/unwrap workspace keys at rest. Validated on every server startup.
-- **UMEK-based recovery**: Crypto identity recovery using User Master Encryption Keys.
-
----
-
-## Features
-
-### Authentication & Identity
-- **Email/password** registration with email verification
-- **Google OAuth** (one-click sign-in, ID token verification)
-- **GitHub OAuth** via Passport.js
-- **LinkedIn OAuth** via Passport.js
-- **OTP verification** via Twilio SMS for phone-based flows
-- **Refresh token rotation** with device-level session tracking
-- **Account lockout** after failed login attempts
-- **Password reset** via tokenized email links
-- **Multi-email accounts** (multiple verified emails per user)
-
-### Company & Organization Management
-- **Company registration** with multi-step setup wizard (profile → departments → invites → complete)
-- **Domain verification** (DNS TXT record) — verified domain enables auto-join policies
-- **Application review** — admin approval flow for new company registrations
-- **Role hierarchy**: `owner → admin → manager → member → guest`
-- **Co-owner support** for shared top-level admin
-- **Department management** — create, assign members, assign managers per department
-- **Employee management** — employee categories (Full-time, Part-time, Contractor, Intern), job titles, direct reporting lines, and work history
-- **Invite system** — email invites with role pre-assignment; invite acceptance flow
-- **Billing plans**: `free`, `starter`, `professional`, `enterprise` with configurable seat limits, workspace quotas, and data retention policies
-
-### Workspaces & Channels
-- **Multi-workspace support** — company workspaces scoped to departments, plus personal workspaces
-- **Workspace settings**: private/public, member invite permissions, admin approval, auto-archive inactive workspaces
-- **Channels** within workspaces — with member role control (`owner`, `admin`, `member`)
-- **Join workspace / Join channel** flows with invite link support
-
-### Messaging
-- **Real-time direct messages** (DMs) with Socket.IO
-- **Channel messages** with full history
-- **Message threads** — reply chains under messages
-- **Internal messaging** for structured org-level broadcasts
-- **Message polls** — create polls within chats
-- **File uploads** — via Multer, served at `/uploads` behind authentication
-- **Rich text** — Markdown rendering with `react-markdown` + `remark-breaks`
-- **Typing indicators** and **read receipts** (configurable per user)
-- **Favorites** — pin DMs and channels for quick access
-- **Muted chats** — per-chat mute with optional duration
-- **Blocked users** management
-
-### End-to-End Encryption
-- ECDH-based key exchange for DMs
-- Per-conversation symmetric encryption keys
-- Client-side private key storage (password-derived encryption)
-- Server KEK-wrapped workspace keys
-- Key distribution health audit — runs on startup and every 60 minutes
-- Device-level key management and session revocation (`/api/v2/devices`)
-
-### AI Features
-- **Google Gemini** integration (`@google/generative-ai`)
-- AI routes exposed at `/api/ai`
-
-### Tasks
-- Full task lifecycle: create, assign, update status, close
-- Task activity log (`TaskActivity` model)
-- Subtask support
-- Available at `/api/tasks` and `/api/v2/tasks`
-
-### Notes
-- Rich notes with E2EE-ready storage
-- Media attachment support (images/videos/audio as base64, up to 50 MB)
-- Available at `/api/notes` and `/api/v2/notes`
-
-### Analytics & Dashboards
-- **Owner Dashboard** — company-wide metrics, growth charts (Recharts), seat usage
-- **Manager Dashboard** — department-level views and team metrics
-- **Admin Dashboard** — platform administration
-- **Analytics routes** at `/api/analytics`
-- `Analytics.js` model tracks structured platform events
-
-### Search
-- Global search across users, channels, and messages at `/api/search`
-
-### Security & Audit
-- **Helmet** — sets 14+ HTTP security headers
-- **Rate limiting** — 20 req/min in production on auth endpoints (100 in development), excluding `/me`, `/refresh`, and `/users`
-- **MongoDB injection sanitization** — strips `$` operators from all request bodies
-- **Input validation** via `express-validator`
-- **Security audit log** (`AuditLog` model) — recorded per sensitive action
-- **Audit digest service** — generates hourly key distribution health reports
-- **Security routes** at `/api/v2/security` and `/api/v2/audit`
-- **Device session tracking** at `/api/v2/devices`
-- **HTTPS redirect** enforced in production (301 redirect for HTTP requests behind proxy)
-
-### User Profiles & Preferences
-- Avatar / profile picture (via Google or upload)
-- Bio, date of birth, address, resume URL
-- Social links: LinkedIn, Twitter, GitHub, website
-- Theme preference: `light`, `dark`, `auto`
-- Privacy settings: read receipts, typing indicators, discovery, data sharing
-- Region settings: language, timezone, date format
-- Online presence tracking (`isOnline`, `lastLoginAt`, `lastActivityAt`)
-- User status: `active`, `away`, `dnd`
-
-### Platform Support
-- **Support tickets** (`SupportTicket`, `SupportMessage` models)
-- Platform-level support routes at `/api/platform/support`
-- User-facing support at `/api/support`
-
-### Updates & Broadcasts
-- Company-wide update/announcement broadcasts (`Update`, `Broadcast` models)
-- Available at `/api/updates`
-
-### Settings
-- Per-user settings page with tabbed interface (profile, security, privacy, region, notifications)
-- Company-level settings managed by admins/owners
-
-### Legal
-- Legal pages rendered client-side (Terms, Privacy Policy, etc.)
-
----
-
-## Project Structure
-
-```
-client/src/
-├── App.js                  # Root router — all route definitions
-├── components/             # Reusable UI components
-│   ├── messagesComp/       # Message thread, composer, reactions (74 files)
-│   ├── profile/            # User profile components
-│   ├── tasksComp/          # Task board components
-│   ├── workspace/          # Workspace UI components
-│   ├── layout/             # App shell, sidebar, nav
-│   ├── company/            # Company management components
-│   ├── manager/            # Manager dashboard components
-│   └── ...
-├── pages/                  # Route-level page components
-│   ├── SidebarComp/        # Main chat interface
-│   ├── AdminDashboard/     # Platform admin views
-│   ├── OwnerDashboard/     # Company owner views
-│   ├── ManagerDashboard/   # Department manager views
-│   ├── LoginPageComp/      # Auth pages
-│   ├── settingsTabs/       # Settings tabs (9 tabs)
-│   ├── legal/              # Legal pages
-│   ├── register/           # Multi-step registration
-│   └── ...
-├── contexts/               # React Context providers (auth, theme, socket, etc.)
-├── hooks/                  # Custom React hooks
-├── services/               # Axios API service modules (24 files)
-├── utils/                  # Helper utilities
-└── modules/                # Domain-specific feature modules
-
-server/
-├── server.js               # App entrypoint: env validation, middleware, routes, Socket.IO
-├── socket.js               # Socket.IO handler registration (top-level)
-├── socket/                 # Modular socket event handlers
-├── src/
-│   ├── features/           # 31 domain feature modules (routes + controllers)
-│   │   ├── auth/           # Login, register, OAuth, refresh, logout
-│   │   ├── admin/          # Platform admin, owner dashboard, manager dashboard
-│   │   ├── company/        # Company CRUD, settings, metrics
-│   │   ├── company-registration/ # Multi-step registration flow
-│   │   ├── employees/      # Employee management
-│   │   ├── departments/    # Department management
-│   │   ├── workspaces/     # Workspace management
-│   │   ├── channels/       # Channel management
-│   │   ├── messages/       # Message CRUD + history
-│   │   ├── tasks/          # Task management
-│   │   ├── notes/          # Notes (E2EE-ready)
-│   │   ├── polls/          # In-chat polls
-│   │   ├── analytics/      # Usage analytics
-│   │   ├── ai/             # Gemini AI endpoints
-│   │   ├── audit/          # Security audit log
-│   │   ├── security/       # Security events
-│   │   ├── devices/        # Device session management
-│   │   ├── crypto/         # UMEK-based identity recovery
-│   │   ├── favorites/      # Pinned chats
-│   │   ├── status/         # User presence status
-│   │   ├── search/         # Global search
-│   │   ├── support/        # Support tickets
-│   │   ├── users/          # User profile and lookup
-│   │   ├── updates/        # Broadcasts and announcements
-│   │   ├── onboarding/     # Employee onboarding
-│   │   ├── internal-messaging/ # Org-level internal messages
-│   │   ├── domain-verification/ # DNS domain verification
-│   │   ├── managers/       # Manager-specific actions
-│   │   ├── dashboard/      # Dashboard aggregations
-│   │   └── chatlist/       # Chat list / conversations list
-│   ├── modules/            # V2 modular architecture
-│   │   ├── messages/       # V2 messages
-│   │   ├── encryption/     # E2EE key operations
-│   │   ├── identity/       # Public key management
-│   │   ├── conversations/  # Conversation key management
-│   │   └── threads/        # Message threads
-│   ├── services/           # Shared services (audit digest, etc.)
-│   └── shared/             # Shared utilities, upload routes, OTP routes
-├── models/                 # 27 Mongoose models
-│   ├── User.js             # Full user schema (auth, E2EE, preferences, presence)
-│   ├── Company.js          # Company schema (billing plans, domain, settings)
-│   ├── Workspace.js        # Workspace (company/personal, members, settings)
-│   ├── Department.js       # Department structure
-│   ├── InternalMessage.js  # Org-wide messaging
-│   ├── ConversationKey.js  # E2EE conversation key storage
-│   ├── UserIdentityKey.js  # User ECDH key storage
-│   ├── UserSession.js      # Device/session tracking
-│   ├── AuditLog.js         # Security audit log
-│   ├── Analytics.js        # Platform analytics events
-│   ├── Task.js             # Task + subtasks
-│   ├── TaskActivity.js     # Task activity history
-│   ├── Note.js             # Notes (E2EE-ready)
-│   ├── SupportTicket.js    # Support tickets
-│   ├── SupportMessage.js   # Support thread messages
-│   ├── DMSession.js        # Direct message sessions
-│   ├── Favorite.js         # Favorited chats
-│   ├── HistoryLog.js       # Action history log
-│   ├── Permission.js       # Granular permission records
-│   ├── Invite.js           # Company/workspace invites
-│   ├── Billing.js          # Billing records
-│   ├── Invoice.js          # Invoice records
-│   ├── Ticket.js           # Generic tickets
-│   ├── Update.js           # Announcements/updates
-│   ├── Broadcast.js        # Broadcast messages
-│   ├── PlatformSession.js  # Platform-level session
-│   └── encryption.js       # Encryption key model
-├── middleware/
-│   ├── auth.js             # JWT access token verification
-│   └── validate.js         # Input sanitization (MongoDB injection prevention)
-├── config/
-│   └── passport.js         # Passport OAuth strategies
-└── utils/
-    └── logger.js           # Structured logger
+├── client/                         # React frontend (Vite)
+│   ├── public/                     # Static assets
+│   ├── src/
+│   │   ├── App.js                  # Root router — all routes defined here
+│   │   ├── index.css               # Global design system tokens (Monolith Flow)
+│   │   ├── main.jsx                # React entry point
+│   │   ├── components/
+│   │   │   ├── layout/             # Core layout shell
+│   │   │   │   ├── MainLayout.jsx  # Primary workspace layout (desktop + mobile)
+│   │   │   │   ├── IconSidebar.jsx # Left icon rail
+│   │   │   │   ├── MobileBottomNav.jsx  # Mobile tab bar (5 tabs)
+│   │   │   │   ├── MobileHomePage.jsx   # Mobile home grid
+│   │   │   │   ├── SidePanel.jsx   # Left slide-over panel
+│   │   │   │   └── panels/         # Route-specific side panels
+│   │   │   │       ├── ChannelsPanel.jsx
+│   │   │   │       ├── MessagesPanel.jsx
+│   │   │   │       ├── NotesPanel.jsx
+│   │   │   │       ├── TasksPanel.jsx
+│   │   │   │       ├── FilesPanel.jsx
+│   │   │   │       ├── KnowledgePanel.jsx
+│   │   │   │       ├── MeetingsPanel.jsx
+│   │   │   │       └── UpdatesPanel.jsx
+│   │   │   ├── ai/                 # Chttrix AI components
+│   │   │   │   └── ChttrixAIChat/  # Full AI chat panel
+│   │   │   ├── chat/               # Message composer, rich editor, slash commands
+│   │   │   ├── home/               # Home panel, workspace header
+│   │   │   ├── messagesComp/       # Channel & DM message list, modals
+│   │   │   ├── profile/            # Profile views (main menu, profile, settings)
+│   │   │   ├── SidebarComp/        # Profile sidebar, settings drawer
+│   │   │   ├── tasksComp/          # Task cards, modals, board components
+│   │   │   ├── admin/              # Admin dashboard components
+│   │   │   ├── manager/            # Manager dashboard components
+│   │   │   ├── security/           # E2EE password unlock, security modals
+│   │   │   └── workspace-os/       # Org chart, employee directory, permissions
+│   │   ├── contexts/               # React contexts (Auth, Workspace, Socket, ...)
+│   │   ├── hooks/                  # Custom hooks (useIsMobile, useSocket, ...)
+│   │   ├── pages/                  # Route-level page components
+│   │   │   ├── Settings.jsx        # User settings (profile, security, notifications…)
+│   │   │   ├── SidebarComp/
+│   │   │   │   └── MyTasks.jsx     # Full task management page
+│   │   │   ├── dashboards/         # Owner, admin, manager dashboards
+│   │   │   ├── settingsTabs/       # Individual settings tab components
+│   │   │   └── workspace-os/       # Workspace OS admin pages
+│   │   ├── services/               # API service layer (axios wrappers)
+│   │   └── utils/                  # Utility functions
+│
+├── server/                         # Node.js + Express backend
+│   ├── server.js                   # Production entry point (env validation + boot)
+│   ├── models/                     # Mongoose models
+│   │   ├── User.js                 # User accounts, profile, identity keys
+│   │   ├── Workspace.js            # Workspace with encryption key
+│   │   ├── Company.js              # Company (multi-workspace owner)
+│   │   ├── Task.js                 # Tasks with priority, status, sprints
+│   │   ├── Note.js                 # Notes with rich content
+│   │   ├── Department.js           # Company departments
+│   │   ├── AuditLog.js             # Immutable audit trail
+│   │   ├── ComplianceLog.js        # GDPR compliance events
+│   │   ├── Analytics.js            # Workspace analytics snapshots
+│   │   ├── Billing.js / Invoice.js # Subscription & invoice records
+│   │   ├── Sprint.js / Milestone.js # Agile sprint & milestone models
+│   │   └── ... (30+ models)
+│   ├── src/
+│   │   ├── features/               # Feature modules (~60 domains)
+│   │   │   ├── auth/               # Login, register, OAuth, sessions, E2EE unlock
+│   │   │   ├── channels/           # Channel CRUD, membership, invites
+│   │   │   ├── messages/           # Message send, edit, delete, reactions, pins
+│   │   │   ├── tasks/              # Task CRUD, assignments, comments
+│   │   │   ├── notes/              # Note CRUD, sharing
+│   │   │   ├── knowledge/          # Knowledge base pages
+│   │   │   ├── files/              # GCS file upload, library
+│   │   │   ├── ai/                 # Gemini AI chat, context, summarise
+│   │   │   ├── automations/        # Workflow automations engine
+│   │   │   ├── notifications/      # Push notifications (WS + Web Push)
+│   │   │   ├── search/             # Full-text cross-entity search
+│   │   │   ├── analytics/          # Workspace analytics
+│   │   │   ├── audit/              # Audit log read routes
+│   │   │   ├── compliance/         # GDPR / compliance log routes
+│   │   │   ├── meetings/           # Huddle/meeting management
+│   │   │   ├── sprints/            # Sprint planning & tracking
+│   │   │   ├── milestones/         # Project milestones
+│   │   │   ├── integrations/       # Third-party integrations
+│   │   │   ├── developer/          # OAuth apps, webhooks, API keys
+│   │   │   ├── admin/              # Admin controls, user management
+│   │   │   ├── company/            # Company profile, billing
+│   │   │   ├── departments/        # Department tree management
+│   │   │   ├── workspaces/         # Workspace CRUD, member management
+│   │   │   ├── workspace-os/       # Workspace OS (templates, permissions, org)
+│   │   │   ├── crypto/             # E2EE key management (KEK, workspace key)
+│   │   │   ├── security/           # Security events, threat detection
+│   │   │   ├── presence/           # Online/offline user presence
+│   │   │   ├── status/             # Custom user status
+│   │   │   └── ... (40+ more)
+│   │   ├── modules/                # Shared technical modules
+│   │   │   ├── ai/                 # Gemini AI client & prompt engine
+│   │   │   ├── conversations/      # Conversation session management
+│   │   │   ├── encryption/         # AES-GCM server-side E2EE helpers
+│   │   │   ├── identity/           # User identity key management (X25519)
+│   │   │   ├── messages/           # Message delivery engine
+│   │   │   ├── threads/            # Thread reply engine
+│   │   │   ├── uploads/            # GCS upload client
+│   │   │   └── linkPreview/        # OG metadata scraper
+│   │   ├── socket/                 # Socket.IO server setup & handlers
+│   │   ├── services/               # Cross-feature services (email, push, queue)
+│   │   ├── config/                 # DB, Redis, GCS config
+│   │   ├── shared/                 # Shared middleware, validators
+│   │   └── utils/                  # Server-side utilities
+│
+├── ai/                             # Standalone AI orchestration layer
+│   ├── agents/                     # AI agent definitions
+│   ├── memory/                     # Conversation memory management
+│   ├── orchestrator/               # Multi-agent orchestration
+│   ├── api/                        # AI API endpoints
+│   └── events/                     # AI event hooks
+│
+├── mobile/                         # React Native (Expo) mobile app
+│   ├── src/                        # Mobile source
+│   ├── constants/                  # Mobile design tokens
+│   └── sdk/                        # Chttrix SDK usage
+│
+├── desktop/                        # Electron desktop app
+│   ├── electron/                   # Main process
+│   └── renderer/                   # Renderer (Chromium shell)
+│
+├── sdk/                            # Chttrix SDK (JS/TS)
+│   ├── src/                        # SDK source
+│   └── types/                      # TypeScript definitions
+│
+├── platform/                       # Platform utilities
+│   ├── sdk/                        # Platform-level SDK
+│   └── types/                      # Platform TypeScript types
+│
+├── package.json                    # Root workspace orchestrator
+├── nixpacks.toml                   # Railway deployment config
+├── railway.json                    # Railway service config
+└── vercel.json                     # Vercel deployment config
 ```
 
 ---
 
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- **Node.js** ≥ 18.x
-- **npm** ≥ 9.x
-- **MongoDB** — a MongoDB Atlas cluster or local instance
-- **Redis** *(optional)* — only required for multi-instance horizontal scaling
+- **Node.js** ≥ 20.x
+- **npm** ≥ 10.x
+- **MongoDB** — local instance or [MongoDB Atlas](https://cloud.mongodb.com/) cluster
+- **Redis** — local instance or [Upstash](https://upstash.com/) / [Redis Cloud](https://redis.com/cloud/)
+- **Google Cloud** project with:
+  - Cloud Storage bucket
+  - Gemini API key (`@google/generative-ai`)
+  - OAuth 2.0 Client ID (for Google sign-in)
 
-### Installation
+### 1. Clone the Repository
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/chttrix-collab.git
-cd chttrix-collab
+git clone https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform.git
+cd Chttrix-AI-Augmented-Collaboration-Platform
+```
 
-# 2. Install all dependencies (root + client + server)
+### 2. Install Dependencies
+
+```bash
+# Install all workspaces at once
 npm run install-all
+
+# Or install individually:
+npm install                    # Root
+cd client && npm install       # Frontend
+cd ../server && npm install    # Backend
 ```
 
-### Environment Variables
-
-#### Server (`server/.env`)
-
-Copy the template and fill in values:
+### 3. Configure Environment Variables
 
 ```bash
+# Copy the examples
 cp server/.env.example server/.env
-```
-
-| Variable | Required | Description |
-|---|---|---|
-| `MONGO_URI` | ✅ | MongoDB connection string |
-| `ACCESS_TOKEN_SECRET` | ✅ | JWT access token secret (min 32 chars) |
-| `REFRESH_TOKEN_SECRET` | ✅ | JWT refresh token secret (min 32 chars) |
-| `FRONTEND_URL` | ✅ | Frontend origin URL (e.g. `http://localhost:5173`) |
-| `GOOGLE_CLIENT_ID` | ✅ | Google OAuth client ID |
-| `SERVER_KEK` | ✅ | 64-char hex AES-256 key for E2EE workspace key wrapping |
-| `NODE_ENV` | ✅ | `development` or `production` |
-| `PORT` | — | Server port (default: `8080`) |
-| `GOOGLE_CLIENT_SECRET` | — | Google OAuth client secret |
-| `GITHUB_CLIENT_ID` | — | GitHub OAuth client ID |
-| `GITHUB_CLIENT_SECRET` | — | GitHub OAuth client secret |
-| `LINKEDIN_CLIENT_ID` | — | LinkedIn OAuth client ID |
-| `LINKEDIN_CLIENT_SECRET` | — | LinkedIn OAuth client secret |
-| `SMTP_HOST` | — | SMTP server for email (invites, resets) |
-| `SMTP_PORT` | — | SMTP port |
-| `SMTP_USER` | — | SMTP username |
-| `SMTP_PASS` | — | SMTP password |
-| `EMAIL_FROM` | — | From address for outbound email |
-| `BREVO_API_KEY` | — | Brevo (Sendinblue) API key alternative |
-| `TWILIO_ACCOUNT_SID` | — | Twilio account SID for OTP SMS |
-| `TWILIO_AUTH_TOKEN` | — | Twilio auth token |
-| `TWILIO_PHONE_NUMBER` | — | Twilio sending number |
-| `GEMINI_API_KEY` | — | Google Gemini AI API key |
-| `REDIS_URL` | — | Redis connection URL for Socket.IO horizontal scaling |
-| `CRYPTO_KEK_ACTIVE_VERSION` | — | Active KEK version (e.g., `1`) |
-| `CRYPTO_KEK_V1` | — | KEK version 1 (64-char hex) |
-| `CRYPTO_KEK_V2` | — | KEK version 2 (64-char hex) |
-| `ACCESS_TOKEN_EXPIRES_IN` | — | Access token TTL (default: `15m`) |
-| `REFRESH_TOKEN_EXPIRES_IN` | — | Refresh token TTL (default: `7d`) |
-
-> **Generate `SERVER_KEK`:**
-> ```bash
-> node -e "require('crypto').randomBytes(32).toString('hex')"
-> ```
-
-#### Client (`client/.env`)
-
-```bash
 cp client/.env.example client/.env
 ```
 
-| Variable | Description |
-|---|---|
-| `VITE_API_URL` | Backend API base URL (e.g. `http://localhost:8080/api`) |
-| `VITE_BACKEND_URL` | Backend base URL |
-| `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `VITE_APP_NAME` | App name (default: `Chttrix`) |
-| `VITE_ENABLE_ANALYTICS` | Enable client analytics (`true`/`false`) |
-| `VITE_ENABLE_DEBUG` | Enable debug logging |
-| `VITE_GOOGLE_ANALYTICS_ID` | Google Analytics ID |
-| `VITE_SENTRY_DSN` | Sentry error tracking DSN |
+Fill in the values — see [Environment Variables](#-environment-variables) below.
 
-### Running Locally
+### 4. Start Development Servers
 
 ```bash
-# Run both client and server concurrently (from root)
+# From the root — starts both client and server concurrently
 npm run dev
 
-# Or run separately:
-npm run server   # starts server with nodemon on port 8080
-npm run client   # starts Vite dev server on port 5173
+# Or individually:
+npm run server   # Backend on :5000
+npm run client   # Frontend on :5173
 ```
 
-**Health check:** Once running, verify the server is up:
-```
-GET http://localhost:8080/api/health
-```
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## API Overview
+## 🔧 Environment Variables
 
-All routes are prefixed with `/api`. The server exposes both legacy (`v1`) and `v2` modular routes.
+### Server (`server/.env`)
 
-| Prefix | Feature |
+```env
+# ─── Database ───────────────────────────────────────────────
+MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/chttrix
+
+# ─── JWT Auth ────────────────────────────────────────────────
+ACCESS_TOKEN_SECRET=<32-char-random-string>
+REFRESH_TOKEN_SECRET=<32-char-random-string>
+
+# ─── E2EE Server Key Encryption Key (256-bit hex, 64 chars) ─
+SERVER_KEK=<64-char-hex-string>
+
+# ─── Frontend URL (CORS) ────────────────────────────────────
+FRONTEND_URL=http://localhost:5173
+
+# ─── Google OAuth ────────────────────────────────────────────
+GOOGLE_CLIENT_ID=<your-google-client-id>
+GOOGLE_CLIENT_SECRET=<your-google-client-secret>
+
+# ─── Redis ───────────────────────────────────────────────────
+REDIS_URL=redis://localhost:6379
+# For Upstash: REDIS_URL=rediss://<token>@<host>:6380
+
+# ─── Google Cloud Storage ────────────────────────────────────
+GCS_BUCKET_NAME=<your-gcs-bucket>
+GCS_PROJECT_ID=<your-gcp-project-id>
+GOOGLE_APPLICATION_CREDENTIALS=./gcs-key.json
+
+# ─── Gemini AI ───────────────────────────────────────────────
+GEMINI_API_KEY=<your-gemini-api-key>
+
+# ─── Email (Nodemailer) ──────────────────────────────────────
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=<your-email>
+SMTP_PASS=<your-app-password>
+EMAIL_FROM=noreply@chttrix.io
+
+# ─── Web Push (VAPID) ────────────────────────────────────────
+VAPID_PUBLIC_KEY=<generated-vapid-public-key>
+VAPID_PRIVATE_KEY=<generated-vapid-private-key>
+
+# ─── App Config ──────────────────────────────────────────────
+PORT=5000
+NODE_ENV=development
+```
+
+### Client (`client/.env`)
+
+```env
+VITE_API_URL=http://localhost:5000
+VITE_SOCKET_URL=http://localhost:5000
+VITE_GOOGLE_CLIENT_ID=<same-google-client-id>
+VITE_VAPID_PUBLIC_KEY=<same-vapid-public-key>
+```
+
+> **Generate VAPID keys:**
+> ```bash
+> npx web-push generate-vapid-keys
+> ```
+
+> **Generate SERVER_KEK:**
+> ```bash
+> node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+> ```
+
+---
+
+## 🔌 API Reference
+
+The backend exposes a versioned REST API at `/api/`. All protected routes require a valid `Authorization: Bearer <accessToken>` header.
+
+### Authentication
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/auth/register` | Create account |
+| `POST` | `/api/auth/login` | Email + password login |
+| `POST` | `/api/auth/google` | Google OAuth login |
+| `POST` | `/api/auth/refresh` | Refresh access token |
+| `POST` | `/api/auth/logout` | Revoke tokens |
+| `GET` | `/api/auth/me` | Get current user profile |
+| `PUT` | `/api/auth/me` | Update profile |
+| `PUT` | `/api/auth/me/password` | Change password |
+| `GET` | `/api/auth/sessions` | List active sessions |
+| `DELETE` | `/api/auth/sessions/:id` | Revoke session |
+| `POST` | `/api/auth/e2ee/unlock` | Unlock workspace E2EE key |
+
+### Workspaces
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/workspaces/my` | Get user's workspaces |
+| `POST` | `/api/workspaces` | Create workspace |
+| `GET` | `/api/workspaces/:id` | Get workspace details |
+| `PUT` | `/api/workspaces/:id` | Update workspace |
+| `DELETE` | `/api/workspaces/:id` | Delete workspace |
+| `POST` | `/api/workspaces/:id/invite` | Send invite link |
+| `GET` | `/api/workspaces/:id/members` | List members |
+| `DELETE` | `/api/workspaces/:id/members/:userId` | Remove member |
+
+### Channels
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/channels?workspaceId=` | List channels |
+| `POST` | `/api/channels` | Create channel |
+| `PUT` | `/api/channels/:id` | Update channel |
+| `DELETE` | `/api/channels/:id` | Delete channel |
+| `POST` | `/api/channels/:id/join` | Join channel |
+| `POST` | `/api/channels/:id/leave` | Leave channel |
+| `GET` | `/api/channels/:id/members` | Get members |
+
+### Messages
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/messages/:channelId` | Fetch messages (paginated) |
+| `POST` | `/api/messages` | Send message |
+| `PUT` | `/api/messages/:id` | Edit message |
+| `DELETE` | `/api/messages/:id` | Delete message |
+| `POST` | `/api/messages/:id/react` | Add/toggle reaction |
+| `POST` | `/api/messages/:id/pin` | Pin message |
+
+### Tasks
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/tasks?workspaceId=` | List tasks |
+| `POST` | `/api/tasks` | Create task |
+| `PUT` | `/api/tasks/:id` | Update task |
+| `DELETE` | `/api/tasks/:id` | Delete task |
+| `POST` | `/api/tasks/:id/comment` | Add comment |
+
+### Notes
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/notes?workspaceId=` | List notes |
+| `POST` | `/api/notes` | Create note |
+| `PUT` | `/api/notes/:id` | Update note |
+| `DELETE` | `/api/notes/:id` | Delete note |
+
+### AI
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/ai/chat` | Send AI message |
+| `POST` | `/api/ai/summarize` | Summarise content |
+| `POST` | `/api/ai/draft` | Draft a message |
+| `POST` | `/api/ai/context` | Process screen context |
+| `GET` | `/api/ai/insights/:workspaceId` | AI workspace insights |
+
+> Full API documentation available at `/api/docs` when running in development mode.
+
+---
+
+## ⚡ Real-time System
+
+Chttrix uses **Socket.IO 4** with the `@socket.io/redis-adapter` for horizontal scaling across multiple server instances.
+
+### Key Socket Events
+
+#### Client → Server (Emit)
+```js
+socket.emit('join_workspace', { workspaceId })
+socket.emit('join_channel', { channelId })
+socket.emit('send_message', { channelId, content, type })
+socket.emit('typing_start', { channelId })
+socket.emit('typing_stop', { channelId })
+socket.emit('reaction_add', { messageId, emoji })
+socket.emit('presence_update', { status }) // online, away, dnd
+```
+
+#### Server → Client (On)
+```js
+socket.on('new_message', (message) => { ... })
+socket.on('message_edited', ({ messageId, content }) => { ... })
+socket.on('message_deleted', ({ messageId }) => { ... })
+socket.on('reaction_updated', ({ messageId, reactions }) => { ... })
+socket.on('typing_users', ({ channelId, users }) => { ... })
+socket.on('presence_changed', ({ userId, status }) => { ... })
+socket.on('notification', (notification) => { ... })
+socket.on('task_updated', (task) => { ... })
+socket.on('member_joined', ({ workspaceId, user }) => { ... })
+```
+
+### Redis Pub/Sub
+The Redis adapter ensures that Socket.IO events broadcast correctly across all server instances in a clustered/scaled deployment.
+
+---
+
+## 🤖 AI System
+
+Chttrix Intelligence is powered by **Google Gemini** (`gemini-1.5-flash` / `gemini-pro`) via the `@google/generative-ai` SDK.
+
+### Capabilities
+| Feature | How it Works |
 |---|---|
-| `/api/auth` | Authentication (login, register, OAuth, refresh, logout) |
-| `/api/otp` | OTP verification |
-| `/api/users` | User profile and search |
-| `/api/companies` | Company CRUD, settings, metrics, registration, employees, domain verification |
-| `/api/departments` | Department management |
-| `/api/workspaces` | Workspace management |
-| `/api/channels` | Channel management |
-| `/api/messages` | Messages (legacy) |
-| `/api/chat` | Chat list / conversation list |
-| `/api/polls` | In-chat polls |
-| `/api/notes` | Notes |
-| `/api/tasks` | Tasks |
-| `/api/search` | Global search |
-| `/api/analytics` | Analytics |
-| `/api/ai` | AI (Gemini) features |
-| `/api/updates` | Announcements and broadcasts |
-| `/api/dashboard` | Dashboard aggregations |
-| `/api/managers` | Manager-specific routes |
-| `/api/admin` | Admin routes |
-| `/api/admin-dashboard` | Admin dashboard |
-| `/api/owner-dashboard` | Owner dashboard |
-| `/api/manager-dashboard` | Manager dashboard |
-| `/api/manager` | Manager (new pattern) |
-| `/api/support` | User support tickets |
-| `/api/platform/support` | Platform-level support |
-| `/api/internal` | Internal org messaging |
-| `/api/upload` | File uploads |
-| `/api/v2/messages` | Messages (V2 modular) |
-| `/api/v2/encryption` | E2EE key operations |
-| `/api/v2/identity` | Public key management |
-| `/api/v2/conversations` | Conversation key management |
-| `/api/threads` | Message threads |
-| `/api/v2/crypto` | UMEK-based identity recovery |
-| `/api/v2/devices` | Device session management |
-| `/api/v2/security` | Security audit routes |
-| `/api/v2/audit` | Audit log routes |
-| `/api/v2/tasks` | Tasks (V2) |
-| `/api/v2/notes` | Notes (V2) |
-| `/api/v2/favorites` | Favorites (V2) |
-| `/api/v2/status` | User presence status |
-| `/api/v2/admin` | Admin (V2) |
-| `/api/health` | Health check (MongoDB status, uptime, env) |
+| **Chat** | Stateful conversation with `GenerativeModel.startChat()`, history preserved per session |
+| **Screen Context** | Client sends current page text → AI answers contextually |
+| **Summarize** | Last N messages → Gemini produces bullet summary |
+| **Draft Message** | Natural language instruction → Gemini generates draft |
+| **Add Task** | AI identifies task details → creates task via internal API |
+| **AI Insights** | Aggregated workspace stats → Gemini generates executive summary |
+
+### AI Architecture (`/ai` directory)
+The standalone AI module includes:
+- **Agents** — specialized sub-agents for different task types
+- **Memory** — conversation history management (short-term + persistent)
+- **Orchestrator** — routes requests to the appropriate agent
+- **API** — REST endpoints for AI interactions
 
 ---
 
-## Security
+## 🛡 Security & E2EE
 
-| Measure | Implementation |
+### Authentication Flow
+1. Login with email/password or Google OAuth
+2. Server returns `accessToken` (15m) + `refreshToken` (7d) in httpOnly cookie
+3. Client stores `accessToken` in memory; auto-refreshes via interceptor
+4. All API calls include `Authorization: Bearer <accessToken>`
+
+### End-to-End Encryption Architecture
+```
+┌─────────┐     generates      ┌──────────────────────────────┐
+│  Client │ ─────────────────► │  Workspace Encryption Key    │
+└─────────┘                    │  (AES-256 symmetric key)     │
+                               └──────────────┬───────────────┘
+                                              │ encrypted with
+                                              ▼
+                               ┌──────────────────────────────┐
+                               │  SERVER_KEK (server-managed) │
+                               │  Only server can wrap/unwrap │
+                               └──────────────────────────────┘
+Messages encrypted client-side before sending.
+Server stores ciphertext only. Decryption requires client unlock.
+```
+
+### DM Encryption (X25519)
+- Each user has an **identity key pair** (X25519) stored server-side
+- DM sessions derive a **shared secret** via ECDH
+- Messages encrypted with AES-GCM using the derived key
+
+### Security Features
+- **Helmet.js** — HTTP security headers
+- **Rate limiting** — per-IP and per-user API limits
+- **CORS** — strict origin whitelist
+- **Session revocation** — all existing sessions can be invalidated
+- **Audit trail** — every sensitive action logged with timestamp + actor
+- **Compliance logs** — GDPR data access and deletion events
+- **Security events** — suspicious login detection
+
+---
+
+## 👥 Role & Permission Model
+
+### Platform Roles
+| Role | Scope | Capabilities |
+|---|---|---|
+| `chttrix_admin` | Platform-wide | Full platform access, tenant management |
+| `owner` | Company | Company settings, billing, all workspaces |
+| `admin` | Company | User management, workspace control |
+| `manager` | Department | Team oversight, analytics, allocation |
+| `member` | Workspace | Standard workspace access |
+
+### Workspace-Level Roles
+| Role | Capabilities |
 |---|---|
-| Access tokens | Short-lived JWT (`15m` default), sent as Bearer token |
-| Refresh tokens | Long-lived JWT (`7d` default), hashed before storage, device-bound |
-| Password hashing | bcryptjs |
-| HTTP headers | Helmet (CSP, HSTS, X-Frame-Options, etc.) |
-| Rate limiting | `express-rate-limit` — 20 req/min on auth in production |
-| Input sanitization | Custom middleware strips MongoDB `$` operators |
-| Input validation | `express-validator` on all mutation endpoints |
-| CORS | Explicit allowlist, `credentials: true` |
-| HTTPS | Enforced in production (301 redirect for HTTP) |
-| E2EE | ECDH key exchange, per-conversation keys, AES-256 KEK |
-| Uploads | Served behind auth middleware (`requireAuth`) |
-| Audit logging | Sensitive actions recorded in `AuditLog`, hourly digest |
-| Account lockout | `failedLoginAttempts` + `lockedUntil` on `User` |
-| Graceful shutdown | SIGTERM/SIGINT handlers drain connections before exit |
+| `workspace_admin` | Manage channels, members, settings |
+| `channel_admin` | Manage channel members and settings |
+| `member` | Read, write, react, thread reply |
+| `guest` | Read-only access to specific channels |
+
+### Permission Matrix
+The permission matrix provides **capability-level control** beyond roles:
+- `can_create_channels` — allow/deny per role
+- `can_invite_members` — workspace-level toggle
+- `can_manage_tasks` — role-scoped task admin
+- `can_view_analytics` — restrict analytics access
+- `can_export_data` — compliance export gate
 
 ---
 
-## Deployment
+## 📱 Mobile Experience
 
-### Frontend → Vercel
+Chttrix has a **fully responsive mobile web UI** built into the main React app, plus a dedicated **React Native (Expo)** app.
 
-Configured via `vercel.json`:
-- **Build command:** `npm install && npm run build --workspace=client`
-- **Output directory:** `../dist`
-- **SPA rewrite:** all routes → `index.html`
+### Mobile Web (Responsive)
+The mobile web view uses a dedicated 5-tab bottom navigation bar:
 
-Set environment variables in the Vercel project dashboard (`VITE_API_URL`, `VITE_GOOGLE_CLIENT_ID`, etc.).
+| Tab | Icon | Route |
+|---|---|---|
+| **Home** | 🏠 | `/workspace/:id/home` — workspace grid |
+| **Notes** | 📄 | `/workspace/:id/notes` — notes list |
+| **Tasks** | ✅ | `/workspace/:id/tasks` — task manager |
+| **AI** | 🤖 | Opens Chttrix AI full-screen panel |
+| **Settings** | ⚙️ | `/settings` — user settings |
 
-### Backend → Railway
+**Mobile navigation patterns:**
+- All panel routes (Channels, Notes, etc.) → full-screen side panel
+- Detail routes (channel, note, DM) → main content with `← Back` button
+- AI opens full-screen overlay with `← AI` back button in header
+- `isMobile` breakpoint: `window.innerWidth < 768`
 
-Configured via `railway.json` and `nixpacks.toml`:
-- **Build command:** `cd server && npm install`
-- **Start command:** `cd server && node server.js`
-- **Restart policy:** `ON_FAILURE` with up to 10 retries
+### React Native App (`/mobile`)
+- Built with **Expo** for iOS + Android
+- Uses **Chttrix SDK** for API communication
+- Shares design tokens with web
 
-Set all server-side environment variables in Railway's variable panel before deploying.
+---
+
+## 🖥 Desktop App
+
+The Electron desktop app (`/desktop`) wraps the Chttrix web app in a native Chromium shell:
+- Native OS notifications
+- System tray integration
+- Platform-specific shortcuts
+- Application menu (File, Edit, View, Window)
+
+```bash
+cd desktop
+npm install
+npm run dev    # Development with hot reload
+npm run build  # Package for distribution
+```
+
+---
+
+## 🔧 SDK & Developer Platform
+
+### Chttrix SDK (`/sdk`)
+```bash
+npm install @chttrix/sdk
+```
+
+```js
+import { ChttrixClient } from '@chttrix/sdk';
+
+const client = new ChttrixClient({ token: '<api-token>' });
+
+// Listen to real-time events
+client.on('message', (msg) => console.log(msg));
+
+// Send a message
+await client.messages.send({ channelId: '...', content: 'Hello!' });
+```
+
+### Developer Portal (In-App)
+Navigate to `Settings → Developer` or `/workspace/:id/developer`:
+- Create OAuth 2.0 applications
+- Register webhooks with event filtering
+- Manage API keys
+- View request logs and delivery history
+
+---
+
+## 🚀 Deployment
+
+### Railway (Recommended)
+
+```toml
+# nixpacks.toml — already configured
+[phases.build]
+cmds = ["cd client && npm install && npm run build"]
+
+[start]
+cmd = "cd server && npm start"
+```
+
+Set all environment variables in Railway's dashboard and deploy.
 
 ### Docker
 
-A `Dockerfile` is available in `server/` for containerized deployments (Cloud Run, ECS, etc.).
+```dockerfile
+# A Dockerfile is included in /server
+cd server
+docker build -t chttrix-server .
+docker run -p 5000:5000 --env-file .env chttrix-server
+```
+
+### Vercel (Frontend Only)
+
+```json
+// vercel.json — already configured
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+Set `VITE_API_URL` to your deployed server URL.
+
+### Environment Checklist Before Deploy
+- [ ] `MONGO_URI` points to Atlas cluster (not localhost)
+- [ ] `REDIS_URL` points to managed Redis (TLS enabled)
+- [ ] `SERVER_KEK` is a unique, securely generated 64-char hex string
+- [ ] `FRONTEND_URL` matches your deployed frontend domain exactly (CORS)
+- [ ] GCS key JSON uploaded and `GOOGLE_APPLICATION_CREDENTIALS` set
+- [ ] VAPID keys generated and set on both server and client
+- [ ] `NODE_ENV=production`
 
 ---
 
-## Scripts
+## 🎨 Design System
 
-### Root
-| Script | Description |
-|---|---|
-| `npm run dev` | Run client and server concurrently |
-| `npm run client` | Start Vite dev server |
-| `npm run server` | Start server with nodemon |
-| `npm run install-all` | Install dependencies for root, client, and server |
+Chttrix uses a custom design system called **Monolith Flow** — a dark-first, border-based, flat aesthetic inspired by tools like Linear and Raycast.
 
-### Client (`/client`)
-| Script | Description |
-|---|---|
-| `npm run dev` | Vite dev server |
-| `npm run build` | Production build to `dist/` |
-| `npm run preview` | Preview production build |
-| `npm run lint` | ESLint on `src/` |
+### Core Design Principles
+- **Dark-first** — deep charcoal backgrounds, no harsh blacks
+- **Border-based** — structure via subtle borders, not shadows
+- **Flat hierarchy** — minimal depth, maximum information density
+- **Amber accent** — `#b8956a` as the single accent color
+- **Inter typeface** — system-style, no decorative fonts
 
-### Server (`/server`)
-| Script | Description |
-|---|---|
-| `npm run dev` | nodemon dev server |
-| `npm start` | Production start (`node server.js`) |
-| `npm run lint` | ESLint |
-| `npm run lint:fix` | ESLint with auto-fix |
+### CSS Token Reference
+
+```css
+--bg-base:       #111111   /* Page background */
+--bg-surface:    #161616   /* Card / sidebar surface */
+--bg-active:     #1e1e1e   /* Active item background */
+--bg-hover:      #1a1a1a   /* Hover state */
+--bg-input:      #141414   /* Input fields */
+
+--text-primary:  #e8e8e8   /* Main body text */
+--text-secondary:#a0a0a0   /* Secondary labels */
+--text-muted:    #6b6b6b   /* Placeholder / metadata */
+
+--accent:        #b8956a   /* Primary accent (amber) */
+--accent-hover:  #c9a97d   /* Accent hover */
+--border-accent: #b8956a66 /* Accent border (40% opacity) */
+
+--border-default:#2a2a2a   /* Component borders */
+--border-subtle: #1f1f1f   /* Subtle dividers */
+
+--state-success: #34d399   /* Success green */
+--state-danger:  #f87171   /* Danger / error red */
+--state-warning: #fbbf24   /* Warning amber */
+
+--font: 'Inter', system-ui, -apple-system, sans-serif
+```
 
 ---
 
-## License
+## 🤝 Contributing
 
-ISC
+We welcome contributions! Here's how to get started:
+
+### Development Workflow
+
+```bash
+# 1. Fork and clone
+git clone https://github.com/<your-fork>/Chttrix-AI-Augmented-Collaboration-Platform.git
+
+# 2. Create a feature branch
+git checkout -b feat/your-feature-name
+
+# 3. Make changes following the code style
+# - Use named exports for components
+# - Follow the feature-module pattern for backend
+# - Use CSS variables from the design system (no hardcoded colors)
+# - No Tailwind — use Vanilla CSS with design tokens
+
+# 4. Commit with conventional commits
+git commit -m "feat(tasks): add recurring task support"
+git commit -m "fix(mobile): navbar not showing on settings page"
+
+# 5. Push and open a PR
+git push origin feat/your-feature-name
+```
+
+### Commit Convention
+| Prefix | Use for |
+|---|---|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `refactor` | Code restructure (no behavior change) |
+| `chore` | Build, deps, tooling |
+| `docs` | Documentation only |
+| `style` | CSS / formatting |
+| `perf` | Performance improvement |
+
+### Code Style Guidelines
+- **Components** — Functional components with hooks only (no class components)
+- **State** — Local `useState`, context for shared state, no Redux
+- **Styling** — CSS variables from `index.css`, inline `style={{}}` props (no Tailwind)
+- **Icons** — Lucide React exclusively, size 14-20px, `strokeWidth={2}`
+- **API calls** — Always through the service layer in `/services/`
+- **Real-time** — Use `useSocket` hook from contexts
+- **Mobile** — Test all UI at `< 768px` with `useIsMobile()` hook
+
+### Pull Request Checklist
+- [ ] Feature works on desktop and mobile (`< 768px`)
+- [ ] No `console.error` or unhandled promise rejections
+- [ ] CSS uses design system tokens (no hardcoded `#hex` or `rgb()`)
+- [ ] Lucide icons used (not emoji or other icon libraries)
+- [ ] Protected routes use `RequireAuth` + `RequireWorkspace` guards
+- [ ] Backend routes validated with `express-validator`
+
+---
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
+Built with ❤️ by [Thrishank Kuntimaddi](https://github.com/thrishankkuntimaddi)
+
+**Chttrix** — *Collaborate Smarter. Build Faster. Together.*
+
+</div>

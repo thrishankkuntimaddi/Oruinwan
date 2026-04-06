@@ -1,280 +1,200 @@
 import React from 'react';
-import { Crown, Shield, UserCheck, Pause, Play, Trash2, MoreVertical, Search } from 'lucide-react';
+import { Crown, Shield, UserCheck, Pause, Play, Trash2, MoreVertical, Search, Loader } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
-/**
- * MembersTab Component
- * Displays and manages workspace members with role-based actions
- */
-const MembersTab = ({
-    activeWorkspace,
-    isAdmin,
-    members,
-    loadingMembers,
-    memberActionLoading = {}, // default to empty object — never crashes on memberActionLoading[id]
-    openMemberDropdown,
-    setOpenMemberDropdown,
-    fetchMembers,
-    refreshWorkspace
-}) => {
+const ROLE_GROUPS = [
+    { role: 'owner', label: 'Owner', Icon: Crown },
+    { role: 'admin', label: 'Admin', Icon: Shield },
+    { role: 'member', label: 'Member', Icon: UserCheck },
+];
+
+const roleBadge = (role) => {
+    const styles = {
+        owner: { color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)' },
+        admin: { color: 'var(--text-secondary)', background: 'var(--bg-active)', border: '1px solid var(--border-default)' },
+        member: { color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border-subtle)' },
+    }[role] || { color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border-subtle)' };
+    return (
+        <span style={{ ...styles, fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '2px', textTransform: 'capitalize' }}>
+            {role}
+        </span>
+    );
+};
+
+const menuBtn = { width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: '12px', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' };
+
+const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberActionLoading = {}, openMemberDropdown, setOpenMemberDropdown, fetchMembers, refreshWorkspace }) => {
     const { showToast } = useToast();
 
     const handleSuspendMember = async (userId) => {
-        if (!window.confirm('Are you sure you want to suspend this member? They will lose access to the workspace.')) {
-            return;
-        }
-
+        if (!window.confirm('Suspend this member? They will lose workspace access.')) return;
         try {
             await api.post(`/api/workspaces/${activeWorkspace.id}/members/${userId}/suspend`);
-            showToast('✅ Member suspended successfully', 'success');
-            fetchMembers();
-            setOpenMemberDropdown(null);
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to suspend member', 'error');
-        }
+            showToast('Member suspended', 'success'); fetchMembers(); setOpenMemberDropdown(null);
+        } catch (err) { showToast(err.response?.data?.message || 'Failed to suspend member', 'error'); }
     };
 
     const handleRestoreMember = async (userId) => {
         try {
             await api.post(`/api/workspaces/${activeWorkspace.id}/members/${userId}/restore`);
-            showToast('✅ Member restored successfully', 'success');
-            fetchMembers();
-            setOpenMemberDropdown(null);
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to restore member', 'error');
-        }
+            showToast('Member restored', 'success'); fetchMembers(); setOpenMemberDropdown(null);
+        } catch (err) { showToast(err.response?.data?.message || 'Failed to restore member', 'error'); }
     };
 
     const handleRemoveMember = async (userId) => {
-        if (!window.confirm('Are you sure you want to remove this member? This action cannot be undone.')) {
-            return;
-        }
-
+        if (!window.confirm('Remove this member? This cannot be undone.')) return;
         try {
             await api.post(`/api/workspaces/${activeWorkspace.id}/remove-member`, { userId });
-            showToast('✅ Member removed successfully', 'success');
-            fetchMembers();
-            setOpenMemberDropdown(null);
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to remove member', 'error');
-        }
+            showToast('Member removed', 'success'); fetchMembers(); setOpenMemberDropdown(null);
+        } catch (err) { showToast(err.response?.data?.message || 'Failed to remove member', 'error'); }
     };
 
     const handleChangeRole = async (userId, currentRole) => {
         const newRole = currentRole === 'admin' ? 'member' : 'admin';
-        const action = newRole === 'admin' ? 'promote to Admin' : 'demote to Member';
-
-        if (!window.confirm(`Are you sure you want to ${action}?`)) {
-            return;
-        }
-
+        if (!window.confirm(`${newRole === 'admin' ? 'Promote to Admin' : 'Demote to Member'}?`)) return;
         try {
             await api.post(`/api/workspaces/${activeWorkspace.id}/members/${userId}/change-role`, { newRole });
-            showToast(`✅ Member ${newRole === 'admin' ? 'promoted to Admin' : 'demoted to Member'} successfully`, 'success');
-            fetchMembers();
-            await refreshWorkspace();
-            setOpenMemberDropdown(null);
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to change role', 'error');
-        }
+            showToast(`Member ${newRole === 'admin' ? 'promoted to Admin' : 'demoted to Member'}`, 'success');
+            fetchMembers(); await refreshWorkspace(); setOpenMemberDropdown(null);
+        } catch (err) { showToast(err.response?.data?.message || 'Failed to change role', 'error'); }
     };
 
-    const renderMemberCard = (member, roleColor, roleLabel) => {
-        return (
-            <div
-                key={member.id}
-                className={`flex items-center justify-between p-3 rounded-xl hover:bg-${roleColor}-50 dark:hover:bg-${roleColor}-900/20 transition-colors border border-${roleColor}-100 dark:border-${roleColor}-900/30 bg-${roleColor}-50/30 dark:bg-${roleColor}-900/10`}
-            >
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className="relative">
-                        {member.avatar ? (
-                            <img
-                                src={member.avatar}
-                                alt={member.name}
-                                className="w-10 h-10 rounded-full object-cover"
-                            />
-                        ) : (
-                            <div className={`w-10 h-10 rounded-full bg-gradient-to-br from-${roleColor}-${roleColor === 'yellow' ? '400' : '500'} to-${roleColor === 'yellow' ? 'orange' : roleColor === 'blue' ? 'indigo' : roleColor}-${roleColor === 'yellow' ? '500' : '600'} flex items-center justify-center text-white font-bold`}>
-                                {member.name.charAt(0).toUpperCase()}
-                            </div>
-                        )}
-                        {member.status === 'online' && (
-                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white dark:border-gray-900"></div>
-                        )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                            <div className="font-semibold text-gray-900 dark:text-white truncate">{member.name}</div>
-                            {member.isCurrentUser && (
-                                <span className="px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-semibold rounded">You</span>
-                            )}
+    const MemberRow = ({ member }) => (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', transition: 'background 150ms ease' }}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+        >
+            {/* Avatar + info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                    {member.avatar ? (
+                        <img src={member.avatar} alt={member.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-default)' }} />
+                    ) : (
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
+                            {member.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{member.email}</div>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {member.memberStatus === 'suspended' && (
-                        <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full flex items-center gap-1">
-                            <Pause className="w-3 h-3" />
-                            Suspended
-                        </span>
                     )}
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-semibold border bg-${roleColor}-100 dark:bg-${roleColor}-900/30 text-${roleColor}-800 dark:text-${roleColor}-${roleColor === 'yellow' ? '400' : '300'} border-${roleColor}-200 dark:border-${roleColor}-800`}>
-                        {roleLabel}
+                    {member.status === 'online' && (
+                        <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '8px', height: '8px', borderRadius: '50%', background: 'var(--state-success)', border: '1.5px solid var(--bg-surface)' }} />
+                    )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.name}</span>
+                        {member.isCurrentUser && (
+                            <span style={{ fontSize: '9px', fontWeight: 700, padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', color: 'var(--accent)', borderRadius: '2px', flexShrink: 0 }}>You</span>
+                        )}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{member.email}</div>
+                </div>
+            </div>
+
+            {/* Role + actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                {member.memberStatus === 'suspended' && (
+                    <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', color: '#e59e0c', background: 'rgba(229,158,12,0.1)', border: '1px solid rgba(229,158,12,0.3)', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Pause size={9} /> Suspended
                     </span>
-                    {isAdmin && !member.isCurrentUser && (
-                        <div className="relative">
-                            <button
-                                onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
-                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                                disabled={memberActionLoading[member.id]}
-                            >
-                                <MoreVertical className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                            </button>
-                            {openMemberDropdown === member.id && (
-                                <div className="absolute right-0 top-full mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 min-w-[160px] z-10">
+                )}
+                {roleBadge(member.role)}
+                {isAdmin && !member.isCurrentUser && (
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setOpenMemberDropdown(openMemberDropdown === member.id ? null : member.id)}
+                            disabled={!!memberActionLoading[member.id]}
+                            style={{ width: '26px', height: '26px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                        >
+                            <MoreVertical size={14} />
+                        </button>
+                        {openMemberDropdown === member.id && (
+                            <>
+                                <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setOpenMemberDropdown(null)} />
+                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '2px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 50, overflow: 'hidden', minWidth: '160px', animation: 'wsFadeIn 0.12s ease' }}>
                                     {member.memberStatus === 'suspended' ? (
-                                        <button
+                                        <button style={{ ...menuBtn, color: 'var(--state-success)' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                             onClick={() => handleRestoreMember(member.id)}
-                                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-green-600 dark:text-green-400"
                                         >
-                                            <Play className="w-4 h-4" />
-                                            Restore Access
+                                            <Play size={12} /> Restore Access
                                         </button>
                                     ) : (
                                         <>
-                                            <button
+                                            <button style={{ ...menuBtn, color: 'var(--text-secondary)' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                                 onClick={() => handleChangeRole(member.id, member.role)}
-                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-blue-600 dark:text-blue-400"
                                             >
-                                                {member.role === 'admin' ? (
-                                                    <>
-                                                        <UserCheck className="w-4 h-4" />
-                                                        Demote to Member
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Shield className="w-4 h-4" />
-                                                        Promote to Admin
-                                                    </>
-                                                )}
+                                                {member.role === 'admin' ? <><UserCheck size={12} /> Demote to Member</> : <><Shield size={12} /> Promote to Admin</>}
                                             </button>
-                                            <button
+                                            <button style={{ ...menuBtn, color: '#e59e0c' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                                 onClick={() => handleSuspendMember(member.id)}
-                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-yellow-700 dark:text-yellow-400"
                                             >
-                                                <Pause className="w-4 h-4" />
-                                                Suspend Member
+                                                <Pause size={12} /> Suspend Member
                                             </button>
-                                            <button
+                                            <button style={{ ...menuBtn, color: 'var(--state-danger)' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                                 onClick={() => handleRemoveMember(member.id)}
-                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 text-red-600 dark:text-red-400"
                                             >
-                                                <Trash2 className="w-4 h-4" />
-                                                Remove Member
+                                                <Trash2 size={12} /> Remove Member
                                             </button>
                                         </>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    )}
-                </div>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
-        );
-    };
+        </div>
+    );
 
     return (
-        <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Manage who has access to this workspace.</p>
+        <div style={{ fontFamily: 'var(--font)' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>Manage who has access to this workspace.</p>
 
-            <div className="relative mb-6">
-                <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                    type="text"
-                    placeholder="Search members..."
-                    className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm focus:bg-white dark:focus:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-gray-900 dark:text-white placeholder-gray-400"
+            {/* Search */}
+            <div style={{ position: 'relative', marginBottom: '16px' }}>
+                <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <input type="text" placeholder="Search members…"
+                    style={{ width: '100%', padding: '8px 10px 8px 30px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                 />
             </div>
 
             {loadingMembers ? (
-                <div className="animate-pulse space-y-3 py-4">
-                    {[80,60,90,55,70,75].map((w,i) => (
-                        <div key={i} className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-25}%`}} />
-                            </div>
-                            <div className="h-7 w-16 bg-gray-100 dark:bg-gray-700 rounded-lg" />
-                        </div>
-                    ))}
-                    <p className="text-gray-500 dark:text-gray-400 text-sm mt-4">Loading members...</p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', padding: '32px', color: 'var(--text-muted)' }}>
+                    <Loader size={18} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                    <span style={{ fontSize: '12px' }}>Loading members…</span>
                 </div>
             ) : members.length > 0 ? (
-                <div className="space-y-6">
-                    {/* Owners Section */}
-                    {(() => {
-                        const owners = members.filter(m => m.role === 'owner');
-                        if (owners.length === 0) return null;
+                <div style={{ border: '1px solid var(--border-subtle)', borderRadius: '2px', overflow: 'hidden' }}>
+                    {ROLE_GROUPS.map(({ role, label, Icon }) => {
+                        const group = members.filter(m => m.role === role);
+                        if (!group.length) return null;
                         return (
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Crown size={16} className="text-yellow-500" />
-                                    <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                        Owner{owners.length > 1 ? 's' : ''} ({owners.length})
-                                    </h3>
+                            <div key={role}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 12px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
+                                    <Icon size={12} style={{ color: role === 'owner' ? 'var(--accent)' : 'var(--text-muted)', flexShrink: 0 }} />
+                                    <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                                        {label}{group.length > 1 ? 's' : ''} ({group.length})
+                                    </span>
                                 </div>
-                                <div className="space-y-2">
-                                    {owners.map((member) => renderMemberCard(member, 'yellow', 'Owner'))}
-                                </div>
+                                {group.map(m => <MemberRow key={m.id} member={m} />)}
                             </div>
                         );
-                    })()}
-
-                    {/* Admins Section */}
-                    {(() => {
-                        const admins = members.filter(m => m.role === 'admin');
-                        if (admins.length === 0) return null;
-                        return (
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Shield size={16} className="text-blue-500" />
-                                    <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                        Admin{admins.length > 1 ? 's' : ''} ({admins.length})
-                                    </h3>
-                                </div>
-                                <div className="space-y-2">
-                                    {admins.map((member) => renderMemberCard(member, 'blue', 'Admin'))}
-                                </div>
-                            </div>
-                        );
-                    })()}
-
-                    {/* Members Section */}
-                    {(() => {
-                        const regularMembers = members.filter(m => m.role === 'member');
-                        if (regularMembers.length === 0) return null;
-                        return (
-                            <div>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <UserCheck size={16} className="text-gray-400" />
-                                    <h3 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                                        Member{regularMembers.length > 1 ? 's' : ''} ({regularMembers.length})
-                                    </h3>
-                                </div>
-                                <div className="space-y-2">
-                                    {regularMembers.map((member) => renderMemberCard(member, 'gray', 'Member'))}
-                                </div>
-                            </div>
-                        );
-                    })()}
+                    })}
                 </div>
             ) : (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center border border-gray-200 dark:border-gray-700 border-dashed">
-                    <div className="text-gray-400 mb-2">👥</div>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">No members found</p>
+                <div style={{ padding: '32px', textAlign: 'center', border: '1px dashed var(--border-default)', borderRadius: '2px' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>No members found</p>
                 </div>
             )}
         </div>

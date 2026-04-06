@@ -1,127 +1,108 @@
-import React from 'react';
-import { Mail, Lock, Eye, EyeOff, Info } from 'lucide-react';
+// Step3AccountForm.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import { Mail, Lock, Eye, EyeOff, Info, AlertCircle } from 'lucide-react';
 
-/**
- * Step3AccountForm Component  
- * Company email and password creation with validation
- */
+const PWD_RULES = [
+    { label: '8–16 characters',    test: p => p.length >= 8 && p.length <= 16 },
+    { label: 'Uppercase letter',   test: p => /[A-Z]/.test(p) },
+    { label: 'Lowercase letter',   test: p => /[a-z]/.test(p) },
+    { label: 'Number',             test: p => /\d/.test(p) },
+    { label: 'Special char',       test: p => /[@$!%*?&]/.test(p) },
+    { label: 'No spaces',          test: p => !/\s/.test(p) },
+];
+
+const inp = (err) => ({
+    width: '100%', boxSizing: 'border-box', padding: '10px 36px 10px 40px',
+    background: '#141414',
+    border: `1px solid ${err ? '#e05252' : 'rgba(255,255,255,0.08)'}`,
+    color: '#e4e4e4', fontSize: '13px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', transition: 'border-color 150ms ease',
+});
+
+const Label = ({ children }) => (
+    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.4)', display: 'block', marginBottom: '6px' }}>
+        {children}
+    </label>
+);
+
+// Ignore legacy theme prop
 const Step3AccountForm = ({
-    formData,
-    onChange,
-    errors,
-    showPassword,
-    showConfirmPassword,
-    onTogglePassword,
-    onToggleConfirmPassword,
-    theme
+    formData, onChange, errors,
+    showPassword, showConfirmPassword,
+    onTogglePassword, onToggleConfirmPassword, theme,
 }) => {
-    return (
-        <div className="max-w-2xl mx-auto space-y-8 animate-fadeIn">
-            <div className="text-center mb-6">
-                <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Create your official company login.
-                </p>
-            </div>
+    const [focused, setFocused] = useState(null);
+    const pwdRules = PWD_RULES.map(r => ({ ...r, met: r.test(formData.password) }));
 
-            <div className="space-y-6">
+    return (
+        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', textAlign: 'center', marginBottom: '32px' }}>
+                Create your official company login.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                 {/* Company Email */}
-                <div className="space-y-2">
-                    <label className={`text-sm font-bold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} ml-1`}>
-                        Company Email
-                    </label>
-                    <div className="relative group">
-                        <Mail className={`absolute left-4 top-3.5 ${theme === 'dark' ? 'text-gray-400 group-focus-within:text-indigo-400' : 'text-gray-400 group-focus-within:text-indigo-500'} transition-colors`} size={20} />
-                        <input
-                            name="companyEmail"
-                            value={formData.companyEmail}
-                            onChange={onChange}
-                            placeholder={`name@${formData.companyDomain || "company.com"}`}
-                            className={`w-full pl-12 pr-4 py-3.5 ${theme === 'dark' ? 'bg-slate-800 text-white border-gray-700 focus:ring-indigo-900' : 'bg-white text-gray-900 border-gray-200 focus:ring-indigo-50'} border ${errors.companyEmail ? "border-red-500" : ""} focus:border-indigo-500 focus:ring-4 rounded-2xl outline-none transition-all shadow-sm`}
-                        />
+                <div>
+                    <Label>Company Email</Label>
+                    <div style={{ position: 'relative' }}>
+                        <Mail size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                        <input name="companyEmail" type="email" value={formData.companyEmail} onChange={onChange}
+                            placeholder={`name@${formData.companyDomain || 'company.com'}`}
+                            onFocus={() => setFocused('companyEmail')} onBlur={() => setFocused(null)}
+                            style={{ ...inp(!!errors.companyEmail), borderColor: errors.companyEmail ? '#e05252' : focused === 'companyEmail' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)', paddingRight: '12px' }} />
                     </div>
-                    {errors.companyEmail && <p className="text-red-500 text-xs font-bold ml-2">{errors.companyEmail}</p>}
-                    <p className={`text-xs ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} ml-2`}>
-                        Must match verified domain: <strong>@{formData.companyDomain || "not set"}</strong>
+                    {errors.companyEmail && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{errors.companyEmail}</p>}
+                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '5px' }}>
+                        Must match domain: <span style={{ color: '#b8956a', fontWeight: 600 }}>@{formData.companyDomain || 'not set'}</span>
                     </p>
                 </div>
 
-                {/* Password Fields Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
-                    {/* Password Input */}
-                    <div className="space-y-2">
-                        <label className={`text-sm font-bold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} ml-1 flex items-center gap-2`}>
-                            Password
-                            <div className="relative group cursor-help">
-                                <Info size={14} className={`${theme === 'dark' ? 'text-gray-500 hover:text-indigo-400' : 'text-gray-400 hover:text-indigo-500'} transition-colors tooltip-trigger`} />
-                                {/* Tooltip Content */}
-                                <div className={`tooltip-content absolute left-full top-1/2 -translate-y-1/2 ml-2 w-64 p-4 ${theme === 'dark' ? 'bg-slate-800 text-white' : 'bg-gray-900 text-white'} text-xs rounded-xl shadow-xl z-50 opacity-0 invisible transition-all duration-300 pointer-events-none`}>
-                                    <div className={`absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 ${theme === 'dark' ? 'bg-slate-800' : 'bg-gray-900'} rotate-45`}></div>
-                                    <p className={`font-bold mb-2 ${theme === 'dark' ? 'text-indigo-300' : 'text-indigo-300'}`}>Password Rules:</p>
-                                    <ul className={`list-disc pl-3 space-y-1 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-300'}`}>
-                                        <li>8-16 characters long</li>
-                                        <li>At least one uppercase (A-Z)</li>
-                                        <li>At least one lowercase (a-z)</li>
-                                        <li>At least one number (0-9)</li>
-                                        <li>At least one special char (@$!%*?&)</li>
-                                        <li>No spaces allowed</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </label>
-                        <div className="relative group">
-                            <Lock className={`absolute left-4 top-3.5 ${theme === 'dark' ? 'text-gray-400 group-focus-within:text-indigo-400' : 'text-gray-400 group-focus-within:text-indigo-500'} transition-colors`} size={20} />
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                name="password"
-                                value={formData.password}
-                                onChange={onChange}
-                                placeholder="••••••••"
-                                className={`w-full pl-12 pr-12 py-3.5 ${theme === 'dark' ? 'bg-slate-800 text-white border-gray-700 focus:ring-indigo-900' : 'bg-white text-gray-900 border-gray-200 focus:ring-indigo-50'} border ${errors.password ? "border-red-300" : ""} focus:border-indigo-500 focus:ring-4 rounded-2xl outline-none transition-all shadow-sm placeholder:text-gray-400`}
-                            />
-                            <button
-                                type="button"
-                                onClick={onTogglePassword}
-                                className={`absolute right-4 top-3.5 ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
-                            >
-                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                {/* Password row */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {/* Password */}
+                    <div>
+                        <Label>Password</Label>
+                        <div style={{ position: 'relative' }}>
+                            <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                            <input type={showPassword ? 'text' : 'password'} name="password" value={formData.password} onChange={onChange} placeholder="••••••••"
+                                onFocus={() => setFocused('password')} onBlur={() => setFocused(null)}
+                                style={{ ...inp(!!errors.password), borderColor: errors.password ? '#e05252' : focused === 'password' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
+                            <button type="button" onClick={onTogglePassword}
+                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', display: 'flex' }}>
+                                {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                             </button>
                         </div>
-                        {errors.password && <p className="text-red-500 text-xs font-bold ml-2">{errors.password}</p>}
+                        {errors.password && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{errors.password}</p>}
                     </div>
 
-                    {/* Confirm Password */}
-                    <div className="space-y-2">
-                        <label className={`text-sm font-bold ${theme === 'dark' ? 'text-gray-300' : 'text-gray-700'} ml-1`}>
-                            Confirm Password
-                        </label>
-                        <div className="relative group">
-                            <Lock className={`absolute left-4 top-3.5 ${theme === 'dark' ? 'text-gray-400 group-focus-within:text-indigo-400' : 'text-gray-400 group-focus-within:text-indigo-500'} transition-colors`} size={20} />
-                            <input
-                                type={showConfirmPassword ? "text" : "password"}
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
-                                onChange={onChange}
-                                placeholder="••••••••"
-                                className={`w-full pl-12 pr-12 py-3.5 ${theme === 'dark' ? 'bg-slate-800 text-white border-gray-700 focus:ring-indigo-900' : 'bg-white text-gray-900 border-gray-200 focus:ring-indigo-50'} border ${errors.confirmPassword ? "border-red-300" : ""} focus:border-indigo-500 focus:ring-4 rounded-2xl outline-none transition-all shadow-sm placeholder:text-gray-400`}
-                            />
-                            <button
-                                type="button"
-                                onClick={onToggleConfirmPassword}
-                                className={`absolute right-4 top-3.5 ${theme === 'dark' ? 'text-gray-500 hover:text-gray-300' : 'text-gray-400 hover:text-gray-600'} transition-colors`}
-                            >
-                                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                    {/* Confirm password */}
+                    <div>
+                        <Label>Confirm Password</Label>
+                        <div style={{ position: 'relative' }}>
+                            <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                            <input type={showConfirmPassword ? 'text' : 'password'} name="confirmPassword" value={formData.confirmPassword} onChange={onChange} placeholder="••••••••"
+                                onFocus={() => setFocused('confirmPassword')} onBlur={() => setFocused(null)}
+                                style={{ ...inp(!!errors.confirmPassword), borderColor: errors.confirmPassword ? '#e05252' : focused === 'confirmPassword' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
+                            <button type="button" onClick={onToggleConfirmPassword}
+                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', display: 'flex' }}>
+                                {showConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                             </button>
                         </div>
-                        {errors.confirmPassword && <p className="text-red-500 text-xs font-bold ml-2">{errors.confirmPassword}</p>}
+                        {errors.confirmPassword && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{errors.confirmPassword}</p>}
                     </div>
                 </div>
 
-                {/* Password Hints (Visible if typing) */}
-                {formData.password && (
-                    <div className={`${theme === 'dark' ? 'bg-indigo-900/20 border-indigo-800 text-indigo-300' : 'bg-indigo-50/50 border-indigo-100 text-indigo-800'} rounded-xl p-3 border text-xs`}>
-                        <div className="flex items-start gap-2">
-                            <Info size={14} className="shrink-0 mt-0.5" />
-                            <span>Ensure your password is 8-16 characters, includes uppercase, lowercase, number, and special character.</span>
+                {/* Password strength dots */}
+                {formData.password.length > 0 && (
+                    <div style={{ padding: '12px 14px', background: 'rgba(184,149,106,0.04)', border: '1px solid rgba(184,149,106,0.1)' }}>
+                        <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.3)', marginBottom: '8px' }}>Password requirements</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {pwdRules.map(r => (
+                                <span key={r.label} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: r.met ? '#5aba8a' : 'rgba(228,228,228,0.3)', fontWeight: 600 }}>
+                                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: r.met ? '#5aba8a' : 'rgba(255,255,255,0.12)', flexShrink: 0 }} />
+                                    {r.label}
+                                </span>
+                            ))}
                         </div>
                     </div>
                 )}

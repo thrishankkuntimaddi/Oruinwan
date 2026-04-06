@@ -4,6 +4,8 @@ import Card from './Card';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
+const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
+
 const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLogoutOthers, handleLogout }) => {
     const { showToast } = useToast();
     const [sessions, setSessions] = useState(initialSessions || []);
@@ -45,60 +47,139 @@ const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLog
     };
 
     const refreshAction = (
-        <button onClick={refreshSessions} disabled={refreshing}
-            className="flex items-center gap-1.5 text-[11.5px] text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+        <button
+            onClick={refreshSessions}
+            disabled={refreshing}
+            style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontSize: 12, color: 'var(--text-muted)',
+                background: 'none', border: 'none',
+                cursor: refreshing ? 'not-allowed' : 'pointer',
+                transition: 'color 150ms ease',
+                ...S.font,
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+        >
+            <RefreshCw size={12} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
             Refresh
         </button>
     );
 
     return (
-        <div className="space-y-4">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Card title="Active Sessions" subtitle="Devices logged into your account" action={refreshAction}>
-                <div className="space-y-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {Array.isArray(sessions) && sessions.map(session => (
-                        <div key={session.id}
-                            className={`flex items-center justify-between p-3 border rounded-xl group transition-all ${session.current
-                                    ? 'border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/10'
-                                    : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                                }`}>
-                            <div className="flex items-center gap-3">
-                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${session.current
-                                        ? 'bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400'
-                                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                                    }`}>
-                                    {session.os === 'mobile' ? <Smartphone size={16} /> : <Monitor size={16} />}
+                        <div
+                            key={session.id}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 12px',
+                                border: `1px solid ${session.current ? 'rgba(184,149,106,0.3)' : 'var(--border-default)'}`,
+                                borderRadius: 2,
+                                backgroundColor: session.current ? 'rgba(184,149,106,0.06)' : 'var(--bg-active)',
+                                transition: 'background-color 150ms ease',
+                            }}
+                        >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <div style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flexShrink: 0,
+                                    backgroundColor: session.current ? 'rgba(184,149,106,0.15)' : 'var(--bg-hover)',
+                                    color: session.current ? 'var(--accent)' : 'var(--text-muted)',
+                                }}>
+                                    {session.os === 'mobile' ? <Smartphone size={15} /> : <Monitor size={15} />}
                                 </div>
                                 <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="text-[12.5px] font-semibold text-gray-800 dark:text-gray-100">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', ...S.font }}>
                                             {session.device || 'Unknown Device'}
-                                            {session.browser && <span className="font-normal text-gray-400"> · {session.browser}</span>}
+                                            {session.browser && (
+                                                <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> · {session.browser}</span>
+                                            )}
                                         </span>
                                         {session.current && (
-                                            <span className="text-[10px] px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 font-bold rounded-full">
+                                            <span style={{
+                                                fontSize: 10,
+                                                padding: '1px 7px',
+                                                backgroundColor: 'rgba(184,149,106,0.15)',
+                                                color: 'var(--accent)',
+                                                fontWeight: 700,
+                                                borderRadius: 2,
+                                                letterSpacing: '0.05em',
+                                                ...S.font,
+                                            }}>
                                                 This device
                                             </span>
                                         )}
                                     </div>
-                                    <div className="flex items-center gap-3 text-[11px] text-gray-400 mt-0.5">
-                                        {session.location && <span className="flex items-center gap-1"><MapPin size={10} />{session.location}</span>}
-                                        {session.lastActive && <span className="flex items-center gap-1"><Clock size={10} />{formatLastActive(session.lastActive)}</span>}
-                                        {session.ip && <span className="flex items-center gap-1"><Globe size={10} />{session.ip}</span>}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 3 }}>
+                                        {session.location && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--text-muted)', ...S.font }}>
+                                                <MapPin size={10} />{session.location}
+                                            </span>
+                                        )}
+                                        {session.lastActive && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--text-muted)', ...S.font }}>
+                                                <Clock size={10} />{formatLastActive(session.lastActive)}
+                                            </span>
+                                        )}
+                                        {session.ip && (
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--text-muted)', ...S.font }}>
+                                                <Globe size={10} />{session.ip}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
                             {session.current ? (
-                                <button onClick={handleLogout}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 text-[12px] font-semibold rounded-lg transition-colors">
+                                <button
+                                    onClick={handleLogout}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        padding: '6px 12px', fontSize: 12, fontWeight: 500,
+                                        color: 'var(--state-danger)',
+                                        backgroundColor: 'rgba(224,82,82,0.08)',
+                                        border: '1px solid rgba(224,82,82,0.25)',
+                                        borderRadius: 2, cursor: 'pointer',
+                                        transition: 'background-color 150ms ease',
+                                        ...S.font,
+                                    }}
+                                >
                                     <LogOut size={12} /> Sign Out
                                 </button>
                             ) : (
                                 <button
                                     onClick={() => revokeSession(session.id)}
                                     disabled={revokingId === session.id}
-                                    className="opacity-0 group-hover:opacity-100 px-3 py-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 text-[12px] font-semibold rounded-lg transition-all"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        padding: '6px 12px', fontSize: 12, fontWeight: 500,
+                                        color: 'var(--state-danger)',
+                                        background: 'none',
+                                        border: '1px solid transparent',
+                                        borderRadius: 2, cursor: revokingId === session.id ? 'not-allowed' : 'pointer',
+                                        opacity: revokingId === session.id ? 0.5 : 1,
+                                        transition: 'background-color 150ms ease, border-color 150ms ease',
+                                        ...S.font,
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.backgroundColor = 'rgba(224,82,82,0.08)';
+                                        e.currentTarget.style.borderColor = 'rgba(224,82,82,0.25)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.backgroundColor = 'transparent';
+                                        e.currentTarget.style.borderColor = 'transparent';
+                                    }}
                                 >
                                     {revokingId === session.id ? 'Revoking…' : 'Revoke'}
                                 </button>
@@ -107,30 +188,61 @@ const SessionsTab = ({ sessions: initialSessions, handleLogoutSession, handleLog
                     ))}
 
                     {(!sessions || sessions.length === 0) && (
-                        <div className="text-center py-10">
-                            <AlertCircle className="mx-auto text-gray-300 dark:text-gray-700 mb-2" size={28} />
-                            <p className="text-[12px] text-gray-400">No active sessions found</p>
-                            <button onClick={refreshSessions} className="text-[12px] text-blue-600 dark:text-blue-400 mt-1 hover:underline">Refresh</button>
+                        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                            <AlertCircle size={28} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} />
+                            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4, ...S.font }}>No active sessions found</p>
+                            <button
+                                onClick={refreshSessions}
+                                style={{ fontSize: 12, color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', ...S.font }}
+                            >Refresh</button>
                         </div>
                     )}
                 </div>
 
                 {sessions && sessions.length > 1 && (
-                    <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
-                        <span className="text-[11.5px] text-gray-400">{sessions.length - 1} other active {sessions.length - 1 === 1 ? 'session' : 'sessions'}</span>
-                        <button onClick={logoutOthers}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 text-[12px] font-semibold rounded-lg transition-colors">
+                    <div style={{
+                        marginTop: 16,
+                        paddingTop: 12,
+                        borderTop: '1px solid var(--border-default)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                    }}>
+                        <span style={{ fontSize: 12, color: 'var(--text-muted)', ...S.font }}>
+                            {sessions.length - 1} other active {sessions.length - 1 === 1 ? 'session' : 'sessions'}
+                        </span>
+                        <button
+                            onClick={logoutOthers}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: 6,
+                                padding: '6px 12px', fontSize: 12, fontWeight: 500,
+                                color: 'var(--state-danger)',
+                                backgroundColor: 'rgba(224,82,82,0.08)',
+                                border: '1px solid rgba(224,82,82,0.25)',
+                                borderRadius: 2, cursor: 'pointer',
+                                transition: 'background-color 150ms ease',
+                                ...S.font,
+                            }}
+                        >
                             <LogOut size={12} /> Sign Out All Others
                         </button>
                     </div>
                 )}
             </Card>
 
-            <div className="flex items-start gap-2.5 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-xl">
-                <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 10,
+                padding: 12,
+                backgroundColor: 'rgba(184,149,106,0.06)',
+                border: '1px solid rgba(184,149,106,0.25)',
+                borderRadius: 2,
+            }}>
+                <AlertCircle size={14} style={{ color: 'var(--accent)', marginTop: 1, flexShrink: 0 }} />
                 <div>
-                    <p className="text-[12.5px] font-bold text-amber-800 dark:text-amber-300">Unrecognised device?</p>
-                    <p className="text-[11.5px] text-amber-700 dark:text-amber-400 mt-0.5">Revoke it immediately and change your password in the Security tab.</p>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent)', margin: 0, marginBottom: 2, ...S.font }}>Unrecognised device?</p>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5, ...S.font }}>Revoke it immediately and change your password in the Security tab.</p>
                 </div>
             </div>
         </div>

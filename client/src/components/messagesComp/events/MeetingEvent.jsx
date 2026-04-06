@@ -1,13 +1,13 @@
 // client/src/components/messagesComp/events/MeetingEvent.jsx
-// Placeholder for meeting type events (future feature)
+// Renders a meeting type event in the conversation stream
 
 import React from 'react';
-import { Video, Calendar, Users } from 'lucide-react';
+import { Video, Calendar, Users, ExternalLink } from 'lucide-react';
+
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 /**
- * Renders a meeting event (future feature)
- * @param {object} event - Meeting event
- * @param {string} currentUserId - Current user's ID
+ * Renders a meeting event from the conversation stream.
  */
 function MeetingEvent({ event, currentUserId }) {
     const { payload } = event;
@@ -30,38 +30,45 @@ function MeetingEvent({ event, currentUserId }) {
 
     return (
         <div
-            className="meeting-event"
             style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.75rem',
-                padding: '1rem',
-                margin: '0.5rem 0',
-                maxWidth: '600px'
+                backgroundColor: 'var(--bg-active)',
+                border: '1px solid var(--border-accent)',
+                borderRadius: '2px',
+                padding: '14px 16px',
+                margin: '6px 0',
+                maxWidth: '480px',
+                fontFamily: FONT,
             }}
         >
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <Video size={20} style={{ color: 'var(--primary-color)' }} />
-                <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 600 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <div style={{
+                    width: '28px', height: '28px', borderRadius: '2px',
+                    backgroundColor: 'rgba(184,149,106,0.12)',
+                    border: '1px solid var(--border-accent)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                }}>
+                    <Video size={14} style={{ color: 'var(--accent)' }} />
+                </div>
+                <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: FONT }}>
                     {title}
                 </h4>
             </div>
 
             {/* Details */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '12px' }}>
                 {startTime && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
-                        <Calendar size={16} style={{ color: 'var(--text-muted)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontFamily: FONT }}>
+                        <Calendar size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <span>
-                            {new Date(startTime).toLocaleString()} • {duration} min
+                            {new Date(startTime).toLocaleString()} &bull; {duration} min
                         </span>
                     </div>
                 )}
 
                 {attendees.length > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' }}>
-                        <Users size={16} style={{ color: 'var(--text-muted)' }} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontFamily: FONT }}>
+                        <Users size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <span>
                             {attendees.length} {attendees.length === 1 ? 'attendee' : 'attendees'}
                         </span>
@@ -74,28 +81,24 @@ function MeetingEvent({ event, currentUserId }) {
                 onClick={handleJoin}
                 disabled={!joinUrl}
                 style={{
-                    background: joinUrl ? 'var(--primary-color)' : 'var(--bg-tertiary)',
-                    color: joinUrl ? 'white' : 'var(--text-muted)',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    padding: '0.5rem 1rem',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    backgroundColor: joinUrl ? 'var(--accent)' : 'var(--bg-hover)',
+                    color: joinUrl ? '#0c0c0c' : 'var(--text-muted)',
+                    border: 'none', outline: 'none',
+                    borderRadius: '2px',
+                    padding: '6px 14px',
+                    fontSize: '12px', fontWeight: 600,
                     cursor: joinUrl ? 'pointer' : 'not-allowed',
-                    transition: 'all 0.2s'
+                    transition: '150ms ease', fontFamily: FONT,
                 }}
+                onMouseEnter={e => { if (joinUrl) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                onMouseLeave={e => { if (joinUrl) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
             >
-                {joinUrl ? 'Join Meeting' : 'Meeting Link Unavailable'}
+                {joinUrl ? <><ExternalLink size={12} /> Join Meeting</> : 'Meeting Link Unavailable'}
             </button>
 
             {isCreator && (
-                <div
-                    style={{
-                        marginTop: '0.75rem',
-                        fontSize: '0.75rem',
-                        color: 'var(--text-muted)'
-                    }}
-                >
+                <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>
                     You created this meeting
                 </div>
             )}

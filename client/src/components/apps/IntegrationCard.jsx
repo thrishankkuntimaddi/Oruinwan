@@ -1,69 +1,73 @@
 import React from "react";
 import { CheckCircle2, ZapOff } from "lucide-react";
 
-/**
- * IntegrationCard
- * Displays a single integration with name, description, status badge, and connect button.
- * All state is driven from parent (AppsPage or similar).
- *
- * Props:
- *   integration   – object from mockIntegrations
- *   connected     – boolean (controlled by parent)
- *   onCardClick   – () => void — opens IntegrationDetailsModal
- *   onToggle      – () => void — quick toggle from card (optional)
- */
+const T = {
+  bg: 'rgba(255,255,255,0.03)',
+  bgHover: 'rgba(184,149,106,0.06)',
+  border: 'rgba(255,255,255,0.08)',
+  borderHover: 'rgba(184,149,106,0.25)',
+  accent: '#b8956a',
+  accentBg: 'rgba(184,149,106,0.1)',
+  text: '#e4e4e4',
+  muted: 'rgba(228,228,228,0.4)',
+  font: 'Inter, system-ui, sans-serif',
+};
+
 export default function IntegrationCard({ integration, connected, onCardClick }) {
   return (
     <button
       onClick={onCardClick}
-      className="group relative flex flex-col bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-5 text-left hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg dark:hover:shadow-blue-900/10 transition-all duration-200 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      style={{
+        position: 'relative', display: 'flex', flexDirection: 'column',
+        background: T.bg, border: `1px solid ${T.border}`,
+        padding: '18px', textAlign: 'left', cursor: 'pointer', outline: 'none',
+        width: '100%', transition: 'all 150ms ease', fontFamily: T.font,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = T.bgHover;
+        e.currentTarget.style.borderColor = T.borderHover;
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = T.bg;
+        e.currentTarget.style.borderColor = T.border;
+      }}
     >
       {/* Connected badge */}
       {connected && (
-        <span className="absolute top-3 right-3 flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-full px-2 py-0.5">
-          <CheckCircle2 size={11} className="flex-shrink-0" />
-          Connected
+        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', padding: '2px 7px' }}>
+          <CheckCircle2 size={10} /> Connected
         </span>
       )}
       {!connected && (
-        <span className="absolute top-3 right-3 flex items-center gap-1 text-[11px] font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-2 py-0.5">
-          <ZapOff size={11} className="flex-shrink-0" />
-          Not Connected
+        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'rgba(228,228,228,0.3)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '2px 7px' }}>
+          <ZapOff size={10} /> Not Connected
         </span>
       )}
 
       {/* Icon */}
-      <div
-        className={`w-12 h-12 rounded-xl bg-gradient-to-br ${integration.color} flex items-center justify-center text-2xl mb-4 shadow-sm group-hover:scale-110 transition-transform duration-200`}
-      >
+      <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '14px', flexShrink: 0 }}>
         {integration.emoji}
       </div>
 
       {/* Name */}
-      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-1 truncate pr-16">
+      <h3 style={{ fontSize: '13px', fontWeight: 700, color: T.text, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '60px' }}>
         {integration.name}
       </h3>
 
-      {/* Category label */}
-      <span className="text-[11px] text-gray-400 dark:text-gray-500 mb-2 font-medium uppercase tracking-wide">
+      {/* Category */}
+      <span style={{ fontSize: '10px', color: T.muted, marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         {integration.categoryLabel}
       </span>
 
       {/* Description */}
-      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">
+      <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.5)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {integration.description}
       </p>
 
-      {/* Hover CTA stripe */}
-      <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-        <span
-          className={`text-xs font-semibold ${
-            connected
-              ? "text-emerald-600 dark:text-emerald-400"
-              : "text-blue-600 dark:text-blue-400"
-          } group-hover:underline`}
-        >
-          {connected ? "Manage →" : "Connect →"}
+      {/* Footer CTA */}
+      <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? '#34d399' : T.accent }}>
+          {connected ? 'Manage →' : 'Connect →'}
         </span>
       </div>
     </button>

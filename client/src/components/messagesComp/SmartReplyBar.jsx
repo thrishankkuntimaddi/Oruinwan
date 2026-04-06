@@ -2,8 +2,9 @@
 // Phase-8: AI-generated quick reply chip suggestions
 import React, { useState, useEffect, useRef } from 'react';
 import api from '@services/api';
+import { Sparkles, X } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || '';
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 /**
  * SmartReplyBar — shows 3 AI-generated reply suggestions as chips.
@@ -43,43 +44,68 @@ export default function SmartReplyBar({ messageId, messageText, onSelectReply, o
 
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
-      padding: '4px 0 6px', fontFamily: 'Inter, sans-serif' }}>
-      <span style={{ fontSize: 11, color: '#6b7280', flexShrink: 0 }}>💡 Quick reply:</span>
+      display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+      padding: '4px 0 6px', fontFamily: FONT,
+    }}>
+      <span style={{
+        fontSize: '11px', color: 'var(--accent)', flexShrink: 0,
+        display: 'flex', alignItems: 'center', gap: '4px',
+      }}>
+        <Sparkles size={11} /> Quick reply:
+      </span>
 
       {loading && (
-        <span style={{ fontSize: 12, color: '#6b7280', fontStyle: 'italic' }}>Thinking…</span>
+        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+          Thinking…
+        </span>
       )}
 
       {!loading && suggestions.map((text, i) => (
-        <button
+        <SuggestionChip
           key={i}
+          text={text}
           onClick={() => { onSelectReply?.(text); setVisible(false); }}
-          style={{
-            background: '#2d3035',
-            border: '1px solid #3a3d42',
-            borderRadius: 16,
-            color: '#d1d5db',
-            padding: '4px 12px',
-            fontSize: 12,
-            cursor: 'pointer',
-            transition: 'background 0.15s, border-color 0.15s',
-            whiteSpace: 'nowrap' }}
-          onMouseEnter={e => { e.target.style.background = '#5865f220'; e.target.style.borderColor = '#5865f2'; }}
-          onMouseLeave={e => { e.target.style.background = '#2d3035'; e.target.style.borderColor = '#3a3d42'; }}
-        >
-          {text}
-        </button>
+        />
       ))}
 
       <button
         onClick={() => { setVisible(false); onDismiss?.(); }}
         style={{
-          background: 'none', border: 'none', color: '#6b7280',
-          cursor: 'pointer', fontSize: 12, padding: '2px 6px' }}
+          background: 'none', border: 'none', outline: 'none',
+          color: 'var(--text-muted)', cursor: 'pointer',
+          fontSize: '12px', padding: '2px 6px', borderRadius: '2px',
+          display: 'flex', alignItems: 'center', transition: '100ms ease',
+        }}
+        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
       >
-        ✕
+        <X size={12} />
       </button>
     </div>
+  );
+}
+
+function SuggestionChip({ text, onClick }) {
+  const [hovered, setHovered] = React.useState(false);
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        backgroundColor: hovered ? 'rgba(184,149,106,0.12)' : 'var(--bg-active)',
+        border: `1px solid ${hovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
+        borderRadius: '99px',
+        color: hovered ? 'var(--accent)' : 'var(--text-secondary)',
+        padding: '4px 12px',
+        fontSize: '12px',
+        cursor: 'pointer',
+        transition: 'background-color 150ms ease, border-color 150ms ease, color 150ms ease',
+        whiteSpace: 'nowrap',
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+      }}
+    >
+      {text}
+    </button>
   );
 }

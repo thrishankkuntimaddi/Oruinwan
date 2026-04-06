@@ -8,7 +8,7 @@ import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import { useSocket } from "../../../contexts/SocketContext"; // ✅ Use global socket
 import CreateChannelModal from "../../messagesComp/CreateChannelModal";
 
-const ChannelsPanel = ({ title }) => {
+const ChannelsPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
     const { workspaceId, id: channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
@@ -263,82 +263,79 @@ const ChannelsPanel = ({ title }) => {
 
     const Item = ({ item }) => {
         const isSelected = selectedItems.has(item.id);
+        const isActive = channelId === item.id;
 
         const handleClick = (e) => {
             if (isSelectionMode) {
                 e.stopPropagation();
-
-                // ✅ Prevent selection of default channels
-                if (item.isDefault) {
-                    showToast('Default channels cannot be deleted', 'warning');
-                    return;
-                }
-
+                if (item.isDefault) { showToast('Default channels cannot be deleted', 'warning'); return; }
                 const newSelected = new Set(selectedItems);
-                if (newSelected.has(item.id)) {
-                    newSelected.delete(item.id);
-                } else {
-                    newSelected.add(item.id);
-                }
+                if (newSelected.has(item.id)) newSelected.delete(item.id);
+                else newSelected.add(item.id);
                 setSelectedItems(newSelected);
             } else {
                 navigate(item.path);
             }
         };
 
-        const isActive = channelId === item.id;
+        const rowStyle = {
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: isMobile ? '10px 14px' : '7px 12px',
+            minHeight: isMobile ? '48px' : 'auto',
+            margin: '1px 4px', cursor: 'pointer',
+            background: isSelected
+                ? 'rgba(184,149,106,0.12)'
+                : isActive
+                    ? 'rgba(184,149,106,0.08)'
+                    : 'transparent',
+            borderLeft: isActive ? '2px solid #b8956a' : '2px solid transparent',
+            position: 'relative', transition: 'all 150ms ease',
+            WebkitTapHighlightColor: 'transparent',
+        };
+
+        const iconBoxStyle = {
+            width: isMobile ? '32px' : '26px', height: isMobile ? '32px' : '26px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+            background: isActive
+                ? 'rgba(184,149,106,0.15)'
+                : item.isPrivate
+                    ? 'rgba(139,92,246,0.1)'
+                    : 'rgba(255,255,255,0.05)',
+            color: isActive ? '#b8956a' : item.isPrivate ? '#a78bfa' : 'rgba(228,228,228,0.4)',
+        };
 
         return (
             <div
                 onClick={handleClick}
-                className={`px-3 py-2 mx-2 transition-all duration-200 rounded-lg cursor-pointer flex items-center justify-between group relative ${isSelectionMode && isSelected
-                    ? "bg-blue-50/80 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-                    : isActive
-                        ? "bg-gradient-to-r from-blue-50 to-white dark:from-blue-900/30 dark:to-gray-900/50 text-blue-600 dark:text-blue-400"
-                        : !item.isMember && item.isDiscoverable
-                            ? "opacity-60 hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400"
-                            : "hover:bg-gray-100 dark:hover:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
-                    }`}
+                style={rowStyle}
+                onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseLeave={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'transparent'; }}
             >
-                {/* Active Accent Bar */}
-                {isActive && !isSelectionMode && (
-                    <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-blue-600 dark:bg-blue-500 rounded-r-full shadow-[0_0_8px_rgba(37,99,235,0.4)]" />
-                )}
-
-                <div className="flex items-center truncate flex-1 gap-3">
+                <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden', gap: '10px' }}>
                     {isSelectionMode && !item.isDefault && (
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
-                            }`}>
-                            {isSelected && <CheckSquare size={10} className="text-white" />}
+                        <div style={{ width: '14px', height: '14px', border: `1px solid ${isSelected ? '#b8956a' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? '#b8956a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {isSelected && <CheckSquare size={9} style={{ color: '#0c0c0c' }} />}
                         </div>
                     )}
 
-                    {/* Icon Backdrop */}
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isActive
-                        ? "bg-blue-100/50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400"
-                        : item.label.toLowerCase() === 'announcements'
-                            ? "bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400"
-                            : item.isPrivate
-                                ? "bg-purple-50 dark:bg-purple-900/20 text-purple-500 dark:text-purple-400"
-                                : "bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 group-hover:bg-gray-200 dark:group-hover:bg-gray-700"
-                        }`}>
+                    <div style={iconBoxStyle}>
                         {item.isPrivate ? (
-                            <Lock size={14} strokeWidth={2.5} />
+                            <Lock size={isMobile ? 14 : 12} strokeWidth={2.5} />
                         ) : (item.label || '').toLowerCase() === 'announcements' ? (
-                            <Megaphone size={14} strokeWidth={2.5} />
+                            <Megaphone size={isMobile ? 14 : 12} strokeWidth={2.5} />
                         ) : (
-                            <Hash size={14} strokeWidth={2.5} />
+                            <Hash size={isMobile ? 14 : 12} strokeWidth={2.5} />
                         )}
                     </div>
 
-                    <span className={`truncate text-sm tracking-tight transition-all ${isActive ? "font-bold text-gray-900 dark:text-white" : "font-semibold group-hover:text-gray-900 dark:group-hover:text-gray-100"}`}>
+                    <span style={{ fontSize: '13px', fontWeight: isActive ? 600 : 400, color: isActive ? '#e4e4e4' : 'rgba(228,228,228,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {(item.label || 'Unnamed Channel').replace(/^#/, '')}
                     </span>
 
-                    {/* Join badge for non-member discoverable channels */}
                     {!item.isMember && item.isDiscoverable && (
-                        <div className="ml-2 p-1 rounded-md bg-blue-100 dark:bg-blue-900/30" title="Click to join">
-                            <UserPlus size={12} className="text-blue-600 dark:text-blue-400" strokeWidth={2.5} />
+                        <div style={{ marginLeft: '4px', padding: '2px', background: 'rgba(184,149,106,0.1)' }} title="Click to join">
+                            <UserPlus size={10} style={{ color: '#b8956a' }} strokeWidth={2.5} />
                         </div>
                     )}
                 </div>
@@ -346,110 +343,89 @@ const ChannelsPanel = ({ title }) => {
         );
     };
 
+
     return (
-        <div className="flex flex-col h-full bg-gray-50/50 dark:bg-gray-900">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
             {/* Header */}
-            <div className="h-16 flex items-center justify-between px-5 bg-white dark:bg-gray-900 shrink-0 border-b border-gray-200 dark:border-gray-800">
-                <div className="flex flex-col">
-                    <h2 className="font-bold text-lg text-gray-800 dark:text-gray-100 tracking-tight leading-tight">
+            <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#0c0c0c', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <h2 style={{ fontWeight: 700, fontSize: '14px', color: '#e4e4e4', lineHeight: '1.2', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {activeWorkspace?.name || 'Channels'}
                     </h2>
-                    <span className="text-xs text-gray-500 font-medium">Channels</span>
+                    <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>Channels</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <button
                         onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        className={`p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors ${isSelectionMode ? "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400" : ""
-                            }`}
+                        style={{ padding: '6px', background: isSelectionMode ? 'rgba(184,149,106,0.1)' : 'transparent', border: isSelectionMode ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: isSelectionMode ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         title="Manage Channels"
+                        onMouseEnter={e => { if (!isSelectionMode) e.currentTarget.style.color = '#e4e4e4'; }}
+                        onMouseLeave={e => { if (!isSelectionMode) e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
                     >
-                        <Settings2 size={20} />
+                        <Settings2 size={18} />
                     </button>
                     <button
                         onClick={() => {
-                            // ✅ Check permission before allowing channel creation
                             const userRole = activeWorkspace?.role?.toLowerCase() || '';
                             const isAdmin = userRole === 'admin' || userRole === 'owner';
                             const canCreateChannel = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
-
-                            if (!canCreateChannel) {
-                                showToast('Channel creation is disabled for members in this workspace', 'warning');
-                                return;
-                            }
+                            if (!canCreateChannel) { showToast('Channel creation is disabled for members in this workspace', 'warning'); return; }
                             setShowCreateChannelModal(true);
                         }}
-                        disabled={(() => {
-                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
-                            const isAdmin = userRole === 'admin' || userRole === 'owner';
-                            return !isAdmin && activeWorkspace?.settings?.allowMemberChannelCreation === false;
-                        })()}
-                        className="p-2 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-gray-400"
-                        title={(() => {
-                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
-                            const isAdmin = userRole === 'admin' || userRole === 'owner';
-                            const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
-                            return canCreate ? "Create Channel" : "Channel creation disabled for members";
-                        })()}
+                        disabled={(() => { const userRole = activeWorkspace?.role?.toLowerCase() || ''; const isAdmin = userRole === 'admin' || userRole === 'owner'; return !isAdmin && activeWorkspace?.settings?.allowMemberChannelCreation === false; })()}
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        title="Create Channel"
+                        onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
                     >
-                        <Plus size={20} />
+                        <Plus size={18} />
                     </button>
                 </div>
             </div>
 
             {/* Search */}
-            <div className="px-4 pt-6">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <div style={{ padding: '12px 16px 8px' }}>
+                <div style={{ position: 'relative' }}>
+                    <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)' }} size={14} />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search channels..."
-                        className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                        style={{ width: '100%', paddingLeft: '32px', paddingRight: '12px', paddingTop: '7px', paddingBottom: '7px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
                     />
                 </div>
             </div>
 
             {/* Selection Mode Header */}
-            {
-                isSelectionMode && (
-                    <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/30 border-b border-blue-100 dark:border-blue-800 flex items-center justify-between sticky top-0 z-10">
-                        <span className="text-sm font-bold text-blue-900 dark:text-blue-300">{selectedItems.size} selected</span>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setShowDeleteConfirm(true)}
-                                disabled={selectedItems.size === 0}
-                                className="p-1.5 text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Delete Selected"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setIsSelectionMode(false);
-                                    setSelectedItems(new Set());
-                                }}
-                                className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
-                                title="Cancel"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
+            {isSelectionMode && (
+                <div style={{ padding: '8px 16px', background: 'rgba(184,149,106,0.08)', borderBottom: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#b8956a', fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedItems.size} selected</span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => setShowDeleteConfirm(true)} disabled={selectedItems.size === 0}
+                            style={{ padding: '5px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: selectedItems.size === 0 ? 0.4 : 1 }}
+                            title="Delete Selected">
+                            <Trash2 size={15} />
+                        </button>
+                        <button onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
+                            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer' }} title="Cancel">
+                            <X size={15} />
+                        </button>
                     </div>
-                )
-            }
+                </div>
+            )}
 
             {/* Channel List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4 space-y-0.5">
-                <div className="px-4 mb-2 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 4px' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', padding: '4px 16px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                     {activeWorkspace?.name || 'Workspace'} Channels
-                </div>
+                </p>
                 {isLoadingChannels ? (
-                    <div className="px-2 space-y-1 animate-pulse">
+                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {[70, 50, 85, 60, 75, 45].map((w, i) => (
-                            <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg">
-                                <div className="w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                                <div className={`h-3 bg-gray-200 dark:bg-gray-700 rounded`} style={{ width: `${w}%` }} />
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px' }}>
+                                <div style={{ width: '24px', height: '24px', background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
+                                <div style={{ height: '10px', background: 'rgba(255,255,255,0.06)', width: `${w}%` }} />
                             </div>
                         ))}
                     </div>
@@ -458,33 +434,28 @@ const ChannelsPanel = ({ title }) => {
                         <Item key={channel.id} item={channel} />
                     ))
                 ) : searchQuery ? (
-                    <div className="px-4 py-8 text-center">
-                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
-                            <Search size={18} className="text-gray-400 dark:text-gray-500" />
+                    <div style={{ padding: '32px 16px', textAlign: 'center' }}>
+                        <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                            <Search size={16} style={{ color: 'rgba(228,228,228,0.3)' }} />
                         </div>
-                        <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">No results for &ldquo;{searchQuery}&rdquo;</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Try a different search term</p>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', fontFamily: 'Inter, system-ui, sans-serif' }}>No results for &ldquo;{searchQuery}&rdquo;</p>
+                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Try a different search term</p>
                     </div>
                 ) : (
-                    <div className="px-4 py-10 text-center">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center mx-auto mb-4 shadow-sm">
-                            <Hash size={22} className="text-blue-500 dark:text-blue-400" />
+                    <div style={{ padding: '40px 16px', textAlign: 'center' }}>
+                        <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                            <Hash size={20} style={{ color: '#b8956a' }} />
                         </div>
-                        <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-1">No channels yet</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 leading-relaxed">
-                            Create a channel to start collaborating with your team
-                        </p>
+                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(228,228,228,0.6)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No channels yet</p>
+                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', marginBottom: '16px', lineHeight: '1.5', fontFamily: 'Inter, system-ui, sans-serif' }}>Create a channel to start collaborating</p>
                         {(() => {
                             const userRole = activeWorkspace?.role?.toLowerCase() || '';
                             const isAdmin = userRole === 'admin' || userRole === 'owner';
                             const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
                             return canCreate ? (
-                                <button
-                                    onClick={() => setShowCreateChannelModal(true)}
-                                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl transition-colors shadow-sm"
-                                >
-                                    <Plus size={14} />
-                                    Create Channel
+                                <button onClick={() => setShowCreateChannelModal(true)}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                    <Plus size={13} /> Create Channel
                                 </button>
                             ) : null;
                         })()}

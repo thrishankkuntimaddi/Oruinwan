@@ -1,28 +1,27 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2 } from 'lucide-react';
 
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+
+const inputStyle = {
+    width: '100%', padding: '8px 10px', fontSize: '13px',
+    backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
+    borderRadius: '2px', outline: 'none', color: 'var(--text-primary)',
+    fontFamily: FONT, boxSizing: 'border-box', transition: 'border-color 100ms ease',
+};
+
 /**
  * Poll Creation Modal
  * Allows users to create single or multiple choice polls
  */
 export default function PollCreationModal({ onClose, onCreate }) {
     const [question, setQuestion] = useState('');
-    const [options, setOptions] = useState(['', '']);
-    const [type, setType] = useState('single'); // 'single' or 'multiple'
-    const [errors, setErrors] = useState({});
+    const [options,  setOptions]  = useState(['', '']);
+    const [type,     setType]     = useState('single');
+    const [errors,   setErrors]   = useState({});
 
-    const handleAddOption = () => {
-        if (options.length < 10) {
-            setOptions([...options, '']);
-        }
-    };
-
-    const handleRemoveOption = (index) => {
-        if (options.length > 2) {
-            setOptions(options.filter((_, i) => i !== index));
-        }
-    };
-
+    const handleAddOption = () => { if (options.length < 10) setOptions([...options, '']); };
+    const handleRemoveOption = (index) => { if (options.length > 2) setOptions(options.filter((_, i) => i !== index)); };
     const handleOptionChange = (index, value) => {
         const newOptions = [...options];
         newOptions[index] = value;
@@ -31,165 +30,201 @@ export default function PollCreationModal({ onClose, onCreate }) {
 
     const validate = () => {
         const newErrors = {};
-
-        if (!question.trim()) {
-            newErrors.question = 'Question is required';
-        }
-
+        if (!question.trim()) newErrors.question = 'Question is required';
         const validOptions = options.filter(opt => opt.trim());
-        if (validOptions.length < 2) {
-            newErrors.options = 'At least 2 options are required';
-        }
-
-        // Check for duplicate options
+        if (validOptions.length < 2) newErrors.options = 'At least 2 options are required';
         const uniqueOptions = new Set(validOptions.map(opt => opt.trim().toLowerCase()));
-        if (uniqueOptions.size !== validOptions.length) {
-            newErrors.options = 'Options must be unique';
-        }
-
+        if (uniqueOptions.size !== validOptions.length) newErrors.options = 'Options must be unique';
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async () => {
         if (!validate()) return;
-
         const validOptions = options.filter(opt => opt.trim());
-
         await onCreate({
             question: question.trim(),
             options: validOptions.map(opt => opt.trim()),
             allowMultiple: type === 'multiple',
         });
-
-        // Don't close modal here - let the parent component close it on success
     };
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
+        <div style={{
+            position: 'fixed', inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 50, fontFamily: FONT,
+        }}>
+            <div style={{
+                width: '100%', maxWidth: '440px', maxHeight: '90vh',
+                display: 'flex', flexDirection: 'column',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)',
+                borderRadius: '4px',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                overflow: 'hidden',
+                animation: 'fadeIn 180ms ease',
+            }}>
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Create Poll
-                    </h2>
-                    <button
-                        onClick={onClose}
-                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
-                    >
-                        <X size={20} className="text-gray-500" />
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
+                    <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: FONT }}>Create Poll</h2>
+                    <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Body - Scrollable */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {/* Question Input */}
+                {/* Body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+                    {/* Question */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            Poll Question *
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px', fontFamily: FONT }}>
+                            Poll Question <span style={{ color: 'var(--state-danger)' }}>*</span>
                         </label>
                         <input
-                            type="text"
-                            value={question}
-                            onChange={(e) => setQuestion(e.target.value)}
-                            placeholder="Ask a question..."
-                            className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${errors.question ? 'border-red-500' : 'border-gray-300'
-                                }`}
-                            autoFocus
+                            type="text" value={question} autoFocus
+                            onChange={e => setQuestion(e.target.value)}
+                            placeholder="Ask a question…"
+                            style={{ ...inputStyle, borderColor: errors.question ? 'var(--state-danger)' : 'var(--border-default)' }}
+                            onFocus={e => e.target.style.borderColor = errors.question ? 'var(--state-danger)' : 'var(--border-accent)'}
+                            onBlur={e => e.target.style.borderColor = errors.question ? 'var(--state-danger)' : 'var(--border-default)'}
                         />
                         {errors.question && (
-                            <p className="mt-1 text-sm text-red-500">{errors.question}</p>
+                            <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--state-danger)', fontFamily: FONT }}>{errors.question}</p>
                         )}
                     </div>
 
                     {/* Poll Type */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontFamily: FONT }}>
                             Poll Type
                         </label>
-                        <div className="flex gap-3">
-                            <label className="flex items-center cursor-pointer">
-                                <input
-                                    type="radio"
-                                    value="single"
-                                    checked={type === 'single'}
-                                    onChange={(e) => setType(e.target.value)}
-                                    className="mr-2"
-                                />
-                                <span className="text-sm text-gray-700 dark:text-gray-300">Single Choice</span>
-                            </label>
-                            <label className="flex items-center cursor-pointer">
-                                <input
-                                    type="radio"
-                                    value="multiple"
-                                    checked={type === 'multiple'}
-                                    onChange={(e) => setType(e.target.value)}
-                                    className="mr-2"
-                                />
-                                <span className="text-sm text-gray-700 dark:text-gray-300">Multiple Choice</span>
-                            </label>
+                        <div style={{ display: 'flex', gap: '16px' }}>
+                            {[{ val: 'single', label: 'Single Choice' }, { val: 'multiple', label: 'Multiple Choice' }].map(({ val, label }) => (
+                                <label key={val} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', color: 'var(--text-secondary)', fontFamily: FONT }}>
+                                    <input
+                                        type="radio" value={val}
+                                        checked={type === val}
+                                        onChange={e => setType(e.target.value)}
+                                        style={{ accentColor: 'var(--accent)' }}
+                                    />
+                                    {label}
+                                </label>
+                            ))}
                         </div>
                     </div>
 
                     {/* Options */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                            Options * (2-10)
+                        <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontFamily: FONT }}>
+                            Options <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>(2–10)</span>
                         </label>
-                        <div className="space-y-2">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             {options.map((option, index) => (
-                                <div key={index} className="flex gap-2">
+                                <div key={index} style={{ display: 'flex', gap: '6px' }}>
                                     <input
-                                        type="text"
-                                        value={option}
-                                        onChange={(e) => handleOptionChange(index, e.target.value)}
+                                        type="text" value={option}
+                                        onChange={e => handleOptionChange(index, e.target.value)}
                                         placeholder={`Option ${index + 1}`}
-                                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                                        style={{ ...inputStyle, flex: 1, borderColor: errors.options ? 'var(--state-danger)' : 'var(--border-default)' }}
+                                        onFocus={e => e.target.style.borderColor = errors.options ? 'var(--state-danger)' : 'var(--border-accent)'}
+                                        onBlur={e => e.target.style.borderColor = errors.options ? 'var(--state-danger)' : 'var(--border-default)'}
                                     />
                                     {options.length > 2 && (
-                                        <button
-                                            onClick={() => handleRemoveOption(index)}
-                                            className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <TrashBtn onClick={() => handleRemoveOption(index)} />
                                     )}
                                 </div>
                             ))}
                         </div>
 
                         {options.length < 10 && (
-                            <button
-                                onClick={handleAddOption}
-                                className="mt-2 flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                            >
-                                <Plus size={16} />
-                                Add Option
-                            </button>
+                            <AddOptionBtn onClick={handleAddOption} />
                         )}
 
                         {errors.options && (
-                            <p className="mt-1 text-sm text-red-500">{errors.options}</p>
+                            <p style={{ margin: '6px 0 0', fontSize: '11px', color: 'var(--state-danger)', fontFamily: FONT }}>{errors.options}</p>
                         )}
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="flex items-center justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-                    >
-                        Create Poll
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', padding: '12px 16px', borderTop: '1px solid var(--border-default)', flexShrink: 0 }}>
+                    <CancelBtn onClick={onClose}>Cancel</CancelBtn>
+                    <CreateBtn onClick={handleSubmit}>Create Poll</CreateBtn>
                 </div>
             </div>
         </div>
+    );
+}
+
+function CloseBtn({ onClick }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: '5px', border: 'none', outline: 'none', background: 'none', cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms', color: hov ? 'var(--state-danger)' : 'var(--text-muted)' }}>
+            <X size={18} />
+        </button>
+    );
+}
+
+function TrashBtn({ onClick }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '7px', border: 'none', outline: 'none', borderRadius: '2px', cursor: 'pointer',
+                color: hov ? 'var(--state-danger)' : 'var(--text-muted)',
+                backgroundColor: hov ? 'rgba(255,80,80,0.08)' : 'transparent', transition: '100ms ease', display: 'flex',
+            }}>
+            <Trash2 size={16} />
+        </button>
+    );
+}
+
+function AddOptionBtn({ onClick }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                marginTop: '8px', display: 'flex', alignItems: 'center', gap: '5px',
+                fontSize: '12px', fontWeight: 500,
+                color: hov ? 'var(--accent)' : 'var(--text-muted)',
+                background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
+                transition: '100ms ease', fontFamily: 'Inter, system-ui, sans-serif', padding: '2px 0',
+            }}>
+            <Plus size={14} /> Add Option
+        </button>
+    );
+}
+
+function CancelBtn({ onClick, children }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '8px 16px', fontSize: '13px', fontWeight: 500,
+                color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                backgroundColor: hov ? 'var(--bg-hover)' : 'transparent',
+                border: '1px solid var(--border-default)', borderRadius: '2px',
+                cursor: 'pointer', outline: 'none', transition: '100ms', fontFamily: 'Inter, system-ui, sans-serif',
+            }}>{children}</button>
+    );
+}
+
+function CreateBtn({ onClick, children }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '8px 16px', fontSize: '13px', fontWeight: 600,
+                backgroundColor: hov ? 'var(--accent-hover)' : 'var(--accent)',
+                color: '#0c0c0c', border: '1px solid var(--accent)',
+                borderRadius: '2px', cursor: 'pointer', outline: 'none',
+                transition: '100ms', fontFamily: 'Inter, system-ui, sans-serif',
+            }}>{children}</button>
     );
 }

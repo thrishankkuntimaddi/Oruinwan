@@ -18,29 +18,29 @@ const turndownService = new TurndownService({
   bulletListMarker: "-",
 });
 
-/**
- * Pre-process contentEditable HTML → Markdown-friendly HTML.
- * Chrome wraps every line in a <div>; the opening <div> marks a new line.
- * Closing </div> carries no extra meaning once the opener is handled.
- *
- *   "DF<div>ASDF</div><div>ASD</div>"
- *   after: "DF<br>ASDF<br>ASD"
- */
 const normaliseEditorHtml = (html) =>
   html
-    // Empty-line placeholder first: <div><br></div> → <br>
     .replace(/<div>\s*<br\s*\/?>\s*<\/div>/gi, '<br>')
-    // Opening block tag → newline (the block START = new line)
     .replace(/<(div|p)[^>]*>/gi, '<br>')
-    // Closing block tags → empty (newline already added by opener)
     .replace(/<\/(div|p)>/gi, '');
 
-// Helper to strip HTML tags
 const stripTags = (html) => {
   const tmp = document.createElement("DIV");
   tmp.innerHTML = html;
   return tmp.textContent || tmp.innerText || "";
 };
+
+const toolbarBtnStyle = (active = false) => ({
+  padding: '6px',
+  borderRadius: '2px',
+  background: 'none',
+  border: 'none',
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  color: active ? 'var(--accent)' : 'var(--text-muted)',
+  transition: 'color 150ms ease',
+});
 
 export default function FooterInput({
   newMessage,
@@ -48,8 +48,7 @@ export default function FooterInput({
   onSend,
   onAttach,
   onSendAttachment,
-  onCreatePoll,        // Phase 7.3
-  // Phase 7.5 — link preview
+  onCreatePoll,
   linkPreview = null,
   linkPreviewLoading = false,
   onDismissPreview,
@@ -69,19 +68,16 @@ export default function FooterInput({
   disabled = false,
   replyingTo = null,
   onCancelReply,
-  members = [],       // workspace/channel member list for @mention autocomplete
-  recentMessages = [], // Phase 4 — last N messages for smart reply
-  showSmartReply = false, // Phase 4 — enable smart reply chips
-  showScreenRecord = false, // Phase 2 — enable screen recorder button
+  members = [],
+  recentMessages = [],
+  showSmartReply = false,
+  showScreenRecord = false,
 }) {
   const emojiRef = useRef(null);
   const attachRef = useRef(null);
   const editableRef = useRef(null);
-
-  // Track whether the input has content for the Send button
   const [hasText, setHasText] = useState(false);
 
-  // @mention autocomplete
   const {
     showSuggestions,
     suggestions,
@@ -93,7 +89,6 @@ export default function FooterInput({
     closeSuggestions,
   } = useMentionAutocomplete(members);
 
-  // ── Slash command system (new full-featured component) ────────────────────
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [previewCommand, setPreviewCommand] = useState(null);
@@ -119,19 +114,12 @@ export default function FooterInput({
     onChange({ target: { value: html } });
     setShowSlashMenu(false);
     setSlashQuery("");
-    // Keep preview open after selection so user sees what the command does
     setPreviewCommand(cmd);
   }, [onChange]);
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  // ─── KEY FIX: track content in a ref, NOT in state ───────────────────────────
-  // We NEVER set editableRef.current.innerHTML from parent state while the user
-  // is typing. We only reset the DOM when the parent clears the message (send).
   const prevMessageRef = useRef(newMessage);
 
   useEffect(() => {
-    // Only push value into the DOM when the parent explicitly clears the message
-    // (i.e. newMessage goes from something → ""). This handles post-send clear.
     if (newMessage === "" && prevMessageRef.current !== "") {
       if (editableRef.current) {
         editableRef.current.innerHTML = "";
@@ -140,11 +128,7 @@ export default function FooterInput({
     }
     prevMessageRef.current = newMessage;
   }, [newMessage]);
-  // ─────────────────────────────────────────────────────────────────────────────
 
-  /* ---------------------------------------------------------
-      OUTSIDE CLICK HANDLER
-  --------------------------------------------------------- */
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (emojiRef.current && !emojiRef.current.contains(event.target) && showEmoji) {
@@ -158,9 +142,6 @@ export default function FooterInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showEmoji, showAttach, setShowEmoji, setShowAttach]);
 
-  /* ---------------------------------------------------------
-      LINK HANDLING
-  --------------------------------------------------------- */
   const [showLinkInput, setShowLinkInput] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
 
@@ -173,9 +154,6 @@ export default function FooterInput({
     }
   };
 
-  /* ---------------------------------------------------------
-      WYSIWYG FORMATTING
-  --------------------------------------------------------- */
   const execFormat = (command, value = null) => {
     editableRef.current?.focus();
     document.execCommand(command, false, value);
@@ -197,20 +175,15 @@ export default function FooterInput({
     }
   };
 
-  /* ---------------------------------------------------------
-      INPUT HANDLER — reads directly from DOM, no state loop
-  --------------------------------------------------------- */
   const handleInput = useCallback((e) => {
     const html = e.currentTarget.innerHTML;
     const text = stripTags(html).trim();
     setHasText(text.length > 0);
     onChange({ target: { value: html } });
     handleMentionInput();
-    // Slash command detection
     if (text.startsWith("/")) {
       setSlashQuery(text);
       setShowSlashMenu(true);
-      // Clear preview when user is still typing
       setPreviewCommand(null);
     } else {
       setShowSlashMenu(false);
@@ -219,9 +192,6 @@ export default function FooterInput({
     }
   }, [onChange, handleMentionInput]);
 
-  /* ---------------------------------------------------------
-      SEND
-  --------------------------------------------------------- */
   const handleSend = useCallback(() => {
     const el = editableRef.current;
     if (!el) return;
@@ -242,26 +212,19 @@ export default function FooterInput({
     if (editableRef.current) editableRef.current.innerHTML = "";
     setHasText(false);
     setNewMessage("");
-    // Clear slash preview on send
     setShowSlashMenu(false);
     setPreviewCommand(null);
   }, [blocked, disabled, onSend, setNewMessage, closeSuggestions, extractMentionText]);
 
-  /* ---------------------------------------------------------
-      KEYBOARD — Enter to send, Shift+Enter for newline
-  --------------------------------------------------------- */
   const handleKeyDown = useCallback((e) => {
-    // Delegate keyboard events to SlashCommandMenu when open
     if (showSlashMenu) {
       const consumed = SlashCommandMenu.handleKey?.(e);
       if (consumed) return;
     }
-    // Close slash menu on Escape
     if (e.key === 'Escape') {
       if (showSlashMenu) { setShowSlashMenu(false); return; }
       if (previewCommand) { setPreviewCommand(null); return; }
     }
-    // Let mention autocomplete consume arrow keys / Tab / Enter / Escape first
     if (showSuggestions) {
       const consumed = handleMentionKeyDown(e);
       if (consumed) {
@@ -278,9 +241,6 @@ export default function FooterInput({
     }
   }, [handleSend, showSuggestions, handleMentionKeyDown, suggestions, selectedIndex, selectSuggestion, showSlashMenu, previewCommand]);
 
-  /* ---------------------------------------------------------
-      EMOJI PICK — insert at cursor position
-  --------------------------------------------------------- */
   const handlePickEmoji = useCallback((emoji) => {
     editableRef.current?.focus();
     document.execCommand("insertText", false, emoji);
@@ -291,13 +251,19 @@ export default function FooterInput({
   }, [onChange, onPickEmoji]);
 
   return (
-    <div className="px-4 py-3 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shrink-0 relative">
-      {/* WhatsApp-style reply preview bar */}
+    <div style={{
+      padding: '12px 16px',
+      backgroundColor: 'var(--bg-surface)',
+      borderTop: '1px solid var(--border-default)',
+      flexShrink: 0,
+      position: 'relative',
+    }}>
+      {/* Reply Preview */}
       {replyingTo && (
         <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />
       )}
 
-      {/* Phase 4 — Smart Reply Suggestions */}
+      {/* Smart Reply Suggestions */}
       {showSmartReply && recentMessages.length > 0 && (
         <SmartReplySuggestions
           recentMessages={recentMessages}
@@ -313,7 +279,7 @@ export default function FooterInput({
         />
       )}
 
-      {/* Slash command preview — shown after command selection */}
+      {/* Slash command preview */}
       {previewCommand && !showSlashMenu && (
         <SlashCommandPreview
           command={previewCommand}
@@ -321,22 +287,29 @@ export default function FooterInput({
         />
       )}
 
-      <div className={`
-        border rounded-2xl transition-all transition-colors duration-200 relative shadow-sm
-        bg-white dark:bg-secondary-800 
-        border-secondary-200 dark:border-secondary-700
-        focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500
-        ${replyingTo ? 'rounded-tl-none rounded-tr-none border-t-0' : ''}
-      `}>
-
-        {/* Phase 7.5 — Link preview banner (dismissable) */}
+      <div style={{
+        border: '1px solid var(--border-default)',
+        borderRadius: '2px',
+        backgroundColor: 'var(--bg-input)',
+        position: 'relative',
+        transition: 'border-color 150ms ease',
+      }}
+        onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+        onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+      >
+        {/* Link Preview Banner */}
         {(linkPreview || linkPreviewLoading) && (
-          <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700/60 flex items-start gap-2 bg-blue-50/40 dark:bg-blue-900/10">
+          <div style={{
+            padding: '8px 12px',
+            borderBottom: '1px solid var(--border-default)',
+            display: 'flex', alignItems: 'flex-start', gap: '8px',
+            backgroundColor: 'rgba(184,149,106,0.04)',
+          }}>
             {linkPreviewLoading && !linkPreview && (
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <svg className="animate-spin h-3.5 w-3.5 text-blue-400" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                <svg style={{ animation: 'spin 1s linear infinite', width: 14, height: 14 }} viewBox="0 0 24 24" fill="none">
+                  <circle style={{ opacity: 0.25 }} cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path style={{ opacity: 0.75 }} fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
                 Fetching preview…
               </div>
@@ -347,19 +320,23 @@ export default function FooterInput({
                   <img
                     src={linkPreview.image}
                     alt=""
-                    className="w-10 h-10 rounded object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
+                    style={{ width: 36, height: 36, borderRadius: '2px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }}
                     onError={e => { e.target.style.display = 'none'; }}
                   />
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{linkPreview.title || linkPreview.url}</p>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                    {linkPreview.title || linkPreview.url}
+                  </p>
                   {linkPreview.site && (
-                    <p className="text-[10px] text-gray-400 truncate">{linkPreview.site}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
+                      {linkPreview.site}
+                    </p>
                   )}
                 </div>
                 <button
                   onClick={onDismissPreview}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-0.5 rounded flex-shrink-0"
+                  style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: '2px', flexShrink: 0 }}
                   title="Dismiss preview"
                 >
                   <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -371,27 +348,42 @@ export default function FooterInput({
           </div>
         )}
 
-        {/* Rich Text Input — uncontrolled div, no html= binding */}
-        <div className="w-full px-3 py-2 text-sm max-h-[30vh] overflow-y-auto overflow-x-hidden custom-scrollbar min-h-[4rem] relative">
+        {/* Rich Text Input */}
+        <div style={{ width: '100%', padding: '8px 12px', maxHeight: '30vh', overflowY: 'auto', overflowX: 'hidden', minHeight: '4rem', position: 'relative' }}>
           <div
             ref={editableRef}
             contentEditable={!blocked && !disabled}
             suppressContentEditableWarning
             onInput={handleInput}
             onKeyDown={handleKeyDown}
-            className={`focus:outline-none min-h-[40px] break-all whitespace-pre-wrap text-gray-800 dark:text-gray-100 message-editor ${(blocked || disabled) ? "cursor-not-allowed opacity-50" : ""}`}
-            style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+            style={{
+              outline: 'none',
+              minHeight: '40px',
+              wordBreak: 'break-word',
+              overflowWrap: 'anywhere',
+              color: (blocked || disabled) ? 'var(--text-muted)' : 'var(--text-primary)',
+              fontSize: '14px',
+              lineHeight: '1.5',
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+              cursor: (blocked || disabled) ? 'not-allowed' : 'text',
+              opacity: (blocked || disabled) ? 0.5 : 1,
+            }}
           />
           {!hasText && !blocked && (
-            <div className="absolute top-2 left-3 text-gray-400 dark:text-gray-500 pointer-events-none text-sm select-none">
+            <div style={{
+              position: 'absolute', top: '8px', left: '12px',
+              color: 'var(--text-muted)', pointerEvents: 'none', fontSize: '14px',
+              fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+              userSelect: 'none',
+            }}>
               {disabled ? "Channel encryption unavailable" : "Message..."}
             </div>
           )}
         </div>
 
-        {/* @mention autocomplete dropdown — anchored with same pattern as slash menu */}
+        {/* Mention Autocomplete */}
         {showSuggestions && (
-          <div className="absolute bottom-full left-0 right-0 z-[60] mb-1">
+          <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 60, marginBottom: '4px' }}>
             <MentionAutocomplete
               suggestions={suggestions}
               selectedIndex={selectedIndex}
@@ -401,9 +393,9 @@ export default function FooterInput({
           </div>
         )}
 
-        {/* Slash command dropdown — outside overflow container so it's not clipped */}
+        {/* Slash Command Menu */}
         {showSlashMenu && (
-          <div className="absolute bottom-full left-0 right-0 z-[60] mb-1">
+          <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 60, marginBottom: '4px' }}>
             <SlashCommandMenu
               query={slashQuery}
               onSelect={insertSlashCommand}
@@ -415,71 +407,107 @@ export default function FooterInput({
 
         {/* Link Input Popover */}
         {showLinkInput && (
-          <div className="absolute bottom-12 left-20 z-50 bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700 rounded-xl p-2 flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2">
+          <div style={{
+            position: 'absolute', bottom: '48px', left: '80px', zIndex: 50,
+            backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
+            borderRadius: '2px', padding: '8px', display: 'flex', alignItems: 'center', gap: '8px',
+            animation: 'fadeIn 220ms cubic-bezier(0.16,1,0.3,1)',
+          }}>
             <input
               id="link-url-input"
               type="text"
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               placeholder="paste link here..."
-              className="text-sm px-2 py-1.5 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg focus:outline-none focus:border-blue-500 w-64"
+              style={{
+                fontSize: '13px', padding: '4px 8px',
+                border: '1px solid var(--border-default)',
+                borderRadius: '2px',
+                backgroundColor: 'var(--bg-input)',
+                color: 'var(--text-primary)',
+                outline: 'none', width: '220px',
+                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+              }}
               onKeyDown={(e) => { if (e.key === "Enter") applyLink(); }}
             />
-            <button onClick={applyLink} className="p-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={applyLink}
+              style={{
+                padding: '4px 8px', backgroundColor: 'var(--accent)',
+                color: '#0c0c0c', border: 'none', borderRadius: '2px',
+                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                transition: 'background-color 150ms ease',
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--accent-hover)'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--accent)'}
+            >
               <Link size={14} />
             </button>
           </div>
         )}
 
         {/* Toolbar */}
-        <div className="flex items-center justify-between px-2 pb-1 bg-white dark:bg-gray-800 rounded-b-2xl">
-
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '4px 8px 6px',
+          backgroundColor: 'var(--bg-input)',
+          borderTop: '1px solid var(--border-subtle)',
+        }}>
           {/* Left: Formatting Tools */}
-          <div className="flex items-center gap-1">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
             {showAI && (
               <>
-                <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("ai")} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors group" title="AI">
-                  <img src="/assets/ChttrixAI-logo.png" alt="AI" className="w-4 h-4 object-contain opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
+                <button
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => insertFormat("ai")}
+                  style={{ ...toolbarBtnStyle(), padding: '5px' }}
+                  title="AI"
+                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                >
+                  <img src="/assets/ChttrixAI-logo.png" alt="AI" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.7 }} />
                 </button>
-                <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1" />
+                <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)', margin: '0 4px' }} />
               </>
             )}
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("bold")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Bold"><Bold size={15} /></button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("italic")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="Italic"><Italic size={15} /></button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("link")} className={`p-1.5 rounded-lg transition-all ${showLinkInput ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"}`} title="Link"><Link size={15} /></button>
-            <button onMouseDown={(e) => e.preventDefault()} onClick={() => insertFormat("list")} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all" title="List"><List size={15} /></button>
+            <ToolBtn icon={<Bold size={14} />} title="Bold" onClick={() => insertFormat("bold")} />
+            <ToolBtn icon={<Italic size={14} />} title="Italic" onClick={() => insertFormat("italic")} />
+            <ToolBtn
+              icon={<Link size={14} />}
+              title="Link"
+              active={showLinkInput}
+              onClick={() => insertFormat("link")}
+            />
+            <ToolBtn icon={<List size={14} />} title="List" onClick={() => insertFormat("list")} />
           </div>
 
           {/* Right: Actions */}
-          <div className="flex items-center gap-1">
-
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
             {/* Emoji */}
-            <div className="relative" ref={emojiRef}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowEmoji(!showEmoji); setShowAttach(false); }}
-                className={`p-1.5 rounded-lg transition-all ${showEmoji ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
+            <div style={{ position: 'relative' }} ref={emojiRef}>
+              <ToolBtn
+                icon={<Smile size={16} />}
                 title="Emoji"
-              >
-                <Smile size={18} />
-              </button>
+                active={showEmoji}
+                onClick={(e) => { e.stopPropagation(); setShowEmoji(!showEmoji); setShowAttach(false); }}
+              />
               {showEmoji && (
-                <div className="absolute bottom-full right-0 mb-2 z-50">
+                <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '8px', zIndex: 50 }}>
                   <EmojiPicker onPick={handlePickEmoji} />
                 </div>
               )}
             </div>
 
             {/* Attachments */}
-            <div className="relative" ref={attachRef}>
-              <button
-                onClick={(e) => { e.stopPropagation(); setShowAttach(!showAttach); setShowEmoji(false); }}
-                className={`p-1.5 rounded-lg transition-all ${showAttach ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
+            <div style={{ position: 'relative' }} ref={attachRef}>
+              <ToolBtn
+                icon={<Paperclip size={16} />}
                 title="Attach"
-              >
-                <Paperclip size={18} />
-              </button>
+                active={showAttach}
+                onClick={(e) => { e.stopPropagation(); setShowAttach(!showAttach); setShowEmoji(false); }}
+              />
               {showAttach && (
-                <div className="absolute bottom-full right-0 mb-2 z-50">
+                <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '8px', zIndex: 50 }}>
                   <AttachMenu
                     onAttach={onAttach}
                     onSendAttachment={onSendAttachment}
@@ -493,18 +521,14 @@ export default function FooterInput({
               )}
             </div>
 
-            {/* Voice — opens full-screen recorder overlay */}
+            {/* Voice */}
             {showVoice && (
               <>
-                <button
-                  onClick={() => { if (!blocked && !disabled) setRecording(true); }}
-                  className={`p-1.5 rounded-lg transition-all text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700`}
+                <ToolBtn
+                  icon={<Mic size={16} />}
                   title="Voice note"
-                >
-                  <Mic size={18} />
-                </button>
-
-                {/* Phase 7.2 — Recorder overlay */}
+                  onClick={() => { if (!blocked && !disabled) setRecording(true); }}
+                />
                 {recording && (
                   <VoiceRecorder
                     onSendAttachment={onSendAttachment}
@@ -516,7 +540,7 @@ export default function FooterInput({
               </>
             )}
 
-            {/* Phase 2 — Screen Recorder button */}
+            {/* Screen Recorder */}
             {showScreenRecord && (
               <ScreenRecorder
                 disabled={blocked || disabled}
@@ -524,20 +548,52 @@ export default function FooterInput({
               />
             )}
 
-            {/* Send */}
-            <Button
+            {/* Send Button */}
+            <button
               onClick={handleSend}
               disabled={!hasText || blocked || disabled}
-              variant="primary"
-              size="icon"
-              className={`ml-2 rounded-full h-9 w-9 shadow-sm ${(!hasText || blocked || disabled) ? "opacity-50" : ""}`}
               title={disabled ? "Cannot send - channel encryption unavailable" : "Send message"}
+              style={{
+                marginLeft: '6px',
+                width: '32px', height: '32px',
+                borderRadius: '2px',
+                backgroundColor: (!hasText || blocked || disabled) ? 'var(--bg-active)' : 'var(--accent)',
+                color: (!hasText || blocked || disabled) ? 'var(--text-muted)' : '#0c0c0c',
+                border: 'none', cursor: (!hasText || blocked || disabled) ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'background-color 150ms ease',
+                opacity: (!hasText || blocked || disabled) ? 0.5 : 1,
+                flexShrink: 0,
+              }}
+              onMouseEnter={e => { if (hasText && !blocked && !disabled) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+              onMouseLeave={e => { if (hasText && !blocked && !disabled) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
             >
-              <SendHorizontal size={18} strokeWidth={2.5} />
-            </Button>
+              <SendHorizontal size={16} strokeWidth={2} />
+            </button>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ToolBtn({ icon, title, onClick, active = false }) {
+  const [hovered, setHovered] = React.useState(false);
+  return (
+    <button
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      title={title}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        padding: '5px', borderRadius: '2px', background: 'none',
+        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center',
+        color: active ? 'var(--accent)' : (hovered ? 'var(--text-primary)' : 'var(--text-muted)'),
+        transition: 'color 150ms ease',
+      }}
+    >
+      {icon}
+    </button>
   );
 }

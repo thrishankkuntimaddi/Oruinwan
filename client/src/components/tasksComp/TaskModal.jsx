@@ -99,23 +99,20 @@ function Avatar({ name, size = "sm", className = "" }) {
   );
 }
 
-function Dropdown({ children, trigger, align = "left" }) {
+function Dropdown({ children, trigger, align = 'left' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
   }, []);
   return (
-    <div className="relative" ref={ref}>
+    <div style={{ position: 'relative' }} ref={ref}>
       <div onClick={() => setOpen((v) => !v)}>{trigger}</div>
       {open && (
-        <div
-          className={`absolute z-50 mt-1.5 ${align === "right" ? "right-0" : "left-0"} min-w-[160px] bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 py-1 overflow-hidden`}
-          style={{ animation: "dropIn 0.12s ease-out" }}
-        >
-          {typeof children === "function" ? children(() => setOpen(false)) : children}
+        <div style={{ position: 'absolute', zIndex: 50, marginTop: '6px', ...(align === 'right' ? { right: 0 } : { left: 0 }), minWidth: '160px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', padding: '4px 0', overflow: 'hidden' }}>
+          {typeof children === 'function' ? children(() => setOpen(false)) : children}
         </div>
       )}
     </div>
@@ -241,41 +238,33 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(8px)" }}
+      style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
     >
       <div
-        className="bg-white dark:bg-gray-900 rounded-2xl w-full shadow-2xl flex flex-col overflow-hidden border border-gray-200/80 dark:border-gray-700/80"
-        style={{ maxWidth: 860, maxHeight: "90vh" }}
+        style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.1)', maxWidth: 860, maxHeight: "90vh", width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
         {/* ── Top bar ── */}
-        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
-          {/* Issue key badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#111111', flexShrink: 0 }}>
           {initialData?.issueKey && (
-            <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 tracking-widest uppercase bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-md">
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
               {initialData.issueKey}
             </span>
           )}
 
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-500/25">
-              <Briefcase size={15} className="text-white" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
+            <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Briefcase size={15} style={{ color: '#b8956a' }} />
             </div>
-            <h2 className="text-[14px] font-bold text-gray-800 dark:text-white tracking-tight truncate">
+            <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
               {isEditing ? (isReadOnly ? "Task Details" : "Update Task") : "Create New Task"}
             </h2>
           </div>
 
-          {/* Quick status pill in header */}
-          {isEditing && (
-            <span className={`hidden sm:flex items-center gap-1.5 text-[11.5px] font-semibold px-2.5 py-1 rounded-full ${statConf.badge}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${statConf.dot}`} />
-              {status}
-            </span>
-          )}
-
           <button
             onClick={onClose}
-            className="flex-shrink-0 w-8 h-8 flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all"
+            style={{ flexShrink: 0, width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(228,228,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
+            onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
           >
             <X size={16} />
           </button>
@@ -310,10 +299,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
         )}
 
         {/* ── Body: two-column layout ── */}
-        <div className="flex flex-1 overflow-hidden">
+        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
           {/* LEFT – main content */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-5 min-w-0" style={{ scrollbarWidth: "thin" }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, scrollbarWidth: 'thin' }}>
 
             {/* Title */}
             <div>
@@ -323,13 +312,15 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 placeholder="Task title…"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className={`w-full text-[18px] font-bold text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 bg-transparent outline-none border-0 border-b-2 pb-1.5 transition-colors ${isReadOnly ? "border-transparent cursor-default" : "border-gray-100 dark:border-gray-800 focus:border-blue-500 dark:focus:border-blue-500"}`}
+                style={{ width: '100%', fontSize: '18px', fontWeight: 700, color: '#e4e4e4', background: 'transparent', outline: 'none', border: 'none', borderBottom: `2px solid ${isReadOnly ? 'transparent' : 'rgba(255,255,255,0.08)'}`, paddingBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif', cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box' }}
+                onFocus={e => { if (!isReadOnly) e.target.style.borderBottomColor = '#b8956a'; }}
+                onBlur={e => { if (!isReadOnly) e.target.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.3)', marginBottom: '8px', fontFamily: 'monospace' }}>
                 <AlignLeft size={11} /> Description
               </label>
               <textarea
@@ -338,7 +329,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                className={`w-full px-3.5 py-3 text-[13px] text-gray-700 dark:text-gray-200 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 rounded-xl resize-none outline-none leading-relaxed placeholder-gray-300 dark:placeholder-gray-600 transition-all ${isReadOnly ? "cursor-default opacity-80" : "focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800"}`}
+                style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: '#e4e4e4', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', outline: 'none', resize: 'none', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif', opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box', colorScheme: 'dark' }}
+                onFocus={e => { if (!isReadOnly) e.target.style.borderColor = 'rgba(184,149,106,0.4)'; }}
+                onBlur={e => { if (!isReadOnly) e.target.style.borderColor = 'rgba(255,255,255,0.08)'; }}
               />
             </div>
 
@@ -510,7 +503,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </div>
 
           {/* RIGHT – metadata sidebar */}
-          <div className="w-[220px] flex-shrink-0 border-l border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 p-4 overflow-y-auto space-y-5" style={{ scrollbarWidth: "thin" }}>
+          <div style={{ width: '220px', flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)', padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px', scrollbarWidth: 'thin' }}>
 
             {/* Status */}
             {isEditing && (
@@ -551,17 +544,17 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
             {/* Priority */}
             <div>
-              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Priority</p>
+              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.3)', marginBottom: '8px', fontFamily: 'monospace' }}>Priority</p>
               {isReadOnly ? (
-                <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-lg ${prioConf.badge}`}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, padding: '4px 10px', background: 'rgba(255,255,255,0.05)', color: '#e4e4e4' }}>
                   <PrioIcon size={11} className={prioConf.iconColor} />
                   {priority}
                 </span>
               ) : (
                 <Dropdown
                   trigger={
-                    <button className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-[12px] font-semibold cursor-pointer transition-all hover:shadow-sm ${prioConf.badge} border-transparent`}>
-                      <span className="flex items-center gap-1.5">
+                    <button style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 600, color: '#e4e4e4', cursor: 'pointer' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <PrioIcon size={11} className={prioConf.iconColor} />
                         {priority}
                       </span>
@@ -574,10 +567,12 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     const PI = c.Icon;
                     return (
                       <button key={p} onClick={() => { setPriority(p); close(); }}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/60 ${priority === p ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"}`}>
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, background: priority === p ? 'rgba(184,149,106,0.1)' : 'transparent', color: '#e4e4e4', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                        onMouseEnter={e => { if (priority !== p) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                        onMouseLeave={e => { if (priority !== p) e.currentTarget.style.background = 'transparent'; }}>
                         <PI size={13} className={c.iconColor} />
                         {p}
-                        {priority === p && <Check size={11} className="ml-auto text-blue-500" />}
+                        {priority === p && <Check size={11} style={{ marginLeft: 'auto', color: '#b8956a' }} />}
                       </button>
                     );
                   })}
@@ -596,7 +591,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 <select
                   value={project}
                   onChange={(e) => setProject(e.target.value)}
-                  className="w-full px-2.5 py-2 text-[12px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 dark:text-gray-200 font-medium"
+                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', cursor: 'pointer', boxSizing: 'border-box' }}
                 >
                   <option value="">Select channel</option>
                   {channels.length > 0 ? channels.map((c) => <option key={c.id} value={c.label}>{c.label}</option>) : (
@@ -626,9 +621,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split("T")[0]}
+                    min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]}
                     max="2100-12-31"
-                    className="w-full px-2.5 py-2 text-[12px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 dark:text-gray-200 font-medium"
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', boxSizing: 'border-box' }}
                   />
                   {dueDateLabel && <p className={`text-[10.5px] font-semibold ${dueDateLabel.color}`}>{dueDateLabel.text}</p>}
                 </div>
@@ -645,23 +640,20 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                   {assignmentType === "channel" && <><Hash size={11} className="text-gray-400" /> Full Channel</>}
                 </span>
               ) : (
-                <div className="flex flex-col gap-1">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
                   {[
-                    { id: "self", Icon: User, label: "Me" },
-                    { id: "individual", Icon: Users, label: "Member(s)" },
-                    { id: "channel", Icon: Hash, label: "Full Channel" },
+                    { id: 'self', Icon: User, label: 'Me' },
+                    { id: 'individual', Icon: Users, label: 'Member(s)' },
+                    { id: 'channel', Icon: Hash, label: 'Full Channel' },
                   ].map(({ id, Icon: BtnIcon, label }) => (
-                    <button
-                      key={id}
-                      type="button"
+                    <button key={id} type="button"
                       onClick={() => {
-                        if (id === "self" || id === "channel") setSelectedMembers([]);
+                        if (id === 'self' || id === 'channel') setSelectedMembers([]);
                         setAssignmentType(id);
                       }}
-                      className={`flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-semibold border transition-all ${assignmentType === id
-                        ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/20"
-                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
-                        }`}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, background: assignmentType === id ? 'rgba(184,149,106,0.12)' : '#161616', border: `1px solid ${assignmentType === id ? 'rgba(184,149,106,0.35)' : 'rgba(255,255,255,0.08)'}`, color: assignmentType === id ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif', textAlign: 'left' }}
+                      onMouseEnter={e => { if (assignmentType !== id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                      onMouseLeave={e => { if (assignmentType !== id) e.currentTarget.style.background = '#161616'; }}
                     >
                       <BtnIcon size={13} /> {label}
                     </button>
@@ -688,16 +680,18 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
         </div>
 
         {/* ── Footer ── */}
-        <div className="flex items-center justify-between gap-4 px-5 py-3.5 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
-          <div className="text-[11px] text-gray-400 dark:text-gray-500">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', background: '#111111', flexShrink: 0 }}>
+          <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             {isEditing && initialData?.updatedAt && (
               <>Last updated&nbsp;{new Date(initialData.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</>
             )}
           </div>
-          <div className="flex items-center gap-2.5">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-[13px] font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-all"
+              style={{ padding: '7px 16px', fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
             >
               Cancel
             </button>
@@ -705,7 +699,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               <button
                 onClick={handleSubmit}
                 disabled={saving}
-                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-[13px] font-bold rounded-xl shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 transition-all active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 20px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', fontFamily: 'Inter, system-ui, sans-serif', opacity: saving ? 0.6 : 1, transition: 'opacity 150ms ease' }}
+                onMouseEnter={e => { if (!saving) e.currentTarget.style.opacity = '0.85'; }}
+                onMouseLeave={e => { e.currentTarget.style.opacity = '1'; }}
               >
                 {saving ? <Loader2 size={14} className="animate-spin" /> : (isEditing ? <Edit3 size={14} /> : <Plus size={14} />)}
                 {saving ? "Saving…" : isEditing ? "Update Task" : "Create Task"}

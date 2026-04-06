@@ -79,17 +79,18 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
         bottom: '100%',
         left: 0,
         width: 260,
-        background: '#1e2124',
-        border: '1px solid #3a3d42',
-        borderRadius: 8,
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-accent)',
+        borderRadius: '2px',
         boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
         overflow: 'hidden',
         zIndex: 1000,
-        fontFamily: 'Inter, sans-serif',
-        marginBottom: 4 }}
+        fontFamily: 'var(--font)',
+        marginBottom: 4,
+      }}
     >
       {loading && (
-        <div style={{ padding: '10px 14px', color: '#6b7280', fontSize: 12 }}>Searching…</div>
+        <div style={{ padding: '10px 14px', color: 'var(--text-muted)', fontSize: 12 }}>Searching…</div>
       )}
       <ul ref={listRef} style={{ listStyle: 'none', margin: 0, padding: '4px 0', maxHeight: 240, overflowY: 'auto' }}>
         {results.map((user, idx) => (
@@ -100,8 +101,9 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
             style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '8px 12px', cursor: 'pointer',
-              background: idx === highlighted ? '#2d3035' : 'transparent',
-              transition: 'background 0.1s' }}
+              backgroundColor: idx === highlighted ? 'var(--bg-active)' : 'transparent',
+              transition: 'background 0.1s',
+            }}
           >
             {user.profilePicture ? (
               <img src={user.profilePicture} alt={user.username}
@@ -109,25 +111,27 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
             ) : (
               <div style={{
                 width: 28, height: 28, borderRadius: '50%',
-                background: '#5865f2',
+                backgroundColor: 'var(--bg-hover)',
+                border: '1px solid var(--border-accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 12, color: '#fff', fontWeight: 600, flexShrink: 0 }}>
+                fontSize: 12, color: 'var(--accent)', fontWeight: 700, flexShrink: 0,
+              }}>
                 {(user.username?.[0] || '?').toUpperCase()}
               </div>
             )}
             <div>
-              <div style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>
+              <div style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 500 }}>
                 {highlightMatch(user.username || '', query)}
               </div>
               {user.role && (
-                <div style={{ fontSize: 10, color: '#6b7280' }}>{user.role}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{user.role}</div>
               )}
             </div>
           </li>
         ))}
       </ul>
-      <div style={{ padding: '4px 12px 6px', borderTop: '1px solid #2d3035' }}>
-        <span style={{ fontSize: 10, color: '#6b7280' }}>↑↓ navigate · Enter to select · Esc to dismiss</span>
+      <div style={{ padding: '4px 12px 6px', borderTop: '1px solid var(--border-subtle)' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>↑↓ navigate · Enter to select · Esc to dismiss</span>
       </div>
     </div>
   );
@@ -141,7 +145,7 @@ function highlightMatch(text, query) {
   return (
     <>
       {text.slice(0, idx)}
-      <strong style={{ color: '#5865f2' }}>{text.slice(idx, idx + query.length)}</strong>
+      <strong style={{ color: 'var(--accent)' }}>{text.slice(idx, idx + query.length)}</strong>
       {text.slice(idx + query.length)}
     </>
   );

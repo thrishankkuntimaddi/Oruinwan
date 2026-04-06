@@ -1,114 +1,171 @@
+// LoadingScreen.jsx — Monolith Flow: Sentient OS Boot Sequence
 import React, { useState, useEffect } from 'react';
 
-const LoadingScreen = ({ onComplete }) => {
-    // Phases: 'initial' | 'center-icon' | 'center-text' | 'moving' | 'done'
-    const [phase, setPhase] = useState('initial');
-    const [text, setText] = useState('');
-    const fullText = 'Chttrix';
+// Each line has: text, style ('code' | 'warm' | 'brand'), delay before typing starts (ms)
+const BOOT_LINES = [
+    { text: '> Initializing workspace OS...', style: 'code', hold: 0 },
+    { text: '> Connecting intelligence layer...', style: 'code', hold: 180 },
+    { text: '> All systems operational.', style: 'code', hold: 120 },
+    { text: 'Hello. Welcome to Chttrix.', style: 'warm', hold: 400 },
+];
+
+const CHAR_SPEED = 22; // ms per character
+
+function useTypewriter(text, active, speed = CHAR_SPEED) {
+    const [displayed, setDisplayed] = useState('');
+    const [done, setDone] = useState(false);
 
     useEffect(() => {
-        let isMounted = true;
+        if (!active) { setDisplayed(''); setDone(false); return; }
+        let i = 0;
+        setDisplayed('');
+        setDone(false);
+        const iv = setInterval(() => {
+            i++;
+            setDisplayed(text.slice(0, i));
+            if (i >= text.length) { clearInterval(iv); setDone(true); }
+        }, speed);
+        return () => clearInterval(iv);
+    }, [active, text, speed]);
 
-        const runSequence = async () => {
-            // 0. Wait for mount (100ms)
-            await new Promise(r => setTimeout(r, 100));
-            if (!isMounted) return;
-            setPhase('center-icon'); // Icon fades in at center
+    return { displayed, done };
+}
 
-            // 1. Hold Icon Center (800ms)
-            await new Promise(r => setTimeout(r, 800));
-            if (!isMounted) return;
+// Individual typed line
+function BootLine({ item, active, onDone }) {
+    const { displayed, done } = useTypewriter(item.text, active, item.style === 'warm' ? 28 : CHAR_SPEED);
 
-            // 2. Icon shifts left (visually due to expansion), prepare for text
-            setPhase('center-text');
+    useEffect(() => {
+        if (done) {
+            const t = setTimeout(onDone, item.hold || 120);
+            return () => clearTimeout(t);
+        }
+    }, [done, item.hold, onDone]);
 
-            // 3. Type "Chttrix"
-            // Wait a moment for layout shift (100ms)
-            await new Promise(r => setTimeout(r, 100));
-            if (!isMounted) return;
+    if (!active && displayed === '') return null;
 
-            for (let i = 0; i <= fullText.length; i++) {
-                if (!isMounted) return;
-                setText(fullText.slice(0, i));
-                await new Promise(r => setTimeout(r, 80)); // Typing speed
-            }
-
-            // 4. Hold full text in center (1000ms)
-            await new Promise(r => setTimeout(r, 800));
-            if (!isMounted) return;
-
-            // 5. Move to Top Left & Fade Bg
-            setPhase('moving');
-
-            // 6. Wait for movement transition (e.g. 1000ms for smooth glide)
-            await new Promise(r => setTimeout(r, 1000));
-            if (!isMounted) return;
-
-            // 7. Done / Unmount
-            if (onComplete) onComplete();
-        };
-
-        runSequence();
-
-        return () => { isMounted = false; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
-
-    // Positioning State
-    const isCentered = phase === 'initial' || phase === 'center-icon' || phase === 'center-text';
-    const isMoving = phase === 'moving';
+    const isCode = item.style === 'code';
+    const isWarm = item.style === 'warm';
 
     return (
-        <div className="fixed inset-0 z-[9999] pointer-events-none">
-            {/* Background Layer - White/Dark - Fades OUT when moving starts */}
-            <div
-                className={`absolute inset-0 bg-white dark:bg-[#030712] transition-opacity duration-[1000ms] ease-in-out ${isMoving ? 'opacity-0' : 'opacity-100'}`}
-            ></div>
+        <div style={{
+            fontFamily: isCode ? '"JetBrains Mono", "Fira Code", "Courier New", monospace' : 'Inter, system-ui, sans-serif',
+            fontSize: isWarm ? '28px' : '13px',
+            fontWeight: isWarm ? 700 : 400,
+            color: isCode ? 'rgba(184,149,106,0.7)' : '#e4e4e4',
+            letterSpacing: isCode ? '0.01em' : '-0.02em',
+            lineHeight: isWarm ? 1.3 : 1.8,
+            marginTop: isWarm ? '32px' : '0',
+            minHeight: isWarm ? '38px' : '24px',
+        }}>
+            {displayed}
+            {active && !done && (
+                <span style={{
+                    display: 'inline-block',
+                    width: isWarm ? '3px' : '7px',
+                    height: isWarm ? '28px' : '13px',
+                    background: isWarm ? '#e4e4e4' : 'rgba(184,149,106,0.9)',
+                    marginLeft: '2px',
+                    verticalAlign: isWarm ? 'middle' : 'text-bottom',
+                    animation: 'cursorBlink 0.7s step-end infinite',
+                }} />
+            )}
+        </div>
+    );
+}
 
-            {/* Content Container - Animates Position & Scale */}
-            {/* 
-                Center: top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
-                Scale: 5x -> 1x
-                Origin: Center (Default) - This ensures robust centering regardless of width changes.
-                
-                Destiation (Left Alignment):
-                - Navbar uses: max-w-7xl mx-auto px-6.
-                - Max Width = 80rem (1280px).
-                - Gap on one side = (100vw - 80rem) / 2.
-                - Padding = 1.5rem (24px).
-                - Total Left = max(24px, (100vw - 1280px)/2 + 24px).
-                - We use Tailwind calc for this using md/xl breakpoints to approximate.
-                
-                Breakpoints:
-                - xl (1280px): Start using calculated left.
-                - Before xl: just left-[24px]. (md:px-6 matches).
-                
-                Vertical:
-                - Top 20px (matches manual alignment).
-            */}
-            <div
-                className={`absolute flex items-center gap-3 transition-all duration-[1000ms] ease-[cubic-bezier(0.76,0,0.24,1)]
-                    ${isCentered ? 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-[3] md:scale-[5]' : ''}
-                    ${isMoving ? 'scale-100 translate-0 top-[20px] left-[24px] xl:left-[calc((100vw-80rem)/2+24px)]' : ''}
-                `}
-            >
-                {/* Logo Image */}
-                <div className={`relative transition-all duration-500 ${phase === 'initial' ? 'opacity-0 scale-90' : 'opacity-100 scale-100'}`}>
-                    <img
-                        src="/chttrix-logo.jpg"
-                        alt="Chttrix"
-                        className="w-10 h-10 rounded-xl shadow-md object-cover"
-                    />
+const LoadingScreen = ({ onComplete }) => {
+    const [phase, setPhase] = useState('boot'); // 'boot' | 'brand' | 'fade'
+    const [lineIndex, setLineIndex] = useState(0);
+    const [opacity, setOpacity] = useState(1);
+    const [brandVisible, setBrandVisible] = useState(false);
+
+    // Advance to next line
+    const advance = () => {
+        if (lineIndex < BOOT_LINES.length - 1) {
+            setLineIndex(i => i + 1);
+        } else {
+            // All lines done — show brand stamp
+            setTimeout(() => {
+                setBrandVisible(true);
+                // Then fade out
+                setTimeout(() => {
+                    setPhase('fade');
+                    setOpacity(0);
+                    setTimeout(() => {
+                        if (onComplete) onComplete();
+                    }, 700);
+                }, 900);
+            }, 300);
+        }
+    };
+
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: '#080808',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'opacity 650ms cubic-bezier(0.4,0,0.2,1)',
+            opacity,
+            pointerEvents: phase === 'fade' ? 'none' : 'all',
+        }}>
+            <style>{`
+                @keyframes cursorBlink {
+                    0%, 100% { opacity: 1; }
+                    50% { opacity: 0; }
+                }
+                @keyframes brandStamp {
+                    from { opacity: 0; transform: scale(0.92) translateY(8px); }
+                    to   { opacity: 1; transform: scale(1) translateY(0); }
+                }
+                @keyframes lineSlideIn {
+                    from { opacity: 0; transform: translateY(6px); }
+                    to   { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
+
+            {/* Ambient background glow */}
+            <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: '600px', height: '400px', background: 'radial-gradient(ellipse, rgba(184,149,106,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+            <div style={{ width: '520px', padding: '0 24px' }}>
+                {/* Terminal block */}
+                <div style={{
+                    borderLeft: '2px solid rgba(184,149,106,0.25)',
+                    paddingLeft: '20px',
+                    marginBottom: '8px',
+                }}>
+                    {BOOT_LINES.map((line, i) => (
+                        <div key={i} style={{ animation: i <= lineIndex ? 'lineSlideIn 200ms ease forwards' : 'none' }}>
+                            {i <= lineIndex && (
+                                <BootLine
+                                    item={line}
+                                    active={i === lineIndex}
+                                    onDone={advance}
+                                />
+                            )}
+                        </div>
+                    ))}
                 </div>
 
-                {/* Text "Chttrix" */}
-                <span
-                    className={`font-exul font-black text-2xl tracking-tighter text-slate-900 dark:text-white leading-none whitespace-nowrap overflow-hidden transition-all duration-300
-                        ${(phase === 'initial' || phase === 'center-icon') ? 'w-0 opacity-0' : 'w-auto opacity-100'}
-                    `}
-                >
-                    {text}
-                </span>
+                {/* Brand stamp — appears after all lines */}
+                {brandVisible && (
+                    <div style={{
+                        marginTop: '48px',
+                        display: 'flex', alignItems: 'center', gap: '14px',
+                        animation: 'brandStamp 500ms cubic-bezier(0.16,1,0.3,1) forwards',
+                    }}>
+                        <img src="/chttrix-logo.jpg" alt="Chttrix"
+                            style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
+                        <div>
+                            <div style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                                Chttrix
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'rgba(184,149,106,0.7)', marginTop: '3px', fontFamily: 'Inter, system-ui, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                                Workspace OS · 2026
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

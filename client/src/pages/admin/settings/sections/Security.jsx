@@ -2,6 +2,14 @@ import React, { useState } from 'react';
 import { Shield, Lock, AlertTriangle, Save } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
+const inputSt = {
+    width: '100%', padding: '10px 12px',
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '13px',
+    outline: 'none', fontFamily: 'Inter, system-ui, sans-serif',
+    boxSizing: 'border-box'
+};
+
 const Security = () => {
     const { showToast } = useToast();
     const [settings, setSettings] = useState({
@@ -11,33 +19,28 @@ const Security = () => {
         ipWhitelist: false
     });
 
-    const handleSave = () => {
-        showToast('Security settings saved', 'success');
-    };
+    const handleSave = () => showToast('Security settings saved', 'success');
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Security</h2>
-                <p className="text-gray-500 dark:text-gray-400">Protect your company account</p>
+                <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '4px' }}>Security</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Protect your company account</p>
             </div>
 
             {/* Password Policy */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Lock size={20} />
-                    Password Policy
-                </h3>
-
-                <div className="space-y-4">
+            <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <Lock size={14} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Password Policy</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                            Required Password Strength
-                        </label>
+                        <FieldLabel text="Required Password Strength" />
                         <select
                             value={settings.passwordPolicy}
-                            onChange={(e) => setSettings(prev => ({ ...prev, passwordPolicy: e.target.value }))}
-                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
+                            onChange={e => setSettings(p => ({ ...p, passwordPolicy: e.target.value }))}
+                            style={inputSt}
                         >
                             <option value="weak">Weak (minimum 6 characters)</option>
                             <option value="medium">Medium (8+ chars, uppercase, number)</option>
@@ -45,75 +48,92 @@ const Security = () => {
                         </select>
                     </div>
 
-                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                        <div>
-                            <p className="font-bold text-gray-900 dark:text-white">Two-Factor Authentication</p>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">Require 2FA for all users</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={settings.twoFactorAuth}
-                                onChange={(e) => setSettings(prev => ({ ...prev, twoFactorAuth: e.target.checked }))}
-                                className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                        </label>
-                    </div>
+                    <ToggleRow
+                        label="Two-Factor Authentication"
+                        desc="Require 2FA for all users"
+                        checked={settings.twoFactorAuth}
+                        onChange={v => setSettings(p => ({ ...p, twoFactorAuth: v }))}
+                    />
 
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-                            Session Timeout (minutes)
-                        </label>
+                        <FieldLabel text="Session Timeout (minutes)" />
                         <input
-                            type="number"
+                            type="number" min="5" max="1440"
                             value={settings.sessionTimeout}
-                            onChange={(e) => setSettings(prev => ({ ...prev, sessionTimeout: e.target.value }))}
-                            className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-gray-900 dark:text-white"
-                            min="5"
-                            max="1440"
+                            onChange={e => setSettings(p => ({ ...p, sessionTimeout: e.target.value }))}
+                            style={{ ...inputSt, width: '140px' }}
                         />
                     </div>
                 </div>
             </div>
 
             {/* IP Whitelist */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Shield size={20} />
-                    IP Whitelist
-                </h3>
-
-                <div className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-xl">
-                    <div className="flex items-start gap-3">
-                        <AlertTriangle className="text-yellow-600 dark:text-yellow-400 mt-0.5" size={20} />
+            <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <Shield size={14} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>IP Whitelist</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <AlertTriangle size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '2px' }} />
                         <div>
-                            <p className="font-bold text-gray-900 dark:text-white">Enable IP Restrictions</p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">Only allow access from specific IP addresses</p>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>Enable IP Restrictions</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Only allow access from specific IP addresses</p>
                         </div>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={settings.ipWhitelist}
-                            onChange={(e) => setSettings(prev => ({ ...prev, ipWhitelist: e.target.checked }))}
-                            className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                    </label>
+                    <Toggle checked={settings.ipWhitelist} onChange={v => setSettings(p => ({ ...p, ipWhitelist: v }))} />
                 </div>
             </div>
 
-            <div className="flex justify-end">
-                <button
-                    onClick={handleSave}
-                    className="px-6 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2"
-                >
-                    <Save size={18} />
-                    Save Changes
-                </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <SaveBtn onClick={handleSave} />
             </div>
         </div>
+    );
+};
+
+const ToggleRow = ({ label, desc, checked, onChange }) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
+        <div>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</p>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{desc}</p>
+        </div>
+        <Toggle checked={checked} onChange={onChange} />
+    </div>
+);
+
+const Toggle = ({ checked, onChange }) => (
+    <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        style={{
+            width: '40px', height: '22px', borderRadius: '11px', flexShrink: 0,
+            background: checked ? 'var(--accent)' : 'var(--border-accent)',
+            border: 'none', cursor: 'pointer', position: 'relative',
+            transition: 'background 200ms ease'
+        }}
+    >
+        <span style={{
+            position: 'absolute', top: '3px',
+            left: checked ? '21px' : '3px',
+            width: '16px', height: '16px', borderRadius: '50%',
+            background: checked ? 'var(--bg-base)' : 'var(--text-muted)',
+            transition: 'left 200ms ease'
+        }} />
+    </button>
+);
+
+const FieldLabel = ({ text }) => (
+    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>{text}</label>
+);
+
+const SaveBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
+            <Save size={14} /> Save Changes
+        </button>
     );
 };
 

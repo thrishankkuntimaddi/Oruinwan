@@ -1,91 +1,88 @@
-/**
- * WorkspaceTaskDetailPanel.jsx
- *
- * Jira-style right-side detail panel for the /tasks workspace page.
- * Adapted from TasksTab.jsx TaskDetailPanel to match the workspace task schema:
- *   - task.id  (not task._id)
- *   - task.status  e.g. "To Do", "In Progress", "In Review", "Completed", "Blocked"
- *   - task.priority e.g. "High", "Medium", "Low", "Emergency"
- *   - task.assignees[]  (populated objects)
- *   - task.assigner / task.assignerId
- */
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     X, Eye, Activity, Plus, ChevronRight,
-    CheckCircle2, Tag, Loader2, AlertTriangle,
+    CheckCircle2, Tag, Loader2,
     ArrowRight, User, Edit2, Calendar, Trash2,
     Timer, Link2, PlayCircle, StopCircle
 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
-// ─── Design tokens ─────────────────────────────────────────────────────────────
-const JIRA_BLUE = '#0052CC';
+// ─── Design tokens (Monolith Flow) ───────────────────────────────────────────
+const T = {
+    base: '#0c0c0c',
+    surface: '#111111',
+    surface2: '#161616',
+    border: 'rgba(255,255,255,0.07)',
+    borderHover: 'rgba(255,255,255,0.12)',
+    text: '#e4e4e4',
+    textMuted: 'rgba(228,228,228,0.45)',
+    textDim: 'rgba(228,228,228,0.25)',
+    amber: '#b8956a',
+    amberBg: 'rgba(184,149,106,0.12)',
+    amberBorder: 'rgba(184,149,106,0.25)',
+};
 
-// Workspace task statuses (Sentence-case strings used in the DB)
+// ─── Statuses ─────────────────────────────────────────────────────────────────
 const WS_STATUSES = [
-    { key: 'To Do', label: 'TO DO', color: '#42526E', bg: '#DFE1E6' },
-    { key: 'In Progress', label: 'IN PROGRESS', color: '#0052CC', bg: '#DEEBFF' },
-    { key: 'In Review', label: 'IN REVIEW', color: '#6554C0', bg: '#EAE6FF' },
-    { key: 'Completed', label: 'COMPLETED', color: '#00875A', bg: '#E3FCEF' },
-    { key: 'Blocked', label: 'BLOCKED', color: '#FF5630', bg: '#FFEBE6' },
+    { key: 'To Do',      label: 'TO DO',       color: 'rgba(228,228,228,0.5)',  bg: 'rgba(255,255,255,0.06)' },
+    { key: 'In Progress',label: 'IN PROGRESS',  color: '#60a5fa',               bg: 'rgba(96,165,250,0.1)'   },
+    { key: 'In Review',  label: 'IN REVIEW',    color: '#a78bfa',               bg: 'rgba(167,139,250,0.1)'  },
+    { key: 'Completed',  label: 'COMPLETED',    color: '#34d399',               bg: 'rgba(52,211,153,0.1)'   },
+    { key: 'Blocked',    label: 'BLOCKED',      color: '#f87171',               bg: 'rgba(248,113,113,0.1)'  },
 ];
-
 const STATUS_MAP = Object.fromEntries(WS_STATUSES.map(s => [s.key, s]));
 
-// Workspace task priorities
+// ─── Priorities ───────────────────────────────────────────────────────────────
 const WS_PRIORITIES = [
-    { key: 'Emergency', label: 'Emergency', color: '#CD1317', arrow: '↑↑' },
-    { key: 'High', label: 'High', color: '#E97F33', arrow: '↑' },
-    { key: 'Medium', label: 'Medium', color: '#E2B203', arrow: '—' },
-    { key: 'Low', label: 'Low', color: '#3E7FC1', arrow: '↓' },
-    { key: 'Lowest', label: 'Lowest', color: '#7A869A', arrow: '↓↓' },
+    { key: 'Emergency', label: 'Emergency', color: '#f87171', arrow: '↑↑' },
+    { key: 'High',      label: 'High',      color: '#fb923c', arrow: '↑'  },
+    { key: 'Medium',    label: 'Medium',    color: T.amber,  arrow: '—'  },
+    { key: 'Low',       label: 'Low',       color: '#60a5fa', arrow: '↓'  },
+    { key: 'Lowest',    label: 'Lowest',    color: T.textMuted, arrow: '↓↓'},
 ];
-
 const PRIO_MAP = Object.fromEntries(WS_PRIORITIES.map(p => [p.key, p]));
 
-// Which statuses can be transitioned to from each status
 const TRANSITIONS = {
-    'To Do': ['In Progress', 'Blocked'],
-    'In Progress': ['In Review', 'Blocked', 'To Do'],
-    'In Review': ['Completed', 'In Progress', 'Blocked'],
-    'Completed': [],
-    'Blocked': ['In Progress', 'To Do'],
+    'To Do':      ['In Progress', 'Blocked'],
+    'In Progress':['In Review', 'Blocked', 'To Do'],
+    'In Review':  ['Completed', 'In Progress', 'Blocked'],
+    'Completed':  [],
+    'Blocked':    ['In Progress', 'To Do'],
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function avatarColor(name = '') {
-    const colors = ['#0052CC', '#00875A', '#FF5630', '#6554C0', '#FF8B00', '#00B8D9', '#36B37E'];
+    const colors = ['#b8956a', '#60a5fa', '#34d399', '#a78bfa', '#fb923c', '#f472b6', '#38bdf8'];
     let h = 0;
     for (let i = 0; i < (name.length || 0); i++) h = (h * 31 + name.charCodeAt(i)) % colors.length;
     return colors[h];
 }
-
 function initials(u) {
     if (!u) return '?';
     const name = u.username || u.name || u.email || '';
     return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
-
 function fmtDate(d) {
     if (!d) return '—';
-    const dt = new Date(d);
-    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
-
 function fmtSeconds(s) {
     if (!s) return '0m';
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
     if (h > 0) return `${h}h ${m}m`;
     if (m > 0) return `${m}m ${sec}s`;
     return `${sec}s`;
 }
 
-// ─── Activity log ─────────────────────────────────────────────────────────────
+// ─── Section label ────────────────────────────────────────────────────────────
+const SectionLabel = ({ children, icon }) => (
+    <p style={{ fontSize: '10px', fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'monospace' }}>
+        {icon} {children}
+    </p>
+);
 
+// ─── Activity Log ─────────────────────────────────────────────────────────────
 function ActivityLog({ taskId }) {
     const [log, setLog] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -93,7 +90,6 @@ function ActivityLog({ taskId }) {
     useEffect(() => {
         if (!taskId) return;
         setLoading(true);
-        // Try v2 endpoint first, fallback gracefully
         api.get(`/api/v2/tasks/${taskId}/activity`)
             .then(r => setLog(r.data.activities || r.data.activity || []))
             .catch(() => setLog([]))
@@ -101,49 +97,49 @@ function ActivityLog({ taskId }) {
     }, [taskId]);
 
     const ACTION_ICONS = {
-        created: <Plus size={11} className="text-green-600" />,
-        status_changed: <ArrowRight size={11} className="text-blue-600" />,
-        updated: <Activity size={11} className="text-orange-500" />,
-        assignee_added: <User size={11} className="text-indigo-600" />,
-        assignee_removed: <User size={11} className="text-red-500" />,
+        created: <Plus size={10} style={{ color: '#34d399' }} />,
+        status_changed: <ArrowRight size={10} style={{ color: '#60a5fa' }} />,
+        updated: <Activity size={10} style={{ color: T.amber }} />,
+        assignee_added: <User size={10} style={{ color: '#a78bfa' }} />,
+        assignee_removed: <User size={10} style={{ color: '#f87171' }} />,
     };
 
     if (loading) return (
-        <div className="flex items-center gap-2 justify-center py-8 text-gray-400 text-xs animate-pulse">
-            <Loader2 size={13} className="animate-spin" /> Loading activity…
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', padding: '32px 0', color: T.textMuted, fontSize: '12px' }}>
+            <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Loading activity…
         </div>
     );
 
     if (!log.length) return (
-        <div className="flex flex-col items-center gap-2 py-10 text-center">
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-                <Activity size={14} className="text-gray-300" />
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', padding: '36px 0', textAlign: 'center' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: T.surface2, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Activity size={13} style={{ color: T.textDim }} />
             </div>
-            <p className="text-xs text-gray-400">No activity recorded yet.</p>
+            <p style={{ fontSize: '12px', color: T.textMuted }}>No activity recorded yet.</p>
         </div>
     );
 
     return (
-        <div className="space-y-3 text-xs">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[...log].reverse().map((a, i) => (
-                <div key={i} className="flex items-start gap-2.5">
-                    <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                        {ACTION_ICONS[a.action] || <Activity size={11} className="text-gray-400" />}
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: T.surface2, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: '1px' }}>
+                        {ACTION_ICONS[a.action] || <Activity size={10} style={{ color: T.textDim }} />}
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-gray-700">
-                            <span className="font-semibold">{a.user?.username || 'Someone'}</span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: '12px', color: T.text, margin: 0 }}>
+                            <span style={{ fontWeight: 700 }}>{a.user?.username || 'Someone'}</span>
                             {' '}
-                            <span className="text-gray-500">
+                            <span style={{ color: T.textMuted }}>
                                 {a.action === 'created' && 'created this task'}
                                 {a.action === 'status_changed' && `moved from ${a.from} → ${a.to}`}
                                 {a.action === 'updated' && `updated ${a.field}`}
                                 {a.action === 'assignee_added' && 'added an assignee'}
                                 {a.action === 'assignee_removed' && 'removed an assignee'}
-                                {!['created', 'status_changed', 'updated', 'assignee_added', 'assignee_removed'].includes(a.action) && a.action}
+                                {!['created','status_changed','updated','assignee_added','assignee_removed'].includes(a.action) && a.action}
                             </span>
                         </p>
-                        <p className="text-gray-400 text-[10px] mt-0.5">
+                        <p style={{ fontSize: '10px', color: T.textDim, marginTop: '2px' }}>
                             {a.createdAt ? new Date(a.createdAt).toLocaleString() : ''}
                         </p>
                     </div>
@@ -153,8 +149,7 @@ function ActivityLog({ taskId }) {
     );
 }
 
-// ─── Main Panel ────────────────────────────────────────────────────────────────
-
+// ─── Main Panel ───────────────────────────────────────────────────────────────
 export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, onUpdate, onDelete }) {
     const { showToast } = useToast();
     const [tab, setTab] = useState('details');
@@ -169,28 +164,25 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''
     );
 
-    // ── Time Tracking state ──────────────────────────────────────────────────
+    // Time tracking
     const [timerRunning, setTimerRunning] = useState(false);
-    const [timerElapsed, setTimerElapsed] = useState(0); // seconds since start
+    const [timerElapsed, setTimerElapsed] = useState(0);
     const [timerLoading, setTimerLoading] = useState(false);
     const timerRef = useRef(null);
     const [totalTime, setTotalTime] = useState(task.timeTracking?.totalTime || 0);
 
-    // Check if a session is already open on mount
     useEffect(() => {
         const hasOpenSession = task.timeTracking?.sessions?.some(s => s.start && !s.end);
         if (hasOpenSession) {
             setTimerRunning(true);
             const openSession = task.timeTracking.sessions.slice().reverse().find(s => s.start && !s.end);
             if (openSession) {
-                const elapsed = Math.floor((Date.now() - new Date(openSession.start).getTime()) / 1000);
-                setTimerElapsed(elapsed);
+                setTimerElapsed(Math.floor((Date.now() - new Date(openSession.start).getTime()) / 1000));
             }
         }
         setTotalTime(task.timeTracking?.totalTime || 0);
     }, [task.timeTracking]);
 
-    // Live tick when timer is running
     useEffect(() => {
         if (timerRunning) {
             timerRef.current = setInterval(() => setTimerElapsed(e => e + 1), 1000);
@@ -204,8 +196,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         setTimerLoading(true);
         try {
             await api.post(`/api/v2/tasks/${task.id}/time/start`);
-            setTimerRunning(true);
-            setTimerElapsed(0);
+            setTimerRunning(true); setTimerElapsed(0);
             showToast('Timer started', 'success');
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to start timer', 'error');
@@ -216,8 +207,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         setTimerLoading(true);
         try {
             const res = await api.post(`/api/v2/tasks/${task.id}/time/stop`);
-            setTimerRunning(false);
-            setTimerElapsed(0);
+            setTimerRunning(false); setTimerElapsed(0);
             setTotalTime(res.data.timeTracking?.totalTime || 0);
             showToast(`Timer stopped — +${fmtSeconds(res.data.elapsed)}`, 'success');
         } catch (err) {
@@ -225,7 +215,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         } finally { setTimerLoading(false); }
     };
 
-    // ── Dependencies state ───────────────────────────────────────────────────
+    // Dependencies
     const [depInput, setDepInput] = useState('');
     const [depLoading, setDepLoading] = useState(false);
     const [localDeps, setLocalDeps] = useState(task.dependencies || []);
@@ -234,9 +224,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         if (!depInput.trim()) return;
         setDepLoading(true);
         try {
-            const res = await api.post(`/api/v2/tasks/${task.id}/dependency`, {
-                dependencyTaskId: depInput.trim()
-            });
+            const res = await api.post(`/api/v2/tasks/${task.id}/dependency`, { dependencyTaskId: depInput.trim() });
             setLocalDeps(res.data.dependencies || []);
             setDepInput('');
             showToast('Dependency added', 'success');
@@ -245,8 +233,6 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         } finally { setDepLoading(false); }
     };
 
-
-    // Sync when task prop changes (e.g. after a remote update)
     useEffect(() => {
         setTitle(task.title || '');
         setDesc(task.description || '');
@@ -255,203 +241,151 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
 
     const save = useCallback(async (updates) => {
         setSaving(true);
-        try {
-            await onUpdate(task.id, updates);
-        } finally {
-            setSaving(false);
-        }
+        try { await onUpdate(task.id, updates); }
+        finally { setSaving(false); }
     }, [task.id, onUpdate]);
 
     const handleStatusClick = (newStatus) => {
-        if (newStatus === 'Blocked') {
-            setShowBlockedInput(true);
-        } else {
-            save({ status: newStatus });
-        }
+        if (newStatus === 'Blocked') setShowBlockedInput(true);
+        else save({ status: newStatus });
     };
 
     const confirmBlocked = () => {
         if (!blockedReason.trim()) return;
         save({ status: 'Blocked', blockedReason: blockedReason.trim() });
-        setShowBlockedInput(false);
-        setBlockedReason('');
+        setShowBlockedInput(false); setBlockedReason('');
     };
 
     const statusConf = STATUS_MAP[task.status] || STATUS_MAP['To Do'];
     const allowedNext = TRANSITIONS[task.status] || [];
     const assignees = task.assignees || (task.assignee && task.assignee !== 'Self' ? [{ username: task.assignee }] : []);
     const reporter = task.assigner ? { username: task.assigner } : task.createdBy;
-    const pConf = PRIO_MAP[task.priority] || PRIO_MAP.Medium;
 
     return (
-        <div
-            className="flex-shrink-0 flex flex-col bg-white overflow-hidden"
-            style={{
-                width: 320,
-                borderLeft: '1px solid #DFE1E6',
-                height: '100%',
-            }}
-        >
-            {/* ── Header ── */}
-            <div
-                className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-                style={{ borderBottom: '1px solid #DFE1E6', background: '#F4F5F7' }}
-            >
-                <div className="flex items-center gap-2">
-                    <div
-                        className="w-4 h-4 rounded-sm flex items-center justify-center"
-                        style={{ background: statusConf.color }}
-                    >
-                        <div className="w-2 h-2 rounded-full bg-white opacity-90" />
-                    </div>
-                    <span
-                        className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-sm"
-                        style={{ background: statusConf.bg, color: statusConf.color }}
-                    >
+        <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', width: '320px', height: '100%', background: T.surface, borderLeft: `1px solid ${T.border}`, overflow: 'hidden' }}>
+
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: T.base }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', background: statusConf.bg, color: statusConf.color, border: `1px solid ${statusConf.color}30` }}>
                         {statusConf.label}
                     </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                    {saving && <Loader2 size={12} className="animate-spin text-gray-400" />}
-                    <button
-                        onClick={onClose}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-400 transition-colors"
-                    >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {saving && <Loader2 size={12} style={{ color: T.amber, animation: 'spin 1s linear infinite' }} />}
+                    <button onClick={onClose}
+                        style={{ padding: '4px', background: 'transparent', border: 'none', color: T.textMuted, cursor: 'pointer', transition: 'color 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = T.text}
+                        onMouseLeave={e => e.currentTarget.style.color = T.textMuted}>
                         <X size={14} />
                     </button>
                 </div>
             </div>
 
-            {/* ── Tabs ── */}
-            <div className="flex border-b flex-shrink-0" style={{ borderColor: '#DFE1E6' }}>
+            {/* Tabs */}
+            <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: T.base }}>
                 {[
-                    { key: 'details', label: 'Details', icon: <Eye size={12} /> },
-                    { key: 'activity', label: 'Activity', icon: <Activity size={12} /> },
+                    { key: 'details', label: 'Details', icon: <Eye size={11} /> },
+                    { key: 'activity', label: 'Activity', icon: <Activity size={11} /> },
                 ].map(t => (
-                    <button
-                        key={t.key}
-                        onClick={() => setTab(t.key)}
-                        className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-all"
-                        style={{
-                            color: tab === t.key ? JIRA_BLUE : '#42526E',
-                            borderBottom: tab === t.key ? `2px solid ${JIRA_BLUE}` : '2px solid transparent',
-                        }}
-                    >
+                    <button key={t.key} onClick={() => setTab(t.key)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 16px', fontSize: '12px', fontWeight: 600, background: 'transparent', border: 'none', borderBottom: tab === t.key ? `2px solid ${T.amber}` : '2px solid transparent', color: tab === t.key ? T.amber : T.textMuted, cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {t.icon} {t.label}
                     </button>
                 ))}
             </div>
 
-            {/* ── Scrollable body ── */}
-            <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+            {/* Scrollable body */}
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'thin' }}>
                 {tab === 'details' ? (
-                    <div className="p-4 space-y-5">
+                    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-                        {/* Issue key + type */}
+                        {/* Issue key */}
                         {task.issueKey && (
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 rounded-sm flex items-center justify-center" style={{ background: '#DEEBFF' }}>
-                                    <CheckCircle2 size={10} style={{ color: JIRA_BLUE }} />
-                                </div>
-                                <span className="text-[10px] font-mono font-bold" style={{ color: '#7A869A' }}>{task.issueKey}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <CheckCircle2 size={11} style={{ color: T.amber }} />
+                                <span style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 700, color: T.textDim }}>{task.issueKey}</span>
                             </div>
                         )}
 
-                        {/* Title — click to edit */}
+                        {/* Title */}
                         <div>
                             {editTitle ? (
-                                <input
-                                    autoFocus
-                                    value={title}
+                                <input autoFocus value={title}
                                     onChange={e => setTitle(e.target.value)}
                                     onBlur={() => { save({ title: title.trim() || task.title }); setEditTitle(false); }}
                                     onKeyDown={e => { if (e.key === 'Enter') { save({ title: title.trim() }); setEditTitle(false); } }}
-                                    className="w-full font-semibold text-sm text-gray-900 border-b-2 focus:outline-none pb-1"
-                                    style={{ borderColor: JIRA_BLUE }}
+                                    style={{ width: '100%', fontSize: '14px', fontWeight: 700, color: T.text, background: T.surface2, border: `1px solid ${T.amber}`, padding: '6px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
                                 />
                             ) : (
-                                <p
-                                    onClick={() => setEditTitle(true)}
-                                    className="font-semibold text-sm text-gray-900 cursor-pointer hover:bg-blue-50 rounded -mx-1 px-1 py-0.5 leading-snug group flex items-start gap-1"
-                                >
-                                    <span className="flex-1">{task.title}</span>
-                                    <Edit2 size={10} className="mt-1 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                                <p onClick={() => setEditTitle(true)}
+                                    style={{ fontSize: '14px', fontWeight: 700, color: T.text, cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: '6px', padding: '4px 6px', margin: '-4px -6px', transition: 'background 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = T.amberBg}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    <span style={{ flex: 1, lineHeight: 1.4 }}>{task.title}</span>
+                                    <Edit2 size={10} style={{ color: T.textDim, flexShrink: 0, marginTop: '4px' }} />
                                 </p>
                             )}
                         </div>
 
                         {/* Description */}
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Description</p>
+                            <SectionLabel>Description</SectionLabel>
                             {editDesc ? (
-                                <textarea
-                                    autoFocus
-                                    value={desc}
+                                <textarea autoFocus value={desc}
                                     onChange={e => setDesc(e.target.value)}
                                     rows={3}
                                     onBlur={() => { save({ description: desc }); setEditDesc(false); }}
-                                    className="w-full text-xs text-gray-700 border rounded p-2 focus:outline-none resize-none"
-                                    style={{ borderColor: '#DFE1E6' }}
+                                    style={{ width: '100%', fontSize: '12px', color: T.text, background: T.surface2, border: `1px solid ${T.border}`, padding: '8px', outline: 'none', resize: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
                                 />
                             ) : (
-                                <p
-                                    onClick={() => setEditDesc(true)}
-                                    className="text-xs text-gray-600 cursor-pointer hover:bg-blue-50 rounded -mx-1 px-1 py-0.5 min-h-[28px] leading-relaxed"
-                                >
-                                    {task.description || <span className="text-gray-400 italic">Click to add description…</span>}
+                                <p onClick={() => setEditDesc(true)}
+                                    style={{ fontSize: '12px', color: task.description ? T.textMuted : T.textDim, cursor: 'pointer', padding: '6px 8px', margin: '-6px -8px', minHeight: '28px', lineHeight: 1.6, transition: 'background 150ms ease', fontFamily: 'Inter, system-ui, sans-serif', fontStyle: task.description ? 'normal' : 'italic' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = T.amberBg}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                    {task.description || 'Click to add description…'}
                                 </p>
                             )}
                         </div>
 
                         {/* Status transitions */}
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Status</p>
+                            <SectionLabel>Status</SectionLabel>
                             {allowedNext.length === 0 ? (
-                                <span className="text-xs text-gray-400 italic">Terminal status — no transitions.</span>
+                                <span style={{ fontSize: '11px', color: T.textDim, fontStyle: 'italic' }}>Terminal status — no transitions.</span>
                             ) : (
-                                <div className="flex flex-wrap gap-1.5">
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {allowedNext.map(ns => {
                                         const nm = STATUS_MAP[ns] || {};
                                         return (
-                                            <button
-                                                key={ns}
-                                                onClick={() => handleStatusClick(ns)}
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded-sm text-[11px] font-bold uppercase tracking-wide transition-all hover:opacity-80"
-                                                style={{
-                                                    background: nm.bg || '#F4F5F7',
-                                                    color: nm.color || '#42526E',
-                                                    border: `1px solid ${(nm.color || '#42526E')}30`,
-                                                }}
-                                            >
-                                                <ChevronRight size={10} />
-                                                {nm.label || ns}
+                                            <button key={ns} onClick={() => handleStatusClick(ns)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: nm.bg || T.surface2, color: nm.color || T.textMuted, border: `1px solid ${(nm.color || T.textMuted)}30`, cursor: 'pointer', transition: 'opacity 150ms ease' }}
+                                                onMouseEnter={e => e.currentTarget.style.opacity = '0.75'}
+                                                onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                                                <ChevronRight size={9} /> {nm.label || ns}
                                             </button>
                                         );
                                     })}
                                 </div>
                             )}
-
-                            {/* Blocked reason input */}
                             {showBlockedInput && (
-                                <div className="mt-2 p-2.5 bg-red-50 rounded border border-red-200">
-                                    <p className="text-[10px] font-semibold text-red-600 mb-1.5">Reason for blocking *</p>
-                                    <input
-                                        autoFocus
-                                        value={blockedReason}
+                                <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(248,113,113,0.06)', border: '1px solid rgba(248,113,113,0.2)' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: 700, color: '#f87171', marginBottom: '8px' }}>Reason for blocking *</p>
+                                    <input autoFocus value={blockedReason}
                                         onChange={e => setBlockedReason(e.target.value)}
                                         placeholder="What is blocking this task?"
-                                        className="w-full text-xs border border-red-200 rounded p-1.5 focus:outline-none bg-white"
+                                        style={{ width: '100%', fontSize: '12px', background: T.surface2, border: '1px solid rgba(248,113,113,0.3)', color: T.text, padding: '6px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
                                         onKeyDown={e => e.key === 'Enter' && confirmBlocked()}
                                     />
-                                    <div className="flex gap-1.5 mt-1.5">
-                                        <button
-                                            onClick={confirmBlocked}
-                                            className="px-2 py-1 text-[10px] font-semibold text-white rounded-sm bg-red-600"
-                                        >Confirm</button>
-                                        <button
-                                            onClick={() => setShowBlockedInput(false)}
-                                            className="px-2 py-1 text-[10px] text-red-600 hover:bg-red-100 rounded-sm"
-                                        >Cancel</button>
+                                    <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                        <button onClick={confirmBlocked}
+                                            style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 700, color: '#0c0c0c', background: '#f87171', border: 'none', cursor: 'pointer' }}>
+                                            Confirm
+                                        </button>
+                                        <button onClick={() => setShowBlockedInput(false)}
+                                            style={{ padding: '4px 10px', fontSize: '11px', color: '#f87171', background: 'transparent', border: 'none', cursor: 'pointer' }}>
+                                            Cancel
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -459,20 +393,12 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
 
                         {/* Priority */}
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Priority</p>
-                            <div className="flex flex-wrap gap-1">
+                            <SectionLabel>Priority</SectionLabel>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                 {WS_PRIORITIES.map(p => (
-                                    <button
-                                        key={p.key}
-                                        onClick={() => save({ priority: p.key })}
-                                        className="flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium transition-all"
-                                        style={{
-                                            background: task.priority === p.key ? `${p.color}18` : '#F4F5F7',
-                                            color: p.color,
-                                            border: task.priority === p.key ? `1px solid ${p.color}` : '1px solid transparent',
-                                        }}
-                                    >
-                                        <span className="font-bold text-[9px]">{p.arrow}</span>
+                                    <button key={p.key} onClick={() => save({ priority: p.key })}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, background: task.priority === p.key ? `${p.color}18` : T.surface2, color: p.color, border: task.priority === p.key ? `1px solid ${p.color}50` : `1px solid ${T.border}`, cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                        <span style={{ fontSize: '9px', fontWeight: 700 }}>{p.arrow}</span>
                                         {p.label}
                                     </button>
                                 ))}
@@ -481,89 +407,68 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
 
                         {/* Assignees */}
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Assignee</p>
+                            <SectionLabel>Assignee</SectionLabel>
                             {assignees.length > 0 ? (
-                                <div className="space-y-2">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {assignees.map((a, i) => {
                                         const name = a.username || a.name || a.email || '?';
                                         return (
-                                            <div key={i} className="flex items-center gap-2">
-                                                <div
-                                                    className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-                                                    style={{ background: avatarColor(name) }}
-                                                >
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: avatarColor(name), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0c0c0c', fontSize: '10px', fontWeight: 700, flexShrink: 0 }}>
                                                     {initials(a)}
                                                 </div>
-                                                <span className="text-xs font-medium text-gray-700 flex-1 truncate">{name}</span>
+                                                <span style={{ fontSize: '12px', fontWeight: 500, color: T.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
+                            ) : members.length > 0 ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', maxHeight: '128px', overflowY: 'auto' }}>
+                                    {members.slice(0, 8).map(m => {
+                                        const name = m.username || m.name || m.email || '?';
+                                        return (
+                                            <button key={m._id || m.id} onClick={() => save({ assignedToIds: [m._id || m.id] })}
+                                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', background: 'transparent', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 150ms ease' }}
+                                                onMouseEnter={e => e.currentTarget.style.background = T.amberBg}
+                                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: avatarColor(name), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0c0c0c', fontSize: '8px', fontWeight: 700, flexShrink: 0 }}>
+                                                    {initials(m)}
+                                                </div>
+                                                <span style={{ fontSize: '12px', color: T.textMuted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             ) : (
-                                members.length > 0 ? (
-                                    <div className="flex flex-col gap-1 max-h-32 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
-                                        {members.slice(0, 8).map(m => {
-                                            const name = m.username || m.name || m.email || '?';
-                                            return (
-                                                <button
-                                                    key={m._id || m.id}
-                                                    onClick={() => save({ assignedToIds: [m._id || m.id] })}
-                                                    className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-blue-50 transition-colors w-full text-left"
-                                                >
-                                                    <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
-                                                        style={{ background: avatarColor(name) }}>
-                                                        {initials(m)}
-                                                    </div>
-                                                    <span className="text-xs text-gray-700 truncate">{name}</span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                ) : (
-                                    <span className="text-xs text-gray-400 italic">Unassigned</span>
-                                )
+                                <span style={{ fontSize: '12px', color: T.textDim, fontStyle: 'italic' }}>Unassigned</span>
                             )}
                         </div>
 
-                        {/* Due date */}
+                        {/* Due Date */}
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Due Date</p>
-                            <input
-                                type="date"
-                                value={localDueDate}
-                                onChange={e => {
-                                    setLocalDueDate(e.target.value);
-                                    save({ dueDate: e.target.value || null });
-                                }}
-                                className="w-full text-xs border rounded px-2 py-1.5 focus:outline-none text-gray-700"
-                                style={{ borderColor: '#DFE1E6' }}
+                            <SectionLabel icon={<Calendar size={10} />}>Due Date</SectionLabel>
+                            <input type="date" value={localDueDate}
+                                onChange={e => { setLocalDueDate(e.target.value); save({ dueDate: e.target.value || null }); }}
+                                style={{ width: '100%', fontSize: '12px', background: T.surface2, border: `1px solid ${T.border}`, color: T.text, padding: '6px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', colorScheme: 'dark' }}
                             />
                             {task.dueDate && (
-                                <p className="text-[10.5px] mt-1 text-gray-400">{fmtDate(task.dueDate)}</p>
+                                <p style={{ fontSize: '11px', color: T.textMuted, marginTop: '4px' }}>{fmtDate(task.dueDate)}</p>
                             )}
                         </div>
 
-                        {/* Subtasks / Child issues */}
+                        {/* Child Issues */}
                         {(task.subtasks?.length > 0 || task.childIssues?.length > 0) && (
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">
-                                    Child Issues ({(task.subtasks || task.childIssues || []).length})
-                                </p>
-                                <div className="space-y-1">
+                                <SectionLabel>Child Issues ({(task.subtasks || task.childIssues || []).length})</SectionLabel>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                     {(task.subtasks || task.childIssues || []).map((s, i) => (
-                                        <div
-                                            key={s._id || i}
-                                            className="flex items-center gap-2 text-xs text-gray-700 hover:bg-gray-50 rounded px-1 py-0.5"
-                                        >
-                                            <div
-                                                className="w-3 h-3 rounded-sm border flex items-center justify-center flex-shrink-0"
-                                                style={{ borderColor: status === 'Completed' ? '#00875A' : '#42526E' }}
-                                            >
-                                                {(s.status === 'done' || s.status === 'Completed') && (
-                                                    <CheckCircle2 size={9} className="text-green-600" />
-                                                )}
+                                        <div key={s._id || i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: T.textMuted, padding: '3px 4px', transition: 'background 150ms ease' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = T.surface2}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                            <div style={{ width: '12px', height: '12px', border: `1px solid ${s.status === 'Completed' || s.status === 'done' ? '#34d399' : T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                {(s.status === 'done' || s.status === 'Completed') && <CheckCircle2 size={9} style={{ color: '#34d399' }} />}
                                             </div>
-                                            <span className={s.status === 'done' || s.status === 'Completed' ? 'line-through text-gray-400' : ''}>
+                                            <span style={{ textDecoration: (s.status === 'done' || s.status === 'Completed') ? 'line-through' : 'none', color: (s.status === 'done' || s.status === 'Completed') ? T.textDim : T.textMuted }}>
                                                 {s.title}
                                             </span>
                                         </div>
@@ -575,11 +480,10 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                         {/* Labels */}
                         {task.labels?.length > 0 && (
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Labels</p>
-                                <div className="flex flex-wrap gap-1">
+                                <SectionLabel>Labels</SectionLabel>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
                                     {task.labels.map((l, i) => (
-                                        <span key={i} className="flex items-center gap-1 px-2 py-0.5 text-[10px] rounded-full"
-                                            style={{ background: '#DEEBFF', color: JIRA_BLUE }}>
+                                        <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '2px 8px', fontSize: '10px', background: T.amberBg, color: T.amber, border: `1px solid ${T.amberBorder}` }}>
                                             <Tag size={8} /> {l}
                                         </span>
                                     ))}
@@ -587,91 +491,57 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         )}
 
-                        {/* ── TIME TRACKING ────────────────────────────────── */}
+                        {/* Time Tracking */}
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                <Timer size={10} /> Time Tracking
-                            </p>
-
-                            {/* Total logged */}
-                            <div className="flex items-center gap-2 mb-2">
-                                <span className="text-xs text-gray-500">Logged:</span>
-                                <span className="text-xs font-bold" style={{ color: JIRA_BLUE }}>
-                                    {fmtSeconds(totalTime)}
-                                </span>
+                            <SectionLabel icon={<Timer size={10} />}>Time Tracking</SectionLabel>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                                <span style={{ fontSize: '12px', color: T.textMuted }}>Logged:</span>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: T.amber }}>{fmtSeconds(totalTime)}</span>
                                 {timerRunning && (
-                                    <span className="ml-auto text-xs font-mono font-bold text-green-600 animate-pulse">
+                                    <span style={{ marginLeft: 'auto', fontSize: '12px', fontFamily: 'monospace', fontWeight: 700, color: '#34d399' }}>
                                         +{fmtSeconds(timerElapsed)} ⏱
                                     </span>
                                 )}
                             </div>
-
-                            {/* Start / Stop button */}
-                            <button
-                                onClick={timerRunning ? stopTimer : startTimer}
-                                disabled={timerLoading}
-                                className="flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-sm transition-all w-full justify-center"
-                                style={{
-                                    background: timerRunning ? '#FFEBE6' : '#E3FCEF',
-                                    color: timerRunning ? '#FF5630' : '#00875A',
-                                    border: `1px solid ${timerRunning ? '#FF5630' : '#00875A'}30`,
-                                    opacity: timerLoading ? 0.6 : 1
-                                }}
-                            >
-                                {timerLoading ? (
-                                    <Loader2 size={12} className="animate-spin" />
-                                ) : timerRunning ? (
-                                    <><StopCircle size={13} /> Stop Timer</>
-                                ) : (
-                                    <><PlayCircle size={13} /> Start Timer</>
-                                )}
+                            <button onClick={timerRunning ? stopTimer : startTimer} disabled={timerLoading}
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '10px', fontSize: '12px', fontWeight: 700, background: timerRunning ? 'rgba(248,113,113,0.1)' : 'rgba(52,211,153,0.1)', color: timerRunning ? '#f87171' : '#34d399', border: `1px solid ${timerRunning ? 'rgba(248,113,113,0.25)' : 'rgba(52,211,153,0.25)'}`, cursor: timerLoading ? 'not-allowed' : 'pointer', opacity: timerLoading ? 0.6 : 1, transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                {timerLoading ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
+                                    : timerRunning ? <><StopCircle size={13} /> Stop Timer</>
+                                    : <><PlayCircle size={13} /> Start Timer</>}
                             </button>
                         </div>
 
-                        {/* ── DEPENDENCIES ─────────────────────────────────── */}
+                        {/* Dependencies */}
                         <div>
-                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1">
-                                <Link2 size={10} /> Dependencies
-                            </p>
-
-                            {/* Existing dependencies */}
+                            <SectionLabel icon={<Link2 size={10} />}>Dependencies</SectionLabel>
                             {localDeps.length > 0 ? (
-                                <div className="space-y-1 mb-2">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
                                     {localDeps.map((dep, i) => {
                                         const depId = dep._id || dep.toString();
                                         const depTitle = dep.title || depId.slice(-8);
                                         return (
-                                            <div key={i} className="flex items-center gap-2 text-xs text-gray-700 bg-gray-50 rounded px-2 py-1.5">
-                                                <Link2 size={9} className="text-gray-400 flex-shrink-0" />
-                                                <span className="flex-1 truncate" title={depId}>{depTitle}</span>
-                                                <span className="text-[9px] font-mono text-gray-400">{depId.slice(-6)}</span>
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: T.textMuted, background: T.surface2, border: `1px solid ${T.border}`, padding: '6px 10px' }}>
+                                                <Link2 size={9} style={{ color: T.textDim, flexShrink: 0 }} />
+                                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{depTitle}</span>
+                                                <span style={{ fontSize: '9px', fontFamily: 'monospace', color: T.textDim }}>{depId.slice(-6)}</span>
                                             </div>
                                         );
                                     })}
                                 </div>
                             ) : (
-                                <p className="text-[11px] text-gray-400 italic mb-2">No dependencies</p>
+                                <p style={{ fontSize: '11px', color: T.textDim, fontStyle: 'italic', marginBottom: '8px' }}>No dependencies</p>
                             )}
-
-                            {/* Add dependency input */}
-                            <div className="flex gap-1.5">
-                                <input
-                                    value={depInput}
-                                    onChange={e => setDepInput(e.target.value)}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                                <input value={depInput} onChange={e => setDepInput(e.target.value)}
                                     placeholder="Paste Task ID…"
-                                    className="flex-1 text-xs border rounded-sm px-2 py-1.5 focus:outline-none min-w-0"
-                                    style={{ borderColor: '#DFE1E6' }}
-                                    onFocus={e => e.target.style.borderColor = JIRA_BLUE}
-                                    onBlur={e => e.target.style.borderColor = '#DFE1E6'}
+                                    style={{ flex: 1, fontSize: '12px', background: T.surface2, border: `1px solid ${T.border}`, color: T.text, padding: '6px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', minWidth: 0 }}
+                                    onFocus={e => e.target.style.borderColor = T.amber}
+                                    onBlur={e => e.target.style.borderColor = T.border}
                                     onKeyDown={e => e.key === 'Enter' && addDependency()}
                                 />
-                                <button
-                                    onClick={addDependency}
-                                    disabled={!depInput.trim() || depLoading}
-                                    className="px-2.5 py-1.5 text-[10px] font-bold text-white rounded-sm transition-all disabled:opacity-40"
-                                    style={{ background: JIRA_BLUE }}
-                                >
-                                    {depLoading ? <Loader2 size={10} className="animate-spin" /> : 'Add'}
+                                <button onClick={addDependency} disabled={!depInput.trim() || depLoading}
+                                    style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, color: '#0c0c0c', background: T.amber, border: 'none', cursor: depInput.trim() && !depLoading ? 'pointer' : 'not-allowed', opacity: !depInput.trim() || depLoading ? 0.5 : 1, transition: 'opacity 150ms ease' }}>
+                                    {depLoading ? <Loader2 size={10} style={{ animation: 'spin 1s linear infinite' }} /> : 'Add'}
                                 </button>
                             </div>
                         </div>
@@ -679,36 +549,33 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                         {/* Channel */}
                         {task.project && (
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Channel</p>
-                                <span className="text-xs font-medium text-gray-700">#{task.project}</span>
+                                <SectionLabel>Channel</SectionLabel>
+                                <span style={{ fontSize: '12px', fontWeight: 500, color: T.textMuted }}>#{task.project}</span>
                             </div>
                         )}
 
                         {/* Reporter */}
                         {reporter && (
                             <div>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Reporter</p>
-                                <div className="flex items-center gap-2">
-                                    <div
-                                        className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
-                                        style={{ background: avatarColor(reporter.username || reporter.name || reporter) }}
-                                    >
+                                <SectionLabel>Reporter</SectionLabel>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: avatarColor(reporter.username || reporter.name || reporter), display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0c0c0c', fontSize: '8px', fontWeight: 700, flexShrink: 0 }}>
                                         {initials(reporter)}
                                     </div>
-                                    <span className="text-xs text-gray-700">{reporter.username || reporter.name || reporter}</span>
+                                    <span style={{ fontSize: '12px', color: T.textMuted }}>{reporter.username || reporter.name || reporter}</span>
                                 </div>
                             </div>
                         )}
 
                         {/* Completion note */}
                         {task.completionNote && (
-                            <div className="p-2.5 bg-emerald-50 rounded border border-emerald-200">
-                                <p className="text-[10px] font-bold text-emerald-700 mb-1 flex items-center gap-1">
+                            <div style={{ padding: '10px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.18)' }}>
+                                <p style={{ fontSize: '10px', fontWeight: 700, color: '#34d399', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                     <CheckCircle2 size={10} /> Completion Note
                                 </p>
-                                <p className="text-xs text-emerald-800 italic">"{task.completionNote}"</p>
+                                <p style={{ fontSize: '12px', color: 'rgba(52,211,153,0.7)', fontStyle: 'italic' }}>"{task.completionNote}"</p>
                                 {task.completedAt && (
-                                    <p className="text-[10px] text-emerald-500 mt-1">
+                                    <p style={{ fontSize: '10px', color: 'rgba(52,211,153,0.4)', marginTop: '4px' }}>
                                         {new Date(task.completedAt).toLocaleDateString()}
                                     </p>
                                 )}
@@ -716,17 +583,18 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                         )}
 
                         {/* Delete */}
-                        <div className="pt-2 border-t" style={{ borderColor: '#DFE1E6' }}>
-                            <button
-                                onClick={() => onDelete(task.id)}
-                                className="flex items-center gap-1.5 text-xs font-medium text-red-500 hover:text-red-700 transition-colors"
-                            >
+                        <div style={{ paddingTop: '8px', borderTop: `1px solid ${T.border}` }}>
+                            <button onClick={() => onDelete(task.id)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 500, color: '#f87171', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#fca5a5'}
+                                onMouseLeave={e => e.currentTarget.style.color = '#f87171'}>
                                 <Trash2 size={11} /> Delete issue
                             </button>
                         </div>
+
                     </div>
                 ) : (
-                    <div className="p-4">
+                    <div style={{ padding: '16px' }}>
                         <ActivityLog taskId={task.id} />
                     </div>
                 )}

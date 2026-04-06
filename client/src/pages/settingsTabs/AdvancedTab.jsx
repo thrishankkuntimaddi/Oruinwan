@@ -1,10 +1,103 @@
 import React, { useState } from 'react';
 import Card from './Card';
-import { Download, Trash2, PauseCircle, AlertTriangle } from 'lucide-react';
+import { Download, Trash2, PauseCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
 
+const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
+
+// ── Shared inline styles ──────────────────────────────────────────────────────
+const inputStyle = {
+    width: '100%',
+    padding: '8px 12px',
+    backgroundColor: 'var(--bg-input)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 2,
+    fontSize: 13,
+    color: 'var(--text-primary)',
+    outline: 'none',
+    boxSizing: 'border-box',
+    fontFamily: 'monospace',
+    letterSpacing: '0.05em',
+    transition: 'border-color 150ms ease',
+};
+
+// ── Confirm modal ─────────────────────────────────────────────────────────────
+const ConfirmModal = ({ title, body, confirmLabel, confirmDanger, onCancel, onConfirm, loading, confirmWord, confirmText, setConfirmText }) => (
+    <div style={{
+        position: 'fixed', inset: 0,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 50, padding: 16,
+    }}>
+        <div style={{
+            backgroundColor: 'var(--bg-surface)',
+            border: '1px solid var(--border-accent)',
+            borderRadius: 2,
+            padding: 24,
+            maxWidth: 400,
+            width: '100%',
+        }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px', ...S.font }}>{title}</h3>
+            <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.6, ...S.font }}>{body}</div>
+
+            {confirmWord && (
+                <div style={{ marginBottom: 16 }}>
+                    <label style={{
+                        display: 'block', fontSize: 10, fontWeight: 700,
+                        textTransform: 'uppercase', letterSpacing: '0.12em',
+                        color: 'var(--text-muted)', marginBottom: 6, ...S.font,
+                    }}>
+                        Type <span style={{ color: 'var(--state-danger)', fontFamily: 'monospace' }}>{confirmWord}</span> to confirm
+                    </label>
+                    <input
+                        type="text"
+                        value={confirmText}
+                        onChange={e => setConfirmText(e.target.value)}
+                        placeholder={confirmWord}
+                        style={{ ...inputStyle, borderColor: confirmText === confirmWord ? 'var(--state-danger)' : 'var(--border-default)' }}
+                        onFocus={e => e.target.style.borderColor = 'var(--state-danger)'}
+                        onBlur={e => e.target.style.borderColor = (confirmText === confirmWord ? 'var(--state-danger)' : 'var(--border-default)')}
+                    />
+                </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                    onClick={onCancel}
+                    disabled={loading}
+                    style={{
+                        flex: 1, padding: '8px 12px', fontSize: 13, fontWeight: 500,
+                        color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)',
+                        border: '1px solid var(--border-default)', borderRadius: 2,
+                        cursor: 'pointer', ...S.font,
+                    }}
+                >Cancel</button>
+                <button
+                    onClick={onConfirm}
+                    disabled={loading || (confirmWord && confirmText !== confirmWord)}
+                    style={{
+                        flex: 1, padding: '8px 12px', fontSize: 13, fontWeight: 500,
+                        color: '#fff',
+                        backgroundColor: confirmDanger ? 'var(--state-danger)' : 'var(--accent)',
+                        border: 'none', borderRadius: 2,
+                        cursor: loading || (confirmWord && confirmText !== confirmWord) ? 'not-allowed' : 'pointer',
+                        opacity: loading || (confirmWord && confirmText !== confirmWord) ? 0.5 : 1,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                        transition: 'opacity 150ms ease', ...S.font,
+                    }}
+                >
+                    {loading && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
+                    {confirmLabel}
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
+// ── AdvancedTab ───────────────────────────────────────────────────────────────
 const AdvancedTab = () => {
     const { logout } = useAuth();
     const { showToast } = useToast();
@@ -37,8 +130,8 @@ const AdvancedTab = () => {
             await api.post('/api/auth/me/deactivate', {});
             try { await logout(); } catch { }
             window.location.href = '/login?deactivated=true';
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Deactivation failed', 'error');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Deactivation failed', 'error');
         } finally { setDeactivating(false); setShowDeactivateModal(false); }
     };
 
@@ -48,132 +141,157 @@ const AdvancedTab = () => {
             await api.delete('/api/users/me');
             showToast('Account deleted', 'success');
             setTimeout(() => { window.location.href = '/login?deleted=true'; }, 1000);
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Deletion failed', 'error');
+        } catch (err) {
+            showToast(err.response?.data?.message || 'Deletion failed', 'error');
         } finally { setDeleting(false); setShowDeleteModal(false); }
     };
 
-    const btnBase = "flex items-center gap-2 px-3 py-2 text-[12.5px] font-semibold rounded-lg transition-colors flex-shrink-0";
-
     return (
-        <div className="space-y-4">
-            {/* Data Export */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {/* ── Data Export ──────────────────────────────────────────── */}
             <Card title="Data Export" subtitle="Download your personal data (GDPR compliant)">
-                <div className="flex items-start justify-between gap-4">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
                     <div>
-                        <p className="text-[12.5px] text-gray-600 dark:text-gray-400 mb-2">
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 10, lineHeight: 1.6, ...S.font }}>
                             Export all personal data — profile, messages, and settings — as a JSON file.
                         </p>
-                        <ul className="text-[11.5px] text-gray-400 space-y-0.5 list-disc list-inside">
-                            <li>Profile information & preferences</li>
-                            <li>Workspace memberships</li>
-                            <li>Account activity history</li>
+                        <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {['Profile information & preferences', 'Workspace memberships', 'Account activity history'].map(item => (
+                                <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)', ...S.font }}>
+                                    <span style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'var(--text-muted)', flexShrink: 0 }} />
+                                    {item}
+                                </li>
+                            ))}
                         </ul>
                     </div>
-                    <button onClick={handleExportData} disabled={exporting}
-                        className={`${btnBase} bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 disabled:opacity-50`}>
-                        <Download size={13} />
+                    <button
+                        onClick={handleExportData}
+                        disabled={exporting}
+                        style={{
+                            flexShrink: 0,
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '8px 16px', fontSize: 13, fontWeight: 500,
+                            color: 'var(--text-primary)',
+                            backgroundColor: 'var(--bg-active)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: 2, cursor: exporting ? 'not-allowed' : 'pointer',
+                            opacity: exporting ? 0.6 : 1,
+                            transition: 'border-color 150ms ease, background-color 150ms ease',
+                            ...S.font,
+                        }}
+                        onMouseEnter={e => { if (!exporting) { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'var(--bg-active)'; }}
+                    >
+                        {exporting ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={13} />}
                         {exporting ? 'Exporting…' : 'Export Data'}
                     </button>
                 </div>
             </Card>
 
-            {/* Deactivate */}
+            {/* ── Deactivate Account ───────────────────────────────────── */}
             <Card title="Deactivate Account" subtitle="Temporarily disable your account">
-                <div className="flex items-start justify-between gap-4">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
                     <div>
-                        <p className="text-[12.5px] text-gray-600 dark:text-gray-400 mb-1">
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.6, ...S.font }}>
                             Hides your profile and pauses notifications. Your data is preserved.
                         </p>
-                        <p className="text-[11.5px] text-gray-400">Reactivate anytime by logging back in.</p>
+                        <p style={{ fontSize: 12, color: 'var(--text-muted)', ...S.font }}>Reactivate anytime by logging back in.</p>
                     </div>
-                    <button onClick={() => setShowDeactivateModal(true)}
-                        className={`${btnBase} bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800`}>
+                    <button
+                        onClick={() => setShowDeactivateModal(true)}
+                        style={{
+                            flexShrink: 0,
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '8px 16px', fontSize: 13, fontWeight: 500,
+                            color: 'var(--accent)',
+                            backgroundColor: 'rgba(184,149,106,0.08)',
+                            border: '1px solid rgba(184,149,106,0.3)',
+                            borderRadius: 2, cursor: 'pointer',
+                            transition: 'background-color 150ms ease',
+                            ...S.font,
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(184,149,106,0.14)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(184,149,106,0.08)'}
+                    >
                         <PauseCircle size={13} /> Deactivate
                     </button>
                 </div>
             </Card>
 
-            {/* Delete */}
+            {/* ── Delete Account ────────────────────────────────────────── */}
             <Card title="Delete Account" subtitle="Permanently remove your account and all data">
-                <div className="flex items-start justify-between gap-4">
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
                     <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <AlertTriangle size={13} className="text-red-500 flex-shrink-0" />
-                            <span className="text-[12.5px] font-bold text-red-600 dark:text-red-400">This action cannot be undone.</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <AlertTriangle size={13} style={{ color: 'var(--state-danger)', flexShrink: 0 }} />
+                            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--state-danger)', ...S.font }}>This action cannot be undone.</span>
                         </div>
-                        <p className="text-[12px] text-gray-500 dark:text-gray-400 mb-1">All messages, files, tasks, and account data will be permanently deleted.</p>
-                        <p className="text-[11.5px] text-amber-600 dark:text-amber-400">Export your data first.</p>
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 4, lineHeight: 1.6, ...S.font }}>
+                            All messages, files, tasks, and account data will be permanently deleted.
+                        </p>
+                        <p style={{ fontSize: 12, color: 'var(--accent)', ...S.font }}>Export your data first.</p>
                     </div>
-                    <button onClick={() => { setDeleteConfirmText(''); setShowDeleteModal(true); }}
-                        className={`${btnBase} bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800`}>
+                    <button
+                        onClick={() => { setDeleteConfirmText(''); setShowDeleteModal(true); }}
+                        style={{
+                            flexShrink: 0,
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '8px 16px', fontSize: 13, fontWeight: 500,
+                            color: 'var(--state-danger)',
+                            backgroundColor: 'rgba(224,82,82,0.08)',
+                            border: '1px solid rgba(224,82,82,0.3)',
+                            borderRadius: 2, cursor: 'pointer',
+                            transition: 'background-color 150ms ease',
+                            ...S.font,
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(224,82,82,0.14)'}
+                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'rgba(224,82,82,0.08)'}
+                    >
                         <Trash2 size={13} /> Delete Account
                     </button>
                 </div>
             </Card>
 
-            {/* Deactivate modal */}
+            {/* ── Deactivate Modal ─────────────────────────────────────── */}
             {showDeactivateModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 max-w-sm w-full shadow-xl">
-                        <h3 className="text-[14px] font-bold text-gray-900 dark:text-white mb-1">Deactivate Account?</h3>
-                        <p className="text-[12px] text-gray-500 dark:text-gray-400 mb-5">
-                            Your profile will be hidden. You can reactivate anytime by logging back in.
-                        </p>
-                        <div className="flex gap-2">
-                            <button onClick={() => setShowDeactivateModal(false)} disabled={deactivating}
-                                className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-[12.5px] font-semibold rounded-lg transition-colors">
-                                Cancel
-                            </button>
-                            <button onClick={handleDeactivateAccount} disabled={deactivating}
-                                className="flex-1 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-50">
-                                {deactivating ? 'Deactivating…' : 'Deactivate'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <ConfirmModal
+                    title="Deactivate Account?"
+                    body="Your profile will be hidden and notifications paused. You can reactivate anytime by logging back in."
+                    confirmLabel={deactivating ? 'Deactivating…' : 'Deactivate'}
+                    confirmDanger={false}
+                    onCancel={() => setShowDeactivateModal(false)}
+                    onConfirm={handleDeactivateAccount}
+                    loading={deactivating}
+                />
             )}
 
-            {/* Delete modal */}
+            {/* ── Delete Modal ──────────────────────────────────────────── */}
             {showDeleteModal && (
-                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-5 max-w-sm w-full shadow-xl">
-                        <div className="flex items-center gap-2.5 mb-3">
-                            <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                                <AlertTriangle size={15} className="text-red-600 dark:text-red-400" />
-                            </div>
-                            <h3 className="text-[14px] font-bold text-gray-900 dark:text-white">Delete Account Permanently?</h3>
+                <ConfirmModal
+                    title="Delete Account Permanently?"
+                    body={
+                        <div>
+                            <p style={{ color: 'var(--state-danger)', fontWeight: 600, marginBottom: 8, ...S.font }}>⚠ This cannot be undone.</p>
+                            <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                {['All messages & conversations', 'Tasks, notes, and workspaces', 'Profile and account data'].map(item => (
+                                    <li key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)', ...S.font }}>
+                                        <span style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: 'var(--text-muted)', flexShrink: 0 }} />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
-                        <p className="text-[12px] font-bold text-red-500 mb-2">⚠️ This cannot be undone.</p>
-                        <ul className="text-[11.5px] text-gray-500 dark:text-gray-400 space-y-0.5 list-disc list-inside mb-4">
-                            <li>All messages & conversations</li>
-                            <li>Tasks, notes, and workspaces</li>
-                            <li>Profile and account data</li>
-                        </ul>
-                        <div className="mb-4">
-                            <label className="text-[10.5px] font-bold uppercase tracking-widest text-gray-500 block mb-1.5">
-                                Type <span className="text-red-500 font-mono">DELETE</span> to confirm
-                            </label>
-                            <input
-                                type="text"
-                                value={deleteConfirmText}
-                                onChange={e => setDeleteConfirmText(e.target.value)}
-                                placeholder="DELETE"
-                                className="w-full px-3 py-2 border border-red-300 dark:border-red-800 rounded-lg text-[12.5px] focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none bg-gray-50 dark:bg-gray-800 dark:text-white font-mono"
-                            />
-                        </div>
-                        <div className="flex gap-2">
-                            <button onClick={() => setShowDeleteModal(false)} disabled={deleting}
-                                className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 text-gray-700 dark:text-gray-300 text-[12.5px] font-semibold rounded-lg transition-colors">
-                                Cancel
-                            </button>
-                            <button onClick={handleDeleteAccount} disabled={deleting || deleteConfirmText !== 'DELETE'}
-                                className="flex-1 px-3 py-2 bg-red-500 hover:bg-red-600 text-white text-[12.5px] font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
-                                {deleting ? 'Deleting…' : 'Delete Forever'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                    }
+                    confirmLabel={deleting ? 'Deleting…' : 'Delete Forever'}
+                    confirmDanger={true}
+                    confirmWord="DELETE"
+                    confirmText={deleteConfirmText}
+                    setConfirmText={setDeleteConfirmText}
+                    onCancel={() => setShowDeleteModal(false)}
+                    onConfirm={handleDeleteAccount}
+                    loading={deleting}
+                />
             )}
         </div>
     );

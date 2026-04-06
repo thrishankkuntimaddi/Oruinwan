@@ -1,18 +1,16 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Trash2, ChevronDown } from 'lucide-react';
 
+// Heading styles → all dark tokens, no light-mode classes
 const LEVEL_STYLES = {
-    1: 'text-4xl font-bold text-gray-900 dark:text-white',
-    2: 'text-3xl font-bold text-gray-800 dark:text-gray-100',
-    3: 'text-2xl font-semibold text-gray-800 dark:text-gray-100',
-    4: 'text-xl font-semibold text-gray-700 dark:text-gray-200',
+    1: { fontSize: '2.25rem', fontWeight: 800, color: '#e4e4e4', lineHeight: 1.15 },
+    2: { fontSize: '1.75rem', fontWeight: 700, color: '#e4e4e4', lineHeight: 1.2 },
+    3: { fontSize: '1.375rem', fontWeight: 600, color: '#e4e4e4', lineHeight: 1.25 },
+    4: { fontSize: '1.125rem', fontWeight: 600, color: 'rgba(228,228,228,0.85)', lineHeight: 1.3 },
 };
 
 const LEVEL_PLACEHOLDERS = {
-    1: 'Heading 1',
-    2: 'Heading 2',
-    3: 'Heading 3',
-    4: 'Heading 4',
+    1: 'Heading 1', 2: 'Heading 2', 3: 'Heading 3', 4: 'Heading 4',
 };
 
 const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, registerRef }) => {
@@ -20,7 +18,6 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
     const level = block.meta?.level || 1;
     const inputRef = useRef(null);
 
-    // Register with parent for auto-focus
     useEffect(() => {
         if (registerRef) registerRef(block.id, inputRef.current);
         return () => { if (registerRef) registerRef(block.id, null); };
@@ -32,32 +29,49 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
     };
 
     const handleKeyDown = (e) => {
-        // Shift + Enter → new text block below
         if (e.key === 'Enter' && e.shiftKey) {
             e.preventDefault();
             if (onAddBlockAfter) onAddBlockAfter(block.id);
         }
-        // Plain Enter → default (browser adds newline or moves within input — native behavior)
     };
 
     return (
         <div className="group relative mb-3">
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {/* Level picker */}
-                <div className="relative">
+                <div style={{ position: 'relative', flexShrink: 0 }}>
                     <button
                         onClick={() => setShowLevelPicker(v => !v)}
-                        className="flex items-center gap-0.5 text-xs font-bold text-gray-400 dark:text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-500 w-8"
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px',
+                            fontWeight: 700, color: 'rgba(228,228,228,0.25)', background: 'transparent',
+                            border: 'none', cursor: 'pointer', opacity: 0, width: '32px',
+                            transition: 'all 150ms ease', fontFamily: 'monospace',
+                        }}
+                        className="group-hover:!opacity-100"
+                        onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}
                     >
-                        H{level}<ChevronDown size={10} />
+                        H{level}<ChevronDown size={9} />
                     </button>
                     {showLevelPicker && (
-                        <div className="absolute left-0 top-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl z-30 overflow-hidden">
+                        <div style={{
+                            position: 'absolute', left: 0, top: '100%', marginTop: '4px',
+                            background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)',
+                            boxShadow: '0 12px 40px rgba(0,0,0,0.7)', zIndex: 30, overflow: 'hidden', minWidth: '64px',
+                        }}>
                             {[1, 2, 3, 4].map(l => (
                                 <button
                                     key={l}
                                     onClick={() => setLevel(l)}
-                                    className={`w-full text-left px-3 py-1.5 text-sm font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${l === level ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'text-gray-700 dark:text-gray-300'}`}
+                                    style={{
+                                        width: '100%', textAlign: 'left', padding: '7px 12px',
+                                        fontSize: '12px', fontWeight: 700, background: l === level ? 'rgba(184,149,106,0.12)' : 'transparent',
+                                        color: l === level ? '#b8956a' : 'rgba(228,228,228,0.7)',
+                                        border: 'none', cursor: 'pointer', fontFamily: 'monospace', transition: 'background 100ms ease',
+                                    }}
+                                    onMouseEnter={e => { if (l !== level) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                                    onMouseLeave={e => { if (l !== level) e.currentTarget.style.background = 'transparent'; }}
                                 >
                                     H{l}
                                 </button>
@@ -73,14 +87,22 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                     onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                     onKeyDown={handleKeyDown}
                     placeholder={LEVEL_PLACEHOLDERS[level]}
-                    className={`flex-1 border-none focus:ring-0 p-0 bg-transparent outline-none placeholder-gray-300 dark:placeholder-gray-600 ${LEVEL_STYLES[level]}`}
+                    style={{
+                        flex: 1, border: 'none', background: 'transparent', outline: 'none',
+                        padding: 0, fontFamily: 'Inter, system-ui, sans-serif',
+                        ...LEVEL_STYLES[level],
+                    }}
+                    className="placeholder-gray-700 dark:placeholder-gray-700"
                 />
 
                 <button
                     onClick={() => onRemoveBlock(block.id)}
-                    className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    style={{ padding: '4px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', flexShrink: 0 }}
+                    className="group-hover:!opacity-100"
+                    onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
                 >
-                    <Trash2 size={15} />
+                    <Trash2 size={14} />
                 </button>
             </div>
         </div>

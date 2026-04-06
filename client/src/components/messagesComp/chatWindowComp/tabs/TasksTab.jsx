@@ -35,11 +35,11 @@ const TRANSITIONS = {
 };
 
 const COLUMNS = [
-    { key: 'backlog', label: 'BACKLOG', color: '#8993A4', headerBg: '#F4F5F7', topColor: '#8993A4' },
-    { key: 'todo', label: 'TO DO', color: '#42526E', headerBg: '#F4F5F7', topColor: '#42526E' },
-    { key: 'in_progress', label: 'IN PROGRESS', color: '#0052CC', headerBg: '#DEEBFF', topColor: '#0052CC' },
-    { key: 'review', label: 'IN REVIEW', color: '#6554C0', headerBg: '#EAE6FF', topColor: '#6554C0' },
-    { key: 'done', label: 'DONE', color: '#00875A', headerBg: '#E3FCEF', topColor: '#00875A' },
+    { key: 'backlog', label: 'BACKLOG', color: '#8993A4', headerBg: 'rgba(137,147,164,0.12)', topColor: '#8993A4' },
+    { key: 'todo', label: 'TO DO', color: '#a0aec0', headerBg: 'rgba(160,174,192,0.1)', topColor: '#a0aec0' },
+    { key: 'in_progress', label: 'IN PROGRESS', color: '#b8956a', headerBg: 'rgba(184,149,106,0.1)', topColor: '#b8956a' },
+    { key: 'review', label: 'IN REVIEW', color: '#9c7fd4', headerBg: 'rgba(156,127,212,0.1)', topColor: '#9c7fd4' },
+    { key: 'done', label: 'DONE', color: '#48bb78', headerBg: 'rgba(72,187,120,0.1)', topColor: '#48bb78' },
 ];
 
 const colMap = Object.fromEntries(COLUMNS.map(c => [c.key, c]));
@@ -55,7 +55,7 @@ const PRIORITIES = [
 const pMap = Object.fromEntries(PRIORITIES.map(p => [p.key, p]));
 const pMeta = k => pMap[k] || pMap.medium;
 
-const JIRA_BLUE = '#0052CC';
+const JIRA_BLUE = 'var(--accent)';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -100,8 +100,14 @@ function PriorityIcon({ priority, size = 14 }) {
 function StatusBadge({ status }) {
     const m = colMap[status] || colMap.todo;
     return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide"
-            style={{ background: m.headerBg, color: m.color }}>
+        <span style={{
+            display: 'inline-flex', alignItems: 'center',
+            padding: '1px 8px', borderRadius: '2px',
+            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+            backgroundColor: m.headerBg, color: m.color,
+            border: `1px solid ${m.topColor}30`,
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        }}>
             {m.label}
         </span>
     );
@@ -110,19 +116,20 @@ function StatusBadge({ status }) {
 // ─── Issue Type Icon (Jira-discipline) ────────────────────────────────────────
 
 const ISSUE_TYPE_META = {
-    epic: { label: 'Epic', color: '#6554C0', bg: '#EAE6FF', Icon: Zap },
-    bug: { label: 'Bug', color: '#FF5630', bg: '#FFEBE6', Icon: AlertTriangle },
-    subtask: { label: 'Subtask', color: '#00B8D9', bg: '#E6FCFF', Icon: CheckCircle2 },
-    task: { label: 'Task', color: '#0052CC', bg: '#DEEBFF', Icon: CheckCircle2 },
+    epic: { label: 'Epic', color: '#9c7fd4', bg: 'rgba(156,127,212,0.15)', Icon: Zap },
+    bug: { label: 'Bug', color: '#fc8181', bg: 'rgba(252,129,129,0.15)', Icon: AlertTriangle },
+    subtask: { label: 'Subtask', color: '#63b3ed', bg: 'rgba(99,179,237,0.15)', Icon: CheckCircle2 },
+    task: { label: 'Task', color: '#b8956a', bg: 'rgba(184,149,106,0.15)', Icon: CheckCircle2 },
 };
 
 function IssueTypeIcon({ type = 'task', size = 12 }) {
     const meta = ISSUE_TYPE_META[type] || ISSUE_TYPE_META.task;
     const { Icon, color, bg } = meta;
     return (
-        <span title={meta.label}
-            className="inline-flex items-center justify-center rounded-sm flex-shrink-0"
-            style={{ width: 16, height: 16, background: bg }}>
+        <span title={meta.label} style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: '2px', flexShrink: 0, width: 16, height: 16, background: bg,
+        }}>
             <Icon size={size} style={{ color }} strokeWidth={2.5} />
         </span>
     );
@@ -141,7 +148,10 @@ function InlineAdd({ defaultStatus, onSubmit, onCancel }) {
     };
 
     return (
-        <div className="rounded border-2 bg-white mb-2 overflow-hidden" style={{ borderColor: JIRA_BLUE }}>
+        <div style={{
+            borderRadius: '2px', border: '1px solid var(--accent)',
+            backgroundColor: 'var(--bg-active)', marginBottom: '8px', overflow: 'hidden',
+        }}>
             <input
                 ref={ref}
                 value={title}
@@ -149,19 +159,25 @@ function InlineAdd({ defaultStatus, onSubmit, onCancel }) {
                 onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') onCancel(); }}
                 onBlur={() => { if (!title.trim()) onCancel(); }}
                 placeholder="What needs to be done?"
-                className="w-full px-3 py-2 text-sm text-gray-800 focus:outline-none"
+                style={{
+                    width: '100%', padding: '8px 10px', fontSize: '13px',
+                    backgroundColor: 'transparent', color: 'var(--text-primary)',
+                    border: 'none', outline: 'none', boxSizing: 'border-box',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}
             />
             {title.trim() && (
-                <div className="flex gap-1.5 px-2 pb-2">
-                    <button onMouseDown={submit}
-                        className="px-3 py-1 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
-                        style={{ background: JIRA_BLUE }}>
-                        Create
-                    </button>
-                    <button onMouseDown={onCancel}
-                        className="px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 rounded-sm">
-                        Cancel
-                    </button>
+                <div style={{ display: 'flex', gap: '6px', padding: '0 8px 8px' }}>
+                    <button onMouseDown={submit} style={{
+                        padding: '3px 10px', fontSize: '11px', fontWeight: 600,
+                        color: '#0c0c0c', backgroundColor: 'var(--accent)',
+                        border: 'none', borderRadius: '2px', cursor: 'pointer',
+                    }}>Create</button>
+                    <button onMouseDown={onCancel} style={{
+                        padding: '3px 10px', fontSize: '11px',
+                        color: 'var(--text-secondary)', backgroundColor: 'var(--bg-hover)',
+                        border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer',
+                    }}>Cancel</button>
                 </div>
             )}
         </div>
@@ -177,87 +193,90 @@ function TaskCard({ task, onClick, onDelete }) {
     const assignee = Array.isArray(task.assignedTo) ? task.assignedTo[0] : task.assignedTo;
     const subtaskCount = task.subtasks?.length || 0;
 
+    const [cardHovered, setCardHovered] = React.useState(false);
     return (
         <div
             onClick={() => onClick(task)}
-            className="group bg-white rounded-sm cursor-pointer mb-2 relative"
+            onMouseEnter={() => setCardHovered(true)}
+            onMouseLeave={() => setCardHovered(false)}
             style={{
-                boxShadow: '0 1px 2px rgba(9,30,66,0.25)',
-                border: blocked ? '1px solid #FF5630' : '1px solid transparent',
+                backgroundColor: cardHovered ? 'var(--bg-hover)' : 'var(--bg-active)',
+                borderRadius: '2px', cursor: 'pointer', marginBottom: '6px', position: 'relative',
+                border: blocked ? '1px solid var(--state-danger)' : `1px solid ${cardHovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
                 borderLeft: `3px solid ${pMeta(task.priority || 'medium').color}`,
+                transition: 'background-color 150ms ease, border-color 150ms ease',
             }}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 1px 2px rgba(9,30,66,0.25), 0 0 0 1px rgba(0,82,204,0.4)'; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = blocked ? '' : '0 1px 2px rgba(9,30,66,0.25)'; }}
         >
-            {/* Blocked banner */}
             {blocked && (
-                <div className="flex items-center gap-1.5 px-2.5 pt-2 pb-1 text-[10px] font-semibold text-red-600">
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 10px 3px', fontSize: '10px', fontWeight: 700,
+                    color: 'var(--state-danger)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>
                     <AlertTriangle size={10} strokeWidth={2.5} />
                     BLOCKED{task.blockedReason ? `: ${task.blockedReason.slice(0, 40)}` : ''}
                 </div>
             )}
 
-            <div className="px-3 pt-2 pb-2.5">
-                {/* Issue type + key row */}
-                <div className="flex items-center gap-1.5 mb-1.5">
+            <div style={{ padding: '8px 10px 10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
                     <IssueTypeIcon type={task.type || task.issueType || 'task'} size={10} />
-                    {(task.issueKey) && (
-                        <span className="text-[10px] font-mono font-semibold" style={{ color: '#7A869A' }}>
+                    {task.issueKey && (
+                        <span style={{ fontSize: '10px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-muted)' }}>
                             {task.issueKey}
                         </span>
                     )}
                 </div>
 
-                {/* Summary */}
-                <p className={`text-sm leading-snug mb-2 ${done ? 'line-through text-gray-400' : 'text-gray-800'}`}>
-                    {task.title}
-                </p>
+                <p style={{
+                    fontSize: '13px', lineHeight: 1.4, marginBottom: '8px',
+                    color: done ? 'var(--text-muted)' : 'var(--text-primary)',
+                    textDecoration: done ? 'line-through' : 'none',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>{task.title}</p>
 
-                {/* Labels */}
                 {task.labels?.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-1.5">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
                         {task.labels.slice(0, 3).map(l => (
-                            <span key={l} className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium"
-                                style={{ background: '#F4F5F7', color: '#42526E' }}>
-                                {l}
-                            </span>
+                            <span key={l} style={{
+                                padding: '1px 6px', borderRadius: '2px', fontSize: '10px',
+                                backgroundColor: 'var(--bg-hover)', color: 'var(--text-muted)',
+                                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                            }}>{l}</span>
                         ))}
                     </div>
                 )}
 
-                {/* Bottom chips row */}
-                <div className="flex items-center gap-1.5 flex-wrap">
-                    {/* Priority */}
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                     <PriorityIcon priority={task.priority || 'medium'} size={13} />
-
-                    {/* Due date */}
                     {task.dueDate && (
-                        <span className={`flex items-center gap-0.5 text-[10px] font-medium ${overdue ? 'text-red-600' : 'text-gray-400'}`}>
-                            <Calendar size={9} />
-                            {fmtDate(task.dueDate)}
-                        </span>
+                        <span style={{
+                            display: 'flex', alignItems: 'center', gap: '3px',
+                            fontSize: '10px', fontWeight: 500,
+                            color: overdue ? 'var(--state-danger)' : 'var(--text-muted)',
+                        }}><Calendar size={9} />{fmtDate(task.dueDate)}</span>
                     )}
-
-                    {/* Subtask count */}
                     {subtaskCount > 0 && (
-                        <span className="flex items-center gap-0.5 text-[10px] text-gray-400">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)' }}>
                             <ListTodo size={9} /> {subtaskCount}
                         </span>
                     )}
-
-                    <div className="flex-1" />
-
-                    {/* Delete */}
-                    <button onClick={e => { e.stopPropagation(); onDelete(task._id); }}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:text-red-500 text-gray-300 transition-all">
-                        <X size={11} />
-                    </button>
-
-                    {/* Assignee */}
+                    <div style={{ flex: 1 }} />
+                    <button onClick={e => { e.stopPropagation(); onDelete(task._id); }} style={{
+                        padding: '2px', background: 'none', border: 'none', cursor: 'pointer',
+                        color: 'var(--text-muted)', opacity: cardHovered ? 1 : 0,
+                        transition: 'opacity 150ms ease, color 150ms ease',
+                    }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    ><X size={11} /></button>
                     {assignee && (
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[8px] font-bold flex-shrink-0"
-                            style={{ background: avatarColor(assignee) }}
-                            title={assignee.username || assignee.name}>
+                        <div style={{
+                            width: 18, height: 18, borderRadius: '50%',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: '#0c0c0c', fontSize: '8px', fontWeight: 700, flexShrink: 0,
+                            background: avatarColor(assignee),
+                        }} title={assignee.username || assignee.name}>
                             {initials(assignee)}
                         </div>
                     )}
@@ -274,36 +293,46 @@ function KanbanColumn({ col, tasks, blockedInCol, onCardClick, onDelete, onInlin
     const isTerminal = col.key === 'done' || col.key === 'cancelled';
 
     return (
-        <div className="flex-1 flex flex-col min-w-0 min-h-0"
-            style={{ background: '#F4F5F7', minWidth: 180 }}>
-            {/* Column header */}
-            <div className="flex items-center gap-2 px-3 py-2.5 flex-shrink-0"
-                style={{ borderTop: `3px solid ${col.topColor}` }}>
-                <span className="text-[11px] font-bold uppercase tracking-wider" style={{ color: col.color }}>
-                    {col.label}
-                </span>
-                <span className="text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center"
-                    style={{ background: '#DFE1E6', color: '#42526E' }}>
-                    {tasks.length}
-                </span>
+        <div style={{
+            flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0,
+            backgroundColor: 'var(--bg-surface)', minWidth: 180,
+        }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 10px', flexShrink: 0,
+                borderTop: `2px solid ${col.topColor}`,
+                borderBottom: '1px solid var(--border-subtle)',
+            }}>
+                <span style={{
+                    fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                    letterSpacing: '0.1em', color: col.color,
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>{col.label}</span>
+                <span style={{
+                    fontSize: '10px', fontWeight: 700,
+                    width: 18, height: 18, borderRadius: '2px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: 'var(--bg-active)', color: 'var(--text-muted)',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>{tasks.length}</span>
                 {blockedInCol > 0 && (
-                    <span className="flex items-center gap-0.5 text-[9px] font-bold text-red-500 ml-0.5">
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 700, color: 'var(--state-danger)' }}>
                         <AlertTriangle size={9} /> {blockedInCol}
                     </span>
                 )}
-                <div className="flex-1" />
+                <div style={{ flex: 1 }} />
                 {!isTerminal && (
-                    <button onClick={() => setAdding(v => !v)}
-                        className="p-0.5 rounded hover:bg-gray-300 text-gray-500 transition-colors"
-                        title="Quick add">
-                        <Plus size={14} />
-                    </button>
+                    <button onClick={() => setAdding(v => !v)} title="Quick add" style={{
+                        padding: '3px', borderRadius: '2px', background: 'none', border: 'none',
+                        cursor: 'pointer', color: 'var(--text-muted)', transition: 'color 150ms ease',
+                    }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    ><Plus size={13} /></button>
                 )}
             </div>
 
-            {/* Cards */}
-            <div className="flex-1 min-h-0 overflow-y-auto px-2 pt-1 pb-2"
-                style={{ scrollbarWidth: 'thin', scrollbarColor: '#C1C7D0 transparent' }}>
+            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '6px 8px 8px' }}>
                 {adding && (
                     <InlineAdd
                         defaultStatus={col.key}
@@ -311,15 +340,12 @@ function KanbanColumn({ col, tasks, blockedInCol, onCardClick, onDelete, onInlin
                         onCancel={() => setAdding(false)}
                     />
                 )}
-
                 {tasks.length === 0 && !adding ? (
-                    <div className="flex items-center justify-center h-16 opacity-40">
-                        <p className="text-xs text-gray-400">No issues</p>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60px', opacity: 0.4 }}>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>No issues</p>
                     </div>
                 ) : (
-                    tasks.map(t => (
-                        <TaskCard key={t._id} task={t} onClick={onCardClick} onDelete={onDelete} />
-                    ))
+                    tasks.map(t => <TaskCard key={t._id} task={t} onClick={onCardClick} onDelete={onDelete} />)
                 )}
             </div>
         </div>
@@ -437,40 +463,47 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
     };
 
     return (
-        <div className="w-80 flex-shrink-0 flex flex-col h-full bg-white border-l overflow-hidden"
-            style={{ borderColor: '#DFE1E6' }}>
-            {/* Panel header */}
-            <div className="flex items-center justify-between px-4 py-3 flex-shrink-0"
-                style={{ borderBottom: '1px solid #DFE1E6', background: '#F4F5F7' }}>
-                <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 rounded-sm flex items-center justify-center"
-                        style={{ background: col.color }}>
-                        <div className="w-2 h-2 rounded-full bg-white opacity-90" />
-                    </div>
+        <div style={{
+            width: 280, flexShrink: 0, display: 'flex', flexDirection: 'column',
+            height: '100%', backgroundColor: 'var(--bg-surface)',
+            borderLeft: '1px solid var(--border-default)', overflow: 'hidden',
+        }}>
+            <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '10px 14px', flexShrink: 0,
+                borderBottom: '1px solid var(--border-default)',
+                backgroundColor: 'var(--bg-active)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '2px', backgroundColor: col.color, flexShrink: 0 }} />
                     <StatusBadge status={task.status} />
                 </div>
-                <div className="flex items-center gap-1">
-                    {saving && <Loader2 size={13} className="animate-spin text-gray-400" />}
-                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-200 text-gray-400 transition-colors">
-                        <X size={14} />
-                    </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {saving && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite', color: 'var(--text-muted)' }} />}
+                    <button onClick={onClose} style={{
+                        padding: '4px', borderRadius: '2px', background: 'none', border: 'none',
+                        cursor: 'pointer', color: 'var(--text-muted)', transition: 'color 150ms ease',
+                    }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    ><X size={14} /></button>
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex border-b" style={{ borderColor: '#DFE1E6' }}>
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)' }}>
                 {[
                     { key: 'details', label: 'Details', icon: <Eye size={12} /> },
                     { key: 'activity', label: 'Activity', icon: <Activity size={12} /> },
                 ].map(t => (
-                    <button key={t.key} onClick={() => setTab(t.key)}
-                        className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold transition-all"
-                        style={{
-                            color: tab === t.key ? JIRA_BLUE : '#42526E',
-                            borderBottom: tab === t.key ? `2px solid ${JIRA_BLUE}` : '2px solid transparent',
-                        }}>
-                        {t.icon} {t.label}
-                    </button>
+                    <button key={t.key} onClick={() => setTab(t.key)} style={{
+                        display: 'flex', alignItems: 'center', gap: '6px',
+                        padding: '8px 14px', fontSize: '12px', fontWeight: 500,
+                        color: tab === t.key ? 'var(--accent)' : 'var(--text-muted)',
+                        background: 'none', border: 'none',
+                        borderBottom: tab === t.key ? '1px solid var(--accent)' : '1px solid transparent',
+                        cursor: 'pointer', transition: 'color 150ms ease',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>{t.icon} {t.label}</button>
                 ))}
             </div>
 
@@ -722,97 +755,115 @@ function CreateModal({ onClose, onSubmit, members }) {
         setSaving(false);
     };
 
+    const selectStyle = {
+        width: '100%', padding: '6px 10px', fontSize: '12px',
+        border: '1px solid var(--border-default)', borderRadius: '2px',
+        backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)',
+        outline: 'none', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+    };
+    const inputStyle = {
+        width: '100%', padding: '6px 10px', fontSize: '13px',
+        border: '1px solid var(--border-default)', borderRadius: '2px',
+        backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)',
+        outline: 'none', boxSizing: 'border-box',
+        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        transition: 'border-color 150ms ease',
+    };
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-            onClick={e => e.target === e.currentTarget && onClose()}>
-            <div className="bg-white rounded-sm shadow-2xl w-[520px] max-h-[90vh] mx-4 overflow-hidden flex flex-col"
-                style={{ boxShadow: '0 8px 32px rgba(9,30,66,0.35)', border: '1px solid #DFE1E6' }}>
-
-                <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
-                    style={{ borderBottom: '1px solid #DFE1E6', background: '#F4F5F7' }}>
-                    <h3 className="font-semibold text-gray-900 text-sm">Create issue</h3>
-                    <button onClick={onClose} className="p-1.5 rounded hover:bg-gray-200 text-gray-500">
-                        <X size={15} />
-                    </button>
+        <div onClick={e => e.target === e.currentTarget && onClose()} style={{
+            position: 'fixed', inset: 0, zIndex: 50,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+        }}>
+            <div style={{
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)',
+                borderRadius: '2px', width: '480px', maxHeight: '90vh',
+                margin: '0 16px', overflow: 'hidden',
+                display: 'flex', flexDirection: 'column',
+                boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
+            }}>
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 20px', flexShrink: 0,
+                    borderBottom: '1px solid var(--border-default)',
+                    backgroundColor: 'var(--bg-active)',
+                }}>
+                    <h3 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', margin: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Create issue</h3>
+                    <button onClick={onClose} style={{
+                        padding: '4px', borderRadius: '2px', background: 'none', border: 'none',
+                        cursor: 'pointer', color: 'var(--text-muted)', transition: 'color 150ms ease',
+                    }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    ><X size={15} /></button>
                 </div>
 
-                <form onSubmit={submit} className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
-                    {/* Summary */}
+                <form onSubmit={submit} style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                            Summary <span className="text-red-500">*</span>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+                            Summary <span style={{ color: 'var(--state-danger)' }}>*</span>
                         </label>
                         <input ref={ref} value={title} onChange={e => setTitle(e.target.value)}
                             placeholder="Enter a summary for this issue"
-                            className="w-full px-3 py-2 text-sm border rounded-sm focus:outline-none text-gray-900"
-                            style={{ borderColor: '#DFE1E6' }}
-                            onFocus={e => e.target.style.borderColor = JIRA_BLUE}
-                            onBlur={e => e.target.style.borderColor = '#DFE1E6'} />
+                            style={inputStyle}
+                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'} />
                     </div>
 
-                    {/* Description */}
                     <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">Description</label>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Description</label>
                         <textarea value={description} onChange={e => setDescription(e.target.value)}
                             rows={3} placeholder="Add a description…"
-                            className="w-full px-3 py-2 text-sm border rounded-sm focus:outline-none resize-none text-gray-700"
-                            style={{ borderColor: '#DFE1E6' }}
-                            onFocus={e => e.target.style.borderColor = JIRA_BLUE}
-                            onBlur={e => e.target.style.borderColor = '#DFE1E6'} />
+                            style={{ ...inputStyle, resize: 'none' }}
+                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'} />
                     </div>
 
-                    {/* Status + Priority row */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Status</label>
-                            <select value={status} onChange={e => setStatus(e.target.value)}
-                                className="w-full px-3 py-2 text-xs border rounded-sm focus:outline-none text-gray-800 bg-white"
-                                style={{ borderColor: '#DFE1E6' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Status</label>
+                            <select value={status} onChange={e => setStatus(e.target.value)} style={selectStyle}>
                                 {COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Priority</label>
-                            <select value={priority} onChange={e => setPriority(e.target.value)}
-                                className="w-full px-3 py-2 text-xs border rounded-sm focus:outline-none text-gray-800 bg-white"
-                                style={{ borderColor: '#DFE1E6' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Priority</label>
+                            <select value={priority} onChange={e => setPriority(e.target.value)} style={selectStyle}>
                                 {PRIORITIES.map(p => <option key={p.key} value={p.key}>{p.label}</option>)}
                             </select>
                         </div>
                     </div>
 
-                    {/* Assignee + Due date row */}
-                    <div className="grid grid-cols-2 gap-3">
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Assignee</label>
-                            <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)}
-                                className="w-full px-3 py-2 text-xs border rounded-sm focus:outline-none text-gray-800 bg-white"
-                                style={{ borderColor: '#DFE1E6' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Assignee</label>
+                            <select value={assigneeId} onChange={e => setAssigneeId(e.target.value)} style={selectStyle}>
                                 <option value="">Unassigned</option>
-                                {members.map(m => (
-                                    <option key={m._id || m.id} value={m._id || m.id}>
-                                        {m.username || m.name}
-                                    </option>
-                                ))}
+                                {members.map(m => <option key={m._id || m.id} value={m._id || m.id}>{m.username || m.name}</option>)}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Due date</label>
-                            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                                className="w-full px-3 py-2 text-xs border rounded-sm focus:outline-none text-gray-800"
-                                style={{ borderColor: '#DFE1E6' }} />
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '6px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>Due date</label>
+                            <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} style={inputStyle} />
                         </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 pt-2" style={{ borderTop: '1px solid #DFE1E6' }}>
-                        <button type="button" onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-sm transition-colors">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={!title.trim() || saving}
-                            className="px-4 py-2 text-sm font-semibold text-white rounded-sm transition-all disabled:opacity-50 flex items-center gap-2"
-                            style={{ background: JIRA_BLUE }}>
-                            {saving ? <Loader2 size={14} className="animate-spin" /> : null}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                        <button type="button" onClick={onClose} style={{
+                            padding: '7px 16px', fontSize: '13px', color: 'var(--text-secondary)',
+                            backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
+                            borderRadius: '2px', cursor: 'pointer',
+                        }}>Cancel</button>
+                        <button type="submit" disabled={!title.trim() || saving} style={{
+                            padding: '7px 16px', fontSize: '13px', fontWeight: 500,
+                            color: '#0c0c0c', backgroundColor: 'var(--accent)',
+                            border: 'none', borderRadius: '2px',
+                            cursor: !title.trim() || saving ? 'not-allowed' : 'pointer',
+                            opacity: !title.trim() || saving ? 0.5 : 1,
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                        }}>
+                            {saving && <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />}
                             Create
                         </button>
                     </div>
@@ -967,20 +1018,20 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     // Loading skeleton
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col overflow-hidden" style={{ background: '#F4F5F7' }}>
-                <div className="px-5 py-3 bg-white border-b flex items-center justify-between animate-pulse" style={{ borderColor: '#DFE1E6' }}>
-                    <div className="h-4 w-48 bg-gray-200 rounded" />
-                    <div className="h-8 w-20 bg-blue-100 rounded-sm" />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
+                <div style={{ padding: '10px 20px', backgroundColor: 'var(--bg-surface)', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: 0.6 }}>
+                    <div style={{ height: 14, width: 180, backgroundColor: 'var(--bg-active)', borderRadius: '2px' }} />
+                    <div style={{ height: 28, width: 72, backgroundColor: 'var(--bg-active)', borderRadius: '2px' }} />
                 </div>
-                <div className="flex-1 flex gap-3 p-4 min-h-0">
+                <div style={{ flex: 1, display: 'flex', gap: '8px', padding: '12px', minHeight: 0 }}>
                     {COLUMNS.map(c => (
-                        <div key={c.key} className="flex-1 rounded-sm" style={{ background: '#F4F5F7', borderTop: `3px solid ${c.topColor}` }}>
-                            <div className="p-3 animate-pulse">
-                                <div className="h-3 w-20 bg-gray-300 rounded mb-3" />
+                        <div key={c.key} style={{ flex: 1, borderRadius: '2px', backgroundColor: 'var(--bg-surface)', borderTop: `2px solid ${c.topColor}` }}>
+                            <div style={{ padding: '10px' }}>
+                                <div style={{ height: 10, width: 72, backgroundColor: 'var(--bg-hover)', borderRadius: '2px', marginBottom: '10px' }} />
                                 {[1, 2].map(i => (
-                                    <div key={i} className="bg-white rounded-sm mb-2 p-3 shadow-sm">
-                                        <div className="h-3 w-4/5 bg-gray-200 rounded mb-2" />
-                                        <div className="h-2 w-1/2 bg-gray-100 rounded" />
+                                    <div key={i} style={{ backgroundColor: 'var(--bg-active)', borderRadius: '2px', marginBottom: '6px', padding: '10px' }}>
+                                        <div style={{ height: 10, width: '80%', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', marginBottom: '6px' }} />
+                                        <div style={{ height: 8, width: '50%', backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
                                     </div>
                                 ))}
                             </div>
@@ -992,51 +1043,56 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     }
 
     return (
-        <div className="flex flex-col h-full overflow-hidden" style={{ background: '#F4F5F7' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
 
-            {/* ── Jira-style toolbar ── */}
-            <div className="flex-shrink-0 flex items-center gap-3 px-5 py-2.5 bg-white border-b"
-                style={{ borderColor: '#DFE1E6' }}>
-                <BookOpen size={15} style={{ color: '#42526E' }} />
-                <span className="text-sm font-semibold" style={{ color: '#172B4D' }}>
+            <div style={{
+                flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 16px',
+                backgroundColor: 'var(--bg-surface)',
+                borderBottom: '1px solid var(--border-default)',
+            }}>
+                <BookOpen size={14} style={{ color: 'var(--text-muted)' }} />
+                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
                     #{(channelName || '').replace(/^#/, '')}
                 </span>
 
-                <div className="w-px h-4 bg-gray-200 mx-1" />
+                <div style={{ width: 1, height: 14, backgroundColor: 'var(--border-default)', margin: '0 4px' }} />
 
-                {/* Stats */}
-                <span className="text-xs" style={{ color: '#7A869A' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
                     {tasks.length} issue{tasks.length !== 1 ? 's' : ''}
-                    {doneCount > 0 && <> · <span className="text-green-600 font-medium">{doneCount} done</span></>}
-                    {totalBlocked > 0 && <> · <span className="text-red-500 font-medium">{totalBlocked} blocked</span></>}
+                    {doneCount > 0 && <> · <span style={{ color: 'var(--state-success)', fontWeight: 500 }}>{doneCount} done</span></>}
+                    {totalBlocked > 0 && <> · <span style={{ color: 'var(--state-danger)', fontWeight: 500 }}>{totalBlocked} blocked</span></>}
                 </span>
 
-                <div className="w-px h-4 bg-gray-200 mx-1" />
+                <div style={{ width: 1, height: 14, backgroundColor: 'var(--border-default)', margin: '0 4px' }} />
 
-                {/* Filters */}
                 {[
                     { key: 'all', label: 'All Issues' },
                     { key: 'mine', label: 'My Issues' },
                     { key: 'high', label: 'High Priority' },
                 ].map(f => (
-                    <button key={f.key} onClick={() => setFilter(f.key)}
-                        className="text-xs font-medium px-2.5 py-1 rounded transition-all"
-                        style={{
-                            background: filter === f.key ? '#DEEBFF' : 'transparent',
-                            color: filter === f.key ? JIRA_BLUE : '#42526E',
-                            fontWeight: filter === f.key ? 700 : 500,
-                        }}>
-                        {f.label}
-                    </button>
+                    <button key={f.key} onClick={() => setFilter(f.key)} style={{
+                        fontSize: '12px', padding: '3px 10px', borderRadius: '2px',
+                        backgroundColor: filter === f.key ? 'rgba(184,149,106,0.12)' : 'transparent',
+                        color: filter === f.key ? 'var(--accent)' : 'var(--text-secondary)',
+                        fontWeight: filter === f.key ? 600 : 400,
+                        border: 'none', cursor: 'pointer', transition: 'background-color 150ms ease',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>{f.label}</button>
                 ))}
 
-                <div className="flex-1" />
+                <div style={{ flex: 1 }} />
 
-                <button onClick={() => setShowModal(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
-                    style={{ background: JIRA_BLUE }}>
-                    <Plus size={13} strokeWidth={2.5} /> Create
-                </button>
+                <button onClick={() => setShowModal(true)} style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '5px 12px', fontSize: '12px', fontWeight: 500,
+                    color: '#0c0c0c', backgroundColor: 'var(--accent)',
+                    border: 'none', borderRadius: '2px', cursor: 'pointer',
+                    transition: 'background-color 150ms ease', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}
+                    onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--accent-hover)'}
+                    onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--accent)'}
+                ><Plus size={13} strokeWidth={2.5} /> Create</button>
             </div>
 
             {/* ── Error Banner ── */}

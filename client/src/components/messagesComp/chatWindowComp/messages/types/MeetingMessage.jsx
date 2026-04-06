@@ -28,28 +28,56 @@ export default function MeetingMessage({ meeting }) {
     const isJoinable = meetingLink && !formattedDate?.isPast;
 
     return (
-        <div className="mt-1.5 max-w-sm rounded-xl border border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 overflow-hidden shadow-sm">
+        <div style={{
+            marginTop: '6px', maxWidth: '280px',
+            border: '1px solid var(--border-accent)',
+            backgroundColor: 'var(--bg-active)',
+            borderRadius: '2px', overflow: 'hidden',
+        }}>
             {/* Header stripe */}
-            <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 dark:bg-blue-700">
-                <Video size={14} className="text-white flex-shrink-0" />
-                <span className="text-xs font-semibold text-white uppercase tracking-wide">Meeting</span>
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '7px 12px',
+                backgroundColor: 'rgba(184,149,106,0.12)',
+                borderBottom: '1px solid var(--border-accent)',
+            }}>
+                <Video size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                <span style={{
+                    fontSize: '9px', fontWeight: 700,
+                    color: 'var(--accent)',
+                    textTransform: 'uppercase', letterSpacing: '0.12em',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>
+                    Meeting
+                </span>
             </div>
 
             {/* Body */}
-            <div className="px-4 py-3 space-y-2">
+            <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {/* Title */}
-                <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2">
+                <div style={{
+                    fontSize: '13px', fontWeight: 600,
+                    color: 'var(--text-primary)',
+                    lineHeight: 1.4,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                }}>
                     {title}
-                </h4>
+                </div>
 
                 {/* Date / Time */}
                 {formattedDate && (
-                    <div className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
-                        <span className="flex items-center gap-1">
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '10px',
+                        fontSize: '11px', color: 'var(--text-secondary)',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={11} />
                             {formattedDate.date}
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <Clock size={11} />
                             {formattedDate.time}
                             {duration ? ` · ${duration} min` : ''}
@@ -59,7 +87,11 @@ export default function MeetingMessage({ meeting }) {
 
                 {/* Participants count */}
                 {participants.length > 0 && (
-                    <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <div style={{
+                        display: 'flex', alignItems: 'center', gap: '4px',
+                        fontSize: '11px', color: 'var(--text-muted)',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
                         <Users size={11} />
                         <span>{participants.length} invited</span>
                     </div>
@@ -67,23 +99,40 @@ export default function MeetingMessage({ meeting }) {
 
                 {/* Past label */}
                 {formattedDate?.isPast && (
-                    <p className="text-[10px] text-gray-400 dark:text-gray-500 italic">This meeting has ended.</p>
+                    <div style={{
+                        fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
+                        This meeting has ended.
+                    </div>
                 )}
             </div>
 
             {/* Join button */}
             {meetingLink && (
-                <div className="px-4 pb-3">
+                <div style={{ padding: '0 12px 10px' }}>
                     <a
                         href={meetingLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={e => e.stopPropagation()}
-                        className={`flex items-center justify-center gap-1.5 w-full py-2 rounded-lg text-xs font-semibold transition-all
-                            ${isJoinable
-                                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md active:scale-95'
-                                : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed pointer-events-none'
-                            }`}
+                        style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                            width: '100%', padding: '7px 0',
+                            backgroundColor: isJoinable ? 'var(--accent)' : 'var(--bg-hover)',
+                            color: isJoinable ? '#0c0c0c' : 'var(--text-muted)',
+                            border: isJoinable ? 'none' : '1px solid var(--border-default)',
+                            borderRadius: '2px',
+                            fontSize: '12px', fontWeight: 600,
+                            textDecoration: 'none',
+                            cursor: isJoinable ? 'pointer' : 'not-allowed',
+                            pointerEvents: isJoinable ? 'auto' : 'none',
+                            transition: 'background-color 150ms ease',
+                            boxSizing: 'border-box',
+                            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                        }}
+                        onMouseEnter={e => { if (isJoinable) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                        onMouseLeave={e => { if (isJoinable) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                     >
                         <ExternalLink size={12} />
                         {isJoinable ? 'Join Meeting' : 'Meeting Ended'}

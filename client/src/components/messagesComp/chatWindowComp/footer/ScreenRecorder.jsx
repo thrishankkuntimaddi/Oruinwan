@@ -100,21 +100,22 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
 
     if (state === "preview") {
         return (
-            <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-xl">
-                <video src={videoUrl} className="h-10 rounded w-24 object-cover border border-blue-200" muted />
-                <span className="text-xs text-blue-600 font-mono">{fmt(duration)}</span>
-                <button onClick={discard} className="p-1.5 hover:bg-red-50 rounded-lg text-red-400" title="Discard">
-                    <Trash2 size={15} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
+                <video src={videoUrl} style={{ height: '36px', width: '64px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} muted />
+                <span style={{ fontSize: '11px', color: '#b8956a', fontFamily: 'monospace' }}>{fmt(duration)}</span>
+                <button onClick={discard} title="Discard"
+                    style={{ padding: '4px', background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
+                >
+                    <Trash2 size={14} />
                 </button>
-                <button
-                    onClick={send}
-                    disabled={uploading}
-                    className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white disabled:opacity-50 transition-colors"
-                    title="Send screen recording"
+                <button onClick={send} disabled={uploading} title="Send screen recording"
+                    style={{ padding: '5px 10px', background: '#b8956a', border: 'none', color: '#0c0c0c', cursor: uploading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease', opacity: uploading ? 0.6 : 1 }}
                 >
                     {uploading
-                        ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin block" />
-                        : <Send size={15} />}
+                        ? <span style={{ width: '13px', height: '13px', border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#0c0c0c', borderRadius: '50%', display: 'block', animation: 'spin 1s linear infinite' }} />
+                        : <Send size={13} />}
                 </button>
             </div>
         );
@@ -127,12 +128,22 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
             title={state === "recording"
                 ? `Recording screen ${fmt(duration)} — click to stop`
                 : "Record screen"}
-            className={`p-2 rounded-xl transition-all ${state === "recording"
-                ? "bg-red-500 text-white scale-110 shadow-lg shadow-red-300 animate-pulse"
-                : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                } disabled:opacity-40`}
+            style={{
+                padding: '5px',
+                borderRadius: '2px',
+                background: state === "recording" ? 'rgba(239,68,68,0.15)' : 'none',
+                border: 'none',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                color: state === "recording" ? '#f87171' : 'var(--text-muted)',
+                transition: 'color 150ms ease',
+                opacity: disabled ? 0.4 : 1,
+            }}
+            onMouseEnter={e => { if (state === 'idle' && !disabled) e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { if (state === 'idle') e.currentTarget.style.color = 'var(--text-muted)'; }}
         >
-            {state === "recording" ? <Square size={18} /> : <Monitor size={18} />}
+            {state === "recording" ? <Square size={16} /> : <Monitor size={16} />}
         </button>
     );
 }

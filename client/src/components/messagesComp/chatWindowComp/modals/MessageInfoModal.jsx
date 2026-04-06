@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState } from "react";
 import { X, CheckCircle2, Clock, Lock, Smile, MessageSquare } from "lucide-react";
+
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 /**
  * MessageInfoModal
@@ -11,162 +13,207 @@ import { X, CheckCircle2, Clock, Lock, Smile, MessageSquare } from "lucide-react
  *   onClose  - fn
  */
 export default function MessageInfoModal({ msg, members = [], readBy = [], currentUserId, onClose }) {
-  if (!msg) return null;
+    if (!msg) return null;
 
-  const readBySet = new Set(readBy.map(String));
+    const readBySet = new Set(readBy.map(String));
 
-  // Seen by = members who have read AND are not the current user
-  const seenByList = members.filter(m => {
-    const id = String(m._id);
-    return readBySet.has(id) && id !== String(currentUserId);
-  }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+    const seenByList = members.filter(m => {
+        const id = String(m._id);
+        return readBySet.has(id) && id !== String(currentUserId);
+    }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 
-  // Delivered to = members who haven't read AND are not the current user
-  const deliveredToList = members.filter(m => {
-    const id = String(m._id);
-    return !readBySet.has(id) && id !== String(currentUserId);
-  }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+    const deliveredToList = members.filter(m => {
+        const id = String(m._id);
+        return !readBySet.has(id) && id !== String(currentUserId);
+    }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
 
-  const displayText = msg.text || msg.payload?.text || '🔒 Encrypted message';
-  const sentAt = msg.createdAt
-    ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : '–';
-  const sentDate = msg.createdAt
-    ? new Date(msg.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
-    : '';
+    const displayText = msg.text || msg.payload?.text || '🔒 Encrypted message';
+    const sentAt   = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '–';
+    const sentDate = msg.createdAt ? new Date(msg.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : '';
 
-  const Avatar = ({ user, size = 'sm', blue = false }) => {
-    const char = (user.username || '?').charAt(0).toUpperCase();
-    const sizeClass = size === 'sm' ? 'w-7 h-7 text-[11px]' : 'w-8 h-8 text-xs';
-    const colorClass = blue
-      ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-100 dark:border-blue-800/50 text-blue-600 dark:text-blue-400'
-      : 'bg-gray-100 dark:bg-gray-700 border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400';
-    return user.profilePicture ? (
-      <img src={user.profilePicture} alt={user.username}
-        className={`${sizeClass} rounded-full object-cover flex-shrink-0 border ${colorClass}`} />
-    ) : (
-      <div className={`${sizeClass} rounded-full flex items-center justify-center border flex-shrink-0 font-bold ${colorClass}`}>
-        {char}
-      </div>
-    );
-  };
+    return (
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 100,
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+            fontFamily: FONT,
+        }}>
+            {/* Backdrop */}
+            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center animate-fade-in">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
-
-      {/* Panel */}
-      <div className="relative z-10 bg-white dark:bg-slate-900 w-full max-w-sm rounded-t-2xl sm:rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700 animate-in slide-in-from-bottom-4 sm:slide-in-from-bottom-0">
-
-        {/* ── Header ── */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-2">
-            <MessageSquare size={16} className="text-blue-500" />
-            <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Message Info</span>
-          </div>
-          <button onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* ── Message preview ── */}
-        <div className="px-4 py-3 bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-gray-800">
-          <p className="text-sm text-gray-700 dark:text-gray-300 italic line-clamp-3 leading-snug">
-            "{displayText}"
-          </p>
-          <div className="mt-1.5 flex items-center gap-3 text-[11px] text-gray-400">
-            <span className="flex items-center gap-1"><Clock size={11} /> {sentDate} at {sentAt}</span>
-            <span className="flex items-center gap-1">
-              <Lock size={11} className="text-blue-400" />
-              {msg.isEncrypted ? 'End-to-end encrypted' : 'Encrypted in transit'}
-            </span>
-          </div>
-        </div>
-
-        {/* ── Scrollable body ── */}
-        <div className="max-h-[55vh] overflow-y-auto custom-scrollbar divide-y divide-gray-100 dark:divide-gray-800">
-
-          {/* Reactions */}
-          {msg.reactions && msg.reactions.length > 0 && (
-            <div className="px-4 py-3">
-              <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2.5">
-                <Smile size={14} className="text-yellow-500" />
-                Reactions ({msg.reactions.reduce((acc, r) => acc + (r.users?.length || 0), 0)})
-              </div>
-              <div className="space-y-2">
-                {msg.reactions.map((reaction, idx) => {
-                  const reactedNames = members
-                    .filter(m => reaction.users?.some(uid => String(uid) === String(m._id)))
-                    .map(u => u.username || 'Unknown');
-                  return (
-                    <div key={idx} className="flex items-center gap-2.5">
-                      <span className="text-base">{reaction.emoji}</span>
-                      <span className="text-xs text-gray-600 dark:text-gray-400">
-                        {reactedNames.join(', ') || `${reaction.users?.length || 0} members`}
-                      </span>
+            {/* Panel */}
+            <div style={{
+                position: 'relative', zIndex: 10,
+                width: '100%', maxWidth: '380px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)',
+                borderBottom: 'none',
+                borderRadius: '4px 4px 0 0',
+                boxShadow: '0 -16px 48px rgba(0,0,0,0.5)',
+                overflow: 'hidden',
+            }}>
+                {/* Header */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-default)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <MessageSquare size={14} style={{ color: 'var(--accent)' }} />
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: FONT }}>Message Info</span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                    <CloseBtn onClick={onClose} />
+                </div>
 
-          {/* Seen By */}
-          <div className="px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-700 dark:text-gray-200 mb-2.5">
-              <CheckCircle2 size={14} className="text-blue-500" />
-              Seen by {seenByList.length}
-            </div>
-            {seenByList.length > 0 ? (
-              <div className="space-y-2.5">
-                {seenByList.map(user => (
-                  <div key={user._id} className="flex items-center gap-2.5">
-                    <Avatar user={user} blue />
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                      {user.username}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 italic pl-5">No one has read this yet.</p>
-            )}
-          </div>
+                {/* Message preview */}
+                <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)' }}>
+                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', fontFamily: FONT }}>
+                        &ldquo;{displayText}&rdquo;
+                    </p>
+                    <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={10} /> {sentDate} at {sentAt}</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Lock size={10} style={{ color: 'var(--accent)' }} />
+                            {msg.isEncrypted ? 'End-to-end encrypted' : 'Encrypted in transit'}
+                        </span>
+                    </div>
+                </div>
 
-          {/* Delivered To */}
-          <div className="px-4 py-3">
-            <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-400 mb-2.5 uppercase tracking-wider">
-              Delivered to ({deliveredToList.length})
+                {/* Scrollable body */}
+                <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+
+                    {/* Reactions */}
+                    {msg.reactions && msg.reactions.length > 0 && (
+                        <Section>
+                            <SectionHeader icon={<Smile size={13} style={{ color: 'var(--accent)' }} />}>
+                                Reactions ({msg.reactions.reduce((acc, r) => acc + (r.users?.length || 0), 0)})
+                            </SectionHeader>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {msg.reactions.map((reaction, idx) => {
+                                    const reactedNames = members
+                                        .filter(m => reaction.users?.some(uid => String(uid) === String(m._id)))
+                                        .map(u => u.username || 'Unknown');
+                                    return (
+                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <span style={{ fontSize: '16px' }}>{reaction.emoji}</span>
+                                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: FONT }}>
+                                                {reactedNames.join(', ') || `${reaction.users?.length || 0} members`}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Section>
+                    )}
+
+                    {/* Seen by */}
+                    <Section>
+                        <SectionHeader icon={<CheckCircle2 size={13} style={{ color: 'var(--accent)' }} />}>
+                            Seen by {seenByList.length}
+                        </SectionHeader>
+                        {seenByList.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {seenByList.map(user => (
+                                    <MemberRow key={user._id} user={user} />
+                                ))}
+                            </div>
+                        ) : (
+                            <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '18px', fontFamily: FONT }}>No one has read this yet.</p>
+                        )}
+                    </Section>
+
+                    {/* Delivered to */}
+                    <Section>
+                        <SectionHeader>Delivered to ({deliveredToList.length})</SectionHeader>
+                        {deliveredToList.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                {deliveredToList.map(user => (
+                                    <MemberRow key={user._id} user={user} muted />
+                                ))}
+                            </div>
+                        ) : (
+                            <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '18px', fontFamily: FONT }}>All members have seen this.</p>
+                        )}
+                    </Section>
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)' }}>
+                    <FooterBtn onClick={onClose}>Close</FooterBtn>
+                </div>
             </div>
-            {deliveredToList.length > 0 ? (
-              <div className="space-y-2.5">
-                {deliveredToList.map(user => (
-                  <div key={user._id} className="flex items-center gap-2.5 opacity-65">
-                    <Avatar user={user} />
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                      {user.username}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 italic pl-5">All members have seen this.</p>
-            )}
-          </div>
         </div>
+    );
+}
 
-        {/* ── Footer ── */}
-        <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-800">
-          <button
-            onClick={onClose}
-            className="w-full py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
-          >
-            Close
-          </button>
+function CloseBtn({ onClick }) {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                padding: '5px', border: 'none', outline: 'none', background: 'none',
+                cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms ease',
+                color: hovered ? 'var(--state-danger)' : 'var(--text-muted)',
+            }}>
+            <X size={15} />
+        </button>
+    );
+}
+
+function Section({ children }) {
+    return (
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+            {children}
         </div>
-      </div>
-    </div>
-  );
+    );
+}
+
+function SectionHeader({ icon, children }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px', fontFamily: 'Inter, system-ui, sans-serif', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            {icon}
+            {children}
+        </div>
+    );
+}
+
+function MemberRow({ user, muted }) {
+    const char = (user.username || '?').charAt(0).toUpperCase();
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: muted ? 0.6 : 1 }}>
+            {user.profilePicture ? (
+                <img src={user.profilePicture} alt={user.username}
+                    style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }} />
+            ) : (
+                <div style={{
+                    width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
+                    backgroundColor: muted ? 'var(--bg-hover)' : 'rgba(184,149,106,0.15)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: `1px solid ${muted ? 'var(--border-default)' : 'var(--border-accent)'}`,
+                    fontSize: '10px', fontWeight: 700,
+                    color: muted ? 'var(--text-muted)' : 'var(--accent)',
+                }}>
+                    {char}
+                </div>
+            )}
+            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                {user.username}
+            </span>
+        </div>
+    );
+}
+
+function FooterBtn({ onClick, children }) {
+    const [hovered, setHovered] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                width: '100%', padding: '8px 0', fontSize: '13px', fontWeight: 500,
+                color: hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
+                backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-active)',
+                border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer',
+                outline: 'none', transition: '100ms ease', fontFamily: 'Inter, system-ui, sans-serif',
+            }}>
+            {children}
+        </button>
+    );
 }

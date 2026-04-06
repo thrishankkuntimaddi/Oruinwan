@@ -1,6 +1,4 @@
-// Phase 1 — Upgraded Reaction Picker
-// Quick strip (6 common emojis) + full emoji-picker-react grid on "+" click
-
+// ReactionPicker — Monolith Flow Design System
 import React, { useState, useRef, useEffect } from "react";
 import EmojiPicker from "emoji-picker-react";
 
@@ -10,26 +8,34 @@ export default function ReactionPicker({ onSelect, onClose }) {
     const [showFull, setShowFull] = useState(false);
     const ref = useRef(null);
 
-    // Close on outside click
     useEffect(() => {
         const handler = (e) => {
-            if (ref.current && !ref.current.contains(e.target)) {
-                onClose?.();
-            }
+            if (ref.current && !ref.current.contains(e.target)) onClose?.();
         };
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, [onClose]);
 
     return (
-        <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+        <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
             {/* Quick strip */}
-            <div className="flex items-center gap-1 bg-white border border-gray-200 shadow-lg rounded-full px-2 py-1 animate-fade-in">
-                {QUICK_REACTIONS.map((emoji) => (
+            <div style={{
+                display: 'flex', alignItems: 'center', gap: '2px',
+                backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
+                borderRadius: '99px', padding: '3px 6px',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+            }}>
+                {QUICK_REACTIONS.map(emoji => (
                     <button
                         key={emoji}
                         onClick={() => { onSelect(emoji); onClose?.(); }}
-                        className="p-1.5 hover:bg-gray-100 rounded-full text-lg transition-transform hover:scale-125"
+                        style={{
+                            padding: '4px', background: 'none', border: 'none',
+                            cursor: 'pointer', fontSize: '17px', borderRadius: '99px',
+                            transition: '150ms ease', lineHeight: 1,
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.3)'}
+                        onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                     >
                         {emoji}
                     </button>
@@ -37,26 +43,28 @@ export default function ReactionPicker({ onSelect, onClose }) {
                 {/* Full picker toggle */}
                 <button
                     onClick={() => setShowFull(s => !s)}
-                    className="p-1.5 hover:bg-gray-100 rounded-full text-sm text-gray-500 transition-colors font-semibold"
                     title="More reactions"
+                    style={{
+                        padding: '4px 7px', background: 'none', border: 'none',
+                        cursor: 'pointer', fontSize: '13px', fontWeight: 700,
+                        color: 'var(--text-muted)', borderRadius: '99px', transition: '150ms ease',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                     +
                 </button>
             </div>
 
-            {/* Full emoji picker — positioned above the strip */}
+            {/* Full emoji picker */}
             {showFull && (
-                <div className="absolute bottom-full mb-2 right-0 z-50 shadow-2xl rounded-2xl overflow-hidden">
+                <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 50, borderRadius: '2px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
                     <EmojiPicker
-                        onEmojiClick={(emojiData) => {
-                            onSelect(emojiData.emoji);
-                            onClose?.();
-                        }}
-                        height={380}
-                        width={320}
-                        searchDisabled={false}
+                        onEmojiClick={data => { onSelect(data.emoji); onClose?.(); }}
+                        height={360} width={300}
                         skinTonesDisabled
                         previewConfig={{ showPreview: false }}
+                        theme="dark"
                     />
                 </div>
             )}

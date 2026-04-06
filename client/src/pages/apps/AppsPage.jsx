@@ -158,8 +158,8 @@ function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
   };
 
   return (
-    <div className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-200">
-      <div className={`h-1.5 bg-gradient-to-r ${gradient}`} />
+    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', transition: 'border-color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.2)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}>
+      <div style={{ height: '3px', background: '#b8956a', opacity: 0.6 }} />
       <div className="p-4">
         <div className="flex items-start gap-3 mb-3">
           {app.iconUrl ? (
@@ -170,7 +170,7 @@ function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <h3 className="font-bold text-sm text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+            <h3 style={{ fontWeight: 700, fontSize: '13px', color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {app.name}
             </h3>
             <p className="text-xs text-gray-400 dark:text-gray-500">{app.developer} · v{app.version}</p>
@@ -203,11 +203,7 @@ function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
           <button
             onClick={install}
             disabled={installing || installed}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all ${
-              installed
-                ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800"
-                : "text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-sm hover:shadow-md hover:-translate-y-0.5"
-            } disabled:opacity-60 disabled:cursor-not-allowed`}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '6px 10px', fontSize: '11px', fontWeight: 700, background: installed ? 'rgba(52,211,153,0.1)' : '#b8956a', border: `1px solid ${installed ? 'rgba(52,211,153,0.25)' : 'transparent'}`, color: installed ? '#34d399' : '#0c0c0c', cursor: installing || installed ? 'not-allowed' : 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'opacity 150ms ease', opacity: installing ? 0.6 : 1 }}
           >
             {installing ? (
               <><RefreshCw size={11} className="animate-spin" />Installing…</>
@@ -310,7 +306,7 @@ export default function AppsPage() {
   }, [fetchMarketplace, activeTab, mktSearch]);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950 min-h-0">
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', minHeight: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* Toast */}
       {mktToast && (
         <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${
@@ -330,12 +326,12 @@ export default function AppsPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-8 py-5 flex-shrink-0">
+      <div style={{ background: '#111111', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '20px 32px', flexShrink: 0 }}>
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-sm">
-                <Puzzle size={20} className="text-white" />
+              <div style={{ width: '36px', height: '36px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Puzzle size={18} style={{ color: '#b8956a' }} />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Apps & Integrations</h1>
@@ -350,7 +346,9 @@ export default function AppsPage() {
               )}
               <button
                 onClick={() => navigate(`/workspace/${workspaceId}/developer`)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#0c0c0c', background: '#b8956a', border: 'none', cursor: 'pointer', transition: 'opacity 150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
               >
                 <Terminal size={14} />Developer Platform
               </button>
@@ -358,26 +356,18 @@ export default function AppsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit mb-5">
+          <div style={{ display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.05)', padding: '3px', width: 'fit-content', marginBottom: '20px' }}>
             <button
               onClick={() => setActiveTab("integrations")}
-              className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === "integrations"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
+              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: activeTab === 'integrations' ? 'rgba(184,149,106,0.12)' : 'transparent', border: `1px solid ${activeTab === 'integrations' ? 'rgba(184,149,106,0.25)' : 'transparent'}`, color: activeTab === 'integrations' ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease' }}
             >
               Integrations
             </button>
             <button
               onClick={() => setActiveTab("marketplace")}
-              className={`flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === "marketplace"
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-              }`}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: activeTab === 'marketplace' ? 'rgba(184,149,106,0.12)' : 'transparent', border: `1px solid ${activeTab === 'marketplace' ? 'rgba(184,149,106,0.25)' : 'transparent'}`, color: activeTab === 'marketplace' ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease' }}
             >
-              <ShoppingBag size={13} />Marketplace
+              <ShoppingBag size={12} />Marketplace
             </button>
           </div>
 
@@ -388,16 +378,12 @@ export default function AppsPage() {
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <input type="text" value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search integrations…"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
+                  style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px', fontSize: '13px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter,system-ui,sans-serif', boxSizing: 'border-box' }} />
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {INTEGRATION_CATEGORIES.map(cat => (
                   <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all ${
-                      activeCategory === cat.id
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:text-blue-600"
-                    }`}>
+                    style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, background: activeCategory === cat.id ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${activeCategory === cat.id ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, color: activeCategory === cat.id ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter,system-ui,sans-serif' }}>
                     {cat.label}
                   </button>
                 ))}
@@ -409,16 +395,12 @@ export default function AppsPage() {
                 <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                 <input type="text" value={mktSearch} onChange={e => { setMktSearch(e.target.value); setMktPage(1); }}
                   placeholder="Search marketplace…"
-                  className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all" />
+                  style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px', fontSize: '13px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter,system-ui,sans-serif', boxSizing: 'border-box' }} />
               </div>
-              <div className="flex items-center gap-2 flex-wrap">
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {MARKETPLACE_CATEGORIES.map(cat => (
                   <button key={cat.id} onClick={() => { setMktCategory(cat.id); setMktPage(1); }}
-                    className={`px-3.5 py-1.5 text-xs font-semibold rounded-full border transition-all ${
-                      mktCategory === cat.id
-                        ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-400 hover:text-blue-600"
-                    }`}>
+                    style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, background: mktCategory === cat.id ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${mktCategory === cat.id ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, color: mktCategory === cat.id ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter,system-ui,sans-serif' }}>
                     {cat.label}
                   </button>
                 ))}

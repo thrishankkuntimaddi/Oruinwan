@@ -1,117 +1,124 @@
 import React from 'react';
 import { User, ArrowRight, Plus, Shield, Lock } from 'lucide-react';
 
-/**
- * WorkspaceGrid - Displays grid of existing workspaces + "Create New" card
- * Pure presentational component - all interactions delegated to parent via props
- */
-const WorkspaceGrid = ({
-    workspaces,
-    onWorkspaceClick,
-    onCreateClick,
-    getIconComponent,
-    user
-}) => {
-    // Check limits: Personal users can only create 3 workspaces
+const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, getIconComponent, user }) => {
     const ownedWorkspacesCount = workspaces.filter(ws => ws.isOwner).length;
     const isLimitReached = user?.userType === 'personal' && ownedWorkspacesCount >= 3;
-
-    // Company members (role: 'member') cannot create workspaces
     const isCompanyMember = user?.companyRole === 'member' && user?.userType !== 'personal';
     const companyName = user?.companyName || 'your company';
 
+    const cardBase = {
+        display: 'flex', flexDirection: 'column', height: '200px',
+        background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+        borderRadius: '2px', padding: '20px', textAlign: 'left',
+        cursor: 'pointer', fontFamily: 'var(--font)',
+        transition: 'background 150ms ease, border-color 150ms ease',
+        overflow: 'hidden', position: 'relative',
+    };
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Existing Workspaces */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {workspaces.map((ws) => {
                 const IconComponent = getIconComponent(ws.icon);
                 return (
-                    <button
-                        key={ws.id}
-                        onClick={() => onWorkspaceClick(ws.id)}
-                        className="group relative flex flex-col h-56 md:h-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 md:p-8 hover:shadow-xl hover:shadow-indigo-100/50 dark:hover:shadow-indigo-900/50 hover:border-indigo-200 dark:hover:border-indigo-700 hover:-translate-y-1 transition-all duration-300 text-left overflow-hidden"
+                    <button key={ws.id} onClick={() => onWorkspaceClick(ws.id)}
+                        className="ws-card"
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = 'var(--bg-hover)';
+                            e.currentTarget.style.outline = '1px solid var(--border-accent)';
+                            const arrow = e.currentTarget.querySelector('.ws-arrow');
+                            if (arrow) { arrow.style.opacity = '1'; arrow.style.transform = 'translateX(3px)'; }
+                            const title = e.currentTarget.querySelector('.ws-name');
+                            if (title) title.style.color = 'var(--text-primary)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = 'var(--bg-surface)';
+                            e.currentTarget.style.outline = '1px solid var(--border-default)';
+                            const arrow = e.currentTarget.querySelector('.ws-arrow');
+                            if (arrow) { arrow.style.opacity = '0'; arrow.style.transform = 'translateX(0)'; }
+                            const title = e.currentTarget.querySelector('.ws-name');
+                            if (title) title.style.color = 'var(--text-secondary)';
+                        }}
+                        style={{ ...cardBase, border: 'none', outline: '1px solid var(--border-default)' }}
                     >
-                        {/* Decorative gradient blob */}
-                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-full blur-2xl group-hover:from-indigo-100 group-hover:to-purple-100 transition-colors"></div>
-
-                        <div className="relative z-10 flex-1">
-                            <div
-                                className="w-14 h-14 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 mb-6"
-                                style={{ backgroundColor: ws.color }}
-                            >
-                                <IconComponent size={28} />
+                        <div style={{ flex: 1 }}>
+                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', marginBottom: '14px', backgroundColor: ws.color, flexShrink: 0 }}>
+                                <IconComponent size={18} />
                             </div>
 
-                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2 truncate pr-4">{ws.name}</h3>
+                            <h3 className="ws-name" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 150ms ease', margin: '0 0 6px' }}>
+                                {ws.name}
+                            </h3>
 
-                            <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400 font-medium">
-                                <div className="flex items-center gap-1.5">
-                                    <User size={14} className="text-slate-400" />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                    <User size={11} />
                                     {ws.role === 'owner' ? 'Owner' : 'Member'}
                                 </div>
-                                <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                                <div style={{ width: '3px', height: '3px', background: 'var(--border-accent)', borderRadius: '50%' }} />
                                 <div>{ws.members} member{ws.members !== 1 && 's'}</div>
                             </div>
                         </div>
 
-                        <div className="relative z-10 mt-auto flex items-center text-indigo-600 font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
-                            Launch Workspace <ArrowRight size={16} className="ml-2" />
+                        <div className="ws-arrow" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 500, color: 'var(--accent)', opacity: 0, transform: 'translateX(0)', transition: 'opacity 150ms ease, transform 150ms ease' }}>
+                            Open Workspace <ArrowRight size={13} />
                         </div>
                     </button>
                 );
             })}
 
-            {/* New Workspace Card — locked for company members */}
+            {/* Locked — company members */}
             {isCompanyMember ? (
-                <div className="group relative flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl bg-slate-50 dark:bg-slate-800/50 cursor-not-allowed select-none overflow-hidden">
-                    {/* Subtle lock bg pattern */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-100/60 to-slate-50/60 dark:from-slate-800/60 dark:to-slate-900/60" />
-                    <div className="relative z-10 flex flex-col items-center px-6 text-center">
-                        <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-4 border border-slate-200 dark:border-slate-600">
-                            <Lock size={22} className="text-slate-400 dark:text-slate-500" />
-                        </div>
-                        <span className="font-bold text-base text-slate-500 dark:text-slate-400 mb-1">
-                            Create Workspace
-                        </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed mb-3">
-                            Only admins &amp; owners can create workspaces in <span className="font-semibold text-slate-500 dark:text-slate-400">{companyName}</span>.
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-1.5 rounded-full border border-indigo-100 dark:border-indigo-800">
-                            <Shield size={11} />
-                            Contact your Admin or Owner
-                        </span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', border: '1px dashed var(--border-default)', borderRadius: '2px', background: 'var(--bg-surface)', cursor: 'not-allowed', userSelect: 'none', padding: '24px', textAlign: 'center' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', border: '1px solid var(--border-default)' }}>
+                        <Lock size={16} style={{ color: 'var(--text-muted)' }} />
                     </div>
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Create Workspace</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '10px', display: 'block' }}>
+                        Only admins &amp; owners can create workspaces in <span style={{ color: 'var(--text-secondary)' }}>{companyName}</span>.
+                    </span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', border: '1px solid var(--border-default)', padding: '4px 10px', borderRadius: '2px' }}>
+                        <Shield size={11} /> Contact your Admin or Owner
+                    </span>
                 </div>
             ) : (
+                /* Create New */
                 <button
-                    onClick={() => {
-                        if (!isLimitReached) onCreateClick();
-                    }}
+                    onClick={() => { if (!isLimitReached) onCreateClick(); }}
                     disabled={isLimitReached}
-                    className={`group relative flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-2xl transition-all duration-300 ${isLimitReached
-                        ? 'border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 cursor-not-allowed opacity-70'
-                        : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20'
-                        }`}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', border: `1px dashed ${isLimitReached ? 'var(--border-subtle)' : 'var(--border-default)'}`, borderRadius: '2px', background: 'transparent', cursor: isLimitReached ? 'not-allowed' : 'pointer', opacity: isLimitReached ? 0.45 : 1, padding: '24px', textAlign: 'center', transition: 'background 150ms ease, border-color 150ms ease', fontFamily: 'var(--font)' }}
+                    onMouseEnter={e => {
+                        if (!isLimitReached) {
+                            e.currentTarget.style.background = 'var(--bg-hover)';
+                            e.currentTarget.style.borderColor = 'var(--accent)';
+                            const icon = e.currentTarget.querySelector('.create-icon');
+                            if (icon) icon.style.color = 'var(--accent)';
+                            const label = e.currentTarget.querySelector('.create-label');
+                            if (label) label.style.color = 'var(--text-primary)';
+                        }
+                    }}
+                    onMouseLeave={e => {
+                        if (!isLimitReached) {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.borderColor = 'var(--border-default)';
+                            const icon = e.currentTarget.querySelector('.create-icon');
+                            if (icon) icon.style.color = 'var(--text-muted)';
+                            const label = e.currentTarget.querySelector('.create-label');
+                            if (label) label.style.color = 'var(--text-secondary)';
+                        }
+                    }}
                 >
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-colors ${isLimitReached
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-400'
-                        : 'bg-slate-100 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600'
-                        }`}>
-                        {isLimitReached ? <Shield size={32} /> : <Plus size={32} />}
+                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', background: 'var(--bg-active)', border: '1px solid var(--border-default)' }}>
+                        {isLimitReached
+                            ? <Shield size={18} className="create-icon" style={{ color: 'var(--text-muted)', transition: 'color 150ms ease' }} />
+                            : <Plus size={18} className="create-icon" style={{ color: 'var(--text-muted)', transition: 'color 150ms ease' }} />
+                        }
                     </div>
-                    <span className={`font-bold text-lg ${isLimitReached
-                        ? 'text-slate-400 dark:text-slate-500'
-                        : 'text-slate-600 dark:text-slate-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-400'
-                        }`}>
+                    <span className="create-label" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', transition: 'color 150ms ease' }}>
                         {isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}
                     </span>
-                    <span className={`text-sm mt-1 px-4 text-center ${isLimitReached
-                        ? 'text-slate-400 dark:text-slate-600'
-                        : 'text-slate-400 dark:text-slate-500 group-hover:text-indigo-500 dark:group-hover:text-indigo-400'
-                        }`}>
-                        {isLimitReached
-                            ? 'You have reached the limit of 3 workspaces on the personal plan.'
-                            : 'Start a new project or team'}
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>
+                        {isLimitReached ? 'You have reached the limit of 3 workspaces on the personal plan.' : 'Start a new project or team'}
                     </span>
                 </button>
             )}

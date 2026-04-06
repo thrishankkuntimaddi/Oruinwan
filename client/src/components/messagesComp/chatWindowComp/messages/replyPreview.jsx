@@ -13,16 +13,24 @@ export default function ReplyPreview({ replyingTo, onCancel }) {
     "🔒 Encrypted message";
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 dark:bg-gray-800/80 border border-b-0 border-secondary-200 dark:border-secondary-700 rounded-t-2xl animate-in fade-in slide-in-from-bottom-1">
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '8px',
+      padding: '6px 16px',
+      backgroundColor: 'var(--bg-active)',
+      borderTop: '1px solid var(--border-default)',
+    }}>
+      {/* Accent bar */}
+      <div style={{ width: '2px', height: '28px', backgroundColor: 'var(--accent)', borderRadius: '1px', flexShrink: 0 }} />
+
       {/* Icon */}
-      <MessageSquare size={14} className="text-blue-500 flex-shrink-0" />
+      <MessageSquare size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
 
       {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 leading-tight">
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent)', lineHeight: 1.3 }}>
           {senderName}
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 truncate leading-tight mt-0.5">
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>
           {previewText}
         </div>
       </div>
@@ -30,10 +38,12 @@ export default function ReplyPreview({ replyingTo, onCancel }) {
       {/* Cancel */}
       <button
         onClick={onCancel}
-        className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors"
+        style={{ flexShrink: 0, padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '100ms ease' }}
+        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
         title="Cancel reply"
       >
-        <X size={14} />
+        <X size={13} />
       </button>
     </div>
   );

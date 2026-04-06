@@ -1,24 +1,27 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { useNotifications } from "../../contexts/NotificationsContext";
 import SearchInlineBar from "../search/SearchInlineBar";
-import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Menu, Bell, CircleHelp, AtSign, UserPlus, Check, Trash2, ExternalLink } from "lucide-react";
+import MobileBottomNav from "./MobileBottomNav";
+import MobileHomePage from "./MobileHomePage";
+import { useIsMobile } from "../../hooks/useIsMobile";
+import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Bell, CircleHelp, AtSign, UserPlus, Check, Trash2, ExternalLink, ChevronLeft } from "lucide-react";
 
-// Icon map for notification types
+// Icon map — all use the same neutral bg, consistent with Monolith design
 const NOTIF_ICONS = {
-    mention: { Icon: AtSign, color: 'text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30' },
-    dm: { Icon: MessageCircle, color: 'text-sky-600 bg-sky-50 dark:bg-sky-900/30' },
-    task_assigned: { Icon: Check, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' },
-    task_comment: { Icon: MessageCircle, color: 'text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30' },
-    member_joined: { Icon: UserPlus, color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30' },
-    channel_pinned: { Icon: Bell, color: 'text-violet-600 bg-violet-50 dark:bg-violet-900/30' },
-    huddle_started: { Icon: Bell, color: 'text-red-500 bg-red-50 dark:bg-red-900/30' },
-    schedule_created: { Icon: Bell, color: 'text-orange-600 bg-orange-50 dark:bg-orange-900/30' },
-    reaction: { Icon: Bell, color: 'text-pink-600 bg-pink-50 dark:bg-pink-900/30' },
+    mention:         { Icon: AtSign,       color: 'var(--text-muted)' },
+    dm:              { Icon: MessageCircle, color: 'var(--text-muted)' },
+    task_assigned:   { Icon: Check,         color: 'var(--state-success)' },
+    task_comment:    { Icon: MessageCircle, color: 'var(--text-muted)' },
+    member_joined:   { Icon: UserPlus,      color: 'var(--state-success)' },
+    channel_pinned:  { Icon: Bell,          color: 'var(--accent)' },
+    huddle_started:  { Icon: Bell,          color: 'var(--state-danger)' },
+    schedule_created:{ Icon: Bell,          color: 'var(--accent)' },
+    reaction:        { Icon: Bell,          color: 'var(--text-secondary)' },
 };
 
 function timeAgo(dateStr) {
@@ -58,36 +61,40 @@ const WorkspaceNotificationPanel = () => {
     };
 
     return (
-        <div className="relative">
+        <div style={{ position: 'relative' }}>
             <button
                 onClick={() => setOpen(o => !o)}
-                className={`relative p-1.5 rounded-md transition-colors ${open ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                style={{ position: 'relative', padding: '6px', borderRadius: '2px', background: open ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: open ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
                 title="Notifications"
+                onMouseEnter={e => { if (!open) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                onMouseLeave={e => { if (!open) e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
-                <Bell size={20} strokeWidth={2} />
+                <Bell size={18} strokeWidth={2} />
                 {unreadCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full bg-indigo-600 text-white text-[9px] font-bold px-1">
+                    <span style={{ position: 'absolute', top: '-2px', right: '-2px', minWidth: '15px', height: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '99px', background: 'var(--accent)', color: '#0c0c0c', fontSize: '9px', fontWeight: 700, padding: '0 3px' }}>
                         {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                 )}
             </button>
 
-            {open && <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />}
+            {open && <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setOpen(false)} />}
 
             {open && (
-                <div className="absolute top-10 right-0 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[100] overflow-hidden"
-                    style={{ animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)' }}>
+                <div style={{ position: 'absolute', top: '38px', right: 0, width: '300px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 100, overflow: 'hidden', animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)', fontFamily: 'var(--font)' }}>
 
                     {/* Header */}
-                    <div className="flex items-center justify-between px-3 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600">
-                        <div className="flex items-center gap-2 text-white">
-                            <Bell size={14} />
-                            <span className="text-xs font-bold">Notifications</span>
-                            {unreadCount > 0 && <span className="bg-white/25 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">{unreadCount} new</span>}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
+                            <Bell size={13} />
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Notifications</span>
+                            {unreadCount > 0 && <span style={{ background: 'var(--accent)', color: '#0c0c0c', fontSize: '9px', fontWeight: 700, padding: '1px 6px', borderRadius: '99px' }}>{unreadCount} new</span>}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {unreadCount > 0 && (
-                                <button onClick={markAllRead} className="flex items-center gap-1 text-white/80 hover:text-white text-[10px] font-semibold" title="Mark all read">
+                                <button onClick={markAllRead} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '10px', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                                >
                                     <Check size={10} /> All read
                                 </button>
                             )}
@@ -95,16 +102,16 @@ const WorkspaceNotificationPanel = () => {
                     </div>
 
                     {/* List */}
-                    <div className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
+                    <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
                         {loading && notifications.length === 0 ? (
-                            <div className="flex items-center justify-center py-8 text-gray-400">
-                                <Loader2 size={18} className="animate-spin" />
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', color: 'var(--text-muted)' }}>
+                                <Loader2 size={16} className="animate-spin" />
                             </div>
                         ) : preview.length === 0 ? (
-                            <div className="flex flex-col items-center py-10 text-gray-400">
-                                <Bell size={28} className="mb-2 opacity-30" />
-                                <p className="text-xs font-medium">All caught up!</p>
-                                <p className="text-[10px] mt-0.5 text-gray-300">No new notifications</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', color: 'var(--text-muted)' }}>
+                                <Bell size={24} style={{ marginBottom: '8px', opacity: 0.3 }} />
+                                <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', margin: '0 0 3px' }}>All caught up!</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>No new notifications</p>
                             </div>
                         ) : preview.map(n => {
                             const { Icon, color } = NOTIF_ICONS[n.type] || NOTIF_ICONS.channel_pinned;
@@ -112,26 +119,25 @@ const WorkspaceNotificationPanel = () => {
                                 <div
                                     key={n._id}
                                     onClick={() => handleClickNotif(n)}
-                                    className={`flex items-start gap-3 px-3 py-2.5 group transition-colors cursor-pointer
-                                        ${n.read ? 'bg-white dark:bg-gray-800' : 'bg-indigo-50/60 dark:bg-indigo-900/10'}
-                                        hover:bg-gray-50 dark:hover:bg-gray-700/50`}
+                                    style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 14px', cursor: 'pointer', transition: '150ms ease', background: n.read ? 'none' : 'var(--bg-hover)', borderBottom: '1px solid var(--border-subtle)' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = n.read ? 'none' : 'var(--bg-hover)'}
                                 >
-                                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${color}`}>
-                                        <Icon size={14} />
+                                    <div style={{ flexShrink: 0, width: '28px', height: '28px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
+                                        <Icon size={13} />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-1.5">
-                                            <p className={`text-xs font-semibold truncate ${n.read ? 'text-gray-600 dark:text-gray-300' : 'text-gray-900 dark:text-gray-100'}`}>
-                                                {n.title}
-                                            </p>
-                                            {!n.read && <span className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-indigo-500" />}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <p style={{ fontSize: '12px', fontWeight: n.read ? 400 : 600, color: n.read ? 'var(--text-secondary)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{n.title}</p>
+                                            {!n.read && <span style={{ flexShrink: 0, width: '5px', height: '5px', borderRadius: '50%', background: 'var(--accent)', display: 'inline-block' }} />}
                                         </div>
-                                        {n.body && <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5">{n.body}</p>}
-                                        <p className="text-[9px] text-gray-400 mt-0.5 font-medium">{timeAgo(n.createdAt)}</p>
+                                        {n.body && <p style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: '2px 0 0' }}>{n.body}</p>}
+                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '2px 0 0', fontWeight: 500 }}>{timeAgo(n.createdAt)}</p>
                                     </div>
                                     <button
                                         onClick={e => { e.stopPropagation(); dismiss(n._id); }}
-                                        className="flex-shrink-0 p-0.5 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        style={{ flexShrink: 0, padding: '2px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', opacity: 0, transition: '150ms ease' }}
+                                        className="group-hover:opacity-100"
                                         title="Dismiss"
                                     >
                                         <X size={11} />
@@ -142,17 +148,21 @@ const WorkspaceNotificationPanel = () => {
                     </div>
 
                     {/* Footer */}
-                    <div className="border-t border-gray-100 dark:border-gray-700 px-3 py-2 bg-gray-50 dark:bg-gray-900 flex items-center justify-between">
+                    <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)' }}>
                         <button
                             onClick={() => { setOpen(false); navigate(`/workspace/${activeWorkspace?.id}/notifications`); }}
-                            className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
+                            style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                         >
                             View all notifications
                         </button>
                         {notifications.length > 0 && (
                             <button
                                 onClick={() => notifCtx?.clearAll?.()}
-                                className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-red-500 transition-colors"
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                 title="Clear all"
                             >
                                 <Trash2 size={10} /> Clear all
@@ -180,15 +190,62 @@ const MainLayout = ({ children, sidePanel }) => {
     const [showAI, setShowAI] = useState(false);
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
-
-    // Mobile State
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const navigate = useNavigate();
     const location = useLocation();
+    const isMobile = useIsMobile(768);
 
-    // Auto-close mobile menu on route change
-    useEffect(() => {
-        setMobileMenuOpen(false);
-    }, [location.pathname]);
+    // Detect if we're on a "detail" route (content is active, not panel root)
+    const workspaceId = activeWorkspace?.id || activeWorkspace?._id;
+    const currentPath = location.pathname;
+    const isDetailRoute = !!workspaceId && (
+        currentPath.includes('/channel/') ||
+        currentPath.includes('/dm/') ||
+        currentPath.includes('/thread/') ||
+        currentPath.includes('/task/') ||
+        currentPath.includes('/note/')
+    );
+
+    // Mobile home: show the MobileHomePage grid instead of sidePanel
+    const isMobileHome = isMobile && !isDetailRoute && !!workspaceId &&
+        (currentPath === `/workspace/${workspaceId}/home` ||
+         currentPath === `/workspace/${workspaceId}`);
+
+    // Mobile section title shown in top bar
+    const getMobileSectionTitle = () => {
+        if (!workspaceId) return activeWorkspace?.name || 'Chttrix';
+        const p = currentPath;
+        if (p.includes('/channels') || p.includes('/channel/')) return 'Channels';
+        if (p.includes('/messages') || p.includes('/dm/'))      return 'Messages';
+        if (p.includes('/tasks')    || p.includes('/task/'))    return 'Tasks';
+        if (p.includes('/notes')    || p.includes('/note/'))    return 'Notes';
+        if (p.includes('/files'))                               return 'Files';
+        if (p.includes('/knowledge'))                           return 'Knowledge';
+        if (p.includes('/huddles'))                             return 'Meetings';
+        if (p.includes('/updates'))                             return 'Updates';
+        if (p.includes('/apps'))                                return 'Apps';
+        if (p.includes('/settings'))                            return 'Settings';
+        if (p.includes('/admin'))                               return 'Admin';
+        if (p.includes('/manager'))                             return 'Manager';
+        return activeWorkspace?.name || 'Chttrix';
+    };
+
+    // Where to navigate "back" to from a detail route
+    const getMobileBackPath = () => {
+        const base = `/workspace/${workspaceId}`;
+        if (currentPath.includes('/channel/'))  return `${base}/channels`;
+        if (currentPath.includes('/dm/'))       return `${base}/messages`;
+        if (currentPath.includes('/task/'))     return `${base}/tasks`;
+        if (currentPath.includes('/note/'))     return `${base}/notes`;
+        if (currentPath.includes('/thread/'))   return -1;
+        return `${base}/home`;
+    };
+
+    const handleMobileBack = () => {
+        const backPath = getMobileBackPath();
+        if (backPath === -1) navigate(-1);
+        else navigate(backPath);
+    };
+
 
     // Cmd+Shift+A → toggle Chttrix AI panel (Cmd+Shift+K conflicts with Chrome on macOS)
     useEffect(() => {
@@ -201,6 +258,22 @@ const MainLayout = ({ children, sidePanel }) => {
         window.addEventListener('keydown', fn);
         return () => window.removeEventListener('keydown', fn);
     }, []);
+
+    // Persist workspaceId so pages outside MainLayout (e.g. Settings) can use it
+    useEffect(() => {
+        if (workspaceId) localStorage.setItem('lastWorkspaceId', workspaceId);
+    }, [workspaceId]);
+
+    // Auto-open AI panel when navigated here with state: { openAI: true }
+    // (e.g. from Settings page bottom nav AI tab)
+    useEffect(() => {
+        if (location.state?.openAI && isMobile) {
+            setShowAI(true);
+            // Clear the flag so back-navigation doesn't re-trigger it
+            navigate(location.pathname, { replace: true, state: {} });
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.state?.openAI]);
 
     // Help State
     const [showHelp, setShowHelp] = useState(false);
@@ -260,31 +333,39 @@ const MainLayout = ({ children, sidePanel }) => {
     };
 
     return (
-        <div className="flex flex-col h-screen w-full overflow-hidden bg-white dark:bg-gray-900 fixed inset-0">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', background: 'var(--bg-base)', position: 'fixed', inset: 0, fontFamily: 'var(--font)', paddingBottom: isMobile ? 'calc(56px + env(safe-area-inset-bottom))' : 0 }}>
             {/* ... (Top Bar remains same) ... */}
 
             {/* Help Modals */}
             {activeHelpModal && (
-                <div className="fixed inset-0 bg-black/60 z-[80] flex items-center justify-center animate-fade-in backdrop-blur-sm p-4">
-                    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-[600px] max-h-[80vh] overflow-hidden flex flex-col relative">
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', padding: '16px', fontFamily: 'var(--font)' }}>
+                    <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '560px', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
                         <button
                             onClick={() => setActiveHelpModal(null)}
-                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 z-10"
+                            style={{ position: 'absolute', top: '14px', right: '14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', zIndex: 10, display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                         >
-                            <X size={24} />
+                            <X size={18} />
                         </button>
 
                         {activeHelpModal === "academy" && (
                             <>
-                                <div className="p-6 bg-indigo-600 text-white">
-                                    <h2 className="text-2xl font-bold flex items-center gap-2"><BookOpen size={28} /> Chttrix Academy</h2>
-                                    <p className="text-indigo-100 mt-1">Master your workflow with these guides.</p>
+                                <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <BookOpen size={20} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                    <div>
+                                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Chttrix Academy</h2>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Master your workflow with these guides.</p>
+                                    </div>
                                 </div>
-                                <div className="p-6 overflow-y-auto space-y-4">
+                                <div style={{ padding: '16px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {["Getting Started Guide", "Advanced Search Techniques", "Managing Notifications", "Integrations 101"].map((guide, i) => (
-                                        <div key={i} className="p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-indigo-300 dark:hover:border-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 cursor-pointer transition-all group">
-                                            <h3 className="font-bold text-gray-800 dark:text-gray-100 group-hover:text-indigo-700 dark:group-hover:text-indigo-400">{guide}</h3>
-                                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Learn the basics and become a pro user in no time.</p>
+                                        <div key={i} style={{ padding: '12px 14px', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', transition: '150ms ease' }}
+                                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+                                        >
+                                            <h3 style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: '0 0 3px' }}>{guide}</h3>
+                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Learn the basics and become a pro user in no time.</p>
                                         </div>
                                     ))}
                                 </div>
@@ -293,28 +374,21 @@ const MainLayout = ({ children, sidePanel }) => {
 
                         {activeHelpModal === "shortcuts" && (
                             <>
-                                <div className="p-6 bg-gray-900 text-white">
-                                    <h2 className="text-2xl font-bold flex items-center gap-2"><Command size={28} /> Keyboard Shortcuts</h2>
-                                    <p className="text-gray-400 mt-1">Speed up your workflow.</p>
+                                <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Command size={20} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                    <div>
+                                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Keyboard Shortcuts</h2>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Speed up your workflow.</p>
+                                    </div>
                                 </div>
-                                <div className="p-6 overflow-y-auto">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="flex justify-between items-center p-2 border-b border-gray-100">
-                                            <span className="text-gray-600">Quick Search</span>
-                                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-500 border border-gray-300">Cmd + K</kbd>
-                                        </div>
-                                        <div className="flex justify-between items-center p-2 border-b border-gray-100">
-                                            <span className="text-gray-600">New Message</span>
-                                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-500 border border-gray-300">Cmd + N</kbd>
-                                        </div>
-                                        <div className="flex justify-between items-center p-2 border-b border-gray-100">
-                                            <span className="text-gray-600">Toggle AI</span>
-                                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-500 border border-gray-300">Cmd + J</kbd>
-                                        </div>
-                                        <div className="flex justify-between items-center p-2 border-b border-gray-100">
-                                            <span className="text-gray-600">Close Window</span>
-                                            <kbd className="px-2 py-1 bg-gray-100 rounded text-xs font-mono text-gray-500 border border-gray-300">Esc</kbd>
-                                        </div>
+                                <div style={{ padding: '16px 24px', overflowY: 'auto' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', backgroundColor: 'var(--border-subtle)' }}>
+                                        {[['Quick Search', 'Cmd + K'], ['New Message', 'Cmd + N'], ['Toggle AI', 'Cmd + Shift + A'], ['Close / Escape', 'Esc']].map(([label, key]) => (
+                                            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', backgroundColor: 'var(--bg-surface)' }}>
+                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{label}</span>
+                                                <kbd style={{ padding: '2px 8px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '10px', fontFamily: 'monospace', color: 'var(--text-primary)' }}>{key}</kbd>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             </>
@@ -322,54 +396,63 @@ const MainLayout = ({ children, sidePanel }) => {
 
                         {activeHelpModal === "bug" && (
                             <>
-                                <div className="p-6 bg-red-50 border-b border-red-100">
-                                    <h2 className="text-2xl font-bold text-red-700 flex items-center gap-2"><Bug size={28} /> Report a Bug</h2>
-                                    <p className="text-red-600 mt-1">Found something broken? Let us know.</p>
-                                </div>
-                                <div className="p-6 space-y-4">
+                                <div style={{ padding: '20px 24px', backgroundColor: 'rgba(198,60,60,0.08)', borderBottom: '1px solid rgba(198,60,60,0.2)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Bug size={20} style={{ color: 'var(--state-danger)', flexShrink: 0 }} />
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">What happened?</label>
-                                        <textarea className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500 h-32" placeholder="Describe the issue..."></textarea>
+                                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--state-danger)', margin: 0 }}>Report a Bug</h2>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Found something broken? Let us know.</p>
                                     </div>
-                                    <button className="w-full py-2 bg-red-600 text-white rounded-md font-bold hover:bg-red-700 transition-colors">
-                                        Submit Report
-                                    </button>
+                                </div>
+                                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>What happened?</label>
+                                        <textarea rows={4} placeholder="Describe the issue..." style={{ width: '100%', padding: '8px 10px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'var(--font)' }}
+                                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                                        />
+                                    </div>
+                                    <button style={{ padding: '8px', fontSize: '13px', fontWeight: 600, color: '#fff', backgroundColor: 'var(--state-danger)', border: 'none', borderRadius: '2px', cursor: 'pointer', transition: '150ms ease' }}
+                                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                    >Submit Report</button>
                                 </div>
                             </>
                         )}
 
                         {activeHelpModal === "whatsnew" && (
                             <>
-                                <div className="p-6 bg-gradient-to-r from-pink-500 to-orange-500 text-white">
-                                    <h2 className="text-2xl font-bold flex items-center gap-2"><Sparkles size={28} /> What's New</h2>
-                                    <p className="text-white/90 mt-1">Latest updates and improvements.</p>
+                                <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <Sparkles size={20} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                                    <div>
+                                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>What's New</h2>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Latest updates and improvements.</p>
+                                    </div>
                                 </div>
-                                <div className="p-6 overflow-y-auto space-y-6">
-                                    <div className="relative pl-4 border-l-2 border-gray-200">
-                                        <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-pink-500"></div>
-                                        <span className="text-xs font-bold text-pink-500 uppercase">Nov 2025</span>
-                                        <h3 className="text-lg font-bold text-gray-900 mt-1">Chttrix AI 2.0</h3>
-                                        <p className="text-gray-600 text-sm mt-1">Smarter responses, faster generation, and context-aware suggestions.</p>
-                                    </div>
-                                    <div className="relative pl-4 border-l-2 border-gray-200">
-                                        <div className="absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-                                        <span className="text-xs font-bold text-orange-500 uppercase">Oct 2025</span>
-                                        <h3 className="text-lg font-bold text-gray-900 mt-1">Dark Mode Beta</h3>
-                                        <p className="text-gray-600 text-sm mt-1">Easy on the eyes. Try it out in settings.</p>
-                                    </div>
+                                <div style={{ padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    {[{ date: 'Nov 2025', color: 'var(--accent)', title: 'Chttrix AI 2.0', body: 'Smarter responses, faster generation, and context-aware suggestions.' }, { date: 'Oct 2025', color: '#9c7fd4', title: 'Dark Mode Beta', body: 'Easy on the eyes. Now the default theme across the app.' }].map(item => (
+                                        <div key={item.date} style={{ paddingLeft: '14px', borderLeft: `2px solid ${item.color}`, position: 'relative' }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, color: item.color, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{item.date}</span>
+                                            <h3 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', margin: '3px 0 4px' }}>{item.title}</h3>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>{item.body}</p>
+                                        </div>
+                                    ))}
                                 </div>
                             </>
                         )}
+
                         {activeHelpModal === "contact" && (
                             <>
-                                <div className="p-6 bg-blue-50 border-b border-blue-100">
-                                    <h2 className="text-2xl font-bold text-blue-900 flex items-center gap-2"><MessageCircle size={28} /> Contact Support</h2>
-                                    <p className="text-blue-700 mt-1">We're here to help with any questions.</p>
-                                </div>
-                                <div className="p-6 space-y-4">
+                                <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <MessageCircle size={20} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                                        <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Contact Support</h2>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>We're here to help with any questions.</p>
+                                    </div>
+                                </div>
+                                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>Subject</label>
+                                        <select style={{ width: '100%', padding: '7px 10px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}>
                                             <option>General Inquiry</option>
                                             <option>Billing Issue</option>
                                             <option>Technical Support</option>
@@ -377,12 +460,16 @@ const MainLayout = ({ children, sidePanel }) => {
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                                        <textarea className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 h-32" placeholder="How can we help you?"></textarea>
+                                        <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px' }}>Message</label>
+                                        <textarea rows={4} placeholder="How can we help you?" style={{ width: '100%', padding: '8px 10px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'var(--font)' }}
+                                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                                        />
                                     </div>
-                                    <button className="w-full py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 transition-colors">
-                                        Send Message
-                                    </button>
+                                    <button style={{ padding: '8px', fontSize: '13px', fontWeight: 600, color: '#0c0c0c', backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: 'pointer', transition: '150ms ease' }}
+                                        onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--accent-hover)'}
+                                        onMouseLeave={e => e.currentTarget.style.backgroundColor = 'var(--accent)'}
+                                    >Send Message</button>
                                 </div>
                             </>
                         )}
@@ -390,89 +477,102 @@ const MainLayout = ({ children, sidePanel }) => {
                 </div>
             )}
 
-            {/* 1. Top Utility Bar (Full Width) */}
-            <div className="h-10 flex items-center justify-between px-2 sm:px-3 bg-white dark:bg-gray-900 flex-shrink-0 z-[60] relative border-b border-gray-200 dark:border-gray-800">
-                {/* Left: Menu Button (Mobile) & Spacer */}
-                <div className="w-10 sm:w-20 flex items-center">
-                    <button
-                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                        className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                        {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-                    </button>
-                </div>
+            {/* 1. Top Utility Bar */}
+            <div style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', background: 'var(--bg-base)', flexShrink: 0, zIndex: 60, position: 'relative', borderBottom: '1px solid var(--border-subtle)' }}>
 
-                {/* Center: Search bar — real input, dropdown below it */}
+                {/* Mobile: left side — AI dismiss / back / section title */}
+                {isMobile && (
+                    <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, marginRight: '6px' }}>
+                        {showAI ? (
+                            /* AI is open → tapping closes it */
+                            <button
+                                onClick={() => setShowAI(false)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '6px 4px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)', WebkitTapHighlightColor: 'transparent' }}
+                            >
+                                <ChevronLeft size={16} /> AI
+                            </button>
+                        ) : isDetailRoute ? (
+                            <button
+                                onClick={handleMobileBack}
+                                style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '6px 4px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)', WebkitTapHighlightColor: 'transparent' }}
+                            >
+                                <ChevronLeft size={16} /> Back
+                            </button>
+                        ) : (
+                            <span style={{ padding: '0 4px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {getMobileSectionTitle()}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {/* Center: Search bar */}
                 <div className="flex-1 max-w-xl mx-auto relative z-[70]">
                     <SearchInlineBar workspaceId={activeWorkspace?.id || activeWorkspace?._id} />
                 </div>
 
 
                 {/* Right: Utilities */}
-                <div className="flex items-center space-x-1 justify-end relative">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end', position: 'relative' }}>
 
                     {/* Notification Bell */}
                     <WorkspaceNotificationPanel />
 
                     {/* Help Button */}
-                    <div className="relative">
+                    <div style={{ position: 'relative' }}>
                         <button
                             onClick={() => setShowHelp(!showHelp)}
-                            className={`p-1.5 rounded-md transition-colors ${showHelp ? 'bg-indigo-100 text-indigo-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                            style={{ padding: '6px', borderRadius: '2px', background: showHelp ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: showHelp ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
                             title="Help & Resources"
+                            onMouseEnter={e => { if (!showHelp) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                            onMouseLeave={e => { if (!showHelp) e.currentTarget.style.color = 'var(--text-muted)'; }}
                         >
-                            <CircleHelp size={20} strokeWidth={2} />
+                            <CircleHelp size={18} strokeWidth={2} />
                         </button>
 
                         {/* Help Popover */}
                         {showHelp && (
                             <>
-                                <div className="fixed inset-0 z-[90]" onClick={() => setShowHelp(false)}></div>
-                                <div className="absolute top-9 right-0 w-64 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-lg shadow-lg border border-gray-200/60 dark:border-gray-700/60 z-[100] overflow-hidden animate-fade-in origin-top-right ring-1 ring-black/5">
-                                    {/* Minimal Header */}
-                                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700/50 flex items-center justify-between bg-gray-50/50 dark:bg-gray-900/50">
-                                        <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Support</span>
-                                        <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-green-100/50 dark:bg-green-900/20 rounded-full">
-                                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                                                <span className="text-[9px] font-bold text-green-600 dark:text-green-400">Systems Normal</span>
-                                            </div>
+                                <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setShowHelp(false)} />
+                                <div style={{ position: 'absolute', top: '36px', right: 0, width: '220px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 100, overflow: 'hidden', animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)' }}>
+                                    {/* Header */}
+                                    <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-active)' }}>
+                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Support</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                            <div style={{ width: '6px', height: '6px', background: 'var(--state-success)', borderRadius: '50%' }} />
+                                            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--state-success)' }}>All systems normal</span>
                                         </div>
                                     </div>
 
-                                    {/* Search */}
-                                    <div className="p-2">
-                                        <div className="relative group">
-                                            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-indigo-500 transition-colors" />
-                                            <input type="text" placeholder="Search docs..." className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-lg text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all" />
-                                        </div>
-                                    </div>
-
-                                    {/* Quick Actions */}
-                                    <div className="px-1 pb-1 space-y-0.5">
-                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("academy"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
-                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform"><BookOpen size={14} /></div>
-                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Academy</span>
-                                        </button>
-                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("shortcuts"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
-                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 group-hover:scale-110 transition-transform"><Command size={14} /></div>
-                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Shortcuts</span>
-                                        </button>
-                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("whatsnew"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
-                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform"><Sparkles size={14} /></div>
-                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">What's New</span>
-                                        </button>
-                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("bug"); }} className="w-full flex items-center gap-3 px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-md transition-colors text-left group">
-                                            <div className="flex items-center justify-center w-6 h-6 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 group-hover:scale-110 transition-transform"><Bug size={14} /></div>
-                                            <span className="text-xs font-medium text-gray-700 dark:text-gray-200">Report Bug</span>
-                                        </button>
+                                    {/* Actions */}
+                                    <div style={{ padding: '4px' }}>
+                                        {[
+                                            { key: 'academy',   Icon: BookOpen,       label: 'Academy' },
+                                            { key: 'shortcuts', Icon: Command,        label: 'Shortcuts' },
+                                            { key: 'whatsnew',  Icon: Sparkles,       label: "What's New" },
+                                            { key: 'bug',       Icon: Bug,            label: 'Report Bug' },
+                                        ].map(({ key, Icon, label }) => (
+                                            <button key={key}
+                                                onClick={() => { setShowHelp(false); setActiveHelpModal(key); }}
+                                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', background: 'none', border: 'none', borderRadius: '2px', cursor: 'pointer', fontSize: '12px', fontWeight: 500, color: 'var(--text-secondary)', fontFamily: 'var(--font)', transition: '150ms ease', textAlign: 'left' }}
+                                                onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                                onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                            >
+                                                <Icon size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                                {label}
+                                            </button>
+                                        ))}
                                     </div>
 
                                     {/* Footer */}
-                                    <div className="border-t border-gray-100 dark:border-gray-700/50 p-2 bg-gray-50/80 dark:bg-gray-900/80">
-                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal("contact"); }} className="w-full flex items-center justify-center gap-2 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all group">
-                                            <MessageCircle size={12} className="text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
-                                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">Contact Support</span>
+                                    <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '6px' }}>
+                                        <button onClick={() => { setShowHelp(false); setActiveHelpModal('contact'); }}
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
+                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                                        >
+                                            <MessageCircle size={12} style={{ color: 'var(--text-muted)' }} />
+                                            Contact Support
                                         </button>
                                     </div>
                                 </div>
@@ -483,83 +583,99 @@ const MainLayout = ({ children, sidePanel }) => {
                     {/* ChttrixAI Button */}
                     <button
                         onClick={() => setShowAI(!showAI)}
-                        className={`p-1.5 rounded-md transition-colors ${showAI ? 'bg-blue-100 text-blue-600' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700'}`}
+                        style={{ padding: '6px', borderRadius: '2px', background: showAI ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: showAI ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
                         title="Toggle Chttrix AI"
+                        onMouseEnter={e => { if (!showAI) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { if (!showAI) e.currentTarget.style.color = 'var(--text-muted)'; }}
                     >
-                        <Bot size={20} strokeWidth={2} />
+                        <Bot size={18} strokeWidth={2} />
                     </button>
                 </div>
             </div>
 
-            {/* 2. Main Workspace Area (Below Top Bar) */}
-            <div className="flex-1 flex overflow-hidden relative">
+            {/* 2. Main Workspace Area */}
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-                {/* Mobile Menu Backdrop */}
-                {mobileMenuOpen && (
-                    <div
-                        className="fixed inset-0 bg-black/50 z-[65] md:hidden backdrop-blur-sm"
-                        onClick={() => setMobileMenuOpen(false)}
+                {/* A. Icon Sidebar — hidden on mobile */}
+                <div style={{ display: isMobile ? 'none' : 'flex', height: '100%' }}>
+                    <IconSidebar onProfileClick={() => setShowProfile(true)} />
+
+                    {/* B. Side Panel — desktop only or mobile panel-root */}
+                    {sidePanel && (
+                        <div
+                            className="h-full flex"
+                            style={{ display: isMobile ? 'none' : 'flex' }}
+                        >
+                            <div
+                                style={{ width: `${sidePanelWidth}px`, background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', height: '100%', flexShrink: 0 }}
+                            >
+                                {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
+                            </div>
+                            {/* SidePanel Drag Handle */}
+                            <div
+                                className="hidden md:block w-1 cursor-col-resize flex-shrink-0 z-40 transition-colors"
+                                style={{ background: 'transparent' }}
+                                onMouseDown={startResizingSidePanel}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--border-accent)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            />
+                        </div>
+                    )}
+                </div>
+
+                {/* Mobile: Home screen (grid) — replaces sidePanel at /home; hidden when AI is open */}
+                {isMobile && isMobileHome && !showAI && (
+                    <MobileHomePage
+                        workspaceId={workspaceId}
+                        onProfileClick={() => setShowProfile(true)}
                     />
                 )}
 
-                {/* A. Far Left: Icon Sidebar */}
-                <div className={`
-                    fixed md:static inset-y-0 left-0 z-[70] h-full
-                    transform transition-transform duration-300 ease-in-out md:transform-none
-                    ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-                    md:flex
-                `}>
-                    <div className="flex h-full shadow-2xl md:shadow-none">
-                        <IconSidebar onProfileClick={() => setShowProfile(true)} />
-
-                        {/* B. Middle Left: Side Panel (Inside drawer on mobile, static on desktop) */}
-                        {sidePanel && (
-                            <div className="h-full flex">
-                                <div
-                                    className="flex-shrink-0 bg-white dark:bg-gray-900 h-full border-r border-gray-200 dark:border-gray-800"
-                                    style={{ width: `${sidePanelWidth}px` }}
-                                >
-                                    {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
-                                </div>
-                                {/* SidePanel Drag Handle (Desktop Only) */}
-                                <div
-                                    className="hidden md:block w-1 bg-transparent hover:bg-blue-400 cursor-col-resize flex-shrink-0 transition-colors z-40"
-                                    onMouseDown={startResizingSidePanel}
-                                ></div>
-                            </div>
-                        )}
+                {/* Mobile: Side Panel — full-width, shown at non-home, non-detail panel routes */}
+                {isMobile && sidePanel && !isDetailRoute && !isMobileHome && !showAI && (
+                    <div style={{ flex: 1, background: 'var(--bg-base)', height: '100%', overflow: 'hidden' }}>
+                        {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...', isMobile: true })}
                     </div>
-                </div>
+                )}
 
                 {/* C. Center: Main Content + Right Sidebar */}
-                <main className="flex-1 flex min-w-0 bg-white dark:bg-gray-900 relative w-full">
-                    {/* Page Content */}
-                    <div className="flex-1 overflow-hidden relative w-full">
+                {/* On mobile: shown only when detail route OR no sidePanel OR AI open OR home */}
+                <main
+                    style={{
+                        flex: 1,
+                        display: (isMobile && !showAI && ((sidePanel && !isDetailRoute && !isMobileHome) || isMobileHome)) ? 'none' : 'flex',
+                        minWidth: 0, background: 'var(--bg-base)', position: 'relative', width: '100%',
+                    }}
+                >
+                    {/* Page Content — hidden on mobile when AI is open so AI gets full screen */}
+                    <div style={{ flex: 1, overflow: 'hidden', position: 'relative', width: '100%', display: (isMobile && showAI) ? 'none' : undefined }}>
                         {children}
                     </div>
 
-                    {/* D. Right Sidebar: Chttrix AI (Resizable) */}
+                    {/* D. Right Sidebar: Chttrix AI */}
                     {showAI && (
                         <>
-                            {/* Drag Handle (Desktop Only) */}
-                            <div
-                                className="hidden md:block w-1 bg-transparent hover:bg-blue-400 cursor-col-resize flex-shrink-0 transition-colors z-40"
-                                onMouseDown={startResizingAI}
-                            ></div>
+                            {/* Drag Handle — desktop only */}
+                            {!isMobile && (
+                                <div
+                                    className="hidden md:block w-1 flex-shrink-0 z-40 cursor-col-resize transition-colors"
+                                    style={{ background: 'transparent' }}
+                                    onMouseDown={startResizingAI}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--border-accent)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                />
+                            )}
 
                             {/* AI Panel */}
                             <div
-                                style={{ width: window.innerWidth < 768 ? '100%' : aiWidth }}
-                                className={`
-                                    fixed md:static inset-y-0 right-0 z-[70]
-                                    bg-white dark:bg-gray-900 flex flex-col shadow-xl md:shadow-none md:border-l border-gray-200 dark:border-gray-800
-                                    ${window.innerWidth < 768 ? (showAI ? 'translate-x-0' : 'translate-x-full') : ''}
-                                `}
+                                style={{
+                                    width: isMobile ? '100%' : aiWidth,
+                                    background: 'var(--bg-base)',
+                                    borderLeft: isMobile ? 'none' : '1px solid var(--border-subtle)',
+                                    display: 'flex', flexDirection: 'column',
+                                    paddingBottom: isMobile ? '54px' : 0,
+                                }}
                             >
-                                <div className="md:hidden flex items-center justify-between p-2 border-b">
-                                    <span className="font-bold pl-2">Chttrix AI</span>
-                                    <button onClick={() => setShowAI(false)} className="p-2"><X size={20} /></button>
-                                </div>
                                 <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
                             </div>
                         </>
@@ -570,6 +686,15 @@ const MainLayout = ({ children, sidePanel }) => {
 
             {/* Overlays */}
             {showProfile && <ProfileMenu onClose={() => setShowProfile(false)} />}
+
+            {/* Mobile Bottom Navigation */}
+            {isMobile && (
+                <MobileBottomNav
+                    workspaceId={workspaceId}
+                    showAI={showAI}
+                    onAIToggle={() => setShowAI(prev => !prev)}
+                />
+            )}
         </div >
     );
 };

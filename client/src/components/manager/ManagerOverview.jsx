@@ -1,17 +1,13 @@
-// client/src/components/manager/ManagerOverview.jsx
-// Overview tab for Manager Dashboard - Key metrics and department health
-
+// client/src/components/manager/ManagerOverview.jsx — Monolith Flow Design System
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
-import {
-    Users, Activity, CheckCircle2, Clock, TrendingUp,
-    MessageSquare, Calendar, LayoutGrid, RefreshCw, Shield,
-    Briefcase, AlertCircle
-} from 'lucide-react';
+import { Users, Activity, CheckCircle2, Clock, TrendingUp, MessageSquare, Calendar, LayoutGrid, RefreshCw, Shield, Briefcase } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
-const ManagerOverview = () => {
+const T = { ff: 'Inter, system-ui, sans-serif' };
+
+export default function ManagerOverview() {
     const { selectedDepartment } = useOutletContext();
     const [metrics, setMetrics] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -21,28 +17,18 @@ const ManagerOverview = () => {
 
     const fetchMetrics = useCallback(async () => {
         const deptId = selectedDepartment?._id;
-        // Only fire if we have a real MongoDB ObjectId (24-char hex), not 'dummy' or undefined
         if (!deptId || !/^[a-f\d]{24}$/i.test(String(deptId))) return;
-
         try {
             setLoading(true);
-            const response = await api.get(`/api/manager/dashboard/metrics/${deptId}`);
-            setMetrics(response.data);
-        } catch (error) {
-            console.error('Error fetching metrics:', error);
-            // Don't show toast for 403 — it just means user isn't a dept head yet
-        } finally {
-            setLoading(false);
-        }
+            const res = await api.get(`/api/manager/dashboard/metrics/${deptId}`);
+            setMetrics(res.data);
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     }, [selectedDepartment]);
 
     useEffect(() => {
-        if (selectedDepartment?._id && /^[a-f\d]{24}$/i.test(String(selectedDepartment._id))) {
-            fetchMetrics();
-        } else {
-            // No valid dept yet — stop spinner
-            setLoading(false);
-        }
+        if (selectedDepartment?._id && /^[a-f\d]{24}$/i.test(String(selectedDepartment._id))) fetchMetrics();
+        else setLoading(false);
     }, [selectedDepartment, fetchMetrics]);
 
     const handleRefresh = async () => {
@@ -50,317 +36,225 @@ const ManagerOverview = () => {
         setRefreshing(true);
         await fetchMetrics();
         setRefreshing(false);
-        showToast("Dashboard refreshed", "success");
+        showToast('Dashboard refreshed', 'success');
     };
 
+    // No dept guard
     if (!selectedDepartment || !selectedDepartment._id || !/^[a-f\d]{24}$/i.test(String(selectedDepartment._id))) {
         return (
-            <div className="flex flex-col h-full items-center justify-center bg-gray-50 dark:bg-gray-900 gap-4 p-8 text-center">
-                <div className="w-16 h-16 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
-                    <Briefcase className="text-indigo-400 dark:text-indigo-500" size={28} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', padding: '48px', textAlign: 'center', fontFamily: T.ff }}>
+                <div style={{ width: '52px', height: '52px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Briefcase size={22} style={{ color: 'var(--accent)' }} />
                 </div>
-                <h2 className="text-lg font-bold text-slate-800 dark:text-white">No Department Assigned</h2>
-                <p className="text-sm text-slate-500 dark:text-gray-400 max-w-sm">
-                    You haven't been assigned as a department head or manager yet.
-                    Ask your company admin to assign you to a department to see metrics here.
+                <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>No Department Assigned</h2>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '340px', lineHeight: '1.6', margin: 0 }}>
+                    You haven't been assigned as a department head yet. Ask your company admin to assign you to a department.
                 </p>
             </div>
         );
     }
 
+    // Loading state
     if (loading && !metrics) {
         return (
-            <div className="h-full bg-gray-50 dark:bg-gray-900 p-6 animate-pulse">
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                    {[1,2,3].map(i => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
-                            <div className="h-10 w-16 bg-gray-300 dark:bg-gray-600 rounded-xl" />
-                            <div className="h-2 w-28 bg-gray-100 dark:bg-gray-700/50 rounded" />
-                        </div>
-                    ))}
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                {/* Header skeleton */}
+                <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div><div className="sk" style={{ height: '14px', width: '160px', marginBottom: '6px' }} /><div className="sk" style={{ height: '10px', width: '240px' }} /></div>
+                    <div className="sk" style={{ width: '32px', height: '32px' }} />
                 </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                    {[70,50,85,55,75].map((w,i) => (
-                        <div key={i} className="flex items-center gap-4">
-                            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                                <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-20}%`}} />
+                <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
+                    {/* Section label */}
+                    <div style={{ marginBottom: '10px' }}><div className="sk" style={{ height: '10px', width: '100px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '200px' }} /></div>
+                    {/* 4 metric tiles */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '24px' }}>
+                        {[1,2,3,4].map(i => (
+                            <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div className="sk" style={{ width: '14px', height: '14px' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                                <div className="sk" style={{ height: '32px', width: '60px', marginBottom: '6px' }} />
+                                <div className="sk" style={{ height: '9px', width: '100px' }} />
                             </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                    {/* Section 2 label */}
+                    <div style={{ marginBottom: '10px' }}><div className="sk" style={{ height: '10px', width: '140px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '220px' }} /></div>
+                    {/* 3 activity tiles */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '24px' }}>
+                        {[1,2,3].map(i => (
+                            <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div className="sk" style={{ width: '14px', height: '14px' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                                <div className="sk" style={{ height: '32px', width: '50px', marginBottom: '6px' }} />
+                                <div className="sk" style={{ height: '9px', width: '90px' }} />
+                            </div>
+                        ))}
+                    </div>
+                    {/* 2 bottom cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {[1,2].map(i => (
+                            <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
+                                    <div className="sk" style={{ width: '28px', height: '28px' }} />
+                                    <div><div className="sk" style={{ height: '10px', width: '120px', marginBottom: '4px' }} /><div className="sk" style={{ height: '8px', width: '80px' }} /></div>
+                                </div>
+                                {[80, 60, 100].map((w, j) => <div key={j} className="sk" style={{ height: '10px', width: `${w}%`, marginBottom: '10px' }} />)}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         );
     }
 
-    // Use real data from API, fall back to zeros (not fake demo values)
-    const displayMetrics = metrics || {
+    const dm = metrics || {
         team: { total: 0, active: 0, pending: 0, managers: 0 },
         activity: { messagesThisWeek: 0, tasksThisWeek: 0, meetingsThisWeek: 0 },
-        department: {
-            name: selectedDepartment?.name || '—',
-            description: '',
-            head: null,
-            createdAt: null
-        }
+        department: { name: selectedDepartment?.name || '—', description: '', head: null }
     };
 
-    // Reusable Rich Stat Card Component matches Owner Dashboard
-    const StatCard = ({ icon: Icon, colorClass, bgClass, value, label, trend, trendLabel }) => (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-all hover:shadow-md group">
-            <div className="flex items-center justify-between mb-4">
-                <div className={`p-2.5 rounded-lg ${bgClass} group-hover:scale-110 transition-transform duration-200`}>
-                    <Icon className={`w-5 h-5 ${colorClass}`} />
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: T.ff }}>
+            {/* Header */}
+            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                <div>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <LayoutGrid size={16} style={{ color: 'var(--accent)' }} /> Manager Overview
+                    </h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Team Performance & Workspace Health · {dm.department?.name}</p>
                 </div>
-                {trend && (
-                    <div className="flex items-center gap-1 text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2.5 py-1 rounded-full border border-green-100 dark:border-green-900/50">
-                        <TrendingUp size={12} strokeWidth={2.5} />
-                        {trend}
-                    </div>
-                )}
-            </div>
-            <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{value}</div>
-            <div className="text-[11px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mt-1">{label}</div>
+                <RefreshBtn onClick={handleRefresh} loading={refreshing || loading} />
+            </header>
 
-            <div className="mt-4 pt-3 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                <span className="text-xs font-medium text-slate-400 dark:text-gray-500">{trendLabel || 'Updated just now'}</span>
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1280px', margin: '0 auto' }}>
+
+                    {/* Team Snapshot */}
+                    <Section label="Team Snapshot" sub="Member distribution & operational status">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1px', background: 'var(--border-subtle)' }}>
+                            {[
+                                { Icon: Users,        color: '#5ab8ba', label: 'Total Members',  value: dm.team?.total || 0,    sub: 'In department' },
+                                { Icon: CheckCircle2, color: 'var(--state-success)', label: 'Active Members',  value: dm.team?.active || 0,   sub: 'Currently active' },
+                                { Icon: Clock,        color: 'var(--accent)',        label: 'Pending Invites', value: dm.team?.pending || 0,  sub: 'Awaiting acceptance' },
+                                { Icon: Shield,       color: '#9b8ecf',              label: 'Managers',        value: dm.team?.managers || 0, sub: 'Department leads' },
+                            ].map(m => <MetricTile key={m.label} {...m} />)}
+                        </div>
+                    </Section>
+
+                    {/* Department Activity */}
+                    <Section label="Department Activity" sub="Weekly productivity & engagement metrics">
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1px', background: 'var(--border-subtle)' }}>
+                            {[
+                                { Icon: MessageSquare, color: 'var(--accent)',         label: 'Messages Sent',   value: dm.activity?.messagesThisWeek || 0, sub: 'This week' },
+                                { Icon: Activity,      color: 'var(--state-success)',  label: 'Tasks Completed', value: dm.activity?.tasksThisWeek || 0,    sub: 'Productivity on track' },
+                                { Icon: Calendar,      color: 'var(--state-danger)',   label: 'Meetings',        value: dm.activity?.meetingsThisWeek || 0, sub: 'Scheduled this week' },
+                            ].map(m => <MetricTile key={m.label} {...m} />)}
+                        </div>
+                    </Section>
+
+                    {/* Details + Quick Actions */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        {/* Department Details */}
+                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                            <SectionHeader icon={Briefcase} label="Department Details" sub="Core information" />
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
+                                <div>
+                                    <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '4px' }}>Department Name</p>
+                                    <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{dm.department?.name}</p>
+                                </div>
+                                {dm.department?.description && (
+                                    <div style={{ background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '10px 12px' }}>
+                                        <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '4px' }}>Description</p>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>{dm.department.description}</p>
+                                    </div>
+                                )}
+                                {dm.department?.head && (
+                                    <div>
+                                        <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '8px' }}>Department Head</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
+                                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(184,149,106,0.1)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
+                                                {dm.department.head.username?.charAt(0)?.toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{dm.department.head.username}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{dm.department.head.email}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
+                            <SectionHeader icon={Activity} label="Quick Actions" sub="Frequent management tasks" />
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '16px' }}>
+                                {[
+                                    { label: 'View Team', sub: 'Manage workload', icon: Users, path: '/manager/dashboard/allocation', color: 'var(--accent)' },
+                                    { label: 'Projects', sub: 'Track progress', icon: CheckCircle2, path: '/manager/dashboard/projects', color: 'var(--state-success)' },
+                                    { label: 'Reports', sub: 'View insights', icon: TrendingUp, path: '/manager/dashboard/reports', color: '#9b8ecf' },
+                                    { label: 'Tasks', sub: 'TaskMaster', icon: Activity, path: '/manager/dashboard/tasks', color: '#5ab8ba' },
+                                ].map(a => <QuickAction key={a.label} {...a} onClick={() => navigate(a.path)} />)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     );
+}
 
-    return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-            {/* Header - Matches Owner Dashboard Header */}
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
-                <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        <LayoutGrid className="text-indigo-600 dark:text-indigo-400" size={24} strokeWidth={2.5} />
-                        Manager Overview
-                    </h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8 flex items-center gap-2">
-                        <span className="uppercase tracking-wider font-bold text-[10px] bg-slate-100 dark:bg-gray-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-gray-300">Workspace Manager</span>
-                        <span>•</span>
-                        Team Performance & Workspace Health
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={handleRefresh}
-                        disabled={refreshing || loading}
-                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-200 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-xs font-bold uppercase tracking-wide rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} strokeWidth={2.5} />
-                        {refreshing ? 'REFRESHING...' : 'REFRESH'}
-                    </button>
-                    <div className="h-8 w-px bg-slate-200 dark:bg-gray-700 mx-1 hidden md:block"></div>
-                </div>
-            </header>
-
-            {/* Content Area */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
-                <div className="space-y-8 max-w-7xl mx-auto">
-
-                    {/* ORGANIZATION OVERVIEW */}
-                    <section>
-                        <div className="flex items-end justify-between mb-5">
-                            <div>
-                                <h3 className="text-sm font-black text-slate-700 dark:text-gray-200 uppercase tracking-widest">Team Snapshot</h3>
-                                <p className="text-xs text-slate-500 dark:text-gray-500 font-medium mt-1">Member distribution & operational status</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <StatCard
-                                icon={Users}
-                                colorClass="text-blue-600 dark:text-blue-400"
-                                bgClass="bg-blue-50 dark:bg-blue-900/30"
-                                value={displayMetrics.team?.total || 0}
-                                label="Total Members"
-                                trend="+2"
-                                trendLabel="New joiners this month"
-                            />
-
-                            <StatCard
-                                icon={CheckCircle2}
-                                colorClass="text-emerald-600 dark:text-emerald-400"
-                                bgClass="bg-emerald-50 dark:bg-emerald-900/30"
-                                value={displayMetrics.team?.active || 0}
-                                label="Active Members"
-                                trendLabel="Currently online & working"
-                            />
-
-                            <StatCard
-                                icon={Clock}
-                                colorClass="text-amber-500 dark:text-amber-400"
-                                bgClass="bg-amber-50 dark:bg-amber-900/30"
-                                value={displayMetrics.team?.pending || 0}
-                                label="Pending Invites"
-                                trendLabel="Waiting for acceptance"
-                            />
-
-                            <StatCard
-                                icon={Shield}
-                                colorClass="text-purple-600 dark:text-purple-400"
-                                bgClass="bg-purple-50 dark:bg-purple-900/30"
-                                value={displayMetrics.team?.managers || 0}
-                                label="Managers"
-                                trendLabel="Department leads"
-                            />
-                        </div>
-                    </section>
-
-                    {/* DEPARTMENT ACTIVITY */}
-                    <section>
-                        <div className="flex items-end justify-between mb-5">
-                            <div>
-                                <h3 className="text-sm font-black text-slate-700 dark:text-gray-200 uppercase tracking-widest">Department Activity</h3>
-                                <p className="text-xs text-slate-500 dark:text-gray-500 font-medium mt-1">Weekly productivity & engagement metrics</p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <StatCard
-                                icon={MessageSquare}
-                                colorClass="text-indigo-600 dark:text-indigo-400"
-                                bgClass="bg-indigo-50 dark:bg-indigo-900/30"
-                                value={displayMetrics.activity?.messagesThisWeek || 0}
-                                label="Messages Sent"
-                                trend="+12%"
-                                trendLabel="Volume vs last week"
-                            />
-
-                            <StatCard
-                                icon={Activity}
-                                colorClass="text-cyan-600 dark:text-cyan-400"
-                                bgClass="bg-cyan-50 dark:bg-cyan-900/30"
-                                value={displayMetrics.activity?.tasksThisWeek || 0}
-                                label="Tasks Completed"
-                                trend="+5"
-                                trendLabel="Productivity on track"
-                            />
-
-                            <StatCard
-                                icon={Calendar}
-                                colorClass="text-rose-500 dark:text-rose-400"
-                                bgClass="bg-rose-50 dark:bg-rose-900/30"
-                                value={displayMetrics.activity?.meetingsThisWeek || 0}
-                                label="Meetings"
-                                trendLabel="Scheduled for this week"
-                            />
-                        </div>
-                    </section>
-
-                    {/* Department Info & Quick Actions Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Department Details */}
-                        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-8">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="p-2 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                                    <Briefcase size={20} className="text-slate-600 dark:text-gray-300" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Department Details</h3>
-                                    <p className="text-xs text-slate-500 dark:text-gray-500 font-medium">Core information</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest block mb-1.5">Department Name</label>
-                                    <p className="text-lg font-bold text-slate-900 dark:text-white">{displayMetrics.department?.name}</p>
-                                </div>
-
-                                {displayMetrics.department?.description && (
-                                    <div className="p-4 bg-slate-50 dark:bg-gray-750/50 rounded-xl border border-slate-100 dark:border-gray-700/50">
-                                        <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Description</label>
-                                        <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed font-medium">{displayMetrics.department.description}</p>
-                                    </div>
-                                )}
-
-                                <div>
-                                    <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-widest block mb-3">Department Head</label>
-                                    <div className="flex items-center gap-4 p-4 border border-slate-200 dark:border-gray-700 rounded-xl hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors cursor-default bg-white dark:bg-gray-800 shadow-sm">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/50 dark:to-violet-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-200 dark:border-indigo-800/50 shadow-inner">
-                                            {displayMetrics.department?.head?.username?.charAt(0)?.toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p className="font-bold text-slate-900 dark:text-white text-sm">{displayMetrics.department?.head?.username}</p>
-                                            <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">{displayMetrics.department?.head?.email}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </section>
-
-                        {/* Quick Actions */}
-                        <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-8">
-                            <div className="flex items-center gap-3 mb-6">
-                                <div className="p-2 bg-slate-100 dark:bg-gray-700 rounded-lg">
-                                    <Activity size={20} className="text-slate-600 dark:text-gray-300" />
-                                </div>
-                                <div>
-                                    <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Quick Actions</h3>
-                                    <p className="text-xs text-slate-500 dark:text-gray-500 font-medium">Frequent management tasks</p>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <button
-                                    onClick={() => navigate('/manager/dashboard/allocation')}
-                                    className="p-4 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700/50 border border-slate-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-xl text-left transition-all group hover:shadow-md"
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <Users className="w-5 h-5 text-slate-400 dark:text-gray-500 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors" />
-                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600 dark:text-indigo-400">
-                                            <TrendingUp size={14} />
-                                        </div>
-                                    </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white mb-0.5">View Team</div>
-                                    <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wide">Manage workload</div>
-                                </button>
-
-                                <button
-                                    onClick={() => navigate('/manager/dashboard/projects')}
-                                    className="p-4 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700/50 border border-slate-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-xl text-left transition-all group hover:shadow-md"
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <CheckCircle2 className="w-5 h-5 text-slate-400 dark:text-gray-500 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
-                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-600 dark:text-emerald-400">
-                                            <TrendingUp size={14} />
-                                        </div>
-                                    </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white mb-0.5">Projects</div>
-                                    <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wide">Track progress</div>
-                                </button>
-
-                                <button
-                                    onClick={() => navigate('/manager/dashboard/reports')}
-                                    className="p-4 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700/50 border border-slate-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-xl text-left transition-all group hover:shadow-md"
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <TrendingUp className="w-5 h-5 text-slate-400 dark:text-gray-500 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" />
-                                    </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white mb-0.5">Reports</div>
-                                    <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wide">View insights</div>
-                                </button>
-
-                                <button className="p-4 bg-white dark:bg-gray-800 hover:bg-slate-50 dark:hover:bg-gray-700/50 border border-slate-200 dark:border-gray-600 hover:border-indigo-300 dark:hover:border-indigo-500 rounded-xl text-left transition-all group hover:shadow-md">
-                                    <div className="flex justify-between items-start mb-2">
-                                        <AlertCircle className="w-5 h-5 text-slate-400 dark:text-gray-500 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors" />
-                                    </div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white mb-0.5">Contact</div>
-                                    <div className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wide">Request access</div>
-                                </button>
-                            </div>
-                        </section>
-                    </div>
-                </div>
-            </div>
+// ── Sub-components ────────────────────────────────────────────────────────────
+const MetricTile = ({ Icon, color, label, value, sub }) => (
+    <div style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <Icon size={14} style={{ color }} />
+            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>{label}</p>
         </div>
+        <p style={{ fontSize: '32px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>{value}</p>
+        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub}</p>
+    </div>
+);
+
+const Section = ({ label, sub, children }) => (
+    <div>
+        <div style={{ marginBottom: '10px' }}>
+            <h3 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-secondary)', margin: 0 }}>{label}</h3>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</p>
+        </div>
+        {children}
+    </div>
+);
+
+const SectionHeader = ({ icon: Icon, label, sub }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+        <div style={{ width: '28px', height: '28px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icon size={13} style={{ color: 'var(--text-muted)' }} />
+        </div>
+        <div>
+            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
+            <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{sub}</p>
+        </div>
+    </div>
+);
+
+const QuickAction = ({ label, sub, icon: Icon, color, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: '12px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: `1px solid ${hov ? color : 'var(--border-subtle)'}`, cursor: 'pointer', textAlign: 'left', transition: 'all 150ms ease', borderRadius: '0' }}>
+            <Icon size={14} style={{ color, marginBottom: '6px' }} />
+            <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</p>
+            <p style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{sub}</p>
+        </button>
     );
 };
 
-export default ManagerOverview;
+const RefreshBtn = ({ onClick, loading: spin }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={spin} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', cursor: spin ? 'not-allowed' : 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+            <RefreshCw size={13} style={{ animation: spin ? 'spin 1s linear infinite' : 'none' }} />
+        </button>
+    );
+};

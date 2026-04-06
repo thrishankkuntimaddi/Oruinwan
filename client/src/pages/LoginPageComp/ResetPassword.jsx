@@ -1,228 +1,159 @@
+// ResetPassword.jsx — Monolith Flow Design System
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useToast } from '../../contexts/ToastContext';
+import { Eye, EyeOff, Lock, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 
-// client/src/pages/LoginPageComp/ResetPassword.jsx
-import React, { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { useToast } from "../../contexts/ToastContext";
-import { useTheme } from "../../contexts/ThemeContext";
-import { Eye, EyeOff, Check, Lock, Sun, Moon, ShieldCheck } from "lucide-react";
+const RULES = [
+    { key: 'length',  label: '8–16 characters', test: p => p.length >= 8 && p.length <= 16 },
+    { key: 'upper',   label: 'Uppercase letter', test: p => /[A-Z]/.test(p) },
+    { key: 'number',  label: 'Number',           test: p => /[0-9]/.test(p) },
+    { key: 'special', label: 'Special character', test: p => /[^A-Za-z0-9]/.test(p) },
+];
+
+const inputSt = (err) => ({
+    width: '100%', boxSizing: 'border-box',
+    background: 'var(--bg-input)',
+    border: `1px solid ${err ? 'var(--state-danger)' : 'var(--border-default)'}`,
+    color: 'var(--text-primary)', fontSize: '13px',
+    padding: '10px 38px 10px 38px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif',
+    transition: 'border-color 150ms ease',
+});
 
 export default function ResetPassword() {
-  const [params] = useSearchParams();
-  const navigate = useNavigate();
-  const { showToast } = useToast();
-  const { theme, toggleTheme } = useTheme();
+    const [params] = useSearchParams();
+    const navigate = useNavigate();
+    const { showToast } = useToast();
 
-  const token = params.get("token");
-  const email = params.get("email");
+    const token = params.get('token');
+    const email = params.get('email');
 
-  const [newPassword, setNewPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [showPwd, setShowPwd] = useState(false);
-  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+    useEffect(() => {
+        document.documentElement.classList.add('public-scroll');
+        return () => document.documentElement.classList.remove('public-scroll');
+    }, []);
 
-  // Password Rules Logic
-  const passwordRules = {
-    length: newPassword.length >= 8 && newPassword.length <= 16,
-    upper: /[A-Z]/.test(newPassword),
-    number: /[0-9]/.test(newPassword),
-    special: /[^A-Za-z0-9]/.test(newPassword)
-  };
+    const [newPassword, setNewPassword] = useState('');
+    const [confirm, setConfirm] = useState('');
+    const [showPwd, setShowPwd] = useState(false);
+    const [showCfm, setShowCfm] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-  const calculateStrength = () => {
-    let score = 0;
-    if (passwordRules.length) score++;
-    if (passwordRules.upper) score++;
-    if (passwordRules.number) score++;
-    if (passwordRules.special) score++;
-    return score;
-  };
+    const rules = RULES.map(r => ({ ...r, met: r.test(newPassword) }));
+    const allMet = rules.every(r => r.met);
+    const matches = newPassword.length > 0 && newPassword === confirm;
+    const isValid = allMet && matches;
 
-  const strength = calculateStrength();
-  const strengthColor = ["bg-slate-200 dark:bg-slate-700", "bg-red-500", "bg-yellow-500", "bg-blue-500", "bg-green-500"];
-  const strengthText = ["Too Weak", "Weak", "Fair", "Good", "Strong"];
-  const isPasswordStrong = strength === 4;
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (newPassword !== confirm) { showToast('Passwords do not match', 'error'); return; }
+        if (!allMet) { showToast('Password does not meet requirements', 'error'); return; }
+        setLoading(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, email, password: newPassword }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Reset failed');
+            showToast('Password reset successfully — please log in.', 'success');
+            navigate('/login');
+        } catch (err) {
+            showToast(err.message, 'error');
+        } finally { setLoading(false); }
+    };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+    const confirmError = confirm.length > 0 && newPassword !== confirm;
 
-    if (newPassword !== confirm) {
-      showToast("Passwords do not match", "error");
-      return;
-    }
-    if (!isPasswordStrong) {
-      showToast("Password does not meet requirements", "error");
-      return;
-    }
+    return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif', padding: '24px' }}>
+            {/* Ambient glow */}
+            <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-    try {
-      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/reset-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, email, password: newPassword }),
-      });
+            <div style={{ width: '100%', maxWidth: '420px', animation: 'slideUp 300ms cubic-bezier(0.16,1,0.3,1)' }}>
+                {/* Logo */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
+                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Chttrix</span>
+                </div>
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "Reset failed");
-      }
+                {/* Card */}
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '32px' }}>
+                    {/* Icon */}
+                    <div style={{ width: '44px', height: '44px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                        <ShieldCheck size={22} style={{ color: 'var(--accent)' }} />
+                    </div>
 
-      showToast("Password reset successful! Please login.", "success");
-      navigate("/login");
-    } catch (err) {
-      showToast(err.message, "error");
-    }
-  };
+                    <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', letterSpacing: '-0.02em' }}>Reset Password</h1>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.6' }}>
+                        Create a strong new password for <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{email}</span>
+                    </p>
 
-  return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className={`absolute inset-0 transition-opacity duration-500 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
-      </div>
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        {/* New Password */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                                <input type={showPwd ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password" required style={inputSt(false)}
+                                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'} />
+                                <button type="button" onClick={() => setShowPwd(!showPwd)}
+                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+                                    {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                            </div>
+                        </div>
 
-      <div className={`absolute inset-0 transition-opacity duration-500 ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`}>
-        <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-100/60 via-purple-100/30 to-transparent blur-[80px]"></div>
-        <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-indigo-100/60 via-pink-100/30 to-transparent blur-[80px]"></div>
-      </div>
+                        {/* Rules checklist */}
+                        {newPassword.length > 0 && (
+                            <div style={{ padding: '12px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
+                                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Requirements</p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                                    {rules.map(r => (
+                                        <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: r.met ? 'var(--state-success)' : 'var(--text-muted)', fontWeight: r.met ? 600 : 400 }}>
+                                            {r.met ? <CheckCircle2 size={11} /> : <div style={{ width: '11px', height: '11px', borderRadius: '50%', border: '1px solid var(--border-accent)', flexShrink: 0 }} />}
+                                            {r.label}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
-      {/* Toggle Theme (Top Right) */}
-      <div className="absolute top-6 right-6 z-50">
-        <button
-          onClick={toggleTheme}
-          className="p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-      </div>
+                        {/* Confirm Password */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                                <input type={showCfm ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Confirm password" required style={inputSt(confirmError)}
+                                    onFocus={e => !confirmError && (e.target.style.borderColor = 'var(--border-accent)')}
+                                    onBlur={e => !confirmError && (e.target.style.borderColor = 'var(--border-default)')} />
+                                <button type="button" onClick={() => setShowCfm(!showCfm)}
+                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+                                    {showCfm ? <EyeOff size={14} /> : <Eye size={14} />}
+                                </button>
+                            </div>
+                            {confirm.length > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', fontSize: '11px', fontWeight: 600, color: matches ? 'var(--state-success)' : 'var(--state-danger)' }}>
+                                    {matches ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
+                                    {matches ? 'Passwords match' : 'Passwords do not match'}
+                                </div>
+                            )}
+                        </div>
 
-      <div className="w-full max-w-md relative z-10 px-6">
-        {/* Glass Card */}
-        <div className="backdrop-blur-xl bg-white/70 dark:bg-[#0B0F19]/60 border border-white/50 dark:border-white/10 shadow-2xl rounded-3xl p-8 md:p-10 transition-all duration-300">
+                        <button type="submit" disabled={!isValid || loading}
+                            style={{ padding: '10px', background: isValid ? 'var(--accent)' : 'var(--bg-active)', border: 'none', color: isValid ? 'var(--bg-base)' : 'var(--text-muted)', fontSize: '13px', fontWeight: 700, cursor: isValid && !loading ? 'pointer' : 'not-allowed', opacity: loading ? 0.6 : 1, transition: 'all 150ms ease', letterSpacing: '0.02em', marginTop: '4px' }}>
+                            {loading ? 'Resetting...' : 'Reset Password'}
+                        </button>
+                    </form>
+                </div>
 
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center mb-6 shadow-lg rotate-3">
-              <ShieldCheck size={32} />
+                <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '32px', opacity: 0.5 }}>
+                    © 2026 Chttrix Inc.
+                </p>
             </div>
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Reset Password</h1>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">Create a strong password to secure your account.</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* New Password */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">New Password</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                  <Lock size={20} />
-                </div>
-                <input
-                  type={showPwd ? "text" : "password"}
-                  placeholder="Create new password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full pl-12 pr-12 py-4 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-[#030712]/50 text-slate-900 dark:text-white placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all font-medium"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPwd(!showPwd)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                >
-                  {showPwd ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-
-              {/* Password Strength Meter */}
-              {newPassword && (
-                <div className="pt-2 px-1 transition-all duration-300 ease-in-out">
-                  <div className="flex justify-between text-xs mb-1.5">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">Password Strength</span>
-                    <span className={`font-bold ${strength === 4 ? 'text-green-500' : 'text-slate-400'}`}>
-                      {strengthText[strength]}
-                    </span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${strengthColor[strength]} transition-all duration-500 ease-out`}
-                      style={{ width: `${(strength / 4) * 100}%` }}
-                    ></div>
-                  </div>
-
-                  {/* Rules Checklist */}
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <div className={`flex items-center gap-1.5 transition-colors ${passwordRules.length ? "text-green-500 font-bold" : ""}`}>
-                      <span className="text-[10px]">{passwordRules.length ? "●" : "○"}</span> 8-16 chars
-                    </div>
-                    <div className={`flex items-center gap-1.5 transition-colors ${passwordRules.upper ? "text-green-500 font-bold" : ""}`}>
-                      <span className="text-[10px]">{passwordRules.upper ? "●" : "○"}</span> Uppercase
-                    </div>
-                    <div className={`flex items-center gap-1.5 transition-colors ${passwordRules.number ? "text-green-500 font-bold" : ""}`}>
-                      <span className="text-[10px]">{passwordRules.number ? "●" : "○"}</span> Number
-                    </div>
-                    <div className={`flex items-center gap-1.5 transition-colors ${passwordRules.special ? "text-green-500 font-bold" : ""}`}>
-                      <span className="text-[10px]">{passwordRules.special ? "●" : "○"}</span> Special char
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Confirm Password */}
-            <div className="space-y-2">
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 ml-1">Confirm Password</label>
-              <div className="relative group">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-indigo-500 transition-colors">
-                  <Lock size={20} />
-                </div>
-                <input
-                  type={showConfirmPwd ? "text" : "password"}
-                  placeholder="Confirm new password"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  className={`w-full pl-12 pr-12 py-4 rounded-xl border bg-slate-50/50 dark:bg-[#030712]/50 text-slate-900 dark:text-white placeholder:text-slate-400 outline-none transition-all font-medium ${confirm && newPassword !== confirm
-                    ? "border-red-500 focus:ring-2 focus:ring-red-500/20"
-                    : "border-slate-200 dark:border-white/10 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                    }`}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPwd(!showConfirmPwd)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                >
-                  {showConfirmPwd ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-              {confirm && newPassword === confirm && (
-                <div className="flex items-center gap-1.5 ml-1 mt-1 text-green-500 text-xs font-bold animate-fade-in-up">
-                  <Check size={14} strokeWidth={3} />
-                  <span>Passwords match</span>
-                </div>
-              )}
-              {confirm && newPassword !== confirm && (
-                <p className="text-red-500 text-xs font-bold ml-1 mt-1 animate-fade-in-up">Passwords do not match</p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={!isPasswordStrong || newPassword !== confirm}
-              className={`w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg transform transition-all mt-4 ${isPasswordStrong && newPassword === confirm
-                ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5"
-                : "bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-500 cursor-not-allowed shadow-none"
-                }`}
-            >
-              Reset Password
-            </button>
-          </form>
         </div>
-
-        <div className={`mt-8 text-center text-xs font-medium transition-colors duration-500 ${theme === 'dark' ? 'text-white/20' : 'text-slate-300'}`}>
-          Secure Password Reset
-        </div>
-
-      </div>
-    </div>
-  );
+    );
 }

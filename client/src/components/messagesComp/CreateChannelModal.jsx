@@ -3,6 +3,8 @@ import api from '@services/api';
 import { useToast } from "../../contexts/ToastContext";
 import { X, Search, Check, Info, Hash, ChevronRight, Globe, Lock, UserPlus } from 'lucide-react';
 
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+
 export default function CreateChannelModal({ onClose, onCreated, workspaceId }) {
     const { showToast } = useToast();
     const [currentTab, setCurrentTab] = useState(1);
@@ -106,134 +108,252 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
     const canCreate = visibility === 'public' || (visibility === 'private' && selectedMemberIds.size > 0);
 
     return (
-        <div className="fixed inset-0 bg-gray-900/40 backdrop-blur-md flex items-center justify-center z-[100] animate-in fade-in duration-200 p-6">
+        <div style={{
+            position: 'fixed', inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 100, padding: '24px',
+            fontFamily: FONT,
+        }}>
             <div
-                className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden flex flex-col transform transition-all animate-in zoom-in-95 duration-200"
-                onClick={(e) => e.stopPropagation()}
+                style={{
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-accent)',
+                    borderRadius: '2px',
+                    width: '100%', maxWidth: '700px',
+                    boxShadow: '0 24px 64px rgba(0,0,0,0.55)',
+                    display: 'flex', flexDirection: 'column',
+                    overflow: 'hidden',
+                    maxHeight: '90vh',
+                }}
+                onClick={e => e.stopPropagation()}
             >
-
                 {/* Header */}
-                <div className="px-10 py-6 border-b border-gray-50 dark:border-gray-800 flex justify-between items-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm sticky top-0 z-20">
-                    <div className="flex items-center gap-5">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-                            <Hash size={24} strokeWidth={3} />
+                <div style={{
+                    padding: '20px 28px',
+                    borderBottom: '1px solid var(--border-default)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    backgroundColor: 'var(--bg-surface)',
+                    flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{
+                            width: '36px', height: '36px', borderRadius: '2px',
+                            backgroundColor: 'rgba(184,149,106,0.15)',
+                            border: '1px solid var(--border-accent)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <Hash size={18} style={{ color: 'var(--accent)' }} strokeWidth={2.5} />
                         </div>
                         <div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white leading-tight tracking-tight">
+                            <h3 style={{
+                                fontSize: '15px', fontWeight: 600,
+                                color: 'var(--text-primary)',
+                                margin: '0 0 2px', letterSpacing: '-0.015em',
+                                fontFamily: FONT,
+                            }}>
                                 Create Channel
                             </h3>
-                            <p className="text-sm text-gray-400 dark:text-gray-500 font-medium mt-0.5">
-                                Step {currentTab}/2: {currentTab === 1 ? "Setup" : "Members"}
+                            <p style={{
+                                fontSize: '12px', color: 'var(--text-muted)',
+                                margin: 0, fontFamily: FONT,
+                            }}>
+                                Step {currentTab}/2 · {currentTab === 1 ? "Details & Visibility" : "Invite Members"}
                             </p>
                         </div>
                     </div>
 
                     <button
                         onClick={onClose}
-                        className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-all duration-200"
+                        style={{
+                            width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
+                            color: 'var(--text-muted)', borderRadius: '2px', transition: '100ms ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
-                        <X size={20} strokeWidth={2.5} />
+                        <X size={18} />
                     </button>
                 </div>
 
-                {/* Progress Line */}
-                <div className="relative h-1 bg-gray-50 dark:bg-gray-800 w-full overflow-hidden">
-                    <div
-                        className="absolute h-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.5)] transition-all duration-500 ease-out"
-                        style={{ width: currentTab === 1 ? '50%' : '100%' }}
-                    />
+                {/* Progress bar */}
+                <div style={{ height: '2px', backgroundColor: 'var(--border-subtle)', flexShrink: 0 }}>
+                    <div style={{
+                        height: '100%',
+                        backgroundColor: 'var(--accent)',
+                        width: currentTab === 1 ? '50%' : '100%',
+                        transition: 'width 300ms ease',
+                    }} />
                 </div>
 
                 {/* Content Area */}
-                <div className="flex-1 bg-white dark:bg-gray-900 p-10 min-h-[420px]">
+                <div style={{ flex: 1, padding: '28px', overflowY: 'auto', minHeight: '360px' }}>
                     {currentTab === 1 ? (
-                        <div className="grid grid-cols-12 gap-12 h-full animate-in slide-in-from-left-4 fade-in duration-300">
+                        /* ── Step 1: Details + Visibility ── */
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
 
-                            {/* LEFT COLUMN: Inputs (7 cols) */}
-                            <div className="col-span-12 md:col-span-7 space-y-8">
-                                {/* Name Input */}
-                                <div className="group space-y-3">
-                                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-1">
+                            {/* LEFT: Inputs */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                {/* Channel Name */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <label style={{
+                                        fontSize: '9px', fontWeight: 700,
+                                        color: 'var(--text-muted)',
+                                        textTransform: 'uppercase', letterSpacing: '0.14em',
+                                        fontFamily: FONT,
+                                    }}>
                                         Channel Name
                                     </label>
-                                    <div className="relative transform transition-all duration-200 focus-within:scale-[1.01]">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 dark:text-gray-600 group-focus-within:text-blue-500 transition-colors">
-                                            <Hash size={22} strokeWidth={2.5} />
+                                    <div style={{ position: 'relative' }}>
+                                        <div style={{
+                                            position: 'absolute', left: '10px', top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            color: 'var(--text-muted)', pointerEvents: 'none',
+                                            display: 'flex',
+                                        }}>
+                                            <Hash size={16} />
                                         </div>
                                         <input
                                             value={name}
-                                            onChange={(e) => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
-                                            className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-lg font-bold text-gray-900 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 transition-all shadow-inner"
+                                            onChange={e => setName(e.target.value.toLowerCase().replace(/\s+/g, '-'))}
+                                            style={{
+                                                width: '100%', padding: '10px 12px 10px 32px',
+                                                backgroundColor: 'var(--bg-input)',
+                                                border: '1px solid var(--border-default)',
+                                                borderRadius: '2px',
+                                                fontSize: '14px', fontWeight: 600,
+                                                color: 'var(--text-primary)',
+                                                outline: 'none', boxSizing: 'border-box',
+                                                fontFamily: FONT,
+                                                transition: 'border-color 150ms ease',
+                                            }}
                                             placeholder="project-name"
                                             autoFocus
+                                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                                         />
                                     </div>
-                                    <p className="text-xs text-gray-400 pl-1 font-medium flex items-center gap-1">
-                                        <Info size={12} />
+                                    <p style={{
+                                        fontSize: '11px', color: 'var(--text-muted)', margin: 0,
+                                        display: 'flex', alignItems: 'center', gap: '4px', fontFamily: FONT,
+                                    }}>
+                                        <Info size={11} />
                                         Lowercase, spaces become hyphens
                                     </p>
                                 </div>
 
-                                {/* Description Input */}
-                                <div className="group space-y-3">
-                                    <label className="block text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest pl-1">
-                                        Description <span className="normal-case font-normal text-gray-300 ml-1 opacity-70">(Optional)</span>
+                                {/* Description */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <label style={{
+                                        fontSize: '9px', fontWeight: 700,
+                                        color: 'var(--text-muted)',
+                                        textTransform: 'uppercase', letterSpacing: '0.14em',
+                                        fontFamily: FONT,
+                                    }}>
+                                        Description <span style={{ fontWeight: 400, textTransform: 'none', opacity: 0.6 }}>(Optional)</span>
                                     </label>
                                     <textarea
                                         value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-none focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 text-sm font-medium text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600 resize-none leading-relaxed transition-all shadow-inner"
+                                        onChange={e => setDescription(e.target.value)}
+                                        style={{
+                                            width: '100%', padding: '10px 12px',
+                                            backgroundColor: 'var(--bg-input)',
+                                            border: '1px solid var(--border-default)',
+                                            borderRadius: '2px',
+                                            fontSize: '13px', color: 'var(--text-primary)',
+                                            outline: 'none', resize: 'none', lineHeight: 1.65,
+                                            boxSizing: 'border-box', fontFamily: FONT,
+                                            transition: 'border-color 150ms ease',
+                                        }}
                                         placeholder="What is this channel about?"
-                                        rows={4}
+                                        rows={5}
+                                        onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                        onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                                     />
                                 </div>
                             </div>
 
-                            {/* RIGHT COLUMN: Visibility (5 cols) */}
-                            <div className="col-span-12 md:col-span-5 flex flex-col gap-5">
-                                <label className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">
+                            {/* RIGHT: Visibility */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                <label style={{
+                                    fontSize: '9px', fontWeight: 700,
+                                    color: 'var(--text-muted)',
+                                    textTransform: 'uppercase', letterSpacing: '0.14em',
+                                    fontFamily: FONT,
+                                }}>
                                     Channel Visibility
                                 </label>
 
-                                {/* Public Channel */}
+                                {/* Public */}
                                 <div
                                     onClick={() => setVisibility('public')}
-                                    className={`relative p-5 rounded-2xl cursor-pointer transition-all duration-300 ${visibility === 'public'
-                                        ? 'bg-gradient-to-br from-blue-600 to-blue-700 shadow-xl shadow-blue-500/20 transform scale-[1.02]'
-                                        : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                                        }`}
+                                    style={{
+                                        padding: '14px 16px',
+                                        borderRadius: '2px', cursor: 'pointer',
+                                        border: `1px solid ${visibility === 'public' ? 'var(--accent)' : 'var(--border-default)'}`,
+                                        backgroundColor: visibility === 'public' ? 'rgba(184,149,106,0.08)' : 'var(--bg-active)',
+                                        transition: 'border-color 150ms ease, background-color 150ms ease',
+                                    }}
                                 >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`p-2.5 rounded-xl transition-colors ${visibility === 'public' ? 'bg-white/20 text-white' : 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 shadow-sm'}`}>
-                                            <Globe size={20} strokeWidth={2.5} />
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '2px', flexShrink: 0,
+                                            backgroundColor: visibility === 'public' ? 'rgba(184,149,106,0.15)' : 'var(--bg-hover)',
+                                            border: '1px solid var(--border-default)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <Globe size={16} style={{ color: visibility === 'public' ? 'var(--accent)' : 'var(--text-muted)' }} />
                                         </div>
-                                        <div className="flex-1">
-                                            <h4 className={`text-[15px] font-bold mb-0.5 ${visibility === 'public' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Public</h4>
-                                            <p className={`text-xs font-medium leading-relaxed ${visibility === 'public' ? 'text-blue-100' : 'text-gray-400 dark:text-gray-500'}`}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                                <h4 style={{
+                                                    fontSize: '13px', fontWeight: 600, margin: 0,
+                                                    color: visibility === 'public' ? 'var(--accent)' : 'var(--text-primary)',
+                                                    fontFamily: FONT,
+                                                }}>Public</h4>
+                                                {visibility === 'public' && (
+                                                    <Check size={14} style={{ color: 'var(--accent)' }} />
+                                                )}
+                                            </div>
+                                            <p style={{
+                                                fontSize: '12px', color: 'var(--text-muted)', margin: 0,
+                                                lineHeight: 1.5, fontFamily: FONT,
+                                            }}>
                                                 Anyone in workspace can discover and join.
                                             </p>
                                         </div>
-                                        {visibility === 'public' && <div className="w-5 h-5 bg-white text-blue-600 rounded-full flex items-center justify-center shadow-sm"><Check size={12} strokeWidth={4} /></div>}
                                     </div>
-                                    
+
                                     {visibility === 'public' && (
-                                        <div 
-                                            className="mt-4 pt-4 border-t border-white/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-2 duration-300"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setIsDiscoverable(!isDiscoverable);
+                                        <div
+                                            style={{
+                                                marginTop: '12px', paddingTop: '12px',
+                                                borderTop: '1px solid var(--border-default)',
+                                                display: 'flex', alignItems: 'flex-start', gap: '10px',
+                                                cursor: 'pointer',
                                             }}
+                                            onClick={e => { e.stopPropagation(); setIsDiscoverable(!isDiscoverable); }}
                                         >
-                                            <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                                                isDiscoverable 
-                                                    ? 'bg-white border-white text-blue-600' 
-                                                    : 'bg-transparent border-white/60 text-transparent hover:border-white'
-                                            }`}>
-                                                <Check size={14} strokeWidth={4} />
+                                            <div style={{
+                                                marginTop: '1px', width: '16px', height: '16px', borderRadius: '2px',
+                                                border: `1px solid ${isDiscoverable ? 'var(--accent)' : 'var(--border-accent)'}`,
+                                                backgroundColor: isDiscoverable ? 'var(--accent)' : 'transparent',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                flexShrink: 0, transition: '150ms ease',
+                                            }}>
+                                                {isDiscoverable && <Check size={10} style={{ color: '#0c0c0c' }} strokeWidth={3} />}
                                             </div>
-                                            <div className="flex-1">
-                                                <h5 className="text-[13px] font-bold text-white leading-none mb-1">Discoverable</h5>
-                                                <p className="text-[11px] font-medium text-blue-100 opacity-90 leading-tight">
+                                            <div style={{ flex: 1 }}>
+                                                <h5 style={{
+                                                    fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)',
+                                                    margin: '0 0 2px', fontFamily: FONT,
+                                                }}>Discoverable</h5>
+                                                <p style={{
+                                                    fontSize: '11px', color: 'var(--text-muted)', margin: 0,
+                                                    lineHeight: 1.5, fontFamily: FONT,
+                                                }}>
                                                     Others can find and join this channel
                                                 </p>
                                             </div>
@@ -241,75 +361,142 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     )}
                                 </div>
 
-                                {/* Private Channel */}
+                                {/* Private */}
                                 <div
                                     onClick={() => setVisibility('private')}
-                                    className={`relative p-5 rounded-2xl cursor-pointer transition-all duration-300 ${visibility === 'private'
-                                        ? 'bg-gray-900 dark:bg-gray-700 shadow-xl shadow-gray-200/50 dark:shadow-none text-white transform scale-[1.02]'
-                                        : 'bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/50'
-                                        }`}
+                                    style={{
+                                        padding: '14px 16px',
+                                        borderRadius: '2px', cursor: 'pointer',
+                                        border: `1px solid ${visibility === 'private' ? 'var(--border-accent)' : 'var(--border-default)'}`,
+                                        backgroundColor: visibility === 'private' ? 'var(--bg-hover)' : 'var(--bg-active)',
+                                        transition: 'border-color 150ms ease, background-color 150ms ease',
+                                    }}
                                 >
-                                    <div className="flex items-start gap-4">
-                                        <div className={`p-2.5 rounded-xl transition-colors ${visibility === 'private' ? 'bg-white/20 text-white' : 'bg-white dark:bg-gray-700 text-gray-400 dark:text-gray-400 shadow-sm'}`}>
-                                            <Lock size={20} strokeWidth={2.5} />
+                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                                        <div style={{
+                                            width: '32px', height: '32px', borderRadius: '2px', flexShrink: 0,
+                                            backgroundColor: visibility === 'private' ? 'var(--bg-active)' : 'var(--bg-hover)',
+                                            border: '1px solid var(--border-default)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <Lock size={16} style={{ color: visibility === 'private' ? 'var(--text-secondary)' : 'var(--text-muted)' }} />
                                         </div>
-                                        <div className="flex-1">
-                                            <h4 className={`text-[15px] font-bold mb-0.5 ${visibility === 'private' ? 'text-white' : 'text-gray-900 dark:text-white'}`}>Private</h4>
-                                            <p className={`text-xs font-medium leading-relaxed ${visibility === 'private' ? 'text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px' }}>
+                                                <h4 style={{
+                                                    fontSize: '13px', fontWeight: 600, margin: 0,
+                                                    color: visibility === 'private' ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                    fontFamily: FONT,
+                                                }}>Private</h4>
+                                                {visibility === 'private' && (
+                                                    <Check size={14} style={{ color: 'var(--text-secondary)' }} />
+                                                )}
+                                            </div>
+                                            <p style={{
+                                                fontSize: '12px', color: 'var(--text-muted)', margin: 0,
+                                                lineHeight: 1.5, fontFamily: FONT,
+                                            }}>
                                                 Only invited members can access.
                                             </p>
                                         </div>
-                                        {visibility === 'private' && <div className="w-5 h-5 bg-white text-gray-900 rounded-full flex items-center justify-center shadow-sm"><Check size={12} strokeWidth={4} /></div>}
                                     </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="h-full flex flex-col animate-in slide-in-from-right-8 fade-in duration-300">
-                            {/* Member Selection Header */}
-                            <div className="mb-6">
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+                        /* ── Step 2: Member Selection ── */
+                        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
+                            {/* Header */}
+                            <div>
+                                <h3 style={{
+                                    fontSize: '14px', fontWeight: 600,
+                                    color: 'var(--text-primary)', margin: '0 0 4px',
+                                    fontFamily: FONT,
+                                }}>
                                     {visibility === 'private' ? 'Invite Members' : 'Invite Members (Optional)'}
                                 </h3>
                                 {visibility === 'private' && (
-                                    <p className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                                    <p style={{ fontSize: '12px', color: 'var(--accent)', margin: 0, fontFamily: FONT }}>
                                         ⚠️ Private channels require at least one invited member for encryption setup.
                                     </p>
                                 )}
                             </div>
 
-                            {/* Member Search Header */}
-                            <div className="flex items-center gap-4 mb-8">
-                                <div className="flex-1 relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-blue-500 transition-colors" size={20} strokeWidth={2.5} />
+                            {/* Search + count row */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{ flex: 1, position: 'relative' }}>
+                                    <Search size={14} style={{
+                                        position: 'absolute', left: '10px', top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        color: 'var(--text-muted)', pointerEvents: 'none',
+                                    }} />
                                     <input
                                         type="text"
                                         placeholder="Search people..."
                                         value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-12 pr-4 py-3.5 bg-gray-50 dark:bg-gray-800/50 border-none rounded-2xl focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900 outline-none transition-all font-semibold text-gray-900 dark:text-white placeholder-gray-400 shadow-inner"
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                        style={{
+                                            width: '100%', padding: '9px 12px 9px 32px',
+                                            backgroundColor: 'var(--bg-input)',
+                                            border: '1px solid var(--border-default)',
+                                            borderRadius: '2px',
+                                            fontSize: '13px', fontWeight: 500,
+                                            color: 'var(--text-primary)',
+                                            outline: 'none', boxSizing: 'border-box', fontFamily: FONT,
+                                            transition: 'border-color 150ms ease',
+                                        }}
                                         autoFocus
+                                        onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                        onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                                     />
                                 </div>
-                                <div className="bg-blue-50 dark:bg-blue-900/20 px-5 py-3.5 rounded-2xl text-xs font-bold text-blue-600 dark:text-blue-300 whitespace-nowrap">
+                                <div style={{
+                                    padding: '6px 14px',
+                                    backgroundColor: 'rgba(184,149,106,0.10)',
+                                    border: '1px solid rgba(184,149,106,0.2)',
+                                    borderRadius: '2px',
+                                    fontSize: '12px', fontWeight: 700, color: 'var(--accent)',
+                                    whiteSpace: 'nowrap', fontFamily: FONT,
+                                }}>
                                     {selectedMemberIds.size} Selected
                                 </div>
                             </div>
 
-                            {/* Grid List for Members */}
-                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar -mr-4">
-                                <div className="grid grid-cols-2 gap-4">
+                            {/* Member grid */}
+                            <div style={{ flex: 1, overflowY: 'auto' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                     {loadingMembers ? (
-                                        <div className="col-span-2 flex flex-col items-center justify-center py-20 text-gray-400 space-y-4">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                                            <span className="text-xs font-semibold uppercase tracking-wide">Fetching members...</span>
+                                        <div style={{
+                                            gridColumn: 'span 2', display: 'flex', flexDirection: 'column',
+                                            alignItems: 'center', justifyContent: 'center', padding: '60px 16px',
+                                            gap: '12px',
+                                        }}>
+                                            <div style={{
+                                                width: '28px', height: '28px', borderRadius: '50%',
+                                                border: '2px solid var(--border-accent)',
+                                                borderTopColor: 'var(--accent)',
+                                                animation: 'spin 0.8s linear infinite',
+                                            }} />
+                                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: FONT }}>
+                                                Fetching members...
+                                            </span>
                                         </div>
                                     ) : filteredMembers.length === 0 ? (
-                                        <div className="col-span-2 text-center py-20 text-gray-400 flex flex-col items-center gap-3">
-                                            <div className="w-16 h-16 bg-gray-50 dark:bg-gray-800 rounded-2xl flex items-center justify-center text-gray-300">
-                                                <Search size={32} />
+                                        <div style={{
+                                            gridColumn: 'span 2', display: 'flex', flexDirection: 'column',
+                                            alignItems: 'center', justifyContent: 'center', padding: '60px 16px', gap: '10px',
+                                        }}>
+                                            <div style={{
+                                                width: '40px', height: '40px', borderRadius: '2px',
+                                                backgroundColor: 'var(--bg-active)',
+                                                border: '1px solid var(--border-default)',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            }}>
+                                                <Search size={20} style={{ color: 'var(--text-muted)' }} />
                                             </div>
-                                            <div className="text-sm font-medium">No members found matching "{searchQuery}"</div>
+                                            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', fontFamily: FONT }}>
+                                                No members found matching "{searchQuery}"
+                                            </div>
                                         </div>
                                     ) : (
                                         filteredMembers.map(user => {
@@ -318,28 +505,56 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                 <div
                                                     key={user.id}
                                                     onClick={() => toggleMember(user.id)}
-                                                    className={`flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 ${isSelected
-                                                        ? "bg-blue-600 shadow-lg shadow-blue-500/20 transform scale-[1.01]"
-                                                        : "bg-gray-50 dark:bg-gray-800 hover:bg-white dark:hover:bg-gray-700/80 hover:shadow-md"
-                                                        }`}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                                        padding: '10px 12px', borderRadius: '2px', cursor: 'pointer',
+                                                        backgroundColor: isSelected ? 'rgba(184,149,106,0.12)' : 'var(--bg-active)',
+                                                        border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-default)'}`,
+                                                        transition: 'border-color 150ms ease, background-color 150ms ease',
+                                                    }}
+                                                    onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; } }}
+                                                    onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'var(--bg-active)'; } }}
                                                 >
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold shadow-sm ${isSelected
-                                                        ? "bg-white/20 text-white"
-                                                        : "bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 shadow-sm"
-                                                        }`}>
+                                                    {/* Avatar initial */}
+                                                    <div style={{
+                                                        width: '32px', height: '32px', borderRadius: '2px', flexShrink: 0,
+                                                        backgroundColor: isSelected ? 'rgba(184,149,106,0.25)' : 'var(--bg-hover)',
+                                                        border: '1px solid var(--border-default)',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        fontSize: '13px', fontWeight: 600, fontFamily: FONT,
+                                                        color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
+                                                    }}>
                                                         {user.name.charAt(0).toUpperCase()}
                                                     </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className={`text-sm font-bold truncate ${isSelected ? "text-white" : "text-gray-900 dark:text-white"}`}>
+
+                                                    {/* Name + email */}
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{
+                                                            fontSize: '13px', fontWeight: 500,
+                                                            color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
+                                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                            fontFamily: FONT,
+                                                        }}>
                                                             {user.name}
                                                         </div>
-                                                        <div className={`text-xs truncate font-medium ${isSelected ? "text-blue-100" : "text-gray-400"}`}>{user.email}</div>
+                                                        <div style={{
+                                                            fontSize: '11px', color: 'var(--text-muted)',
+                                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                            fontFamily: FONT,
+                                                        }}>
+                                                            {user.email}
+                                                        </div>
                                                     </div>
-                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${isSelected
-                                                        ? "bg-white text-blue-600 shadow-sm"
-                                                        : "border-2 border-gray-200 dark:border-gray-700"
-                                                        }`}>
-                                                        {isSelected && <Check size={14} strokeWidth={4} />}
+
+                                                    {/* Checkbox */}
+                                                    <div style={{
+                                                        width: '18px', height: '18px', borderRadius: '2px', flexShrink: 0,
+                                                        border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-accent)'}`,
+                                                        backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        transition: '150ms ease',
+                                                    }}>
+                                                        {isSelected && <Check size={11} style={{ color: '#0c0c0c' }} strokeWidth={3} />}
                                                     </div>
                                                 </div>
                                             );
@@ -352,19 +567,41 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 </div>
 
                 {/* Footer */}
-                <div className="px-10 py-6 bg-white dark:bg-gray-900 border-t border-gray-50 dark:border-gray-800 flex justify-between items-center sticky bottom-0 z-20">
+                <div style={{
+                    padding: '16px 28px',
+                    borderTop: '1px solid var(--border-default)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    backgroundColor: 'var(--bg-surface)', flexShrink: 0,
+                }}>
                     <button
                         onClick={onClose}
-                        className="px-6 py-3 text-sm font-bold text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                        style={{
+                            padding: '7px 16px', fontSize: '13px', fontWeight: 500,
+                            color: 'var(--text-muted)', background: 'none', border: 'none',
+                            outline: 'none', cursor: 'pointer', fontFamily: FONT,
+                            transition: 'color 150ms ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         Cancel
                     </button>
 
-                    <div className="flex items-center gap-4">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {currentTab === 2 && (
                             <button
                                 onClick={() => setCurrentTab(1)}
-                                className="px-6 py-3 text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-colors"
+                                style={{
+                                    padding: '7px 16px', fontSize: '13px', fontWeight: 500,
+                                    color: 'var(--text-secondary)',
+                                    backgroundColor: 'var(--bg-active)',
+                                    border: '1px solid var(--border-default)',
+                                    borderRadius: '2px', cursor: 'pointer', fontFamily: FONT,
+                                    transition: '150ms ease',
+                                    outline: 'none',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'var(--bg-active)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                             >
                                 Back
                             </button>
@@ -374,24 +611,40 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                             <button
                                 onClick={handleNextTab}
                                 disabled={!name.trim()}
-                                className={`flex items-center gap-2 px-8 py-3.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all duration-300 transform ${!name.trim()
-                                    ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed shadow-none"
-                                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5"
-                                    }`}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    padding: '7px 20px', fontSize: '13px', fontWeight: 600,
+                                    color: !name.trim() ? 'var(--text-muted)' : '#0c0c0c',
+                                    backgroundColor: !name.trim() ? 'var(--bg-active)' : 'var(--accent)',
+                                    border: 'none', borderRadius: '2px', outline: 'none',
+                                    cursor: !name.trim() ? 'not-allowed' : 'pointer',
+                                    fontFamily: FONT, transition: '150ms ease',
+                                    opacity: !name.trim() ? 0.5 : 1,
+                                }}
+                                onMouseEnter={e => { if (name.trim()) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                                onMouseLeave={e => { if (name.trim()) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                             >
                                 Next Step
-                                <ChevronRight size={16} strokeWidth={3} />
+                                <ChevronRight size={15} strokeWidth={2.5} />
                             </button>
                         ) : (
                             <button
                                 onClick={handleCreate}
                                 disabled={!canCreate}
-                                className={`flex items-center gap-2 px-8 py-3.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all duration-300 transform ${!canCreate
-                                    ? "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-600 cursor-not-allowed shadow-none"
-                                    : "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-500/30 hover:shadow-blue-500/40 hover:-translate-y-0.5"
-                                    }`}
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    padding: '7px 20px', fontSize: '13px', fontWeight: 600,
+                                    color: !canCreate ? 'var(--text-muted)' : '#0c0c0c',
+                                    backgroundColor: !canCreate ? 'var(--bg-active)' : 'var(--accent)',
+                                    border: 'none', borderRadius: '2px', outline: 'none',
+                                    cursor: !canCreate ? 'not-allowed' : 'pointer',
+                                    fontFamily: FONT, transition: '150ms ease',
+                                    opacity: !canCreate ? 0.5 : 1,
+                                }}
+                                onMouseEnter={e => { if (canCreate) e.currentTarget.style.backgroundColor = 'var(--accent-hover)'; }}
+                                onMouseLeave={e => { if (canCreate) e.currentTarget.style.backgroundColor = 'var(--accent)'; }}
                             >
-                                <UserPlus size={18} strokeWidth={2.5} />
+                                <UserPlus size={15} strokeWidth={2} />
                                 Create Channel
                             </button>
                         )}

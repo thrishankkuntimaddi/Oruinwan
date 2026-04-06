@@ -15,8 +15,14 @@ function initials(user) {
   return name.charAt(0).toUpperCase() || '?';
 }
 
+const T = {
+  bg: '#0c0c0c', bar: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.07)',
+  text: '#e4e4e4', muted: 'rgba(228,228,228,0.35)', accent: '#b8956a',
+  font: 'Inter, system-ui, sans-serif',
+};
+
 function avatarColor(name) {
-  const colors = ['#6554C0', '#0052CC', '#00875A', '#FF5630', '#FF991F', '#36B37E', '#00B8D9'];
+  const colors = ['#b8956a', '#8b5cf6', '#22c55e', '#f97316', '#3b82f6', '#06b6d4', '#ec4899'];
   if (!name) return colors[0];
   return colors[name.charCodeAt(0) % colors.length];
 }
@@ -34,49 +40,41 @@ function WorkloadRow({ item, maxCount }) {
   const name = item.user?.username || item.user?.firstName || 'Unknown';
   const bgColor = avatarColor(name);
 
-  // Color the bar by workload intensity
-  const barColor = pct > 75 ? '#FF5630' : pct > 50 ? '#E97F33' : '#0052CC';
+  const barColor = pct > 75 ? '#ef4444' : pct > 50 ? '#f97316' : T.accent;
 
   return (
     <div
-      className="flex items-center gap-3 px-4 py-3 border-b hover:bg-gray-50 transition-colors"
-      style={{ borderColor: '#DFE1E6' }}
+      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderBottom: `1px solid ${T.border}`, transition: 'background 150ms ease', fontFamily: T.font, background: 'transparent', cursor: 'default' }}
+      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
-      {/* Avatar */}
       <div
-        className="w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-        style={{ background: bgColor }}
+        style={{ width: '28px', height: '28px', borderRadius: '50%', background: bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '11px', fontWeight: 700, flexShrink: 0 }}
         title={name}
       >
         {initials(item.user)}
       </div>
 
-      {/* Name + bar */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-medium text-gray-800 truncate">{name}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+            <span style={{ fontSize: '13px', fontWeight: 500, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
             {item.user?.email && (
-              <span className="text-[10px] text-gray-400 truncate hidden sm:block">{item.user.email}</span>
+              <span style={{ fontSize: '10px', color: T.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.user.email}</span>
             )}
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            <span className="text-xs font-bold" style={{ color: barColor }}>
-              {item.count} {item.count === 1 ? 'task' : 'tasks'}
-            </span>
-          </div>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: barColor, flexShrink: 0, marginLeft: '8px', fontFamily: T.font }}>
+            {item.count} {item.count === 1 ? 'task' : 'tasks'}
+          </span>
         </div>
-        {/* Progress bar */}
-        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div style={{ height: '5px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
           <div
-            className="h-full rounded-full transition-all duration-300"
-            style={{ width: `${pct}%`, background: barColor }}
+            style={{ height: '100%', width: `${pct}%`, background: barColor, transition: 'width 300ms ease' }}
           />
         </div>
       </div>
 
-      {/* Percentage label */}
-      <span className="text-[10px] font-semibold w-8 text-right flex-shrink-0" style={{ color: barColor }}>
+      <span style={{ fontSize: '10px', fontWeight: 700, width: '32px', textAlign: 'right', flexShrink: 0, color: barColor, fontFamily: T.font }}>
         {pct}%
       </span>
     </div>
@@ -117,65 +115,64 @@ export default function WorkloadPanel({ workspaceId }) {
   const totalTasks = workload.reduce((sum, item) => sum + item.count, 0);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: T.bg, fontFamily: T.font }}>
       {/* Header */}
-      <div
-        className="flex-shrink-0 bg-white border-b px-4 py-2.5 flex items-center gap-2"
-        style={{ borderColor: '#DFE1E6' }}
-      >
-        <Users size={14} style={{ color: '#0052CC' }} />
-        <span className="text-xs font-semibold" style={{ color: '#172B4D' }}>Team Workload</span>
+      <div style={{ flexShrink: 0, background: '#111111', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Users size={14} style={{ color: T.accent }} />
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.5)' }}>Team Workload</span>
         {!loading && workload.length > 0 && (
-          <span className="text-xs text-gray-400">
+          <span style={{ fontSize: '11px', color: T.muted }}>
             — {workload.length} member(s) · {totalTasks} task(s) total
           </span>
         )}
-        <div className="flex-1" />
+        <div style={{ flex: 1 }} />
         <button
           onClick={fetchWorkload}
           disabled={loading}
-          className="p-1.5 rounded hover:bg-gray-100 transition-colors disabled:opacity-50"
+          style={{ padding: '5px', background: 'transparent', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', color: T.muted, opacity: loading ? 0.5 : 1, transition: 'color 150ms ease' }}
+          onMouseEnter={e => { if (!loading) e.currentTarget.style.color = T.accent; }}
+          onMouseLeave={e => { e.currentTarget.style.color = T.muted; }}
           title="Refresh workload"
         >
-          <RefreshCw size={12} className={loading ? 'animate-spin' : ''} style={{ color: '#7A869A' }} />
+          <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
         </button>
       </div>
 
       {/* Legend */}
       {!loading && workload.length > 0 && (
-        <div className="flex-shrink-0 px-4 py-1.5 bg-gray-50 border-b flex items-center gap-4" style={{ borderColor: '#DFE1E6' }}>
+        <div style={{ flexShrink: 0, padding: '6px 16px', background: 'rgba(255,255,255,0.02)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
           {[
-            { color: '#0052CC', label: 'Normal (≤50%)' },
-            { color: '#E97F33', label: 'Heavy (51-75%)' },
-            { color: '#FF5630', label: 'Overloaded (>75%)' },
+            { color: T.accent, label: 'Normal (≤50%)' },
+            { color: '#f97316', label: 'Heavy (51-75%)' },
+            { color: '#ef4444', label: 'Overloaded (>75%)' },
           ].map(l => (
-            <div key={l.label} className="flex items-center gap-1.5">
-              <div className="w-2 h-2 rounded-full" style={{ background: l.color }} />
-              <span className="text-[10px] text-gray-500">{l.label}</span>
+            <div key={l.label} style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: l.color }} />
+              <span style={{ fontSize: '10px', color: T.muted, fontFamily: T.font }}>{l.label}</span>
             </div>
           ))}
         </div>
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto bg-white" style={{ scrollbarWidth: 'thin' }}>
+      <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', background: T.bg }}>
         {loading && (
-          <div className="flex items-center justify-center h-40 text-gray-400 text-sm gap-2">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '160px', color: T.muted, fontSize: '13px', gap: '8px', fontFamily: T.font }}>
             <RefreshCw size={14} className="animate-spin" />
             Loading workload…
           </div>
         )}
         {error && !loading && (
-          <div className="flex flex-col items-center justify-center h-40 gap-2 text-red-400">
-            <p className="text-sm">{error}</p>
-            <button onClick={fetchWorkload} className="text-blue-500 text-xs underline">Retry</button>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '160px', gap: '8px' }}>
+            <p style={{ fontSize: '13px', color: '#f87171', fontFamily: T.font }}>{error}</p>
+            <button onClick={fetchWorkload} style={{ fontSize: '11px', color: T.accent, background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontFamily: T.font }}>Retry</button>
           </div>
         )}
         {!loading && !error && workload.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-48 gap-2 text-gray-400">
-            <Users size={28} className="opacity-30" />
-            <p className="text-sm">No assigned tasks in this workspace</p>
-            <p className="text-xs text-gray-300">Assign tasks to team members to see workload here</p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '192px', gap: '8px' }}>
+            <Users size={28} style={{ opacity: 0.2, color: T.muted }} />
+            <p style={{ fontSize: '13px', color: T.muted, fontFamily: T.font }}>No assigned tasks in this workspace</p>
+            <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', fontFamily: T.font }}>Assign tasks to team members to see workload here</p>
           </div>
         )}
         {!loading && !error && workload.map(item => (

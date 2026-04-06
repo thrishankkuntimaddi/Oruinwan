@@ -1,30 +1,28 @@
 /**
  * FileMessage.jsx — Phase 7.1 Attachments
  * Renders a clickable file card: icon + name + size + download button.
- *
- * Downloads route through the authenticated backend proxy
- * (GET /api/v2/uploads/file?path=<gcsPath>) so the GCS bucket can stay private.
  */
 import React from "react";
 import { FileText, Film, Archive, Sheet, File, Download } from "lucide-react";
 import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
+// icon + tinted surface using CSS token alpha variants
 const ICON_MAP = {
-    pdf: { Icon: FileText, color: "text-red-500 bg-red-50 dark:bg-red-900/20 dark:text-red-400" },
-    doc: { Icon: FileText, color: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400" },
-    docx: { Icon: FileText, color: "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400" },
-    xls: { Icon: Sheet, color: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400" },
-    xlsx: { Icon: Sheet, color: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400" },
-    csv: { Icon: Sheet, color: "text-green-600 bg-green-50 dark:bg-green-900/20 dark:text-green-400" },
-    zip: { Icon: Archive, color: "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400" },
-    rar: { Icon: Archive, color: "text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20 dark:text-yellow-400" },
-    mp4: { Icon: Film, color: "text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400" },
-    mov: { Icon: Film, color: "text-purple-600 bg-purple-50 dark:bg-purple-900/20 dark:text-purple-400" },
+    pdf:  { Icon: FileText, bg: 'rgba(224,82,82,0.10)',  color: '#e05252' },
+    doc:  { Icon: FileText, bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
+    docx: { Icon: FileText, bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
+    xls:  { Icon: Sheet,    bg: 'rgba(90,186,138,0.10)',  color: '#5aba8a' },
+    xlsx: { Icon: Sheet,    bg: 'rgba(90,186,138,0.10)',  color: '#5aba8a' },
+    csv:  { Icon: Sheet,    bg: 'rgba(90,186,138,0.10)',  color: '#5aba8a' },
+    zip:  { Icon: Archive,  bg: 'rgba(201,168,124,0.12)', color: 'var(--accent-hover)' },
+    rar:  { Icon: Archive,  bg: 'rgba(201,168,124,0.12)', color: 'var(--accent-hover)' },
+    mp4:  { Icon: Film,     bg: 'rgba(138,110,184,0.12)', color: '#8a6eb8' },
+    mov:  { Icon: Film,     bg: 'rgba(138,110,184,0.12)', color: '#8a6eb8' },
 };
 
 function getFileInfo(name = '') {
     const ext = name.split('.').pop()?.toLowerCase() || '';
-    return ICON_MAP[ext] || { Icon: File, color: "text-gray-500 bg-gray-100 dark:bg-gray-700 dark:text-gray-400" };
+    return ICON_MAP[ext] || { Icon: File, bg: 'var(--bg-hover)', color: 'var(--text-secondary)' };
 }
 
 export default function FileMessage({ msg }) {
@@ -34,35 +32,46 @@ export default function FileMessage({ msg }) {
 
     if (!proxyUrl) return null;
 
-    const { Icon, color } = getFileInfo(name);
+    const { Icon, bg, color } = getFileInfo(name);
 
     return (
         <a
             href={proxyUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-1 flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors max-w-xs group"
+            style={{
+                marginTop: '6px', display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '8px 12px',
+                backgroundColor: 'var(--bg-active)',
+                border: '1px solid var(--border-default)',
+                borderRadius: '2px',
+                maxWidth: '280px',
+                textDecoration: 'none',
+                transition: 'border-color 100ms ease, background-color 100ms ease',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'var(--bg-active)'; }}
         >
             {/* File type icon */}
-            <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center ${color}`}>
-                <Icon size={20} />
+            <div style={{ flexShrink: 0, width: '36px', height: '36px', borderRadius: '2px', backgroundColor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon size={18} style={{ color }} />
             </div>
 
             {/* File details */}
-            <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {name || "Attachment"}
                 </div>
                 {sizeFormatted && (
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         {sizeFormatted}
                     </div>
                 )}
             </div>
 
             {/* Download icon */}
-            <div className="flex-shrink-0 text-gray-400 dark:text-gray-500 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                <Download size={16} />
+            <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
+                <Download size={15} />
             </div>
         </a>
     );

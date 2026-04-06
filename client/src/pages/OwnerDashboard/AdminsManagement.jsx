@@ -1,15 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
-import { UserPlus, Shield, BarChart3, Crown, MoreVertical, Lock, FileText, Settings, UserMinus, MessageSquare } from 'lucide-react';
+import { UserPlus, Shield, BarChart3, Crown, MoreVertical, Lock, FileText, Settings, UserMinus, MessageSquare, Search } from 'lucide-react';
 import { getCompanyMembers } from '../../services/companyService';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
-
-const ROLE_COLORS = {
-    owner: '#8b5cf6',
-    admin: '#6366f1'
-};
+const ROLE_COLORS = { owner: '#b8956a', admin: '#7a7a7a' };
 
 const AdminsManagement = () => {
     const { company } = useCompany();
@@ -19,355 +15,302 @@ const AdminsManagement = () => {
     const [admins, setAdmins] = useState([]);
     const [filteredAdmins, setFilteredAdmins] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [showStats, setShowStats] = useState(false); // Hidden by default
-    const [actionMenuOpen, setActionMenuOpen] = useState(null); // Track open menu by admin ID
+    const [showStats, setShowStats] = useState(false);
+    const [actionMenuOpen, setActionMenuOpen] = useState(null);
 
-    // Close menu when clicking outside
     useEffect(() => {
-        const handleClickOutside = () => setActionMenuOpen(null);
-        window.addEventListener('click', handleClickOutside);
-        return () => window.removeEventListener('click', handleClickOutside);
+        const h = () => setActionMenuOpen(null);
+        window.addEventListener('click', h);
+        return () => window.removeEventListener('click', h);
     }, []);
 
     const fetchAdmins = useCallback(async () => {
-        if (!company?._id) {
-            setLoading(false);
-            return;
-        }
+        if (!company?._id) { setLoading(false); return; }
         try {
             setLoading(true);
             const response = await getCompanyMembers(company._id);
-            // Filter for only Owner and Admin roles
-            const adminUsers = (response.members || []).filter(
-                member => member.companyRole === 'owner' || member.companyRole === 'admin'
-            );
+            const adminUsers = (response.members || []).filter(m => m.companyRole === 'owner' || m.companyRole === 'admin');
             setAdmins(adminUsers);
             setFilteredAdmins(adminUsers);
-        } catch (err) {
-            console.error('Failed to fetch admins:', err);
+        } catch {
             showToast('Failed to load administrators', 'error');
         } finally {
             setLoading(false);
         }
     }, [company?._id, showToast]);
 
-    useEffect(() => {
-        fetchAdmins();
-    }, [fetchAdmins]);
+    useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
 
-    // Search filter
     useEffect(() => {
-        let result = admins;
-        if (searchQuery) {
-            result = result.filter(admin =>
-                admin.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                admin.email?.toLowerCase().includes(searchQuery.toLowerCase())
-            );
-        }
-        setFilteredAdmins(result);
+        setFilteredAdmins(!searchQuery ? admins : admins.filter(a =>
+            a.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            a.email?.toLowerCase().includes(searchQuery.toLowerCase())
+        ));
     }, [admins, searchQuery]);
 
-    // Statistics data
     const roleDistribution = [
         { name: 'Owner', value: admins.filter(a => a.companyRole === 'owner').length, color: ROLE_COLORS.owner },
-        { name: 'Admin', value: admins.filter(a => a.companyRole === 'admin').length, color: ROLE_COLORS.admin }
+        { name: 'Admin', value: admins.filter(a => a.companyRole === 'admin').length, color: ROLE_COLORS.admin },
     ];
-
     const onlineAdmins = filteredAdmins.filter(a => a.isOnline).length;
 
-    if (loading) {
-        return (
-            <div className="h-screen bg-gray-50 dark:bg-gray-900 p-8 animate-pulse space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                        <div className="h-6 w-44 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-                        <div className="h-3 w-60 bg-gray-100 dark:bg-gray-800 rounded" />
-                    </div>
-                    <div className="h-9 w-28 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl" />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
+    const tooltipStyle = { backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '11px', borderRadius: '0' };
+
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '160px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '240px' }} /></div>
+                <div className="sk" style={{ height: '30px', width: '110px' }} />
+            </div>
+            <div style={{ flex: 1, padding: '20px 28px' }}>
+                {/* 3 stat tiles */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
                     {[1,2,3].map(i => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-                            <div className="h-10 w-16 bg-gray-300 dark:bg-gray-600 rounded-xl" />
+                        <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}><div className="sk" style={{ width: '14px', height: '14px' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                            <div className="sk" style={{ height: '28px', width: '50px' }} />
                         </div>
                     ))}
                 </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                    {[75,55,85,60,70].map((w,i) => (
-                        <div key={i} className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-20}%`}} />
+                {/* Search + filter */}
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                    <div className="sk" style={{ height: '32px', flex: 1 }} />
+                    <div className="sk" style={{ height: '32px', width: '130px' }} />
+                </div>
+                {/* Table */}
+                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 80px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '16px' }}>
+                        {[70,60,55,55,0].map((w,i) => <div key={i} className="sk" style={{ height: '9px', width: `${w}px` }} />)}
+                    </div>
+                    {[1,2,3,4,5].map(i => (
+                        <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 80px', padding: '11px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div className="sk" style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0 }} />
+                                <div><div className="sk" style={{ height: '11px', width: '110px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '140px' }} /></div>
                             </div>
-                            <div className="h-7 w-20 bg-gray-100 dark:bg-gray-700 rounded-xl" />
+                            <div className="sk" style={{ height: '18px', width: '55px' }} />
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><div className="sk" style={{ width: '6px', height: '6px', borderRadius: '50%' }} /><div className="sk" style={{ height: '9px', width: '40px' }} /></div>
+                            <div className="sk" style={{ height: '9px', width: '80px' }} />
+                            <div style={{ display: 'flex', gap: '4px' }}><div className="sk" style={{ height: '24px', width: '24px' }} /><div className="sk" style={{ height: '24px', width: '24px' }} /></div>
                         </div>
                     ))}
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
 
     return (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900 transition-colors">
-            {/* Header Section - Matches UserManagement Style */}
-            <header className="h-20 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm shrink-0">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+
+            {/* Header */}
+            <header style={{
+                height: '56px', padding: '0 28px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0, zIndex: 5,
+            }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white">Administrators</h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium">Owner & Admin roles management</p>
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <Shield size={16} style={{ color: 'var(--accent)' }} />
+                        Administrators
+                    </h2>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>
+                        Owner &amp; Admin roles management
+                    </p>
                 </div>
-                <div className="flex items-center gap-3">
-                    {/* Statistics Toggle */}
-                    <button
-                        onClick={() => setShowStats(!showStats)}
-                        className={`p-2 rounded-lg transition-colors ${showStats
-                            ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400'
-                            : 'text-slate-400 dark:text-gray-500 hover:bg-slate-50 dark:hover:bg-gray-700'
-                            }`}
-                        title={showStats ? 'Hide Statistics' : 'Show Statistics'}
-                    >
-                        <BarChart3 size={20} />
-                    </button>
-                    <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm flex items-center gap-2">
-                        <UserPlus size={16} />
-                        Invite Admin
-                    </button>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <StatsBtn active={showStats} onClick={() => setShowStats(p => !p)} />
+                    <InviteBtn />
                 </div>
             </header>
 
-            {/* Scrollable Content - Matches UserManagement Full Width */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-6 z-10 custom-scrollbar bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                {/* Statistics Section - Toggleable */}
-                {showStats && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-slideDown">
-                        {/* Filtered Admins Card */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
-                            <div className="mb-4">
-                                <div className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                                    Total Administrators
-                                </div>
+                    {/* Stats panel */}
+                    {showStats && (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
+                            {/* Total */}
+                            <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px' }}>Total Administrators</p>
+                                <p style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '4px' }}>{filteredAdmins.length}</p>
+                                <p style={{ fontSize: '12px', color: 'var(--state-success)' }}>{onlineAdmins} currently online</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Total in company: {admins.length}</p>
                             </div>
-                            <div className="text-5xl font-black text-slate-900 dark:text-white mb-2">
-                                {filteredAdmins.length}
-                            </div>
-                            <div className="text-sm text-green-600 dark:text-green-400 font-medium">
-                                {onlineAdmins} currently online
-                            </div>
-                            <div className="text-xs text-slate-500 dark:text-gray-400 mt-2">
-                                Total in Company: {admins.length}
-                            </div>
-                        </div>
 
-                        {/* Role Distribution */}
-                        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6">
-                            <div className="mb-4">
-                                <div className="text-xs font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wide">
-                                    Role Distribution
-                                </div>
-                            </div>
-                            <ResponsiveContainer width="100%" height={120}>
-                                <PieChart>
-                                    <Pie
-                                        data={roleDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={30}
-                                        outerRadius={50}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {roleDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="mt-4 space-y-2">
-                                {roleDistribution.map((role) => (
-                                    <div key={role.name} className="flex items-center justify-between text-xs">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: role.color }}></div>
-                                            <span className="text-slate-600 dark:text-gray-300 font-medium">{role.name}</span>
+                            {/* Role Distribution */}
+                            <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px' }}>Role Distribution</p>
+                                <ResponsiveContainer width="100%" height={90}>
+                                    <PieChart>
+                                        <Pie data={roleDistribution} cx="50%" cy="50%" innerRadius={25} outerRadius={40} paddingAngle={4} dataKey="value">
+                                            {roleDistribution.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                        </Pie>
+                                        <Tooltip contentStyle={tooltipStyle} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '8px' }}>
+                                    {roleDistribution.map(r => (
+                                        <div key={r.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ width: '8px', height: '8px', background: r.color, flexShrink: 0 }} />
+                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{r.name}</span>
+                                            </div>
+                                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)' }}>{r.value}</span>
                                         </div>
-                                        <span className="text-slate-900 dark:text-white font-bold">{role.value}</span>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Admin Powers */}
+                            <div style={{ background: 'var(--bg-surface)', padding: '20px', position: 'relative' }}>
+                                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                    <Crown size={14} style={{ color: 'var(--accent)' }} />
+                                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)' }}>Admin Powers</p>
+                                </div>
+                                {['Full system access', 'User management', 'Department control', 'Workspace oversight'].map(p => (
+                                    <div key={p} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                        <div style={{ width: '4px', height: '4px', background: 'var(--accent)', borderRadius: '50%', flexShrink: 0 }} />
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{p}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
-
-                        {/* Admin Info */}
-                        <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-sm p-6 text-white">
-                            <div className="flex items-center gap-3 mb-4">
-                                <Crown size={24} />
-                                <div className="text-sm font-bold uppercase tracking-wide">Admin Powers</div>
-                            </div>
-                            <div className="space-y-2 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white/80"></div>
-                                    <span>Full system access</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white/80"></div>
-                                    <span>User management</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white/80"></div>
-                                    <span>Department control</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-white/80"></div>
-                                    <span>Workspace oversight</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Search Bar */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-4 mb-6">
-                    <input
-                        type="text"
-                        placeholder="Search administrators..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-transparent text-slate-700 dark:text-gray-200 placeholder-slate-400 dark:placeholder-gray-500 focus:outline-none text-sm"
-                    />
-                </div>
-
-                {/* Admins Table */}
-                <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 overflow-hidden">
-                    <table className="w-full">
-                        <thead className="bg-slate-50 dark:bg-gray-700/50 border-b border-slate-200 dark:border-gray-700">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Administrator
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Role
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Email
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-slate-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200 dark:divide-gray-700">
-                            {filteredAdmins.map((admin) => (
-                                <tr key={admin._id} className="hover:bg-slate-50 dark:hover:bg-gray-700/30 transition-colors">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
-                                                {admin.username?.charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <div className="text-sm font-bold text-slate-900 dark:text-white">
-                                                    {admin.username}
-                                                </div>
-                                                <div className="text-xs text-slate-500 dark:text-gray-400">
-                                                    {admin.jobTitle || 'Administrator'}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${admin.companyRole === 'owner'
-                                            ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                                            : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
-                                            }`}>
-                                            {admin.companyRole === 'owner' ? (
-                                                <span className="flex items-center gap-1">
-                                                    <Crown size={12} /> Owner
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1">
-                                                    <Shield size={12} /> Admin
-                                                </span>
-                                            )}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm text-slate-600 dark:text-gray-300">{admin.email}</div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="flex items-center gap-2">
-                                            <div className={`w-2 h-2 rounded-full ${admin.isOnline ? 'bg-green-500' : 'bg-gray-400 dark:bg-gray-600'
-                                                }`}></div>
-                                            <span className="text-sm text-slate-600 dark:text-gray-300">
-                                                {admin.isOnline ? 'Online' : 'Offline'}
-                                            </span>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="relative">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setActionMenuOpen(actionMenuOpen === admin._id ? null : admin._id);
-                                                }}
-                                                className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
-                                            >
-                                                <MoreVertical size={16} />
-                                            </button>
-
-                                            {/* Dropdown Menu */}
-                                            {actionMenuOpen === admin._id && (
-                                                <div
-                                                    className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-slate-200 dark:border-gray-700 z-50 overflow-hidden animate-fadeIn"
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <div className="p-1">
-                                                        <button className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 transition-colors">
-                                                            <Lock size={14} className="text-indigo-500" />
-                                                            Manage Permissions
-                                                        </button>
-                                                        <button className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 transition-colors">
-                                                            <FileText size={14} className="text-blue-500" />
-                                                            View Activity Log
-                                                        </button>
-                                                        <button className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 transition-colors">
-                                                            <Settings size={14} className="text-slate-500" />
-                                                            Edit Role
-                                                        </button>
-                                                        <button className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-gray-200 hover:bg-slate-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-2 transition-colors">
-                                                            <MessageSquare size={14} className="text-green-500" />
-                                                            Direct Message
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Destructive Actions */}
-                                                    {admin.companyRole !== 'owner' && (
-                                                        <div className="p-1 border-t border-slate-100 dark:border-gray-700">
-                                                            <button className="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-2 transition-colors">
-                                                                <UserMinus size={14} />
-                                                                Revoke Access
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-
-                    {filteredAdmins.length === 0 && (
-                        <div className="text-center py-12">
-                            <Shield className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                            <p className="text-slate-500 dark:text-gray-400">No administrators found</p>
-                        </div>
                     )}
+
+                    {/* Search */}
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 14px' }}>
+                        <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                        <input
+                            type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search administrators..."
+                            style={{ flex: 1, background: 'none', border: 'none', outline: 'none', padding: '10px 0', fontSize: '13px', color: 'var(--text-primary)', fontFamily: 'inherit' }}
+                        />
+                    </div>
+
+                    {/* Table */}
+                    <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
+                                    {['Administrator', 'Role', 'Email', 'Status', 'Actions'].map(col => (
+                                        <th key={col} style={{ padding: '10px 16px', textAlign: 'left', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{col}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredAdmins.map(admin => (
+                                    <AdminRow
+                                        key={admin._id}
+                                        admin={admin}
+                                        menuOpen={actionMenuOpen === admin._id}
+                                        onMenuToggle={e => { e.stopPropagation(); setActionMenuOpen(actionMenuOpen === admin._id ? null : admin._id); }}
+                                    />
+                                ))}
+                                {filteredAdmins.length === 0 && (
+                                    <tr><td colSpan={5} style={{ padding: '48px', textAlign: 'center' }}>
+                                        <Shield size={24} style={{ color: 'var(--text-muted)', margin: '0 auto 8px' }} />
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No administrators found</p>
+                                    </td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </section>
                 </div>
             </div>
         </div>
+    );
+};
+
+// ─ Sub-components ─────────────────────────────────────────────────────────────
+
+const AdminRow = ({ admin, menuOpen, onMenuToggle }) => {
+    const [hov, setHov] = React.useState(false);
+    const isOwner = admin.companyRole === 'owner';
+    return (
+        <tr style={{ borderBottom: '1px solid var(--border-subtle)', background: hov ? 'var(--bg-hover)' : 'transparent', transition: 'background 150ms ease' }}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
+            <td style={{ padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', background: isOwner ? 'rgba(184,149,106,0.12)' : 'var(--bg-active)', border: `1px solid ${isOwner ? 'var(--accent)' : 'var(--border-accent)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: isOwner ? 'var(--accent)' : 'var(--text-secondary)', flexShrink: 0 }}>
+                        {admin.username?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>{admin.username}</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{admin.jobTitle || 'Administrator'}</p>
+                    </div>
+                </div>
+            </td>
+            <td style={{ padding: '12px 16px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '10px', fontWeight: 700, background: isOwner ? 'rgba(184,149,106,0.12)' : 'var(--bg-active)', border: `1px solid ${isOwner ? 'var(--accent)' : 'var(--border-accent)'}`, color: isOwner ? 'var(--accent)' : 'var(--text-secondary)' }}>
+                    {isOwner ? <Crown size={9} /> : <Shield size={9} />}
+                    {isOwner ? 'Owner' : 'Admin'}
+                </span>
+            </td>
+            <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>{admin.email}</td>
+            <td style={{ padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: admin.isOnline ? 'var(--state-success)' : 'var(--text-muted)', flexShrink: 0 }} />
+                    <span style={{ fontSize: '12px', color: admin.isOnline ? 'var(--state-success)' : 'var(--text-muted)' }}>{admin.isOnline ? 'Online' : 'Offline'}</span>
+                </div>
+            </td>
+            <td style={{ padding: '12px 16px', position: 'relative' }}>
+                <button onClick={onMenuToggle}
+                    style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: menuOpen ? 'var(--bg-active)' : 'none', border: menuOpen ? '1px solid var(--border-default)' : 'none', color: menuOpen ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+                    <MoreVertical size={14} />
+                </button>
+                {menuOpen && (
+                    <div onClick={e => e.stopPropagation()} style={{ position: 'absolute', right: '8px', top: '100%', width: '180px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', zIndex: 50, padding: '4px' }}>
+                        {[
+                            { Icon: Lock, label: 'Manage Permissions', color: 'var(--text-secondary)' },
+                            { Icon: FileText, label: 'View Activity Log', color: 'var(--text-secondary)' },
+                            { Icon: Settings, label: 'Edit Role', color: 'var(--text-secondary)' },
+                            { Icon: MessageSquare, label: 'Direct Message', color: 'var(--text-secondary)' },
+                        ].map(({ Icon, label, color }) => (
+                            <MenuBtn key={label} Icon={Icon} label={label} color={color} />
+                        ))}
+                        {!isOwner && (
+                            <>
+                                <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }} />
+                                <MenuBtn Icon={UserMinus} label="Revoke Access" color="var(--state-danger)" />
+                            </>
+                        )}
+                    </div>
+                )}
+            </td>
+        </tr>
+    );
+};
+
+const MenuBtn = ({ Icon, label, color }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', background: hov ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color, fontSize: '12px', fontWeight: 500, textAlign: 'left', transition: 'background 150ms ease' }}>
+            <Icon size={12} /> {label}
+        </button>
+    );
+};
+
+const StatsBtn = ({ active, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: active ? 'rgba(184,149,106,0.12)' : hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, color: active ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+            <BarChart3 size={14} />
+        </button>
+    );
+};
+
+const InviteBtn = () => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
+            <UserPlus size={13} /> Invite Admin
+        </button>
     );
 };
 

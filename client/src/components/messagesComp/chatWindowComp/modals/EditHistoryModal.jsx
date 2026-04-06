@@ -1,15 +1,16 @@
 // Phase 1 — Edit History Modal
 // Shows a chronological diff of all edits to a message
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { X, Clock, GitCommit } from "lucide-react";
+
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 function diffWords(oldText = "", newText = "") {
     const oldWords = oldText.split(/\s+/);
     const newWords = newText.split(/\s+/);
     const result = [];
 
-    // Simple Myers-style word-level diff via LCS
     const matrix = Array.from({ length: oldWords.length + 1 },
         () => Array(newWords.length + 1).fill(0));
 
@@ -53,12 +54,9 @@ function fmtDate(ts) {
  * @param {function} props.onClose
  */
 export default function EditHistoryModal({ message, onClose }) {
-    // Build an ordered list: [original, ...edits, current]
     const versions = useMemo(() => {
         const history = message?.editHistory || [];
         const list = [];
-
-        // Oldest snapshots first
         for (let i = history.length - 1; i >= 0; i--) {
             list.push({
                 text: history[i].text || "(encrypted)",
@@ -66,7 +64,6 @@ export default function EditHistoryModal({ message, onClose }) {
                 label: i === history.length - 1 ? "Original" : `Edit ${history.length - i}`
             });
         }
-        // Current version
         list.push({
             text: message?.text || "(no text)",
             editedAt: message?.editedAt,
@@ -77,76 +74,120 @@ export default function EditHistoryModal({ message, onClose }) {
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            style={{
+                position: 'fixed', inset: 0, zIndex: 50,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)',
+                fontFamily: FONT,
+            }}
             onClick={onClose}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col overflow-hidden"
+                style={{
+                    width: '100%', maxWidth: '520px', margin: '0 16px',
+                    maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+                    backgroundColor: 'var(--bg-surface)',
+                    border: '1px solid var(--border-accent)',
+                    borderRadius: '4px',
+                    boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                    overflow: 'hidden',
+                    animation: 'fadeIn 180ms ease',
+                }}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                    <div className="flex items-center gap-2">
-                        <GitCommit size={18} className="text-violet-500" />
-                        <h2 className="font-semibold text-gray-900 text-base">Edit History</h2>
-                        <span className="ml-1 text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
-                            {versions.length - 1} edit{versions.length !== 2 ? "s" : ""}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <GitCommit size={16} style={{ color: 'var(--accent)' }} />
+                        <h2 style={{ margin: 0, fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)', fontFamily: FONT }}>
+                            Edit History
+                        </h2>
+                        <span style={{
+                            fontSize: '10px', fontWeight: 600, padding: '1px 7px', borderRadius: '99px',
+                            backgroundColor: 'rgba(184,149,106,0.10)', color: 'var(--accent)',
+                            border: '1px solid var(--border-accent)', fontFamily: FONT,
+                        }}>
+                            {versions.length - 1} edit{versions.length !== 2 ? 's' : ''}
                         </span>
                     </div>
-                    <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-                        <X size={18} className="text-gray-500" />
-                    </button>
+                    <CloseBtn onClick={onClose} />
                 </div>
 
                 {/* Versions list */}
-                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-5">
+                <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {versions.map((version, idx) => {
                         const prev = idx > 0 ? versions[idx - 1] : null;
                         const diff = prev ? diffWords(prev.text, version.text) : null;
+                        const isCurrent = version.label === "Current";
 
                         return (
-                            <div key={idx} className="relative">
-                                {/* Timeline dot */}
+                            <div key={idx} style={{ position: 'relative' }}>
+                                {/* Timeline connector */}
                                 {idx < versions.length - 1 && (
-                                    <div className="absolute left-[5px] top-6 bottom-[-20px] w-px bg-gray-200" />
+                                    <div style={{
+                                        position: 'absolute', left: '5px', top: '20px', bottom: '-20px', width: '1px',
+                                        backgroundColor: 'var(--border-default)',
+                                    }} />
                                 )}
-                                <div className="flex gap-3">
-                                    <div className={`mt-1 w-3 h-3 rounded-full flex-shrink-0 border-2 ${version.label === "Current" ? "bg-violet-500 border-violet-500" : "bg-white border-gray-300"}`} />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className={`text-xs font-semibold ${version.label === "Current" ? "text-violet-600" : "text-gray-500"}`}>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    {/* Timeline dot */}
+                                    <div style={{
+                                        marginTop: '3px', width: '11px', height: '11px', borderRadius: '50%', flexShrink: 0,
+                                        backgroundColor: isCurrent ? 'var(--accent)' : 'var(--bg-surface)',
+                                        border: `2px solid ${isCurrent ? 'var(--accent)' : 'var(--border-default)'}`,
+                                    }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        {/* Label + timestamp */}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                                            <span style={{
+                                                fontSize: '11px', fontWeight: 600, fontFamily: FONT,
+                                                color: isCurrent ? 'var(--accent)' : 'var(--text-muted)',
+                                            }}>
                                                 {version.label}
                                             </span>
                                             {version.editedAt && (
-                                                <span className="text-xs text-gray-400 flex items-center gap-1">
-                                                    <Clock size={11} />
-                                                    {fmtDate(version.editedAt)}
+                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px', fontFamily: FONT }}>
+                                                    <Clock size={10} /> {fmtDate(version.editedAt)}
                                                 </span>
                                             )}
                                         </div>
-                                        {/* Diff view or plain text */}
-                                        {diff ? (
-                                            <p className="text-sm leading-relaxed text-gray-700 bg-gray-50 rounded-lg px-3 py-2 break-words">
-                                                {diff.map((token, ti) => (
-                                                    <span
-                                                        key={ti}
-                                                        className={
-                                                            token.type === "add"
-                                                                ? "bg-green-100 text-green-800 rounded px-0.5 mx-0.5"
-                                                                : token.type === "remove"
-                                                                    ? "bg-red-100 text-red-700 line-through rounded px-0.5 mx-0.5"
-                                                                    : "mx-0.5"
-                                                        }
-                                                    >
-                                                        {token.word}{" "}
-                                                    </span>
-                                                ))}
-                                            </p>
-                                        ) : (
-                                            <p className="text-sm leading-relaxed text-gray-700 bg-gray-50 rounded-lg px-3 py-2 break-words">
-                                                {version.text}
-                                            </p>
-                                        )}
+                                        {/* Content */}
+                                        <div style={{
+                                            fontSize: '13px', lineHeight: 1.6, color: 'var(--text-secondary)',
+                                            backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-subtle)',
+                                            borderRadius: '2px', padding: '8px 12px', wordBreak: 'break-words',
+                                            fontFamily: FONT,
+                                        }}>
+                                            {diff ? (
+                                                <span>
+                                                    {diff.map((token, ti) => (
+                                                        <span
+                                                            key={ti}
+                                                            style={{
+                                                                margin: '0 1px',
+                                                                ...(token.type === 'add' ? {
+                                                                    backgroundColor: 'rgba(90,186,138,0.15)',
+                                                                    color: 'var(--state-success)',
+                                                                    padding: '0 2px', borderRadius: '2px',
+                                                                } : token.type === 'remove' ? {
+                                                                    backgroundColor: 'rgba(255,80,80,0.12)',
+                                                                    color: 'var(--state-danger)',
+                                                                    textDecoration: 'line-through',
+                                                                    padding: '0 2px', borderRadius: '2px',
+                                                                } : {}),
+                                                            }}
+                                                        >
+                                                            {token.word}{" "}
+                                                        </span>
+                                                    ))}
+                                                </span>
+                                            ) : (
+                                                version.text
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -155,5 +196,20 @@ export default function EditHistoryModal({ message, onClose }) {
                 </div>
             </div>
         </div>
+    );
+}
+
+function CloseBtn({ onClick }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '5px', border: 'none', outline: 'none', background: 'none',
+                cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms',
+                color: hov ? 'var(--state-danger)' : 'var(--text-muted)',
+            }}>
+            <X size={16} />
+        </button>
     );
 }

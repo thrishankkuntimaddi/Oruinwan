@@ -1,74 +1,60 @@
+// Step4DocumentsForm.jsx — Monolith Flow Design System
 import React from 'react';
-import { FileText, UploadCloud } from 'lucide-react';
+import { FileText, UploadCloud, AlertCircle } from 'lucide-react';
 
-/**
- * Step4DocumentsForm Component
- * File upload for verification documents
- */
-const Step4DocumentsForm = ({
-    formData,
-    onFileChange,
-    errors,
-    theme
-}) => {
-    return (
-        <div className="max-w-2xl mx-auto space-y-8 animate-fadeIn">
-            <div className="text-center mb-6">
-                <p className={`${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-                    Please upload verification documents for your entity.
-                </p>
-            </div>
+// Ignore legacy theme prop
+const Step4DocumentsForm = ({ formData, onFileChange, errors, theme }) => (
+    <div style={{ maxWidth: '560px', margin: '0 auto' }}>
+        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', textAlign: 'center', marginBottom: '32px' }}>
+            Please upload verification documents for your entity.
+        </p>
 
-            <div className="space-y-6">
-                <div
-                    className={`border-3 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center transition-all ${theme === 'dark'
-                            ? formData.documents
-                                ? "border-indigo-400 bg-indigo-900/20"
-                                : "border-gray-600 text-gray-400 hover:border-indigo-400 hover:bg-slate-800"
-                            : formData.documents
-                                ? "border-indigo-400 bg-indigo-50/50"
-                                : "border-gray-300 text-gray-500 hover:border-indigo-400 hover:bg-white"
-                        } ${theme === 'dark' ? 'bg-slate-800/50' : 'bg-white/50'}`}
-                >
-                    <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-4 transition-transform shadow-sm ${formData.documents
-                            ? theme === 'dark' ? "bg-slate-700 text-indigo-400" : "bg-white text-indigo-600"
-                            : theme === 'dark' ? "bg-gray-800 text-gray-400" : "bg-gray-100 text-gray-400"
-                        }`}>
-                        {formData.documents ? <FileText size={32} /> : <UploadCloud size={32} />}
-                    </div>
+        <label style={{ display: 'block', cursor: 'pointer' }}>
+            <input type="file" style={{ display: 'none' }} onChange={onFileChange} />
+            <div style={{
+                border: `2px dashed ${formData.documents ? '#5aba8a' : errors.documents ? '#e05252' : 'rgba(255,255,255,0.1)'}`,
+                padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: '12px', textAlign: 'center', transition: 'all 200ms ease',
+                background: formData.documents ? 'rgba(90,186,138,0.04)' : 'rgba(255,255,255,0.02)',
+            }}
+                onMouseEnter={e => !formData.documents && (e.currentTarget.style.borderColor = 'rgba(184,149,106,0.4)')}
+                onMouseLeave={e => !formData.documents && (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)')}>
 
-                    {formData.documents ? (
-                        <div className="animate-fadeIn">
-                            <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} text-lg mb-1`}>
-                                {formData.documents.name}
-                            </p>
-                            <p className={`text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'} mb-4`}>
-                                {(formData.documents.size / 1024 / 1024).toFixed(2)} MB
-                            </p>
-                            <label className={`cursor-pointer ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} font-bold hover:underline`}>
-                                Change File
-                                <input type="file" className="hidden" onChange={onFileChange} />
-                            </label>
-                        </div>
-                    ) : (
-                        <div>
-                            <p className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'} text-lg mb-2`}>
-                                Drag & Drop or Click to Upload
-                            </p>
-                            <p className={`text-sm ${theme === 'dark' ? 'text-gray-500' : 'text-gray-400'} mb-6`}>
-                                Business Registration, Tax ID, or Incorporation Cert.
-                            </p>
-                            <label className={`cursor-pointer px-6 py-3 ${theme === 'dark' ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-gray-900 hover:bg-black'} text-white rounded-xl font-bold shadow-lg transition-all`}>
-                                Browse Files
-                                <input type="file" className="hidden" onChange={onFileChange} />
-                            </label>
-                        </div>
-                    )}
+                <div style={{ width: '52px', height: '52px', background: formData.documents ? 'rgba(90,186,138,0.1)' : 'rgba(255,255,255,0.05)', border: `1px solid ${formData.documents ? 'rgba(90,186,138,0.25)' : 'rgba(255,255,255,0.08)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {formData.documents
+                        ? <FileText size={24} style={{ color: '#5aba8a' }} />
+                        : <UploadCloud size={24} style={{ color: 'rgba(228,228,228,0.3)' }} />
+                    }
                 </div>
-                {errors.documents && <p className="text-red-500 text-center text-sm font-bold">{errors.documents}</p>}
+
+                {formData.documents ? (
+                    <>
+                        <p style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4' }}>{formData.documents.name}</p>
+                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.35)' }}>
+                            {(formData.documents.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                        <span style={{ fontSize: '12px', color: '#b8956a', fontWeight: 600, textDecoration: 'underline' }}>Change File</span>
+                    </>
+                ) : (
+                    <>
+                        <p style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4' }}>Drag & Drop or click to upload</p>
+                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.35)', lineHeight: '1.6' }}>
+                            Business Registration, Tax ID, or Incorporation Certificate
+                        </p>
+                        <div style={{ padding: '8px 20px', background: '#b8956a', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, marginTop: '4px' }}>
+                            Browse Files
+                        </div>
+                    </>
+                )}
             </div>
-        </div>
-    );
-};
+        </label>
+
+        {errors.documents && (
+            <p style={{ fontSize: '11px', color: '#e05252', marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <AlertCircle size={11} />{errors.documents}
+            </p>
+        )}
+    </div>
+);
 
 export default Step4DocumentsForm;

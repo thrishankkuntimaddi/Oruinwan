@@ -1,101 +1,117 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Briefcase, Code, Terminal, Lock, Heart, Mail } from 'lucide-react';
+// Careers.jsx — Monolith Flow Design System
+import React, { useState } from 'react';
+import PublicPageShell from '../components/layout/PublicPageShell';
+import { Briefcase, MapPin, Clock, ArrowRight, Sparkles, Users, Globe, ChevronDown, ChevronUp } from 'lucide-react';
 
-const Careers = () => {
-    const navigate = useNavigate();
+const PERKS = [
+    { icon: Globe,    title: 'Remote First',        desc: 'Work from anywhere. We have teammates across time zones and async is a first-class citizen.' },
+    { icon: Sparkles, title: 'Use What You Build',  desc: 'All tools, expenses, and subscriptions are provided. You use Chttrix every day — so do we.' },
+    { icon: Users,    title: 'Small, High-trust Team', desc: 'No bureaucracy. You\'ll have real ownership and direct impact from day one.' },
+    { icon: Briefcase, title: 'Equity & Benefits',  desc: 'Competitive salary, meaningful equity, and health coverage for full-time roles.' },
+];
+
+const ROLES = [
+    { id: 1, dept: 'Engineering', title: 'Senior Full-Stack Engineer', type: 'Full-time', location: 'Remote', desc: 'Build and scale core Chttrix platform features. You\'ll own entire product verticals. Strong expertise in React, Node.js, and real-time systems preferred.' },
+    { id: 2, dept: 'AI / ML',     title: 'AI Product Engineer',        type: 'Full-time', location: 'Remote', desc: 'Develop and integrate Chttrix Intelligence — workspace-aware AI that reads context, generates tasks, and surfaces answers. LLM API experience required.' },
+    { id: 3, dept: 'Design',      title: 'Product Designer',           type: 'Full-time', location: 'Remote', desc: 'Own the design system and product UX end-to-end. You care deeply about the space between pixels as much as business outcomes.' },
+    { id: 4, dept: 'Growth',      title: 'Head of Growth',             type: 'Full-time', location: 'Remote', desc: 'Lead product-led growth strategy, onboarding optimization, and enterprise funnel development. Data-driven and builder mindset required.' },
+];
+
+const DEPT_COLORS = { Engineering: '#6ea8fe', 'AI / ML': '#b8956a', Design: '#a78bfa', Growth: '#34d399' };
+
+export default function Careers() {
+    const [open, setOpen] = useState(null);
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
-            {/* Navbar */}
-            <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5">
-                <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-                        <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md" />
-                        <span className="font-black text-2xl tracking-tighter">Chttrix</span>
-                    </div>
-                    <button onClick={() => navigate("/")} className="text-sm font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-white transition-colors flex items-center gap-2">
-                        <ArrowLeft size={16} /> Back to Home
-                    </button>
-                </div>
-            </nav>
-
+        <PublicPageShell title="Careers">
             {/* Hero */}
-            <header className="pt-40 pb-20 container mx-auto px-6 text-center max-w-4xl">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 dark:bg-purple-900/20 border border-purple-100 dark:border-purple-500/20 rounded-full text-purple-600 dark:text-purple-400 font-bold mb-8">
-                    <Briefcase size={16} />
-                    We're Building
-                </div>
-                <h1 className="text-5xl md:text-7xl font-black mb-8 tracking-tight">
-                    Careers at Chttrix
-                </h1>
-                <p className="text-xl text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed">
-                    Chttrix is built by a small team focused on security, product quality, and user trust.
-                </p>
-            </header>
-
-            {/* Values */}
-            <section className="py-20 bg-white dark:bg-[#0B0F19] border-y border-slate-200 dark:border-white/5">
-                <div className="container mx-auto px-6 max-w-6xl">
-                    <h2 className="text-3xl font-black text-center mb-16">What We Care About</h2>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-                        <ValueCard icon={<Lock className="text-emerald-500" />} title="Privacy-First" desc="Engineering with security as a constraint, not an afterthought." />
-                        <ValueCard icon={<Terminal className="text-blue-500" />} title="Clean Systems" desc="Maintainable, robust, and scalable codebases." />
-                        <ValueCard icon={<Heart className="text-red-500" />} title="Product Design" desc="Thoughtful user experiences that respect attention." />
-                        <ValueCard icon={<Code className="text-purple-500" />} title="Long-Term" desc="Building for the next decade, not the next quarter." />
+            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '80px 0 64px' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
+                        <Briefcase size={11} style={{ color: '#b8956a' }} />
+                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>We're Hiring</span>
                     </div>
-                </div>
-            </section>
-
-            {/* Open Roles */}
-            <section className="py-24 container mx-auto px-6 max-w-4xl">
-                <div className="text-center mb-16">
-                    <h2 className="text-4xl font-black mb-6">Open Roles</h2>
-                    <p className="text-lg text-slate-500 dark:text-slate-400">
-                        We don't hire aggressively. When we do, we look for people who value responsibility as much as innovation.
+                    <h1 style={{ fontSize: 'clamp(30px,5vw,54px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '18px', maxWidth: '680px' }}>
+                        Help us build the future<br />of work.
+                    </h1>
+                    <p style={{ fontSize: '16px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.8', maxWidth: '520px', marginBottom: '32px' }}>
+                        We're a small, high-trust team building something ambitious. Every person here has a meaningful impact on the product and the company.
                     </p>
-                </div>
-
-                <div className="bg-slate-100 dark:bg-[#111827] rounded-3xl p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800">
-                    <h3 className="text-2xl font-bold mb-4">No Open Positions Currently</h3>
-                    <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-lg mx-auto">
-                        We don't have open positions at the moment. As Chttrix grows, we may open roles in:
-                    </p>
-                    <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto mb-10">
-                        {['Backend & Systems Engineering', 'Security & Cryptography', 'Frontend & Product Engineering', 'Design & DX'].map(role => (
-                            <div key={role} className="p-4 bg-white dark:bg-black/20 rounded-xl font-medium text-slate-700 dark:text-slate-300 shadow-sm">
-                                {role}
+                    <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                        {[`${ROLES.length} open roles`, 'Remote worldwide', 'Equity included'].map(b => (
+                            <div key={b} style={{ display: 'flex', alignItems: 'center', gap: '7px', fontSize: '12px', color: 'rgba(228,228,228,0.4)', fontWeight: 600 }}>
+                                <span style={{ width: '5px', height: '5px', background: '#b8956a', display: 'inline-block' }} />
+                                {b}
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
 
-                    <div className="max-w-xl mx-auto bg-indigo-50 dark:bg-indigo-900/10 p-6 rounded-2xl">
-                        <p className="font-medium text-indigo-900 dark:text-indigo-200 mb-4">
-                            If you're interested in working with us in the future, reach out with a short introduction:
-                        </p>
-                        <a href="mailto:chttrixchat@gmail.com" className="inline-flex items-center gap-2 text-xl font-black text-indigo-600 dark:text-indigo-400 hover:underline">
-                            <Mail size={20} /> chttrixchat@gmail.com
-                        </a>
+            {/* Perks */}
+            <div style={{ padding: '64px 0', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '32px' }}>Why Chttrix</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                        {PERKS.map(p => {
+                            const Icon = p.icon;
+                            return (
+                                <div key={p.title} style={{ background: '#111', padding: '24px 20px' }}>
+                                    <Icon size={18} style={{ color: '#b8956a', marginBottom: '12px' }} />
+                                    <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', marginBottom: '7px' }}>{p.title}</h3>
+                                    <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.75' }}>{p.desc}</p>
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
-            </section>
+            </div>
 
-            {/* Footer */}
-            <footer className="py-12 border-t border-slate-200 dark:border-white/5 text-center text-slate-500 dark:text-slate-400">
-                <p>© 2026 Chttrix Inc.</p>
-            </footer>
-        </div>
+            {/* Open Roles */}
+            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '64px 24px' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Open Positions</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                    {ROLES.map(role => {
+                        const isOpen = open === role.id;
+                        const deptColor = DEPT_COLORS[role.dept] || '#b8956a';
+                        return (
+                            <div key={role.id} style={{ background: '#111' }}>
+                                <button onClick={() => setOpen(isOpen ? null : role.id)}
+                                    style={{ width: '100%', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                                        <span style={{ padding: '2px 8px', background: `${deptColor}12`, border: `1px solid ${deptColor}25`, fontSize: '10px', fontWeight: 700, color: deptColor, textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>{role.dept}</span>
+                                        <span style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4' }}>{role.title}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'rgba(228,228,228,0.35)' }}>
+                                            <Clock size={11} />{role.type}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: 'rgba(228,228,228,0.35)' }}>
+                                            <MapPin size={11} />{role.location}
+                                        </div>
+                                        {isOpen ? <ChevronUp size={14} style={{ color: 'rgba(228,228,228,0.4)' }} /> : <ChevronDown size={14} style={{ color: 'rgba(228,228,228,0.4)' }} />}
+                                    </div>
+                                </button>
+                                {isOpen && (
+                                    <div style={{ padding: '0 24px 24px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.8', marginTop: '16px', marginBottom: '20px' }}>{role.desc}</p>
+                                        <a href={`mailto:careers@chttrix.io?subject=Application: ${role.title}`}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 20px', background: '#b8956a', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, textDecoration: 'none', transition: 'opacity 150ms ease' }}
+                                            onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
+                                            onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                                            Apply via Email <ArrowRight size={13} />
+                                        </a>
+                                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '10px' }}>Send your CV and a short message about why you're excited about Chttrix.</p>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.3)', marginTop: '28px' }}>
+                    Don't see your role? Email <a href="mailto:careers@chttrix.io" style={{ color: '#b8956a', textDecoration: 'none' }}>careers@chttrix.io</a> — we always read speculative applications.
+                </p>
+            </div>
+        </PublicPageShell>
     );
-};
-
-const ValueCard = ({ icon, title, desc }) => (
-    <div className="p-6 bg-slate-50 dark:bg-white/5 rounded-3xl hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
-        <div className="w-12 h-12 bg-white dark:bg-[#030712] rounded-2xl flex items-center justify-center shadow-sm mb-4">
-            {React.cloneElement(icon, { size: 24 })}
-        </div>
-        <h3 className="text-lg font-bold mb-2">{title}</h3>
-        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{desc}</p>
-    </div>
-);
-
-export default Careers;
+}

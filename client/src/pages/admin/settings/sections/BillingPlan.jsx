@@ -1,20 +1,17 @@
 import React from 'react';
 import { CreditCard } from 'lucide-react';
 
-const BillingPlan = () => {
-    return (
-        <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">Billing & Plan</h2>
-                <p className="text-gray-500 dark:text-gray-400">Manage subscription and payment</p>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-                <CreditCard className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 dark:text-gray-400">Billing management coming soon</p>
-            </div>
+const BillingPlan = () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+        <div>
+            <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '4px' }}>Billing & Plan</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Manage subscription and payment</p>
         </div>
-    );
-};
+        <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '48px 24px', textAlign: 'center' }}>
+            <CreditCard size={36} style={{ color: 'var(--text-muted)', opacity: 0.4, margin: '0 auto 12px' }} />
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Billing management coming soon</p>
+        </div>
+    </div>
+);
 
 export default BillingPlan;

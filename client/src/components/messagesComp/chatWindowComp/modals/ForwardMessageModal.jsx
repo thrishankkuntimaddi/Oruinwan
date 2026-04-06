@@ -4,20 +4,19 @@ import { useContacts } from "../../../../contexts/ContactsContext";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import api from '@services/api';
 
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+
 export default function ForwardMessageModal({ onClose, onForward, currentChatId, currentChatType }) {
     const { channels } = useContacts();
     const { activeWorkspace } = useWorkspace();
-    const [activeTab, setActiveTab] = useState('channels'); // 'channels' or 'dms'
-    const [search, setSearch] = useState("");
-    const [selectedItems, setSelectedItems] = useState(new Set()); // Multiple selection
+    const [activeTab,        setActiveTab]        = useState('channels');
+    const [search,           setSearch]           = useState("");
+    const [selectedItems,    setSelectedItems]    = useState(new Set());
     const [workspaceMembers, setWorkspaceMembers] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading,          setLoading]          = useState(false);
 
-    // Fetch workspace members when DM tab is active
     useEffect(() => {
-        if (activeTab === 'dms' && activeWorkspace) {
-            loadWorkspaceMembers();
-        }
+        if (activeTab === 'dms' && activeWorkspace) loadWorkspaceMembers();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeTab, activeWorkspace]);
 
@@ -33,225 +32,274 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
         }
     };
 
-    // Filter out current channel/DM from the list
     const filteredChannels = channels
         .filter(ch => ch.id !== currentChatId)
         .filter(ch => ch.label.toLowerCase().includes(search.toLowerCase()));
 
-    // For DMs tab: show workspace members (not just existing DM sessions)
     const filteredDMs = workspaceMembers
         .filter(member => member.username.toLowerCase().includes(search.toLowerCase()));
-
 
     const toggleSelection = (item) => {
         const newSelection = new Set(selectedItems);
         const itemId = activeTab === 'channels' ? item.id : item._id;
-
-        if (newSelection.has(itemId)) {
-            newSelection.delete(itemId);
-        } else {
-            newSelection.add(itemId);
-        }
+        if (newSelection.has(itemId)) newSelection.delete(itemId);
+        else newSelection.add(itemId);
         setSelectedItems(newSelection);
     };
 
     const handleForward = () => {
         if (selectedItems.size === 0) return;
-
         const targets = [];
-
         if (activeTab === 'channels') {
-            // Convert selected channel IDs to target objects
             selectedItems.forEach(id => {
                 const channel = channels.find(ch => ch.id === id);
-                if (channel) {
-                    targets.push({
-                        type: 'channel',
-                        id: channel.id,
-                        label: channel.label
-                    });
-                }
+                if (channel) targets.push({ type: 'channel', id: channel.id, label: channel.label });
             });
         } else {
-            // Convert selected member IDs to DM targets
             selectedItems.forEach(id => {
                 const member = workspaceMembers.find(m => m._id === id);
-                if (member) {
-                    targets.push({
-                        type: 'dm',
-                        id: member._id, // User ID for new DM
-                        label: member.username,
-                        isNewDM: true // Flag to indicate this is a user ID, not DM session ID
-                    });
-                }
+                if (member) targets.push({ type: 'dm', id: member._id, label: member.username, isNewDM: true });
             });
         }
-
-        // Pass all selected targets to parent handler
         onForward(targets);
     };
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-fade-in">
-            <div className="bg-white dark:bg-slate-800 w-96 rounded-xl shadow-2xl flex flex-col max-h-[80vh] border border-gray-100 dark:border-gray-700">
-
+        <div style={{
+            position: 'absolute', inset: 0, zIndex: 50,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)',
+            fontFamily: FONT,
+            animation: 'fadeIn 180ms ease',
+        }}>
+            <div style={{
+                width: '380px', maxHeight: '80vh',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-accent)',
+                borderRadius: '4px',
+                boxShadow: '0 24px 64px rgba(0,0,0,0.5)',
+                display: 'flex', flexDirection: 'column',
+                overflow: 'hidden',
+            }}>
                 {/* Header */}
-                <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                    <h3 className="font-bold text-gray-800 dark:text-white">Forward message to...</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
-                        <X size={20} />
-                    </button>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <h3 style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', fontFamily: FONT }}>
+                        Forward message to…
+                    </h3>
+                    <CloseBtn onClick={onClose} />
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-200 dark:border-gray-700">
-                    <button
-                        onClick={() => setActiveTab('channels')}
-                        className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'channels'
-                            ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
-                            }`}
-                    >
-                        <div className="flex items-center justify-center gap-2">
-                            <Hash size={16} />
-                            Channels
-                        </div>
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('dms')}
-                        className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'dms'
-                            ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50'
-                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-700'
-                            }`}
-                    >
-                        <div className="flex items-center justify-center gap-2">
-                            <User size={16} />
-                            Direct Messages
-                        </div>
-                    </button>
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
+                    <TabBtn active={activeTab === 'channels'} onClick={() => setActiveTab('channels')}>
+                        <Hash size={13} /> Channels
+                    </TabBtn>
+                    <TabBtn active={activeTab === 'dms'} onClick={() => setActiveTab('dms')}>
+                        <User size={13} /> Direct Messages
+                    </TabBtn>
                 </div>
 
                 {/* Search */}
-                <div className="p-3 border-b border-gray-100 dark:border-gray-700">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                    <div style={{ position: 'relative' }}>
+                        <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                         <input
                             type="text"
-                            placeholder={activeTab === 'channels' ? "Search channels..." : "Search people..."}
-                            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-900 dark:text-white"
+                            placeholder={activeTab === 'channels' ? "Search channels…" : "Search people…"}
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             autoFocus
+                            style={{
+                                width: '100%', padding: '7px 10px 7px 32px',
+                                backgroundColor: 'var(--bg-active)',
+                                border: '1px solid var(--border-default)',
+                                borderRadius: '2px', outline: 'none',
+                                color: 'var(--text-primary)', fontSize: '13px',
+                                fontFamily: FONT, boxSizing: 'border-box',
+                                transition: 'border-color 100ms ease',
+                            }}
+                            onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                            onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                         />
                     </div>
                 </div>
 
                 {/* List */}
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[200px]">
+                <div style={{ flex: 1, overflowY: 'auto', padding: '6px', minHeight: '200px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     {loading ? (
-                        <div className="text-center py-8 text-gray-400 text-sm">
-                            Loading...
-                        </div>
+                        <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontSize: '12px', fontFamily: FONT }}>Loading…</div>
                     ) : activeTab === 'channels' ? (
-                        // Channels list
                         filteredChannels.length > 0 ? (
                             filteredChannels.map(channel => {
                                 const isSelected = selectedItems.has(channel.id);
                                 return (
-                                    <button
+                                    <ListItem
                                         key={channel.id}
+                                        isSelected={isSelected}
                                         onClick={() => toggleSelection(channel)}
-                                        className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${isSelected
-                                            ? "bg-blue-50 border border-blue-200"
-                                            : "hover:bg-gray-50 dark:hover:bg-slate-700/50 border border-transparent"
-                                            }`}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => { }}
-                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                        />
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs bg-gray-700">
-                                            <Hash size={14} />
-                                        </div>
-                                        <div className="text-left flex-1">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{channel.label}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">Channel</div>
-                                        </div>
-                                    </button>
+                                        avatar={
+                                            <div style={{ width: '30px', height: '30px', borderRadius: '2px', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexShrink: 0 }}>
+                                                <Hash size={13} />
+                                            </div>
+                                        }
+                                        primary={channel.label}
+                                        secondary="Channel"
+                                    />
                                 );
                             })
                         ) : (
-                            <div className="text-center py-8 text-gray-400 text-sm">
-                                No channels found
-                            </div>
+                            <EmptyState>No channels found</EmptyState>
                         )
                     ) : (
-                        // DMs list (workspace members)
                         filteredDMs.length > 0 ? (
                             filteredDMs.map(member => {
                                 const isSelected = selectedItems.has(member._id);
                                 return (
-                                    <button
+                                    <ListItem
                                         key={member._id}
+                                        isSelected={isSelected}
                                         onClick={() => toggleSelection(member)}
-                                        className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${isSelected
-                                            ? "bg-blue-50 border border-blue-200"
-                                            : "hover:bg-gray-50 border border-transparent"
-                                            }`}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => { }}
-                                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                        />
-                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs bg-blue-500">
-                                            {member.profilePicture ? (
-                                                <img src={member.profilePicture} alt={member.username} className="w-full h-full rounded-full object-cover" />
-                                            ) : (
-                                                <User size={14} />
-                                            )}
-                                        </div>
-                                        <div className="text-left flex-1">
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{member.username}</div>
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">{member.email}</div>
-                                        </div>
-                                    </button>
+                                        avatar={
+                                            <div style={{ width: '30px', height: '30px', borderRadius: '50%', backgroundColor: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                                                {member.profilePicture ? (
+                                                    <img src={member.profilePicture} alt={member.username} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#0c0c0c' }}>
+                                                        {(member.username || 'U')[0].toUpperCase()}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        }
+                                        primary={member.username}
+                                        secondary={member.email}
+                                    />
                                 );
                             })
                         ) : (
-                            <div className="text-center py-8 text-gray-400 text-sm">
-                                {loading ? "Loading..." : "No members found"}
-                            </div>
+                            <EmptyState>{loading ? "Loading…" : "No members found"}</EmptyState>
                         )
                     )}
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>
                         {selectedItems.size > 0 && `${selectedItems.size} selected`}
-                    </div>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={handleForward}
-                            disabled={selectedItems.size === 0}
-                            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        >
-                            Forward to {selectedItems.size || '...'}
-                        </button>
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                        <CancelBtn onClick={onClose}>Cancel</CancelBtn>
+                        <ForwardBtn onClick={handleForward} disabled={selectedItems.size === 0}>
+                            Forward to {selectedItems.size || '…'}
+                        </ForwardBtn>
                     </div>
                 </div>
-
             </div>
         </div>
+    );
+}
+
+function CloseBtn({ onClick }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: '5px', border: 'none', outline: 'none', background: 'none', cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms', color: hov ? 'var(--state-danger)' : 'var(--text-muted)' }}>
+            <X size={16} />
+        </button>
+    );
+}
+
+function TabBtn({ active, onClick, children }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                flex: 1, padding: '10px 0', fontSize: '12px', fontWeight: 500,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                color: active ? 'var(--accent)' : (hov ? 'var(--text-secondary)' : 'var(--text-muted)'),
+                backgroundColor: 'transparent',
+                border: 'none', outline: 'none', cursor: 'pointer',
+                borderBottom: active ? '2px solid var(--accent)' : '2px solid transparent',
+                transition: '100ms ease', fontFamily: 'Inter, system-ui, sans-serif',
+            }}>
+            {children}
+        </button>
+    );
+}
+
+function ListItem({ isSelected, onClick, avatar, primary, secondary }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '7px 8px', border: 'none', outline: 'none', cursor: 'pointer',
+                borderRadius: '2px', textAlign: 'left',
+                backgroundColor: isSelected ? 'rgba(184,149,106,0.10)' : (hov ? 'var(--bg-hover)' : 'transparent'),
+                borderLeft: isSelected ? '2px solid var(--accent)' : '2px solid transparent',
+                transition: '80ms ease',
+            }}>
+            {/* Checkbox */}
+            <div style={{
+                width: '14px', height: '14px', borderRadius: '2px', flexShrink: 0,
+                border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border-default)'}`,
+                backgroundColor: isSelected ? 'var(--accent)' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: '100ms',
+            }}>
+                {isSelected && <span style={{ color: '#0c0c0c', fontSize: '9px', fontWeight: 700 }}>✓</span>}
+            </div>
+            {avatar}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{primary}</div>
+                {secondary && <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{secondary}</div>}
+            </div>
+        </button>
+    );
+}
+
+function EmptyState({ children }) {
+    return (
+        <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            {children}
+        </div>
+    );
+}
+
+function CancelBtn({ onClick, children }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '7px 16px', fontSize: '12px', fontWeight: 500,
+                color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                backgroundColor: hov ? 'var(--bg-hover)' : 'transparent',
+                border: '1px solid var(--border-default)', borderRadius: '2px',
+                cursor: 'pointer', outline: 'none', transition: '100ms', fontFamily: 'Inter, system-ui, sans-serif',
+            }}>
+            {children}
+        </button>
+    );
+}
+
+function ForwardBtn({ onClick, disabled, children }) {
+    const [hov, setHov] = useState(false);
+    return (
+        <button onClick={onClick} disabled={disabled}
+            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '7px 16px', fontSize: '12px', fontWeight: 600,
+                color: disabled ? 'var(--text-muted)' : '#0c0c0c',
+                backgroundColor: disabled ? 'var(--bg-active)' : (hov ? 'var(--accent-hover)' : 'var(--accent)'),
+                border: `1px solid ${disabled ? 'var(--border-default)' : 'var(--accent)'}`,
+                borderRadius: '2px', cursor: disabled ? 'not-allowed' : 'pointer',
+                outline: 'none', transition: '100ms', opacity: disabled ? 0.5 : 1,
+                fontFamily: 'Inter, system-ui, sans-serif',
+            }}>
+            {children}
+        </button>
     );
 }

@@ -1,14 +1,12 @@
 /**
- * VoiceMessage.jsx — Phase 7.1 Attachments (also used in Phase 7.2 voice notes)
- * Renders a play/pause audio player with elapsed-time display.
+ * VoiceMessage.jsx — Phase 7.1 / 7.2
+ * Audio player: play/pause + scrub bar + timestamps.
  */
 import React, { useRef, useState, useEffect } from "react";
 import { Play, Pause, Mic } from "lucide-react";
 import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
 function formatDuration(seconds) {
-    // WebM/Opus files from MediaRecorder often report Infinity until fully buffered.
-    // Fall back to dashes rather than showing "Infinity:NaN".
     if (!seconds || !isFinite(seconds) || isNaN(seconds)) return '--:--';
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = Math.floor(seconds % 60).toString().padStart(2, '0');
@@ -20,28 +18,22 @@ export default function VoiceMessage({ msg }) {
     const { sizeFormatted, duration: storedDuration } = attachment;
     const proxyUrl = toProxyUrl(attachment);
     const audioRef = useRef(null);
-    const [playing, setPlaying] = useState(false);
-    const [current, setCurrent] = useState(0);
-    // Phase 7.2: seed total from attachment.duration (set by recorder) so it shows before loadedmetadata
+    const [playing, setPlaying]   = useState(false);
+    const [current, setCurrent]   = useState(0);
     const [duration, setDuration] = useState(storedDuration || 0);
     const [progress, setProgress] = useState(0);
-
 
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
         const onMeta = () => {
-            // audio.duration is Infinity for WebM streams without duration metadata.
-            // Fall back to storedDuration (recorded by VoiceRecorder) in that case.
             const d = audio.duration;
             setDuration(isFinite(d) && d > 0 ? d : storedDuration || 0);
         };
         const onTime = () => {
             setCurrent(audio.currentTime);
-            // Use finite duration; fall back to storedDuration for WebM streams
             const totalDur = isFinite(audio.duration) && audio.duration > 0
-                ? audio.duration
-                : storedDuration || 0;
+                ? audio.duration : storedDuration || 0;
             setProgress(totalDur ? (audio.currentTime / totalDur) * 100 : 0);
         };
         const onEnd = () => { setPlaying(false); setCurrent(0); setProgress(0); };
@@ -73,41 +65,52 @@ export default function VoiceMessage({ msg }) {
     };
 
     return (
-        <div className="mt-1 flex items-center gap-3 px-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl max-w-xs">
+        <div style={{
+            marginTop: '6px', display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '8px 12px',
+            backgroundColor: 'var(--bg-active)',
+            border: '1px solid var(--border-default)',
+            borderRadius: '2px',
+            maxWidth: '260px',
+        }}>
             <audio ref={audioRef} src={proxyUrl} preload="metadata" />
 
             {/* Play/Pause */}
             <button
                 onClick={toggle}
-                className="flex-shrink-0 w-9 h-9 rounded-full bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-colors"
+                style={{
+                    flexShrink: 0, width: '32px', height: '32px', borderRadius: '50%',
+                    backgroundColor: playing ? 'var(--accent-hover)' : 'var(--accent)',
+                    border: 'none', outline: 'none', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: '100ms ease',
+                }}
             >
-                {playing ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
+                {playing
+                    ? <Pause size={13} style={{ color: '#0c0c0c' }} />
+                    : <Play  size={13} style={{ color: '#0c0c0c', marginLeft: '1px' }} />
+                }
             </button>
 
-            {/* Waveform / Progress */}
-            <div className="flex-1 min-w-0">
+            {/* Scrub bar + times */}
+            <div style={{ flex: 1, minWidth: 0 }}>
                 <div
-                    className="h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full cursor-pointer relative overflow-hidden"
+                    style={{ height: '3px', backgroundColor: 'var(--border-accent)', borderRadius: '99px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
                     onClick={seek}
                 >
                     <div
-                        className="absolute inset-y-0 left-0 bg-blue-500 rounded-full transition-all"
-                        style={{ width: `${progress}%` }}
+                        style={{ position: 'absolute', inset: '0 auto 0 0', backgroundColor: 'var(--accent)', borderRadius: '99px', width: `${progress}%`, transition: 'width 100ms linear' }}
                     />
                 </div>
-                <div className="flex items-center justify-between mt-1">
-                    <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono">
-                        {formatDuration(current)}
-                    </span>
-                    <span className="text-[10px] text-gray-400 dark:text-gray-500 font-mono">
-                        {duration ? formatDuration(duration) : '—'}
-                    </span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{formatDuration(current)}</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)',     fontFamily: 'monospace' }}>{duration ? formatDuration(duration) : '—'}</span>
                 </div>
             </div>
 
-            {/* Mic icon badge */}
-            <div className="flex-shrink-0 text-gray-400 dark:text-gray-500">
-                <Mic size={14} />
+            {/* Mic badge */}
+            <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
+                <Mic size={13} />
             </div>
         </div>
     );

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Copy, Check, ChevronDown, Terminal } from 'lucide-react';
+import { Trash2, Copy, Check, ChevronDown } from 'lucide-react';
 
 const LANGUAGES = [
     'javascript', 'typescript', 'python', 'bash', 'json',
@@ -31,39 +31,40 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-4">
-            <div className="rounded-xl overflow-hidden shadow-lg border border-gray-800/80">
-                {/* MacOS-style header bar */}
-                <div className="flex items-center justify-between px-4 py-2.5 bg-[#1e1e2e]">
-                    {/* Traffic lights */}
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-[6px]">
-                            <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-                            <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
-                            <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+            <div style={{ border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+                {/* Header bar */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: '#161616', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {/* Traffic lights */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#ff5f57' }} />
+                            <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#febc2e' }} />
+                            <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#28c840' }} />
                         </div>
-                        <div className="h-3.5 w-px bg-gray-700" />
+                        <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.08)' }} />
                         {/* Language picker */}
-                        <div className="relative">
+                        <div style={{ position: 'relative' }}>
                             <button
                                 onClick={() => setShowLangPicker(v => !v)}
-                                className="flex items-center gap-1.5 text-xs font-mono font-medium text-gray-400 hover:text-gray-200 transition-colors group/lang"
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'monospace', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.5)'}
                             >
-                                <span
-                                    className="w-2 h-2 rounded-full flex-shrink-0"
-                                    style={{ backgroundColor: dotColor }}
-                                />
+                                <span style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: dotColor }} />
                                 {lang}
-                                <ChevronDown size={10} className={`transition-transform ${showLangPicker ? 'rotate-180' : ''}`} />
+                                <ChevronDown size={9} style={{ transition: 'transform 200ms ease', transform: showLangPicker ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                             </button>
                             {showLangPicker && (
-                                <div className="absolute left-0 top-full mt-2 bg-[#1a1a2e] border border-gray-700 rounded-xl shadow-2xl z-30 max-h-52 overflow-y-auto min-w-[140px] py-1">
+                                <div style={{ position: 'absolute', left: 0, top: '100%', marginTop: '6px', background: '#161616', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', zIndex: 30, maxHeight: '200px', overflowY: 'auto', minWidth: '140px', padding: '4px 0' }}>
                                     {LANGUAGES.map(l => (
                                         <button
                                             key={l}
                                             onClick={() => setLang(l)}
-                                            className={`w-full text-left px-3 py-1.5 text-xs font-mono flex items-center gap-2 hover:bg-gray-800 transition-colors ${l === lang ? 'text-blue-400' : 'text-gray-400'}`}
+                                            style={{ width: '100%', textAlign: 'left', padding: '6px 12px', fontSize: '11px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px', background: l === lang ? 'rgba(184,149,106,0.1)' : 'transparent', color: l === lang ? '#b8956a' : 'rgba(228,228,228,0.5)', border: 'none', cursor: 'pointer', transition: 'background 100ms ease' }}
+                                            onMouseEnter={e => { if (l !== lang) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                            onMouseLeave={e => { if (l !== lang) e.currentTarget.style.background = 'transparent'; }}
                                         >
-                                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: LANG_COLORS[l] || '#888' }} />
+                                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0, background: LANG_COLORS[l] || '#888' }} />
                                             {l}
                                         </button>
                                     ))}
@@ -73,37 +74,48 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
                             onClick={handleCopy}
-                            className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${copied
-                                    ? 'bg-emerald-900/50 text-emerald-400'
-                                    : 'text-gray-500 hover:text-gray-300 hover:bg-gray-800'
-                                }`}
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 500,
+                                padding: '4px 10px', background: copied ? 'rgba(52,211,153,0.1)' : 'transparent',
+                                color: copied ? '#34d399' : 'rgba(228,228,228,0.4)', border: `1px solid ${copied ? 'rgba(52,211,153,0.25)' : 'rgba(255,255,255,0.08)'}`,
+                                cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'monospace',
+                            }}
+                            onMouseEnter={e => { if (!copied) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; } }}
+                            onMouseLeave={e => { if (!copied) { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; } }}
                         >
-                            {copied ? <><Check size={12} />Copied</> : <><Copy size={12} />Copy</>}
+                            {copied ? <><Check size={11} />Copied</> : <><Copy size={11} />Copy</>}
                         </button>
                         <button
                             onClick={() => onRemoveBlock(block.id)}
-                            className="p-1.5 text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded-lg hover:bg-red-900/20"
+                            style={{ padding: '5px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                            className="group-hover:!opacity-100"
+                            onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
                         >
-                            <Trash2 size={13} />
+                            <Trash2 size={12} />
                         </button>
                     </div>
                 </div>
 
                 {/* Code area */}
-                <div className="relative bg-[#13131f]">
-                    {/* Line numbers visual stripe */}
-                    <div className="absolute left-0 top-0 bottom-0 w-10 bg-[#0f0f1a] border-r border-gray-800/50 pointer-events-none" />
+                <div style={{ position: 'relative', background: '#0e0e0e' }}>
+                    {/* Line number gutter stripe */}
+                    <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '40px', background: 'rgba(255,255,255,0.015)', borderRight: '1px solid rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
                     <textarea
                         value={block.content}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                         spellCheck={false}
                         placeholder={`// ${lang} code...`}
-                        className="w-full font-mono text-[13px] text-gray-200 bg-transparent p-4 pl-12 outline-none resize-none min-h-[110px] placeholder-gray-700 leading-[1.7] tracking-tight"
+                        style={{
+                            width: '100%', fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: '12.5px',
+                            color: '#e4e4e4', background: 'transparent', padding: '14px 14px 14px 54px',
+                            outline: 'none', resize: 'none', minHeight: '110px', lineHeight: 1.75,
+                            letterSpacing: '0.01em', boxSizing: 'border-box', tabSize: 2,
+                        }}
                         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
-                        style={{ tabSize: 2 }}
                     />
                 </div>
             </div>

@@ -1,30 +1,46 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 
-/**
- * HelpAcademyView Component
- * Academy guides and learning resources
- */
-const HelpAcademyView = ({ onBack }) => {
-    return (
-        <div className="w-80 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
-                <button onClick={onBack} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
-                    <ChevronLeft size={14} className="mr-1" /> Back
-                </button>
-                <span className="font-bold text-gray-900 dark:text-white text-sm">Academy</span>
-                <div className="w-8"></div>
-            </div>
-            <div className="p-4 overflow-y-auto space-y-2">
-                {["Getting Started", "Power User Tips", "Workspace Mgmt", "Integrations"].map((guide, i) => (
-                    <div key={i} className="p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors">
-                        <h3 className="font-bold text-sm text-gray-800 dark:text-gray-200">{guide}</h3>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Read guide →</p>
-                    </div>
-                ))}
-            </div>
-        </div>
-    );
+const panelStyle = {
+    width: '256px', background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden',
+    fontFamily: 'Inter, system-ui, sans-serif',
 };
+const headerStyle = {
+    padding: '12px 16px', display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)',
+    background: 'rgba(255,255,255,0.02)', flexShrink: 0,
+};
+const BackBtn = ({ onBack }) => (
+    <button onClick={onBack}
+        style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+        onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+    >
+        <ChevronLeft size={13} /> Back
+    </button>
+);
+
+const HelpAcademyView = ({ onBack }) => (
+    <div style={{ ...panelStyle, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={headerStyle}>
+            <BackBtn onBack={onBack} />
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Academy</span>
+            <div style={{ width: '40px' }} />
+        </div>
+        <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }} className="custom-scrollbar">
+            {['Getting Started', 'Power User Tips', 'Workspace Management', 'Integrations'].map((guide, i) => (
+                <button key={i}
+                    style={{ width: '100%', textAlign: 'left', padding: '10px 12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter,system-ui,sans-serif' }}
+                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
+                >
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#e4e4e4', marginBottom: '2px' }}>{guide}</div>
+                    <div style={{ fontSize: '11px', color: '#b8956a' }}>Read guide →</div>
+                </button>
+            ))}
+        </div>
+    </div>
+);
 
 export default HelpAcademyView;

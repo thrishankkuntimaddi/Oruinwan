@@ -127,7 +127,9 @@ const VideoBlock = ({
                                 />
                                 <label
                                     htmlFor={`video-upload-${block.id}`}
-                                    className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors text-center"
+                                    style={{ display: 'block', width: '100%', padding: '8px 20px', background: '#b8956a', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, textAlign: 'center', cursor: 'pointer', border: 'none', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                                 >
                                     Upload video file
                                 </label>

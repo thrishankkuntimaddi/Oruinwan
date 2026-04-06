@@ -11,19 +11,39 @@ export default function EmojiPicker({ onPick }) {
 
   return (
     <div
-      onClick={(e) => e.stopPropagation()}
-      className="bg-white border border-gray-100 rounded-2xl shadow-2xl w-80 flex flex-col z-50 animate-fade-in origin-bottom-right overflow-hidden"
+      onClick={e => e.stopPropagation()}
+      style={{
+        backgroundColor: 'var(--bg-surface)',
+        border: '1px solid var(--border-accent)',
+        borderRadius: '2px',
+        width: '280px',
+        display: 'flex',
+        flexDirection: 'column',
+        zIndex: 50,
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+        fontFamily: 'var(--font)',
+      }}
     >
-      <div className="px-4 py-3 border-b border-gray-50 bg-gray-50/50">
-        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pick an emoji</h3>
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)' }}>
+        <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.14em', margin: 0 }}>
+          Pick an emoji
+        </h3>
       </div>
 
-      <div className="p-2 grid grid-cols-8 gap-1 max-h-64 overflow-y-auto custom-scrollbar">
-        {EMOJIS.map((em) => (
+      <div style={{ padding: '6px', display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '2px', maxHeight: '200px', overflowY: 'auto' }} className="custom-scrollbar">
+        {EMOJIS.map(em => (
           <button
             key={em}
             onClick={() => onPick(em)}
-            className="w-8 h-8 flex items-center justify-center text-xl rounded-lg hover:bg-gray-100 hover:scale-110 transition-all cursor-pointer"
+            style={{
+              width: '30px', height: '30px', display: 'flex', alignItems: 'center',
+              justifyContent: 'center', fontSize: '16px', borderRadius: '2px',
+              background: 'none', border: 'none', cursor: 'pointer',
+              transition: '150ms ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             {em}
           </button>

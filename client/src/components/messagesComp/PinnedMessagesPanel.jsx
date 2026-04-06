@@ -2,8 +2,9 @@
 // Phase-8: Side drawer showing pinned messages for the current channel/DM
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
+import { Pin, X } from 'lucide-react';
 
-const API = import.meta.env.VITE_API_URL || '';
+const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
 export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUserId, onClose, onUnpin }) {
   const [messages, setMessages] = useState([]);
@@ -14,10 +15,6 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
     setLoading(true);
     setError(null);
     try {
-      const endpoint = channelId
-        ? `/api/v2/messages/channel/${channelId}?pinned=true`
-        : `/api/v2/messages/dm/${dmSessionId}?pinned=true`;
-
       // Fallback: fetch all messages and filter pinned client-side
       // since the backend filter is a query param convenience
       const res = await api.get(
@@ -46,50 +43,91 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed', right: 0, top: 0, bottom: 0, width: 340,
-        background: 'var(--bg-secondary, #1e2124)',
-        borderLeft: '1px solid var(--border, #2d3035)',
-        display: 'flex', flexDirection: 'column',
-        zIndex: 900, boxShadow: '-4px 0 24px rgba(0,0,0,0.4)',
-        fontFamily: 'Inter, sans-serif' }}
-    >
+    <div style={{
+      position: 'fixed', right: 0, top: 0, bottom: 0, width: 320,
+      backgroundColor: 'var(--bg-surface)',
+      borderLeft: '1px solid var(--border-accent)',
+      display: 'flex', flexDirection: 'column',
+      zIndex: 900, boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+      fontFamily: FONT,
+    }}>
       {/* Header */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 20px', borderBottom: '1px solid var(--border, #2d3035)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 18 }}>📌</span>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
+        padding: '14px 20px',
+        borderBottom: '1px solid var(--border-default)',
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Pin size={16} style={{ color: 'var(--accent)' }} />
+          <h2 style={{
+            margin: 0, fontSize: '14px', fontWeight: 600,
+            color: 'var(--text-primary)', fontFamily: FONT,
+          }}>
             Pinned Messages
           </h2>
           {!loading && (
             <span style={{
-              background: '#5865f2', color: '#fff', borderRadius: 10,
-              fontSize: 11, padding: '1px 7px', fontWeight: 600 }}>{messages.length}</span>
+              backgroundColor: 'rgba(184,149,106,0.15)',
+              border: '1px solid rgba(184,149,106,0.2)',
+              color: 'var(--accent)',
+              borderRadius: '99px',
+              fontSize: '10px', fontWeight: 700,
+              padding: '1px 7px', fontFamily: FONT,
+            }}>
+              {messages.length}
+            </span>
           )}
         </div>
-        <button onClick={onClose} style={{
-          background: 'none', border: 'none', color: '#a0a5b0',
-          cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4, borderRadius: 4 }}>✕</button>
+        <button
+          onClick={onClose}
+          style={{
+            background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
+            color: 'var(--text-muted)', display: 'flex', padding: '4px', borderRadius: '2px',
+            transition: '100ms ease',
+          }}
+          onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+        >
+          <X size={16} />
+        </button>
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 0' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
         {loading && (
-          <div style={{ textAlign: 'center', color: '#a0a5b0', padding: 32 }}>
+          <div style={{
+            textAlign: 'center', color: 'var(--text-muted)',
+            padding: '32px 16px', fontSize: '13px', fontFamily: FONT,
+          }}>
             Loading pinned messages…
           </div>
         )}
         {error && (
-          <div style={{ color: '#ed4245', padding: '12px 20px', fontSize: 13 }}>{error}</div>
+          <div style={{
+            color: 'var(--state-danger)', padding: '12px 20px',
+            fontSize: '13px', fontFamily: FONT,
+          }}>
+            {error}
+          </div>
         )}
         {!loading && messages.length === 0 && (
-          <div style={{ textAlign: 'center', color: '#a0a5b0', padding: 40 }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>📌</div>
-            <p style={{ margin: 0, fontSize: 14 }}>No pinned messages yet</p>
-            <p style={{ margin: '4px 0 0', fontSize: 12, color: '#6b7280' }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+            padding: '48px 16px', gap: '10px',
+          }}>
+            <div style={{
+              width: '40px', height: '40px', borderRadius: '2px',
+              backgroundColor: 'var(--bg-active)',
+              border: '1px solid var(--border-default)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Pin size={20} style={{ color: 'var(--text-muted)' }} />
+            </div>
+            <p style={{ margin: 0, fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', fontFamily: FONT }}>
+              No pinned messages yet
+            </p>
+            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)', fontFamily: FONT, textAlign: 'center' }}>
               Hover a message and click Pin to save it here
             </p>
           </div>
@@ -108,6 +146,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
 }
 
 function PinnedMessageCard({ msg, currentUserId, onUnpin }) {
+  const [hovered, setHovered] = React.useState(false);
   const sender = msg.sender?.username || 'Unknown';
   const text = msg.text || msg.decryptedContent || (msg.payload?.isEncrypted ? '🔒 Encrypted message' : '');
   const time = new Date(msg.pinnedAt || msg.createdAt).toLocaleDateString('en-US', {
@@ -115,19 +154,31 @@ function PinnedMessageCard({ msg, currentUserId, onUnpin }) {
   const isSender = String(msg.sender?._id || msg.sender) === String(currentUserId);
 
   return (
-    <div style={{
-      margin: '4px 12px', borderRadius: 8, padding: '12px 14px',
-      background: 'var(--bg-tertiary, #2b2d31)',
-      border: '1px solid var(--border, #3a3d42)',
-      transition: 'background 0.15s' }}
-      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover, #35363a)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-tertiary, #2b2d31)'}
+    <div
+      style={{
+        margin: '4px 12px', borderRadius: '2px', padding: '10px 12px',
+        backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-active)',
+        border: `1px solid ${hovered ? 'var(--border-accent)' : 'var(--border-default)'}`,
+        transition: '150ms ease',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ color: '#5865f2', fontSize: 13, fontWeight: 600 }}>{sender}</span>
-        <span style={{ color: '#6b7280', fontSize: 11 }}>{time}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+        <span style={{
+          color: 'var(--accent)', fontSize: '12px', fontWeight: 600, fontFamily: FONT,
+        }}>
+          {sender}
+        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontFamily: FONT }}>
+          {time}
+        </span>
       </div>
-      <p style={{ margin: 0, color: '#d1d5db', fontSize: 13, lineHeight: 1.5, wordBreak: 'break-word' }}>
+      <p style={{
+        margin: 0, color: 'var(--text-secondary)', fontSize: '13px',
+        lineHeight: 1.55, wordBreak: 'break-word', fontFamily: FONT,
+        overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+      }}>
         {msg.type === 'image' ? '📷 Photo' :
           msg.type === 'voice' ? '🎵 Voice note' :
             msg.type === 'file' ? '📎 File' :
@@ -137,9 +188,16 @@ function PinnedMessageCard({ msg, currentUserId, onUnpin }) {
         <button
           onClick={() => onUnpin(msg._id)}
           style={{
-            marginTop: 8, background: 'none', border: '1px solid #ed4245',
-            color: '#ed4245', borderRadius: 4, padding: '3px 10px', fontSize: 11,
-            cursor: 'pointer', fontWeight: 600 }}>
+            marginTop: '8px', background: 'none',
+            border: '1px solid var(--border-default)',
+            color: 'var(--state-danger)', borderRadius: '2px',
+            padding: '3px 10px', fontSize: '11px',
+            cursor: 'pointer', fontWeight: 600,
+            fontFamily: FONT, transition: '150ms ease',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--state-danger)'; e.currentTarget.style.backgroundColor = 'rgba(224,82,82,0.08)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'transparent'; }}
+        >
           Unpin
         </button>
       )}

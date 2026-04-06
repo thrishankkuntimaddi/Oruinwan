@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     Shield, AlertTriangle, CheckCircle, XCircle, Lock,
-    Key, Users, Activity, RefreshCw, Crown, Eye, Settings,
-    Globe, Monitor, Clock, Download, TrendingUp,
-    AlertCircle, UserCheck, FileText
+    Key, Users, Activity, RefreshCw, Eye, Settings,
+    Globe, Monitor, Clock, Download, TrendingUp, AlertCircle, UserCheck, FileText
 } from 'lucide-react';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -14,7 +12,6 @@ import api from '@services/api';
 const OwnerSecurity = () => {
     const { isCompanyOwner } = useCompany();
     const { showToast } = useToast();
-    const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -30,15 +27,12 @@ const OwnerSecurity = () => {
                 api.get('/api/owner-dashboard/active-sessions'),
                 api.get('/api/owner-dashboard/security-events?limit=50')
             ]);
-
             setSecurityData(security);
             setActiveSessions(sessionsRes.data.sessions || []);
             setSecurityEvents(eventsRes.data.events || []);
             if (security?.emailDomain) setEmailDomain(security.emailDomain);
-        } catch (error) {
-            console.error("Error fetching security data:", error);
-            showToast("Failed to load security data", "error");
-            // Set defaults on error
+        } catch {
+            showToast('Failed to load security data', 'error');
             setActiveSessions([]);
             setSecurityEvents([]);
         }
@@ -46,14 +40,8 @@ const OwnerSecurity = () => {
 
     useEffect(() => {
         if (!isCompanyOwner()) return;
-
-        const loadInitialData = async () => {
-            setLoading(true);
-            await fetchData();
-            setLoading(false);
-        };
-
-        loadInitialData();
+        const load = async () => { setLoading(true); await fetchData(); setLoading(false); };
+        load();
     }, [isCompanyOwner, fetchData]);
 
     const handleRefresh = async () => {
@@ -61,376 +49,267 @@ const OwnerSecurity = () => {
         setRefreshing(true);
         await fetchData();
         setRefreshing(false);
-        showToast("Security data refreshed", "success");
+        showToast('Security data refreshed', 'success');
     };
 
-    const getEventIcon = (type) => {
-        switch (type) {
-            case 'success':
-                return <CheckCircle className="w-5 h-5 text-green-500" />;
-            case 'warning':
-                return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
-            case 'critical':
-                return <XCircle className="w-5 h-5 text-red-500" />;
-            default:
-                return <AlertCircle className="w-5 h-5 text-blue-500" />;
-        }
-    };
-
-    const getEventBadge = (type) => {
-        const styles = {
-            success: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-            warning: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-            critical: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-            info: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+    const eventStyle = (type) => {
+        const map = {
+            success: { color: 'var(--state-success)', bg: 'rgba(90,186,138,0.1)', border: 'var(--state-success)', Icon: CheckCircle },
+            warning: { color: 'var(--accent)', bg: 'rgba(184,149,106,0.1)', border: 'var(--accent)', Icon: AlertTriangle },
+            critical: { color: 'var(--state-danger)', bg: 'rgba(224,82,82,0.1)', border: 'var(--state-danger)', Icon: XCircle },
         };
-        return styles[type] || styles.info;
+        return map[type] || { color: 'var(--text-secondary)', bg: 'var(--bg-active)', border: 'var(--border-default)', Icon: AlertCircle };
     };
 
-    if (!isCompanyOwner()) {
-        return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-                <div className="text-center">
-                    <Crown className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
-                    <p className="text-gray-500 dark:text-gray-400 mb-6">Only the Company Owner can view security information.</p>
-                    <button
-                        onClick={() => navigate('/admin/dashboard')}
-                        className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                    >
-                        Go to Admin Dashboard
-                    </button>
-                </div>
+    if (loading) return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div><div className="sk" style={{ height: '13px', width: '220px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '280px' }} /></div>
+                <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '30px', width: '90px' }} /></div>
             </div>
-        );
-    }
-
-    if (loading) {
-        return (
-            <div className="h-screen bg-gray-50 dark:bg-gray-900 p-8 animate-pulse space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                        <div className="h-6 w-44 bg-gray-200 dark:bg-gray-700 rounded-xl" />
-                        <div className="h-3 w-60 bg-gray-100 dark:bg-gray-800 rounded" />
-                    </div>
-                    <div className="h-9 w-28 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl" />
-                </div>
-                <div className="grid grid-cols-3 gap-4">
-                    {[1,2,3].map(i => (
-                        <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded" />
-                            <div className="h-10 w-16 bg-gray-300 dark:bg-gray-600 rounded-xl" />
-                        </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+                {/* Risk score + 3 tiles */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
+                    {[1,2,3,4].map(i => (
+                         <div key={i} style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}><div className="sk" style={{ width: '14px', height: '14px' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                             <div className="sk" style={{ height: '32px', width: '60px', marginBottom: '6px' }} />
+                             <div className="sk" style={{ height: '9px', width: '100px' }} />
+                         </div>
                     ))}
                 </div>
-                <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-                    {[75,55,85,60,70].map((w,i) => (
-                        <div key={i} className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                            <div className="flex-1 space-y-1.5">
-                                <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded" style={{width:`${w}%`}} />
-                                <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{width:`${w-20}%`}} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {/* Events log */}
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)' }}><div className="sk" style={{ height: '11px', width: '130px' }} /></div>
+                        {[1,2,3,4,5].map(i => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                <div className="sk" style={{ width: '26px', height: '26px', flexShrink: 0 }} />
+                                <div style={{ flex: 1 }}><div className="sk" style={{ height: '10px', width: '80%', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '50%' }} /></div>
+                                <div className="sk" style={{ height: '18px', width: '55px', flexShrink: 0 }} />
                             </div>
-                            <div className="h-7 w-20 bg-gray-100 dark:bg-gray-700 rounded-xl" />
-                        </div>
-                    ))}
+                        ))}
+                    </div>
+                    {/* Sessions */}
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                        <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)' }}><div className="sk" style={{ height: '11px', width: '130px' }} /></div>
+                        {[1,2,3,4,5].map(i => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                <div className="sk" style={{ width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0 }} />
+                                <div style={{ flex: 1 }}><div className="sk" style={{ height: '10px', width: '120px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                                <div className="sk" style={{ height: '18px', width: '50px', flexShrink: 0 }} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
-        );
-    }
+        </div>
+    );
 
     return (
-        <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             {/* Header */}
-            <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
+            <header style={{
+                height: '56px', padding: '0 28px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0, zIndex: 5,
+            }}>
                 <div>
-                    <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-                        <Shield className="text-indigo-500" size={24} />
-                        Security & Risk Management
+                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                        <Shield size={16} style={{ color: 'var(--accent)' }} />
+                        Security &amp; Risk Management
                     </h2>
-                    <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>
                         Monitor access, sessions, and security events
                     </p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={handleRefresh}
-                        disabled={refreshing}
-                        className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-                    >
-                        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                        {refreshing ? 'Refreshing...' : 'Refresh'}
-                    </button>
-                </div>
+                <HBtn onClick={handleRefresh} disabled={refreshing} label={refreshing ? 'Refreshing...' : 'Refresh'}
+                    icon={<RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />} />
             </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
-                <div className="space-y-8 max-w-7xl mx-auto">
-                    {/* Security Score & Overview */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white shadow-xl">
-                            <div className="flex items-center justify-between mb-4">
-                                <Shield className="w-8 h-8 opacity-80" />
-                                <span className="text-xs font-bold bg-white/20 px-2 py-1 rounded-full">SCORE</span>
-                            </div>
-                            <p className="text-sm opacity-90 mb-2">Compliance Score</p>
-                            <p className="text-4xl font-black">{securityData?.complianceScore || 95}%</p>
-                            <p className="text-xs opacity-75 mt-2">Excellent security posture</p>
-                        </div>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                                    <Activity className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                                </div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Active Sessions</p>
+                    {/* Score + Stats Row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
+                        {/* Compliance Score */}
+                        <div style={{ background: 'var(--bg-surface)', padding: '24px', position: 'relative', overflow: 'hidden' }}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--state-success)' }} />
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
+                                <Shield size={18} style={{ color: 'var(--state-success)' }} />
+                                <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--state-success)', border: '1px solid var(--state-success)', padding: '2px 6px' }}>SCORE</span>
                             </div>
-                            <p className="text-3xl font-black text-gray-900 dark:text-white">{securityData?.activeSessions || 0}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Users logged in (24h)</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Compliance Score</p>
+                            <p style={{ fontSize: '36px', fontWeight: 700, color: 'var(--state-success)', letterSpacing: '-0.03em' }}>{securityData?.complianceScore || 95}%</p>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Excellent security posture</p>
                         </div>
-
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-xl flex items-center justify-center">
-                                    <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+                        {/* Stats */}
+                        {[
+                            { label: 'Active Sessions', value: securityData?.activeSessions || 0, sub: 'Users logged in (24h)', icon: Activity },
+                            { label: 'Security Alerts', value: securityData?.auditSummary?.critical || 0, sub: 'Require attention', icon: AlertTriangle, danger: true },
+                            { label: 'Audit Events', value: securityData?.auditSummary?.lastWeek || 0, sub: 'Last 7 days', icon: FileText },
+                        ].map(({ label, value, sub, icon: Icon, danger }) => (
+                            <div key={label} style={{ background: 'var(--bg-surface)', padding: '24px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                    <Icon size={14} style={{ color: danger ? 'var(--state-danger)' : 'var(--text-muted)' }} />
+                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{label}</span>
                                 </div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Security Alerts</p>
+                                <p style={{ fontSize: '28px', fontWeight: 700, color: danger && value > 0 ? 'var(--state-danger)' : 'var(--text-primary)', letterSpacing: '-0.02em' }}>{value}</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{sub}</p>
                             </div>
-                            <p className="text-3xl font-black text-gray-900 dark:text-white">
-                                {securityData?.auditSummary?.critical || 0}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Require attention</p>
-                        </div>
-
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-xl flex items-center justify-center">
-                                    <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                                </div>
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Audit Events</p>
-                            </div>
-                            <p className="text-3xl font-black text-gray-900 dark:text-white">
-                                {securityData?.auditSummary?.lastWeek || 0}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Last 7 days</p>
-                        </div>
+                        ))}
                     </div>
 
                     {/* Active Sessions */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <Monitor className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                Active Sessions
-                            </h3>
-                            <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium">
-                                View All
+                    <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Monitor size={14} style={{ color: 'var(--accent)' }} />
+                            <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flex: 1 }}>Active Sessions</h3>
+                        </div>
+                        <div style={{ padding: '8px' }}>
+                            {activeSessions.length > 0 ? activeSessions.map(session => (
+                                <div key={session.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                    <div style={{ width: '36px', height: '36px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
+                                        {session.user?.charAt(0) || 'U'}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '3px' }}>{session.user || 'Unknown'}</p>
+                                        <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Monitor size={10} /> {session.device || 'Unknown Device'}</span>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Globe size={10} /> {session.location || 'Unknown'}</span>
+                                            <span>IP: {session.ip || 'N/A'}</span>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', background: 'rgba(90,186,138,0.1)', border: '1px solid var(--state-success)', color: 'var(--state-success)', fontSize: '10px', fontWeight: 700 }}>
+                                            <Activity size={9} /> Active
+                                        </span>
+                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '3px' }}>{session.lastActive ? new Date(session.lastActive).toLocaleString() : '—'}</p>
+                                    </div>
+                                </div>
+                            )) : (
+                                <div style={{ padding: '40px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No active sessions in the last 24 hours</div>
+                            )}
+                        </div>
+                    </section>
+
+                    {/* Security Events */}
+                    <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <AlertTriangle size={14} style={{ color: 'var(--accent)' }} />
+                                <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Recent Security Events</h3>
+                            </div>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: 'var(--accent)', fontSize: '11px', fontWeight: 600, cursor: 'pointer' }}>
+                                <Download size={12} /> Export
                             </button>
                         </div>
-
-                        <div className="space-y-4">
-                            {activeSessions.length > 0 ? (
-                                activeSessions.map((session) => {
-                                    // Calculate relative time
-                                    const lastActiveTime = session.lastActive
-                                        ? new Date(session.lastActive).toLocaleString()
-                                        : 'Unknown';
-
-                                    return (
-                                        <div key={session.id} className="flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center text-white font-bold">
-                                                {session.user?.charAt(0) || 'U'}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm font-bold text-gray-900 dark:text-white">{session.user || 'Unknown'}</p>
-                                                <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                                    <span className="flex items-center gap-1">
-                                                        <Monitor size={12} />
-                                                        {session.device || 'Unknown Device'}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Globe size={12} />
-                                                        {session.location || 'Unknown Location'}
-                                                    </span>
-                                                    <span>IP: {session.ip || 'N/A'}</span>
+                        <div style={{ padding: '8px' }}>
+                            {securityEvents.length > 0 ? securityEvents.map(event => {
+                                const { color, bg, border, Icon } = eventStyle(event.type);
+                                return (
+                                    <div key={event.id} style={{ display: 'flex', gap: '12px', padding: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+                                        <div style={{ marginTop: '1px', flexShrink: 0 }}>
+                                            <Icon size={14} style={{ color }} />
+                                        </div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                                                <div>
+                                                    <h4 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>{event.event}</h4>
+                                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>by {event.user}</p>
                                                 </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                    <Activity size={12} />
-                                                    Active
+                                                <span style={{ display: 'inline-block', padding: '2px 8px', background: bg, border: `1px solid ${border}`, color, fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', flexShrink: 0 }}>
+                                                    {event.type}
                                                 </span>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{lastActiveTime}</p>
+                                            </div>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>{event.details}</p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                                                <Clock size={10} />
+                                                {event.timestamp ? new Date(event.timestamp).toLocaleString() : 'Unknown time'}
                                             </div>
                                         </div>
-                                    );
-                                })
-                            ) : (
-                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                    No active sessions in the last 24 hours
-                                </div>
+                                    </div>
+                                );
+                            }) : (
+                                <div style={{ padding: '40px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>No security events in the last 7 days</div>
                             )}
                         </div>
-                    </div>
+                    </section>
 
-                    {/* Recent Security Events */}
-                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                <AlertTriangle className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                Recent Security Events
-                            </h3>
-                            <button className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium flex items-center gap-1">
-                                <Download size={14} />
-                                Export
-                            </button>
-                        </div>
-
-                        <div className="space-y-3">
-                            {securityEvents.length > 0 ? (
-                                securityEvents.map((event) => {
-                                    // Format timestamp
-                                    const eventTime = event.timestamp
-                                        ? new Date(event.timestamp).toLocaleString()
-                                        : 'Unknown time';
-
-                                    return (
-                                        <div key={event.id} className="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                                            <div className="mt-1">
-                                                {getEventIcon(event.type)}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-4 mb-2">
-                                                    <div>
-                                                        <h4 className="text-sm font-bold text-gray-900 dark:text-white">{event.event}</h4>
-                                                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">by {event.user}</p>
-                                                    </div>
-                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${getEventBadge(event.type)}`}>
-                                                        {event.type}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{event.details}</p>
-                                                <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                                                    <Clock size={12} />
-                                                    {eventTime}
-                                                </div>
+                    {/* Auth Settings + Access Control */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
+                        {/* Auth Settings */}
+                        <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                                <Settings size={14} style={{ color: 'var(--accent)' }} />
+                                <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Authentication Settings</h3>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {[
+                                    { icon: Lock, label: 'Two-Factor Authentication', sub: 'Enabled for all admins', ok: true },
+                                    { icon: Key, label: 'Password Policy', sub: 'Minimum 8 characters, 1 special', ok: true },
+                                    { icon: Clock, label: 'Session Timeout', sub: '30 minutes of inactivity', ok: true },
+                                ].map(({ icon: Icon, label, sub, ok }) => (
+                                    <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <Icon size={13} style={{ color: 'var(--text-muted)' }} />
+                                            <div>
+                                                <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '1px' }}>{label}</p>
+                                                <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{sub}</p>
                                             </div>
                                         </div>
-                                    );
-                                })
-                            ) : (
-                                <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                                    No security events in the last 7 days
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Security Settings */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                <Settings className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                Authentication Settings
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <Lock className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">Two-Factor Authentication</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">Enabled for all admins</p>
-                                        </div>
+                                        {ok ? <CheckCircle size={14} style={{ color: 'var(--state-success)', flexShrink: 0 }} /> : <XCircle size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
                                     </div>
-                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                </div>
-
-                                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <Key className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">Password Policy</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">Minimum 8 characters, 1 special</p>
-                                        </div>
-                                    </div>
-                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                </div>
-
-                                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div className="flex items-center gap-3">
-                                        <Clock className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                                        <div>
-                                            <p className="text-sm font-medium text-gray-900 dark:text-white">Session Timeout</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">30 minutes of inactivity</p>
-                                        </div>
-                                    </div>
-                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                </div>
+                                ))}
                             </div>
                         </div>
 
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                <UserCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                                Access Control
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">Role-Based Access (RBAC)</p>
-                                        <CheckCircle className="w-5 h-5 text-green-500" />
+                        {/* Access Control */}
+                        <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                                <UserCheck size={14} style={{ color: 'var(--accent)' }} />
+                                <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Access Control</h3>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {[
+                                    { label: 'Role-Based Access (RBAC)', sub: '4 roles defined', icon: Users, ok: true },
+                                    { label: 'IP Whitelisting', sub: 'Not configured', icon: Globe, ok: false },
+                                    { label: 'Domain Restriction', sub: emailDomain ? `@${emailDomain} only` : 'Not configured', icon: Eye, ok: !!emailDomain },
+                                ].map(({ label, sub, icon: Icon, ok }) => (
+                                    <div key={label} style={{ padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                            <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>{label}</p>
+                                            {ok ? <CheckCircle size={13} style={{ color: 'var(--state-success)' }} /> : <XCircle size={13} style={{ color: 'var(--text-muted)' }} />}
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                                            <Icon size={10} /> <span>{sub}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                        <Users size={12} />
-                                        <span>4 roles defined</span>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">IP Whitelisting</p>
-                                        <XCircle className="w-5 h-5 text-gray-400" />
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                        <Globe size={12} />
-                                        <span>Not configured</span>
-                                    </div>
-                                </div>
-
-                                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white">Domain Restriction</p>
-                                        <CheckCircle className="w-5 h-5 text-green-500" />
-                                    </div>
-                                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                                        <Eye size={12} />
-                                        <span>{emailDomain ? `@${emailDomain} only` : 'Not configured'}</span>
-                                    </div>
-                                </div>
+                                ))}
                             </div>
                         </div>
                     </div>
 
-                    {/* Security Recommendations */}
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-2xl p-6 border border-amber-200 dark:border-amber-800">
-                        <div className="flex gap-4">
-                            <AlertCircle className="w-6 h-6 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-1" />
-                            <div className="flex-1">
-                                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-300 mb-2">Security Recommendations</h3>
-                                <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-400">
-                                    <li className="flex items-start gap-2">
-                                        <TrendingUp size={16} className="flex-shrink-0 mt-0.5" />
-                                        <span>Enable IP whitelisting for admin accounts to restrict access from trusted locations</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <TrendingUp size={16} className="flex-shrink-0 mt-0.5" />
-                                        <span>Review and update password policies to require rotation every 90 days</span>
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <TrendingUp size={16} className="flex-shrink-0 mt-0.5" />
-                                        <span>Configure automated security alerts for suspicious login attempts</span>
-                                    </li>
+                    {/* Recommendations */}
+                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--accent)', padding: '20px', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '3px', background: 'var(--accent)' }} />
+                        <div style={{ display: 'flex', gap: '12px', paddingLeft: '4px' }}>
+                            <AlertCircle size={16} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
+                            <div>
+                                <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)', marginBottom: '10px' }}>Security Recommendations</h3>
+                                <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {[
+                                        'Enable IP whitelisting for admin accounts to restrict access from trusted locations',
+                                        'Review and update password policies to require rotation every 90 days',
+                                        'Configure automated security alerts for suspicious login attempts',
+                                    ].map((rec, i) => (
+                                        <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                            <TrendingUp size={12} style={{ flexShrink: 0, marginTop: '2px', color: 'var(--accent)' }} />
+                                            <span>{rec}</span>
+                                        </li>
+                                    ))}
                                 </ul>
                             </div>
                         </div>
@@ -438,6 +317,16 @@ const OwnerSecurity = () => {
                 </div>
             </div>
         </div>
+    );
+};
+
+const HBtn = ({ onClick, disabled, label, icon }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} disabled={disabled} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '5px', background: hov && !disabled ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: disabled ? 'var(--text-muted)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.6 : 1, transition: 'all 150ms ease', borderRadius: '0' }}>
+            {icon}{label}
+        </button>
     );
 };
 

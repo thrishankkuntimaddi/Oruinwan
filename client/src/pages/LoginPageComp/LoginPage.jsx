@@ -1,202 +1,170 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import { ArrowLeft, CheckCircle, Sparkles, Shield, Moon, Sun } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
-import LoginForm from "../../components/loginpage/LoginForm";
-import SignupForm from "../../components/loginpage/SignupForm";
-import { useTheme } from "../../contexts/ThemeContext";
+// LoginPage.jsx — Monolith Flow Design System
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { CheckCircle2, Sparkles, Shield, MessageSquare, Zap } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import LoginForm from '../../components/loginpage/LoginForm';
+import SignupForm from '../../components/loginpage/SignupForm';
+
+const FEATURES = [
+    { icon: MessageSquare, color: '#b8956a', text: 'Channels, DMs & threads' },
+    { icon: Zap,           color: '#6ea8fe', text: 'One-click video huddles' },
+    { icon: Sparkles,      color: '#a78bfa', text: 'Chttrix AI — workspace aware' },
+    { icon: Shield,        color: '#5aba8a', text: 'End-to-end encrypted' },
+];
 
 const LoginPage = () => {
-  const [searchParams] = useSearchParams();
-  const mode = searchParams.get("mode");
-  const [isSignup, setIsSignup] = useState(mode === "signup");
+    const [searchParams] = useSearchParams();
+    const mode = searchParams.get('mode');
+    const [isSignup, setIsSignup] = useState(mode === 'signup');
+    const { user, loading } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+    const registrationMessage = location.state?.message;
+    const prefilledEmail = location.state?.email;
 
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { theme, toggleTheme } = useTheme(); // Ensure theme consistency
+    // Enable scroll for this public page
+    useEffect(() => {
+        document.documentElement.classList.add('public-scroll');
+        return () => document.documentElement.classList.remove('public-scroll');
+    }, []);
 
-  // Get message and email from navigation state (from registration)
-  const registrationMessage = location.state?.message;
-  const prefilledEmail = location.state?.email;
+    useEffect(() => {
+        setIsSignup(mode === 'signup');
+    }, [mode]);
 
-  useEffect(() => {
-    if (mode === "signup") {
-      setIsSignup(true);
-    } else {
-      setIsSignup(false);
-    }
-  }, [mode]);
+    useEffect(() => {
+        if (!loading && user) {
+            const needsPasswordSetup = localStorage.getItem('oauthPasswordSetupRequired') === 'true';
+            if (needsPasswordSetup) return;
+            if (user.isTemporaryPassword === true && user.passwordInitialized === false) return;
+            const isChttrixAdmin = user.roles?.includes('chttrix_admin');
+            const isOwner = user.companyRole === 'owner';
+            if (isChttrixAdmin) navigate('/chttrix-admin', { replace: true });
+            else if (isOwner) navigate('/owner/dashboard', { replace: true });
+            else navigate('/workspaces', { replace: true });
+        }
+    }, [user, loading, navigate]);
 
-  // Redirect to appropriate dashboard if already logged in
-  useEffect(() => {
-    if (!loading && user) {
-      // Don't auto-redirect if user needs to set password (OAuth first-time login)
-      const needsPasswordSetup = localStorage.getItem("oauthPasswordSetupRequired") === "true";
-      if (needsPasswordSetup) {
-        return;
-      }
-
-      // NOTE: Bulk-import temp-password users are handled by RequireAuth which
-      // intercepts every protected route. No redirect needed here — adding one
-      // creates a competing navigate() that fights RequireAuth's <Navigate> and
-      // causes the Chrome "Throttling navigation" infinite loop.
-      if (user.isTemporaryPassword === true && user.passwordInitialized === false) {
-        return; // Let RequireAuth bounce them to /setup-password
-      }
-
-      // Check if user is Chttrix platform admin
-      const isChttrixAdmin = user.roles && user.roles.includes('chttrix_admin');
-      const isOwner = user.companyRole === 'owner';
-
-      if (isChttrixAdmin) {
-        navigate("/chttrix-admin", { replace: true });
-      } else if (isOwner) {
-        navigate("/owner/dashboard", { replace: true });
-      } else {
-        navigate("/workspaces", { replace: true });
-      }
-    }
-  }, [user, loading, navigate]);
-
-
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-white dark:bg-[#030712] text-slate-500">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-800 rounded-full mb-4"></div>
-          <p>Loading session...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (user) return null;
-
-  return (
-    <div className="min-h-screen w-full flex bg-white dark:bg-[#030712] selection:bg-indigo-500 selection:text-white">
-
-      {/* LEFT SIDE - BRAND PRESENTATION (Desktop Only) */}
-      <div className={`hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-16 transition-colors duration-500 ${theme === 'dark' ? 'bg-[#0B0F19]' : 'bg-slate-50'}`}>
-
-        {/* --- Background Effects (Theme Dependent) --- */}
-
-        {/* Dark Mode Background */}
-        <div className={`absolute inset-0 transition-opacity duration-500 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/30 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
-        </div>
-
-        {/* Light Mode Background (Orbs) */}
-        <div className={`absolute inset-0 transition-opacity duration-500 ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`}>
-          <style>{`
-                @keyframes float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, -20px); } }
-                @keyframes float-delayed { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(0, 20px); } }
-                .animate-float { animation: float 10s ease-in-out infinite; }
-                .animate-float-delayed { animation: float-delayed 12s ease-in-out infinite; }
-            `}</style>
-          <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-100/80 via-purple-100/50 to-transparent blur-[80px] animate-float"></div>
-          <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-indigo-100/80 via-pink-100/50 to-transparent blur-[80px] animate-float-delayed"></div>
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-50 brightness-100 contrast-150 mix-blend-soft-light"></div>
-        </div>
-
-        {/* --- Content --- */}
-        <div className="relative z-10">
-          <div onClick={() => navigate('/')} className="cursor-pointer flex items-center gap-3 mb-12 group w-fit">
-            <img src="/chttrix-logo.jpg" alt="Logo" className="w-10 h-10 rounded-xl shadow-md group-hover:scale-110 transition-transform duration-300" />
-            <span className={`text-2xl font-bold tracking-tight transition-colors duration-500 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Chttrix</span>
-          </div>
-
-          <h1 className={`text-6xl font-black leading-tight mb-8 transition-colors duration-500 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-            Work where <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600 dark:from-indigo-400 dark:to-purple-400">future happens.</span>
-          </h1>
-          <p className={`text-xl max-w-lg leading-relaxed font-medium transition-colors duration-500 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-            The operating system for high-performance teams.
-            Seamlessly switch between structured channels, video huddles, and AI-powered workflows.
-          </p>
-        </div>
-
-        {/* --- Features Grid (Theme Adoptive Cards) --- */}
-        <div className="relative z-10 grid grid-cols-2 gap-6 mt-12">
-          {/* Card 1 */}
-          <div className={`p-6 rounded-2xl border backdrop-blur-sm transition-all duration-500 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/40 border-white/50 shadow-lg shadow-indigo-100'}`}>
-            <Sparkles className="text-purple-500 dark:text-purple-400 mb-4" size={24} />
-            <h3 className={`font-bold text-lg mb-2 transition-colors duration-500 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>AI Native</h3>
-            <p className={`text-sm transition-colors duration-500 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Built with intelligence at the core, not as an afterthought.</p>
-          </div>
-
-          {/* Card 2 */}
-          <div className={`p-6 rounded-2xl border backdrop-blur-sm transition-all duration-500 ${theme === 'dark' ? 'bg-white/5 border-white/10' : 'bg-white/40 border-white/50 shadow-lg shadow-indigo-100'}`}>
-            <Shield className="text-indigo-500 dark:text-indigo-400 mb-4" size={24} />
-            <h3 className={`font-bold text-lg mb-2 transition-colors duration-500 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>Enterprise Ready</h3>
-            <p className={`text-sm transition-colors duration-500 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Bank-grade security with granular role-based access control.</p>
-          </div>
-        </div>
-
-        <div className={`relative z-10 text-xs mt-12 transition-colors duration-500 ${theme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>
-          © 2026 Chttrix Inc. All rights reserved.
-        </div>
-      </div>
-
-      {/* RIGHT SIDE - AUTH FORMS */}
-      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 sm:p-8 relative">
-
-        {/* Toggle Theme (Top Right) */}
-        <div className="absolute top-6 right-6">
-          <button
-            onClick={toggleTheme}
-            className="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-          >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-        </div>
-
-        {/* Mobile Header */}
-        <div className="absolute top-6 left-6 lg:hidden">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 transition-colors">
-            <ArrowLeft size={18} /> Back
-          </button>
-        </div>
-
-        <div className="w-full max-w-md space-y-8">
-
-          {/* Registration Success Message */}
-          {registrationMessage && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-start gap-4 animate-fade-in-up">
-              <div className="p-2 bg-green-100 dark:bg-green-800 rounded-full shrink-0">
-                <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-300" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-green-900 dark:text-green-100">Account Created</h3>
-                <p className="text-sm text-green-700 dark:text-green-300 mt-1">{registrationMessage}</p>
-                {prefilledEmail && (
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-2 font-mono bg-green-100 dark:bg-green-800/50 px-2 py-1 rounded w-fit">
-                    {prefilledEmail}
-                  </p>
-                )}
-              </div>
+    if (loading) {
+        return (
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0c0c' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                    <img src="/chttrix-logo.jpg" alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', opacity: 0.4 }} />
+                    <div style={{ height: '2px', width: '80px', background: 'rgba(184,149,106,0.2)', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: '#b8956a', animation: 'slideBar 1.2s ease-in-out infinite' }} />
+                    </div>
+                </div>
+                <style>{`@keyframes slideBar { from{left:-40px} to{left:100%} }`}</style>
             </div>
-          )}
+        );
+    }
 
-          {/* Forms */}
-          <div className="transition-all duration-500 ease-in-out">
-            {isSignup ? (
-              <SignupForm onSwitch={() => setIsSignup(false)} />
-            ) : (
-              <LoginForm
-                onSwitch={() => setIsSignup(true)}
-                initialEmail={prefilledEmail}
-              />
-            )}
-          </div>
+    if (user) return null;
 
+    return (
+        <div style={{ minHeight: '100vh', display: 'flex', background: '#0c0c0c', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <style>{`* { box-sizing: border-box; } ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }`}</style>
+
+            {/* ── LEFT PANEL — Brand ── */}
+            <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', background: '#080808', borderRight: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
+                {/* Ambient glow */}
+                <div style={{ position: 'absolute', top: '20%', left: '30%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(110,168,254,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
+
+                {/* Logo */}
+                <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', position: 'relative', zIndex: 1 }}>
+                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
+                </div>
+
+                {/* Center content */}
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <h1 style={{ fontSize: 'clamp(32px,3.5vw,52px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '18px' }}>
+                        Work where<br />
+                        <span style={{ color: '#b8956a' }}>the future happens.</span>
+                    </h1>
+                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.8', marginBottom: '40px', maxWidth: '400px' }}>
+                        The operating system for high-performance teams. Channels, AI, tasks — all in one place.
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {FEATURES.map(f => {
+                            const Icon = f.icon;
+                            return (
+                                <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <div style={{ width: '30px', height: '30px', background: `${f.color}14`, border: `1px solid ${f.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                        <Icon size={13} style={{ color: f.color }} />
+                                    </div>
+                                    <span style={{ fontSize: '13px', color: 'rgba(228,228,228,0.55)', fontWeight: 500 }}>{f.text}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Footer quote */}
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ borderLeft: '2px solid rgba(184,149,106,0.3)', paddingLeft: '14px', marginBottom: '16px' }}>
+                        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', fontStyle: 'italic', lineHeight: '1.7' }}>
+                            "Chttrix replaced Slack, Notion, and Jira for our team. We haven't looked back."
+                        </p>
+                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '6px' }}>Maya H. — CTO at Fluxio</p>
+                    </div>
+                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.15)' }}>© 2026 Chttrix Inc.</p>
+                </div>
+            </div>
+
+            {/* ── RIGHT PANEL — Forms ── */}
+            <div style={{ flex: '1 1 50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', overflowY: 'auto' }}>
+                <div style={{ width: '100%', maxWidth: '420px' }}>
+                    {/* Registration success banner */}
+                    {registrationMessage && (
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '14px 16px', background: 'rgba(90,186,138,0.07)', border: '1px solid rgba(90,186,138,0.25)', marginBottom: '24px', animation: 'fadeIn 300ms ease' }}>
+                            <CheckCircle2 size={16} style={{ color: '#5aba8a', flexShrink: 0, marginTop: '1px' }} />
+                            <div>
+                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#5aba8a', marginBottom: '2px' }}>Account Created</p>
+                                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.5)' }}>{registrationMessage}</p>
+                                {prefilledEmail && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', fontFamily: 'monospace', marginTop: '4px' }}>{prefilledEmail}</p>}
+                            </div>
+                        </div>
+                    )}
+                    <style>{`@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }`}</style>
+
+                    {/* Tab switcher */}
+                    <div style={{ display: 'flex', marginBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                        {[{ label: 'Sign In', val: false }, { label: 'Create Account', val: true }].map(tab => (
+                            <button key={tab.label} onClick={() => setIsSignup(tab.val)}
+                                style={{ flex: 1, padding: '10px', background: 'none', border: 'none', borderBottom: `2px solid ${isSignup === tab.val ? '#b8956a' : 'transparent'}`, color: isSignup === tab.val ? '#e4e4e4' : 'rgba(228,228,228,0.4)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 200ms ease', marginBottom: '-1px' }}>
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Form */}
+                    {isSignup
+                        ? <SignupForm onSwitch={() => setIsSignup(false)} />
+                        : <LoginForm onSwitch={() => setIsSignup(true)} initialEmail={prefilledEmail} />
+                    }
+
+                    {/* Nav links */}
+                    <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', gap: '16px' }}>
+                        {[
+                            { label: 'Privacy', path: '/privacy' },
+                            { label: 'Terms', path: '/terms' },
+                            { label: 'Register Company', path: '/register-company' },
+                        ].map(l => (
+                            <button key={l.label} onClick={() => navigate(l.path)}
+                                style={{ background: 'none', border: 'none', color: 'rgba(228,228,228,0.25)', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}>
+                                {l.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 export default LoginPage;

@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useIsMobile } from '../hooks/useIsMobile';
+import MobileBottomNav from '../components/layout/MobileBottomNav';
 import {
     User, Lock, Palette, Bell, Globe, Shield, Laptop, Settings as SettingsIcon,
     ChevronRight, Search, ArrowLeft, X, Menu, Plug
@@ -21,6 +24,9 @@ import AdvancedTab from './settingsTabs/AdvancedTab';
 import IntegrationsTab from './settingsTabs/IntegrationsTab';
 import ComplianceTab from './settingsTabs/ComplianceTab';
 
+const S = {
+    font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' },
+};
 
 const NAV_SECTIONS = [
     { id: 'profile', label: 'My Profile', icon: User, description: 'Name, photo, bio' },
@@ -33,7 +39,6 @@ const NAV_SECTIONS = [
     { id: 'integrations', label: 'Integrations', icon: Plug, description: 'GitHub, Slack, AI & more' },
     { id: 'compliance', label: 'Compliance & Privacy', icon: Shield, description: 'GDPR, audit logs, retention' },
     { id: 'advanced', label: 'Advanced', icon: SettingsIcon, description: 'Account & data' },
-
 ];
 
 const Settings = () => {
@@ -43,6 +48,7 @@ const Settings = () => {
     const { showToast } = useToast();
     const { theme, toggleTheme } = useTheme();
 
+    const isMobile = useIsMobile();
     const [activeSection, setActiveSection] = useState('profile');
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(false);
@@ -51,7 +57,6 @@ const Settings = () => {
     const [workspaces, setWorkspaces] = useState([]);
     const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('');
 
-    // ── Shared state lifted to parent so tabs get it ───────────────────────────
     const [notifications, setNotifications] = useState({
         marketingEmails: false, securityEmails: true, productUpdates: true,
         dmPush: true, mentionPush: true, threadPush: false, soundEffects: true,
@@ -160,28 +165,80 @@ const Settings = () => {
     const activeLabel = NAV_SECTIONS.find(s => s.id === activeSection)?.label || '';
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex font-sans text-gray-900 dark:text-gray-100">
+        <div style={{
+            height: '100vh',
+            overflow: 'hidden',
+            backgroundColor: 'var(--bg-base)',
+            display: 'flex',
+            ...S.font,
+            color: 'var(--text-primary)',
+            paddingBottom: isMobile ? 'calc(56px + env(safe-area-inset-bottom))' : 0,
+        }}>
 
             {/* ── Sidebar ─────────────────────────────────────── */}
-            <aside className={`fixed inset-y-0 left-0 z-30 w-64 flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transition-transform duration-200
-                ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-
+            <aside style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                bottom: 0,
+                zIndex: 30,
+                width: 240,
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: 'var(--bg-surface)',
+                borderRight: '1px solid var(--border-default)',
+                transition: 'transform 200ms ease',
+                transform: mobileSidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+            }}
+                className="settings-sidebar"
+            >
                 {/* Logo / back */}
-                <div className="h-14 flex items-center px-4 border-b border-gray-200 dark:border-gray-800 gap-3">
+                <div style={{
+                    height: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 16px',
+                    borderBottom: '1px solid var(--border-default)',
+                    gap: 12,
+                    flexShrink: 0,
+                }}>
                     <button
                         onClick={handleBackNavigation}
-                        className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                        title="Go back"
+                        style={{
+                            padding: 6, borderRadius: 2, background: 'none', border: 'none',
+                            cursor: 'pointer', color: 'var(--text-muted)',
+                            display: 'flex', alignItems: 'center',
+                            transition: 'color 150ms ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         <ArrowLeft size={16} />
                     </button>
-                    <img src="/chttrix-logo.jpg" alt="Logo" className="w-6 h-6 rounded-md" />
-                    <span className="font-black text-sm tracking-tight text-gray-900 dark:text-white">Chttrix</span>
-                    <span className="ml-auto text-[10px] font-bold uppercase tracking-widest text-gray-400">Settings</span>
+                    <img src="/chttrix-logo.jpg" alt="Logo" style={{ width: 20, height: 20, borderRadius: 2 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Chttrix</span>
+                    <span style={{
+                        marginLeft: 'auto',
+                        fontSize: 9,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.12em',
+                        color: 'var(--text-muted)',
+                    }}>Settings</span>
                 </div>
 
                 {/* Nav items */}
-                <nav className="flex-1 overflow-y-auto py-2 px-2">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 px-2 py-1.5 mb-1">Account</p>
+                <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
+                    <p style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.12em',
+                        color: 'var(--text-muted)',
+                        padding: '6px 8px',
+                        marginBottom: 4,
+                    }}>Account</p>
                     {filteredSections.map((section) => {
                         const Icon = section.icon;
                         const isActive = activeSection === section.id;
@@ -192,31 +249,98 @@ const Settings = () => {
                                     setActiveSection(section.id);
                                     setMobileSidebarOpen(false);
                                 }}
-                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl mb-0.5 text-left transition-all group ${isActive
-                                    ? 'bg-blue-600 text-white shadow-sm'
-                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
-                                    }`}
+                                style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 10,
+                                    padding: '8px 10px',
+                                    borderRadius: 2,
+                                    marginBottom: 2,
+                                    textAlign: 'left',
+                                    background: isActive ? 'var(--bg-active)' : 'none',
+                                    border: isActive ? '1px solid var(--border-default)' : '1px solid transparent',
+                                    cursor: 'pointer',
+                                    transition: 'background 150ms ease, border-color 150ms ease',
+                                    ...S.font,
+                                }}
+                                onMouseEnter={e => {
+                                    if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)';
+                                }}
+                                onMouseLeave={e => {
+                                    if (!isActive) e.currentTarget.style.background = 'none';
+                                }}
                             >
-                                <Icon size={15} className={`flex-shrink-0 ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300'}`} />
-                                <div className="flex-1 min-w-0">
-                                    <div className={`text-[12.5px] font-semibold leading-tight ${isActive ? 'text-white' : ''}`}>{section.label}</div>
-                                    <div className={`text-[10.5px] leading-tight mt-0.5 truncate ${isActive ? 'text-blue-200' : 'text-gray-400 dark:text-gray-600'}`}>{section.description}</div>
+                                <Icon
+                                    size={16}
+                                    style={{
+                                        flexShrink: 0,
+                                        color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                                        transition: 'color 150ms ease',
+                                    }}
+                                />
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                        fontSize: 13,
+                                        fontWeight: isActive ? 600 : 400,
+                                        color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                        lineHeight: 1.3,
+                                        transition: 'color 150ms ease',
+                                    }}>{section.label}</div>
+                                    <div style={{
+                                        fontSize: 11,
+                                        color: 'var(--text-muted)',
+                                        lineHeight: 1.4,
+                                        marginTop: 1,
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                    }}>{section.description}</div>
                                 </div>
-                                {isActive && <ChevronRight size={13} className="text-blue-200 flex-shrink-0" />}
+                                {isActive && <ChevronRight size={13} style={{ color: 'var(--accent)', flexShrink: 0 }} />}
                             </button>
                         );
                     })}
                 </nav>
 
                 {/* User footer */}
-                <div className="p-3 border-t border-gray-200 dark:border-gray-800">
-                    <div className="flex items-center gap-2.5 px-1">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs flex-shrink-0">
+                <div style={{
+                    padding: '12px 16px',
+                    borderTop: '1px solid var(--border-default)',
+                    flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{
+                            width: 28,
+                            height: 28,
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#0c0c0c',
+                            fontWeight: 700,
+                            fontSize: 12,
+                            flexShrink: 0,
+                        }}>
                             {user?.username?.charAt(0).toUpperCase()}
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="text-[12.5px] font-bold text-gray-900 dark:text-white truncate">{user?.username}</div>
-                            <div className="text-[11px] text-gray-400 truncate">{user?.email}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: 'var(--text-primary)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}>{user?.username}</div>
+                            <div style={{
+                                fontSize: 11,
+                                color: 'var(--text-muted)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                            }}>{user?.email}</div>
                         </div>
                     </div>
                 </div>
@@ -224,41 +348,131 @@ const Settings = () => {
 
             {/* Mobile overlay */}
             {mobileSidebarOpen && (
-                <div className="fixed inset-0 bg-black/40 z-20 md:hidden" onClick={() => setMobileSidebarOpen(false)} />
+                <div
+                    style={{
+                        position: 'fixed', inset: 0,
+                        backgroundColor: 'rgba(0,0,0,0.5)',
+                        zIndex: 20,
+                    }}
+                    onClick={() => setMobileSidebarOpen(false)}
+                />
             )}
 
             {/* ── Main content ───────────────────────────────── */}
-            <main className="flex-1 md:ml-64 flex flex-col min-h-screen">
-                {/* Top bar */}
-                <header className="h-14 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10 gap-4">
-                    {/* Left: breadcrumb */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
+            <main style={{
+                flex: 1,
+                minWidth: 0,
+                minHeight: 0,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+            }}
+                className="settings-main"
+            >
+                {/* Top bar — fixed height, never moves */}
+                <header style={{
+                    height: 48,
+                    minHeight: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0 24px',
+                    borderBottom: '1px solid var(--border-default)',
+                    backgroundColor: 'var(--bg-surface)',
+                    flexShrink: 0,
+                    zIndex: 10,
+                    gap: 16,
+                }}>
+                    {/* Left: mobile menu + breadcrumb */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                         <button
-                            className="md:hidden p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                            style={{
+                                padding: 6, borderRadius: 2, background: 'none', border: 'none',
+                                cursor: 'pointer', color: 'var(--text-muted)',
+                                display: 'flex', alignItems: 'center',
+                                transition: 'color 150ms ease',
+                            }}
                             onClick={() => setMobileSidebarOpen(true)}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                         >
                             <Menu size={18} />
                         </button>
-                        <div className="hidden md:flex items-center gap-2">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Settings</span>
-                            <span className="text-gray-300 dark:text-gray-700">/</span>
-                            <span className="text-[13px] font-bold text-gray-900 dark:text-white">{activeLabel}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.12em',
+                                color: 'var(--text-muted)',
+                            }}>Settings</span>
+                            <span style={{ color: 'var(--border-accent)', fontSize: 14 }}>/</span>
+                            <span style={{
+                                fontSize: 13,
+                                fontWeight: 600,
+                                color: 'var(--text-primary)',
+                            }}>{activeLabel}</span>
                         </div>
                     </div>
 
                     {/* Center: Search bar */}
-                    <div className="flex-1 max-w-md">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                    <div style={{ flex: 1, maxWidth: 360 }}>
+                        <div style={{ position: 'relative' }}>
+                            <Search
+                                size={14}
+                                style={{
+                                    position: 'absolute',
+                                    left: 10,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    color: 'var(--text-muted)',
+                                    pointerEvents: 'none',
+                                }}
+                            />
                             <input
                                 type="text"
                                 placeholder="Search settings…"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-9 pr-8 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-[13px] text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all"
+                                style={{
+                                    width: '100%',
+                                    paddingLeft: 32,
+                                    paddingRight: searchQuery ? 32 : 12,
+                                    paddingTop: 6,
+                                    paddingBottom: 6,
+                                    backgroundColor: 'var(--bg-input)',
+                                    border: '1px solid var(--border-default)',
+                                    borderRadius: 2,
+                                    fontSize: 13,
+                                    color: 'var(--text-primary)',
+                                    outline: 'none',
+                                    boxSizing: 'border-box',
+                                    transition: 'border-color 150ms ease',
+                                    ...S.font,
+                                }}
+                                onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
+                                onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                             />
                             {searchQuery && (
-                                <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                <button
+                                    onClick={() => setSearchQuery('')}
+                                    style={{
+                                        position: 'absolute',
+                                        right: 8,
+                                        top: '50%',
+                                        transform: 'translateY(-50%)',
+                                        background: 'none',
+                                        border: 'none',
+                                        cursor: 'pointer',
+                                        color: 'var(--text-muted)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        padding: 2,
+                                        transition: 'color 150ms ease',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                                >
                                     <X size={13} />
                                 </button>
                             )}
@@ -268,15 +482,45 @@ const Settings = () => {
                     {/* Right: back */}
                     <button
                         onClick={handleBackNavigation}
-                        className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[12.5px] font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                        style={{
+                            flexShrink: 0,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '6px 12px',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            color: 'var(--text-secondary)',
+                            background: 'none',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: 2,
+                            cursor: 'pointer',
+                            transition: 'color 150ms ease, border-color 150ms ease',
+                            ...S.font,
+                        }}
+                        onMouseEnter={e => {
+                            e.currentTarget.style.color = 'var(--text-primary)';
+                            e.currentTarget.style.borderColor = 'var(--border-accent)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.color = 'var(--text-secondary)';
+                            e.currentTarget.style.borderColor = 'var(--border-default)';
+                        }}
                     >
                         <ArrowLeft size={14} /> Back
                     </button>
                 </header>
 
-                {/* Content */}
-                <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                    <div className="max-w-3xl mx-auto space-y-6 pb-24">
+                {/* Content — the ONLY scrolling element in the page */}
+                <div
+                    className="settings-scroll"
+                    style={{
+                        flex: 1,
+                        minHeight: 0,
+                        padding: '32px 24px',
+                    }}
+                >
+                    <div style={{ maxWidth: 720, margin: '0 auto', paddingBottom: 80 }}>
 
                         {activeSection === 'profile' && (
                             <ProfileTab
@@ -314,14 +558,32 @@ const Settings = () => {
                             />
                         )}
                         {activeSection === 'integrations' && (
-                            <div className="space-y-4">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                                 {workspaces.length > 1 && (
                                     <div>
-                                        <label className="block text-[12px] font-medium text-gray-700 dark:text-gray-300 mb-1">Workspace</label>
+                                        <label style={{
+                                            display: 'block',
+                                            fontSize: 11,
+                                            fontWeight: 700,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.12em',
+                                            color: 'var(--text-muted)',
+                                            marginBottom: 8,
+                                            ...S.font,
+                                        }}>Workspace</label>
                                         <select
                                             value={selectedWorkspaceId}
                                             onChange={e => setSelectedWorkspaceId(e.target.value)}
-                                            className="px-3 py-2 text-[13px] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                                            style={{
+                                                padding: '6px 10px',
+                                                fontSize: 13,
+                                                backgroundColor: 'var(--bg-input)',
+                                                border: '1px solid var(--border-default)',
+                                                borderRadius: 2,
+                                                color: 'var(--text-primary)',
+                                                outline: 'none',
+                                                ...S.font,
+                                            }}
                                         >
                                             {workspaces.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
                                         </select>
@@ -336,6 +598,28 @@ const Settings = () => {
                     </div>
                 </div>
             </main>
+
+            {/* Sidebar desktop offset */}
+            <style>{`
+                @media (min-width: 768px) {
+                    .settings-sidebar { transform: translateX(0) !important; }
+                    .settings-main { margin-left: 240px; }
+                }
+            `}</style>
+
+            {/* Mobile bottom nav — rendered via portal so iOS Safari overflow:hidden can't clip it */}
+            {isMobile && createPortal(
+                <MobileBottomNav
+                    workspaceId={workspaces[0]?.id || localStorage.getItem('lastWorkspaceId') || ''}
+                    showAI={false}
+                    onAIToggle={() => {
+                        const wsId = workspaces[0]?.id || localStorage.getItem('lastWorkspaceId');
+                        if (wsId) navigate(`/workspace/${wsId}/home`, { state: { openAI: true } });
+                        else navigate(-1);
+                    }}
+                />,
+                document.body
+            )}
         </div>
     );
 };

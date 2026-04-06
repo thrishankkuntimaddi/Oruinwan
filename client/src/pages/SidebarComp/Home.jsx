@@ -228,35 +228,52 @@ const Home = () => {
   }, [socket, activeChat]);
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900">
+    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-base, #0c0c0c)' }}>
+      <style>{`
+        @keyframes shimmer {
+          0%   { opacity: 0.4; }
+          50%  { opacity: 0.8; }
+          100% { opacity: 0.4; }
+        }
+        .skel-shimmer { animation: shimmer 1.6s ease-in-out infinite; }
+      `}</style>
+
       {isLoading ? (
-        <div className="w-full h-full flex flex-col bg-white dark:bg-gray-900 animate-pulse p-4 gap-4">
+        <div className="skel-shimmer" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-base, #0c0c0c)', padding: '16px', gap: '20px' }}>
           {/* Header skeleton */}
-          <div className="flex items-center gap-3 pb-3 border-b border-gray-100 dark:border-gray-800">
-            <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700" />
-            <div className="flex-1 space-y-1.5">
-              <div className="h-3 w-28 bg-gray-200 dark:bg-gray-700 rounded" />
-              <div className="h-2 w-16 bg-gray-100 dark:bg-gray-700/50 rounded" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', flexShrink: 0 }} />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ height: '10px', width: '120px', background: 'rgba(255,255,255,0.08)' }} />
+              <div style={{ height: '8px', width: '70px', background: 'rgba(255,255,255,0.04)' }} />
             </div>
           </div>
-          {/* Chat message skeletons - Slack-style, all left-aligned */}
-          <div className="flex-1 space-y-5 overflow-hidden">
-            {[{ n: 18, l1: 65, l2: 0 }, { n: 22, l1: 50, l2: 38 }, { n: 16, l1: 78, l2: 0 }, { n: 24, l1: 55, l2: 42 }, { n: 20, l1: 70, l2: 0 }].map((b, i) => (
-              <div key={i} className="flex items-start gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0 mt-0.5" />
-                <div className="flex-1 space-y-1.5" style={{ maxWidth: '70%' }}>
-                  <div className="flex gap-2 items-baseline">
-                    <div className="h-2.5 bg-gray-300 dark:bg-gray-600 rounded" style={{ width: `${b.n * 4}px` }} />
-                    <div className="h-2 w-8 bg-gray-100 dark:bg-gray-700/50 rounded" />
+
+          {/* Message skeletons */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '22px', overflow: 'hidden' }}>
+            {[
+              { aw: 100, l1: '65%', l2: null },
+              { aw: 88,  l1: '50%', l2: '38%' },
+              { aw: 72,  l1: '78%', l2: null },
+              { aw: 96,  l1: '55%', l2: '42%' },
+              { aw: 82,  l1: '70%', l2: null },
+            ].map((b, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ flex: 1, maxWidth: '68%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
+                    <div style={{ height: '9px', width: `${b.aw}px`, background: 'rgba(255,255,255,0.1)' }} />
+                    <div style={{ height: '7px', width: '40px', background: 'rgba(255,255,255,0.04)' }} />
                   </div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded-lg" style={{ width: `${b.l1}%` }} />
-                  {b.l2 > 0 && <div className="h-4 bg-gray-100 dark:bg-gray-700/60 rounded-lg" style={{ width: `${b.l2}%` }} />}
+                  <div style={{ height: '14px', background: 'rgba(255,255,255,0.06)', width: b.l1 }} />
+                  {b.l2 && <div style={{ height: '14px', background: 'rgba(255,255,255,0.04)', width: b.l2 }} />}
                 </div>
               </div>
             ))}
           </div>
+
           {/* Input skeleton */}
-          <div className="h-11 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700" />
+          <div style={{ height: '42px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }} />
         </div>
       ) : activeChat ? (
         <ChatWindowV2
@@ -281,6 +298,7 @@ const Home = () => {
       )}
     </div>
   );
+
 };
 
 export default Home;

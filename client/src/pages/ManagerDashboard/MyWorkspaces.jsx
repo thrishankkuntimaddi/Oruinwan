@@ -8,64 +8,98 @@ const MyWorkspaces = ({ data }) => {
 
     return (
         <section>
-            <div className="mb-4">
-                <h3 className="text-sm font-bold text-slate-700 dark:text-gray-300 uppercase tracking-wide">My Workspaces</h3>
-                <p className="text-xs text-slate-500 dark:text-gray-500">Projects you manage</p>
+            <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.13em', textTransform: 'uppercase', margin: '0 0 4px' }}>
+                    My Workspaces
+                </h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>Projects you manage</p>
             </div>
 
-            <div className="space-y-4">
-                {workspaces.length === 0 ? (
-                    <div className="p-8 text-center bg-white dark:bg-gray-800 rounded-xl border border-dashed border-slate-300 dark:border-gray-600">
-                        <Briefcase className="w-10 h-10 text-slate-300 dark:text-gray-600 mx-auto mb-2" />
-                        <p className="text-sm text-slate-500 dark:text-gray-400">You don't manage any workspaces yet</p>
-                    </div>
-                ) : (
-                    workspaces.map((ws) => (
-                        <div key={ws._id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-5 transition-colors">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                <div className="flex-1">
-                                    <h4 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
-                                        <Briefcase size={18} className="text-indigo-600 dark:text-indigo-400" />
-                                        {ws.name}
-                                    </h4>
-                                    <div className="flex items-center gap-4 mt-2 text-xs font-medium text-slate-500 dark:text-gray-400">
-                                        <span>{ws.memberCount} Members</span>
-                                        <span>•</span>
-                                        <span className={ws.status === 'active' ? 'text-green-600 dark:text-green-400' : 'text-slate-500'}>
-                                            {ws.status === 'active' ? 'Active' : 'Archived'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center gap-6">
-                                    {/* Activity Stats for this workspace */}
-                                    <div className="text-center">
-                                        <div className="text-lg font-black text-slate-900 dark:text-white">{ws.activity?.messages || 0}</div>
-                                        <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-gray-500">Messages</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-lg font-black text-slate-900 dark:text-white">{ws.activity?.tasksActive || 0}</div>
-                                        <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-gray-500">Open Tasks</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-lg font-black text-slate-900 dark:text-white">{ws.activity?.tasksCompleted || 0}</div>
-                                        <div className="text-[10px] uppercase font-bold text-slate-400 dark:text-gray-500">Completed</div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <button
-                                        onClick={() => navigate(`/workspace/${ws._id}/home`)}
-                                        className="px-4 py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors">
-                                        Manage
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
+            {workspaces.length === 0 ? (
+                <div style={{
+                    padding: '48px 24px', textAlign: 'center',
+                    background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)'
+                }}>
+                    <Briefcase size={32} style={{ color: 'var(--text-muted)', margin: '0 auto 12px' }} />
+                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>You don't manage any workspaces yet</p>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--border-subtle)' }}>
+                    {workspaces.map((ws) => (
+                        <WorkspaceRow key={ws._id} ws={ws} navigate={navigate} />
+                    ))}
+                </div>
+            )}
         </section>
+    );
+};
+
+const WorkspaceRow = ({ ws, navigate }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <div
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)',
+                padding: '20px 24px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px',
+                transition: 'background 150ms ease'
+            }}
+        >
+            <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <Briefcase size={16} style={{ color: hov ? 'var(--accent)' : 'var(--text-muted)', transition: 'color 150ms ease' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{ws.name}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', paddingLeft: '24px' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{ws.memberCount} Members</span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>·</span>
+                    <span style={{
+                        fontSize: '12px',
+                        color: ws.status === 'active' ? 'var(--state-success)' : 'var(--text-muted)'
+                    }}>
+                        {ws.status === 'active' ? 'Active' : 'Archived'}
+                    </span>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                <StatCell label="Messages" value={ws.activity?.messages || 0} />
+                <StatCell label="Open Tasks" value={ws.activity?.tasksActive || 0} />
+                <StatCell label="Completed" value={ws.activity?.tasksCompleted || 0} />
+                <ManageBtn onClick={() => navigate(`/workspace/${ws._id}/home`)} />
+            </div>
+        </div>
+    );
+};
+
+const StatCell = ({ label, value }) => (
+    <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>{value}</div>
+        <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: '2px' }}>{label}</div>
+    </div>
+);
+
+const ManageBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '7px 16px',
+                background: hov ? 'var(--bg-hover)' : 'var(--bg-active)',
+                border: '1px solid var(--border-default)',
+                color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '13px', fontWeight: 500,
+                borderRadius: '2px', cursor: 'pointer',
+                transition: 'color 150ms ease, background 150ms ease'
+            }}
+        >
+            Manage
+        </button>
     );
 };
 

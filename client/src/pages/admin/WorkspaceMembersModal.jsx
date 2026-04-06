@@ -1,75 +1,54 @@
-// client/src/pages/admin/WorkspaceMembersModal.jsx
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-    X, Users, UserPlus, Search, Shield, Crown,
-    UserMinus, ChevronDown, Check, Loader2, Circle
-} from 'lucide-react';
+import { X, Users, UserPlus, Search, Shield, Crown, UserMinus, ChevronDown, Check } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
-// ── Role badge ────────────────────────────────────────────────────────────────
-const RoleBadge = ({ role, type = 'workspace' }) => {
+const ACCENT_COLORS = ['#b8956a', '#5aba8a', '#7a5af8', '#e05252', '#38bdf8', '#f59e0b'];
+
+const RoleBadge = ({ role }) => {
     const cfg = {
-        owner:   { bg: 'bg-yellow-900/40', text: 'text-yellow-400', label: 'Owner' },
-        admin:   { bg: 'bg-purple-900/40', text: 'text-purple-400', label: 'Admin' },
-        member:  { bg: 'bg-blue-900/40',   text: 'text-blue-400',   label: 'Member' },
-        manager: { bg: 'bg-green-900/40',  text: 'text-green-400',  label: 'Manager' },
-        guest:   { bg: 'bg-gray-700/40',   text: 'text-gray-400',   label: 'Guest' },
+        owner: { color: 'var(--accent)', label: 'Owner' },
+        admin: { color: '#7a5af8', label: 'Admin' },
+        member: { color: 'var(--text-secondary)', label: 'Member' },
+        manager: { color: 'var(--state-success)', label: 'Manager' },
+        guest: { color: 'var(--text-muted)', label: 'Guest' },
     };
     const c = cfg[role] || cfg.member;
     return (
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${c.bg} ${c.text}`}>
-            {role === 'owner' && <Crown size={10} />}
-            {role === 'admin' && <Shield size={10} />}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', padding: '1px 6px', fontSize: '10px', fontWeight: 700, color: c.color, border: `1px solid ${c.color}` }}>
+            {role === 'owner' && <Crown size={9} />}
+            {role === 'admin' && <Shield size={9} />}
             {c.label}
         </span>
     );
 };
 
-// ── Avatar ────────────────────────────────────────────────────────────────────
-const Avatar = ({ user, size = 'md' }) => {
-    const sz = size === 'sm' ? 'w-7 h-7 text-xs' : 'w-9 h-9 text-sm';
-    if (user.profilePicture) {
-        return <img src={user.profilePicture} alt={user.username} className={`${sz} rounded-full object-cover flex-shrink-0`} />;
-    }
+const Avatar = ({ user }) => {
+    if (user.profilePicture) return <img src={user.profilePicture} alt={user.username} style={{ width: '32px', height: '32px', borderRadius: '0', objectFit: 'cover', flexShrink: 0 }} />;
     const initials = (user.username || '?').charAt(0).toUpperCase();
-    const colors = ['bg-indigo-600', 'bg-violet-600', 'bg-pink-600', 'bg-sky-600', 'bg-emerald-600'];
-    const color = colors[initials.charCodeAt(0) % colors.length];
+    const bg = ACCENT_COLORS[initials.charCodeAt(0) % ACCENT_COLORS.length];
     return (
-        <div className={`${sz} ${color} rounded-full flex items-center justify-center font-bold text-white flex-shrink-0`}>
-            {initials}
-        </div>
+        <div style={{ width: '32px', height: '32px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#0c0c0c', flexShrink: 0 }}>{initials}</div>
     );
 };
 
-// ── Role selector dropdown ────────────────────────────────────────────────────
 const RoleSelector = ({ value, onChange }) => {
     const [open, setOpen] = useState(false);
-    const roles = [
-        { value: 'member', label: 'Member' },
-        { value: 'admin',  label: 'Admin'  },
-    ];
+    const roles = [{ value: 'member', label: 'Member' }, { value: 'admin', label: 'Admin' }];
     return (
-        <div className="relative">
-            <button
-                type="button"
-                onClick={() => setOpen(o => !o)}
-                className="flex items-center gap-1 px-2.5 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-semibold text-gray-200 transition-colors"
-            >
-                {roles.find(r => r.value === value)?.label}
-                <ChevronDown size={12} />
+        <div style={{ position: 'relative' }}>
+            <button type="button" onClick={() => setOpen(o => !o)}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', borderRadius: '2px' }}>
+                {roles.find(r => r.value === value)?.label} <ChevronDown size={11} />
             </button>
             {open && (
-                <div className="absolute right-0 top-full mt-1 w-28 bg-gray-800 border border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '2px', width: '120px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', zIndex: 50 }}>
                     {roles.map(r => (
-                        <button
-                            key={r.value}
-                            type="button"
-                            onClick={() => { onChange(r.value); setOpen(false); }}
-                            className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-200 hover:bg-gray-700 transition-colors"
-                        >
-                            {r.label}
-                            {value === r.value && <Check size={12} className="text-indigo-400" />}
+                        <button key={r.value} type="button" onClick={() => { onChange(r.value); setOpen(false); }}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'none', border: 'none', color: value === r.value ? 'var(--accent)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', textAlign: 'left', transition: 'all 150ms ease' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'none'; }}>
+                            {r.label} {value === r.value && <Check size={11} style={{ color: 'var(--accent)' }} />}
                         </button>
                     ))}
                 </div>
@@ -78,22 +57,26 @@ const RoleSelector = ({ value, onChange }) => {
     );
 };
 
-// ── Main Modal ────────────────────────────────────────────────────────────────
+const inputSt = {
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
+    fontFamily: 'Inter, system-ui, sans-serif', padding: '7px 10px 7px 28px',
+    width: '100%', boxSizing: 'border-box',
+};
+
 const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
     const { showToast } = useToast();
-
-    const [tab, setTab] = useState('members'); // 'members' | 'add'
-    const [members,        setMembers]        = useState([]);
+    const [tab, setTab] = useState('members');
+    const [members, setMembers] = useState([]);
     const [companyMembers, setCompanyMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(false);
     const [loadingCompany, setLoadingCompany] = useState(false);
-    const [search,         setSearch]         = useState('');
-    const [addSearch,      setAddSearch]      = useState('');
-    const [addingId,       setAddingId]       = useState(null);
-    const [removingId,     setRemovingId]     = useState(null);
-    const [roleMap,        setRoleMap]        = useState({}); // { userId: 'member'|'admin' }
+    const [search, setSearch] = useState('');
+    const [addSearch, setAddSearch] = useState('');
+    const [addingId, setAddingId] = useState(null);
+    const [removingId, setRemovingId] = useState(null);
+    const [roleMap, setRoleMap] = useState({});
 
-    // ── Fetch current workspace members ──────────────────────────────────────
     const fetchMembers = useCallback(async () => {
         setLoadingMembers(true);
         try {
@@ -101,12 +84,9 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
             setMembers(res.data.members || []);
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to load members', 'error');
-        } finally {
-            setLoadingMembers(false);
-        }
+        } finally { setLoadingMembers(false); }
     }, [workspace._id, showToast]);
 
-    // ── Fetch company-wide members ────────────────────────────────────────────
     const fetchCompanyMembers = useCallback(async () => {
         setLoadingCompany(true);
         try {
@@ -114,17 +94,11 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
             setCompanyMembers(res.data.members || []);
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to load company members', 'error');
-        } finally {
-            setLoadingCompany(false);
-        }
+        } finally { setLoadingCompany(false); }
     }, [showToast]);
 
-    useEffect(() => {
-        fetchMembers();
-        fetchCompanyMembers();
-    }, [fetchMembers, fetchCompanyMembers]);
+    useEffect(() => { fetchMembers(); fetchCompanyMembers(); }, [fetchMembers, fetchCompanyMembers]);
 
-    // ── Add member ────────────────────────────────────────────────────────────
     const handleAdd = async (userId) => {
         setAddingId(userId);
         try {
@@ -135,12 +109,9 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
             onMemberCountChange?.(members.length + 1);
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to add member', 'error');
-        } finally {
-            setAddingId(null);
-        }
+        } finally { setAddingId(null); }
     };
 
-    // ── Remove member ─────────────────────────────────────────────────────────
     const handleRemove = async (userId) => {
         setRemovingId(userId);
         try {
@@ -150,129 +121,88 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
             onMemberCountChange?.(members.length - 1);
         } catch (err) {
             showToast(err.response?.data?.message || 'Failed to remove member', 'error');
-        } finally {
-            setRemovingId(null);
-        }
+        } finally { setRemovingId(null); }
     };
 
-    // ── Computed: company members NOT yet in this workspace ───────────────────
     const memberIds = new Set(members.map(m => String(m._id)));
     const addableMembers = companyMembers.filter(m => !memberIds.has(String(m._id)));
-
-    const filteredMembers  = members.filter(m =>
-        m.username?.toLowerCase().includes(search.toLowerCase()) ||
-        m.email?.toLowerCase().includes(search.toLowerCase())
-    );
-    const filteredAddable  = addableMembers.filter(m =>
-        m.username?.toLowerCase().includes(addSearch.toLowerCase()) ||
-        m.email?.toLowerCase().includes(addSearch.toLowerCase())
-    );
+    const filteredMembers = members.filter(m => m.username?.toLowerCase().includes(search.toLowerCase()) || m.email?.toLowerCase().includes(search.toLowerCase()));
+    const filteredAddable = addableMembers.filter(m => m.username?.toLowerCase().includes(addSearch.toLowerCase()) || m.email?.toLowerCase().includes(addSearch.toLowerCase()));
 
     return (
-        <div className="fixed inset-0 z-[200] flex items-center justify-end bg-black/60 backdrop-blur-sm"
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.6)' }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-
-            {/* Panel */}
-            <div className="w-full max-w-lg h-full bg-gray-900 border-l border-gray-700/80 flex flex-col shadow-2xl animate-slideInRight">
-
+            <div style={{ width: '100%', maxWidth: '480px', height: '100%', background: 'var(--bg-surface)', borderLeft: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, system-ui, sans-serif' }}>
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-gray-700/80 flex items-center justify-between flex-shrink-0">
-                    <div>
-                        <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                                style={{ backgroundColor: workspace.color || '#4f46e5' }}>
-                                <Users size={16} className="text-white" />
-                            </div>
-                            {workspace.name}
-                        </h2>
-                        <p className="text-xs text-gray-400 mt-0.5 ml-10">Workspace Members · {members.length} total</p>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', background: workspace.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Users size={15} style={{ color: '#0c0c0c' }} />
+                        </div>
+                        <div>
+                            <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{workspace.name}</h2>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Workspace Members · {members.length} total</p>
+                        </div>
                     </div>
-                    <button onClick={onClose}
-                        className="p-2 hover:bg-gray-700 rounded-lg transition-colors text-gray-400 hover:text-white">
-                        <X size={18} />
+                    <button onClick={onClose} style={{ padding: '6px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'color 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
+                        <X size={16} />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-gray-700/80 flex-shrink-0">
-                    {[
-                        { key: 'members', label: 'Members', icon: Users,    count: members.length },
-                        { key: 'add',     label: 'Add Members', icon: UserPlus, count: addableMembers.length },
-                    ].map(t => (
-                        <button
-                            key={t.key}
-                            onClick={() => setTab(t.key)}
-                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 text-sm font-semibold transition-colors border-b-2 ${
-                                tab === t.key
-                                    ? 'border-indigo-500 text-indigo-400 bg-indigo-500/5'
-                                    : 'border-transparent text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                            }`}
-                        >
-                            <t.icon size={16} />
-                            {t.label}
-                            <span className={`px-1.5 py-0.5 rounded-full text-xs font-bold ${
-                                tab === t.key ? 'bg-indigo-500/20 text-indigo-400' : 'bg-gray-700 text-gray-400'
-                            }`}>{t.count}</span>
-                        </button>
-                    ))}
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                    {[{ key: 'members', label: 'Members', icon: Users, count: members.length }, { key: 'add', label: 'Add Members', icon: UserPlus, count: addableMembers.length }].map(t => {
+                        const active = tab === t.key;
+                        return (
+                            <button key={t.key} onClick={() => setTab(t.key)}
+                                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 16px', background: 'none', border: 'none', borderBottom: `2px solid ${active ? 'var(--accent)' : 'transparent'}`, color: active ? 'var(--accent)' : 'var(--text-muted)', fontSize: '12px', fontWeight: active ? 600 : 400, cursor: 'pointer', transition: 'all 150ms ease' }}>
+                                <t.icon size={13} /> {t.label}
+                                <span style={{ padding: '1px 6px', background: active ? 'var(--bg-active)' : 'var(--border-subtle)', color: active ? 'var(--accent)' : 'var(--text-muted)', fontSize: '10px', fontWeight: 700, borderRadius: '2px' }}>{t.count}</span>
+                            </button>
+                        );
+                    })}
                 </div>
 
-                {/* ── Tab: Members ──────────────────────────────────────────── */}
+                {/* Members Tab */}
                 {tab === 'members' && (
-                    <div className="flex flex-col flex-1 min-h-0">
-                        {/* Search */}
-                        <div className="px-4 py-3 border-b border-gray-700/50 flex-shrink-0">
-                            <div className="relative">
-                                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                                <input
-                                    type="text"
-                                    placeholder="Search members…"
-                                    value={search}
-                                    onChange={e => setSearch(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                                />
-                            </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                        <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, position: 'relative' }}>
+                            <Search size={12} style={{ position: 'absolute', left: '22px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                            <input type="text" placeholder="Search members…" value={search} onChange={e => setSearch(e.target.value)} style={inputSt} />
                         </div>
-
-                        {/* List */}
-                        <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1 custom-scrollbar">
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }} className="custom-scrollbar">
                             {loadingMembers ? (
-                                <div className="flex items-center justify-center py-16">
-                                    <Loader2 size={28} className="animate-spin text-indigo-500" />
+                                <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+                                    <div style={{ width: '24px', height: '24px', border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                                 </div>
                             ) : filteredMembers.length === 0 ? (
-                                <div className="text-center py-16 text-gray-500">
-                                    <Users size={36} className="mx-auto mb-3 opacity-40" />
-                                    <p className="text-sm">{search ? 'No members match your search' : 'No members yet'}</p>
+                                <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--text-muted)' }}>
+                                    <Users size={28} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+                                    <p style={{ fontSize: '12px' }}>{search ? 'No members match your search' : 'No members yet'}</p>
                                 </div>
                             ) : filteredMembers.map(m => (
-                                <div key={m._id}
-                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-800/60 transition-colors group">
-                                    <div className="relative">
+                                <div key={m._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', transition: 'background 150ms ease', position: 'relative' }}
+                                    onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.querySelector('.remove-btn')?.classList.add('visible'); }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.querySelector('.remove-btn')?.classList.remove('visible'); }}>
+                                    <div style={{ position: 'relative' }}>
                                         <Avatar user={m} />
-                                        <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-gray-900 ${m.isOnline ? 'bg-emerald-400' : 'bg-gray-600'}`} />
+                                        <span style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '8px', height: '8px', borderRadius: '50%', background: m.isOnline ? 'var(--state-success)' : 'var(--border-accent)', border: '2px solid var(--bg-surface)' }} />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm font-semibold text-gray-200 truncate">{m.username}</p>
-                                            <RoleBadge role={m.workspaceRole} type="workspace" />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.username}</p>
+                                            <RoleBadge role={m.workspaceRole} />
                                         </div>
-                                        <p className="text-xs text-gray-400 truncate">{m.companyEmail || m.email}</p>
-                                        {m.companyEmail && m.email && m.companyEmail !== m.email && (
-                                            <p className="text-xs text-gray-600 truncate">{m.email}</p>
-                                        )}
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.companyEmail || m.email}</p>
                                     </div>
                                     {m.workspaceRole !== 'owner' && (
-                                        <button
-                                            onClick={() => handleRemove(m._id)}
-                                            disabled={removingId === m._id}
-                                            className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-all"
-                                            title="Remove from workspace"
-                                        >
+                                        <button className="remove-btn" onClick={() => handleRemove(m._id)} disabled={removingId === m._id} title="Remove from workspace"
+                                            style={{ opacity: 0, padding: '4px', background: 'none', border: 'none', color: 'var(--state-danger)', cursor: 'pointer', borderRadius: '2px', transition: 'opacity 150ms ease' }}>
                                             {removingId === m._id
-                                                ? <Loader2 size={14} className="animate-spin" />
-                                                : <UserMinus size={14} />
-                                            }
+                                                ? <div style={{ width: '12px', height: '12px', border: '2px solid var(--state-danger)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                                : <UserMinus size={13} />}
                                         </button>
                                     )}
                                 </div>
@@ -281,74 +211,44 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
                     </div>
                 )}
 
-                {/* ── Tab: Add Members ──────────────────────────────────────── */}
+                {/* Add Members Tab */}
                 {tab === 'add' && (
-                    <div className="flex flex-col flex-1 min-h-0">
-                        {/* Info banner */}
-                        <div className="mx-4 mt-3 px-3 py-2 bg-indigo-900/20 border border-indigo-700/30 rounded-xl flex items-start gap-2 flex-shrink-0">
-                            <Shield size={14} className="text-indigo-400 mt-0.5 flex-shrink-0" />
-                            <p className="text-xs text-indigo-300">
-                                Only <strong>company members</strong> can be added. External users are never shown.
-                            </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                        <div style={{ margin: '10px 12px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'flex-start', gap: '8px', flexShrink: 0 }}>
+                            <Shield size={12} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
+                            <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Only <strong style={{ color: 'var(--text-primary)' }}>company members</strong> can be added. External users are never shown.</p>
                         </div>
-
-                        {/* Search */}
-                        <div className="px-4 py-3 flex-shrink-0">
-                            <div className="relative">
-                                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                                <input
-                                    type="text"
-                                    placeholder="Search company members…"
-                                    value={addSearch}
-                                    onChange={e => setAddSearch(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-xl text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                                />
-                            </div>
+                        <div style={{ padding: '0 12px 10px', flexShrink: 0, position: 'relative' }}>
+                            <Search size={12} style={{ position: 'absolute', left: '22px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                            <input type="text" placeholder="Search company members…" value={addSearch} onChange={e => setAddSearch(e.target.value)} style={inputSt} />
                         </div>
-
-                        {/* List */}
-                        <div className="flex-1 overflow-y-auto px-4 space-y-1 pb-4 custom-scrollbar">
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px 12px' }} className="custom-scrollbar">
                             {loadingCompany ? (
-                                <div className="flex items-center justify-center py-16">
-                                    <Loader2 size={28} className="animate-spin text-indigo-500" />
+                                <div style={{ display: 'flex', justifyContent: 'center', padding: '48px' }}>
+                                    <div style={{ width: '24px', height: '24px', border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                                 </div>
                             ) : filteredAddable.length === 0 ? (
-                                <div className="text-center py-16 text-gray-500">
-                                    <UserPlus size={36} className="mx-auto mb-3 opacity-40" />
-                                    <p className="text-sm font-medium text-gray-400">
-                                        {addSearch ? 'No company members match your search' : 'All company members are already in this workspace'}
-                                    </p>
+                                <div style={{ textAlign: 'center', padding: '48px 16px' }}>
+                                    <UserPlus size={28} style={{ color: 'var(--text-muted)', opacity: 0.4, margin: '0 auto 8px' }} />
+                                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{addSearch ? 'No company members match your search' : 'All company members are already in this workspace'}</p>
                                 </div>
                             ) : filteredAddable.map(m => (
-                                <div key={m._id}
-                                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-800/60 transition-colors">
+                                <div key={m._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 10px', transition: 'background 150ms ease' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                                     <Avatar user={m} />
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-sm font-semibold text-gray-200 truncate">{m.username}</p>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.username}</p>
                                             <RoleBadge role={m.companyRole} />
                                         </div>
-                                        <p className="text-xs text-gray-400 truncate">{m.companyEmail || m.jobTitle || m.email}</p>
-                                        {m.companyEmail && m.email && m.companyEmail !== m.email && (
-                                            <p className="text-xs text-gray-600 truncate">{m.email}</p>
-                                        )}
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.companyEmail || m.jobTitle || m.email}</p>
                                     </div>
-
-                                    {/* Role selector + Add button */}
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                        <RoleSelector
-                                            value={roleMap[m._id] || 'member'}
-                                            onChange={role => setRoleMap(prev => ({ ...prev, [m._id]: role }))}
-                                        />
-                                        <button
-                                            onClick={() => handleAdd(m._id)}
-                                            disabled={addingId === m._id}
-                                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors disabled:opacity-60"
-                                        >
-                                            {addingId === m._id
-                                                ? <Loader2 size={12} className="animate-spin" />
-                                                : <UserPlus size={12} />
-                                            }
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                                        <RoleSelector value={roleMap[m._id] || 'member'} onChange={role => setRoleMap(p => ({ ...p, [m._id]: role }))} />
+                                        <button onClick={() => handleAdd(m._id)} disabled={addingId === m._id}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 10px', background: addingId === m._id ? 'var(--bg-active)' : 'var(--accent)', border: 'none', color: addingId === m._id ? 'var(--text-muted)' : 'var(--bg-base)', fontSize: '11px', fontWeight: 700, cursor: addingId === m._id ? 'not-allowed' : 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+                                            {addingId === m._id ? <div style={{ width: '10px', height: '10px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <UserPlus size={11} />}
                                             Add
                                         </button>
                                     </div>

@@ -9,144 +9,198 @@ import TeamLoad from './TeamLoad';
 import UnassignedEmployees from './UnassignedEmployees';
 
 import {
-  getMyWorkspaces,
-  getTeamLoad,
-  getUnassignedEmployees
+    getMyWorkspaces,
+    getTeamLoad,
+    getUnassignedEmployees
 } from '../../services/managerDashboardService';
 
 const ManagerDashboard = () => {
-  // We can reuse isCompanyAdmin check or create a specific isManager helper if available
-  // For now, assuming managers have at least some specific role or just reusing admin/owner logic + manager logic
-  // But better to strictly use what permissions allow.
-  // However, the backend middleware 'requireManager' allows owner, admin, manager.
-  // Context probably needs an update to expose isManager or we check role manually.
-  const { userCompanyRole, isCompanyOwner } = useCompany();
-  const isManagerOrAbove = ['owner', 'admin', 'manager'].includes(userCompanyRole) || isCompanyOwner();
+    const { userCompanyRole, isCompanyOwner } = useCompany();
+    const isManagerOrAbove = ['owner', 'admin', 'manager'].includes(userCompanyRole) || isCompanyOwner();
+    const { showToast } = useToast();
+    const navigate = useNavigate();
 
-  const { showToast } = useToast();
-  const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [workspacesData, setWorkspacesData] = useState(null);
+    const [teamLoadData, setTeamLoadData] = useState(null);
+    const [unassignedData, setUnassignedData] = useState(null);
 
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+    const fetchData = useCallback(async () => {
+        try {
+            const [wsData, teamData, unassigned] = await Promise.all([
+                getMyWorkspaces(),
+                getTeamLoad(),
+                getUnassignedEmployees()
+            ]);
+            setWorkspacesData(wsData);
+            setTeamLoadData(teamData);
+            setUnassignedData(unassigned);
+        } catch (error) {
+            console.error("Error fetching manager dashboard data:", error);
+            if (error.response?.status !== 404) {
+                showToast("Failed to load dashboard data", "error");
+            }
+        }
+    }, [showToast]);
 
-  const [workspacesData, setWorkspacesData] = useState(null);
-  const [teamLoadData, setTeamLoadData] = useState(null);
-  const [unassignedData, setUnassignedData] = useState(null);
+    useEffect(() => {
+        if (!isManagerOrAbove) return;
+        const loadInitialData = async () => {
+            setLoading(true);
+            await fetchData();
+            setLoading(false);
+        };
+        loadInitialData();
+    }, [isManagerOrAbove, fetchData]);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [wsData, teamData, unassigned] = await Promise.all([
-        getMyWorkspaces(),
-        getTeamLoad(),
-        getUnassignedEmployees()
-      ]);
-
-      setWorkspacesData(wsData);
-      setTeamLoadData(teamData);
-      setUnassignedData(unassigned);
-    } catch (error) {
-      console.error("Error fetching manager dashboard data:", error);
-      // Don't show toast on every error to avoid spamming if user is just not a manager of anything yet
-      if (error.response?.status !== 404) {
-        showToast("Failed to load dashboard data", "error");
-      }
-    }
-  }, [showToast]);
-
-  useEffect(() => {
-    if (!isManagerOrAbove) return;
-
-    const loadInitialData = async () => {
-      setLoading(true);
-      await fetchData();
-      setLoading(false);
+    const handleRefresh = async () => {
+        if (refreshing) return;
+        setRefreshing(true);
+        await fetchData();
+        setRefreshing(false);
+        showToast("Dashboard refreshed", "success");
     };
 
-    loadInitialData();
-  }, [isManagerOrAbove, fetchData]);
-
-  const handleRefresh = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-    showToast("Dashboard refreshed", "success");
-  };
-
-  if (!isManagerOrAbove) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
-        <div className="text-center">
-          <LayoutGrid className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Access Denied</h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-6">You need manager privileges to access this page.</p>
-          <button
-            onClick={() => navigate('/workspaces')}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            Go to Workspaces
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-      {/* Header */}
-      <header className="h-16 px-8 flex items-center justify-between z-10 bg-white dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700 shadow-sm">
-        <div>
-          <h2 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            <LayoutGrid className="text-indigo-600 dark:text-indigo-400" size={24} />
-            Manager Console
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-gray-400 font-medium ml-8">
-            Delivery & Team Allocation · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
-          </p>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Show Admin Console button only if user is admin/owner */}
-          {['owner', 'admin'].includes(userCompanyRole) && (
-            <button
-              onClick={() => navigate('/admin/dashboard')}
-              className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2"
-            >
-              <Shield size={16} />
-              Admin Console
-            </button>
-          )}
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing || loading}
-            className="px-4 py-2 bg-white dark:bg-gray-700 border border-slate-300 dark:border-gray-600 text-slate-700 dark:text-gray-200 text-sm font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-gray-600 transition-colors shadow-sm flex items-center gap-2 disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
-      </header>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto w-full px-8 py-8 z-10 custom-scrollbar">
-        {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-          </div>
-        ) : (
-          <div className="space-y-8 max-w-7xl mx-auto">
-            {/* Top Row: Unassigned Employees (Critical Action) & Team Load */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-              <UnassignedEmployees data={unassignedData} />
-              <TeamLoad data={teamLoadData} />
+    if (!isManagerOrAbove) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                background: 'var(--bg-base)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 16px',
+                fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+            }}>
+                <div style={{ textAlign: 'center' }}>
+                    <LayoutGrid size={40} style={{ color: 'var(--text-muted)', margin: '0 auto 16px' }} />
+                    <h2 style={{
+                        fontSize: '22px', fontWeight: 600,
+                        color: 'var(--text-primary)', marginBottom: '8px',
+                        letterSpacing: '-0.015em'
+                    }}>Access Denied</h2>
+                    <p style={{
+                        fontSize: '14px', color: 'var(--text-secondary)',
+                        marginBottom: '24px', lineHeight: '1.6'
+                    }}>
+                        You need manager privileges to access this page.
+                    </p>
+                    <button
+                        onClick={() => navigate('/workspaces')}
+                        style={{
+                            padding: '8px 20px',
+                            background: 'var(--bg-active)',
+                            color: 'var(--text-primary)',
+                            border: '1px solid var(--border-default)',
+                            borderRadius: '2px',
+                            fontSize: '14px', fontWeight: 500,
+                            cursor: 'pointer',
+                            transition: 'background 150ms ease'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-active)'}
+                    >
+                        Go to Workspaces
+                    </button>
+                </div>
             </div>
+        );
+    }
 
-            {/* Bottom Row: My Workspaces */}
-            <MyWorkspaces data={workspacesData} />
-          </div>
-        )}
-      </div>
-    </div>
-  );
+    return (
+        <div style={{
+            display: 'flex', flexDirection: 'column', height: '100vh',
+            background: 'var(--bg-base)',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
+        }}>
+            {/* Header */}
+            <header style={{
+                height: '64px', padding: '0 32px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                background: 'var(--bg-surface)',
+                borderBottom: '1px solid var(--border-subtle)',
+                flexShrink: 0, zIndex: 10
+            }}>
+                <div>
+                    <h2 style={{
+                        fontSize: '18px', fontWeight: 600,
+                        color: 'var(--text-primary)',
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        letterSpacing: '-0.015em', margin: 0
+                    }}>
+                        <LayoutGrid size={18} style={{ color: 'var(--accent)' }} />
+                        Manager Console
+                    </h2>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', marginLeft: '26px' }}>
+                        Delivery & Team Allocation · {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {['owner', 'admin'].includes(userCompanyRole) && (
+                        <HeaderBtn icon={Shield} label="Admin Console" onClick={() => navigate('/admin/dashboard')} />
+                    )}
+                    <HeaderBtn
+                        icon={RefreshCw}
+                        label={refreshing ? 'Refreshing...' : 'Refresh'}
+                        onClick={handleRefresh}
+                        disabled={refreshing || loading}
+                        spinning={refreshing}
+                    />
+                </div>
+            </header>
+
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }} className="custom-scrollbar">
+                {loading ? (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>
+                        <div style={{
+                            width: '24px', height: '24px',
+                            border: '2px solid var(--border-accent)',
+                            borderTopColor: 'var(--accent)',
+                            borderRadius: '50%',
+                            animation: 'spin 0.8s linear infinite'
+                        }} />
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1280px', margin: '0 auto' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                            <UnassignedEmployees data={unassignedData} />
+                            <TeamLoad data={teamLoadData} />
+                        </div>
+                        <MyWorkspaces data={workspacesData} />
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+const HeaderBtn = ({ icon: Icon, label, onClick, disabled, spinning }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            disabled={disabled}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '7px 14px',
+                background: hov ? 'var(--bg-hover)' : 'var(--bg-active)',
+                border: '1px solid var(--border-default)',
+                color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '13px', fontWeight: 500,
+                borderRadius: '2px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                opacity: disabled ? 0.5 : 1,
+                transition: 'color 150ms ease, background 150ms ease'
+            }}
+        >
+            <Icon size={14} style={{ animation: spinning ? 'spin 1s linear infinite' : 'none' }} />
+            {label}
+        </button>
+    );
 };
 
 export default ManagerDashboard;

@@ -1,16 +1,8 @@
-// Phase 4 — Smart Reply Suggestions UI Component
-// Shows 3 AI-generated reply chips below the chat, clicking inserts text into composer
-
+// SmartReplySuggestions — Monolith Flow Design System
 import React, { useState, useEffect, useCallback } from "react";
 import { Zap, X } from "lucide-react";
 import api from '@services/api';
 
-/**
- * @param {object} props
- * @param {Array} props.recentMessages - Last N messages in the chat [{sender, text}]
- * @param {function} props.onSelect - Called with the selected suggestion string
- * @param {boolean} props.enabled - Whether smart reply is active
- */
 export default function SmartReplySuggestions({ recentMessages = [], onSelect, enabled = true }) {
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -22,9 +14,7 @@ export default function SmartReplySuggestions({ recentMessages = [], onSelect, e
         setLoading(true);
         setDismissed(false);
         try {
-            const res = await api.post("/api/ai/smart-reply", {
-                messages: recentMessages.slice(-5)
-            });
+            const res = await api.post("/api/ai/smart-reply", { messages: recentMessages.slice(-5) });
             setSuggestions(res.data.suggestions || []);
         } catch {
             setSuggestions([]);
@@ -33,7 +23,6 @@ export default function SmartReplySuggestions({ recentMessages = [], onSelect, e
         }
     }, [enabled, recentMessages]);
 
-    // Re-fetch when new messages arrive (debounced)
     useEffect(() => {
         if (recentMessages.length === lastMsgCount) return;
         setLastMsgCount(recentMessages.length);
@@ -44,12 +33,12 @@ export default function SmartReplySuggestions({ recentMessages = [], onSelect, e
     if (!enabled || dismissed || (suggestions.length === 0 && !loading)) return null;
 
     return (
-        <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto scrollbar-hide">
-            <Zap size={13} className="text-violet-400 flex-shrink-0" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', overflowX: 'auto', fontFamily: 'var(--font)' }}>
+            <Zap size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
             {loading ? (
-                <div className="flex gap-2">
+                <div style={{ display: 'flex', gap: '6px' }}>
                     {[80, 100, 72].map((w, i) => (
-                        <div key={i} className={`h-7 rounded-full bg-gray-100 animate-pulse`} style={{ width: w }} />
+                        <div key={i} style={{ height: '24px', width: `${w}px`, borderRadius: '2px', backgroundColor: 'var(--bg-hover)', animation: 'pulse 1.5s ease-in-out infinite' }} />
                     ))}
                 </div>
             ) : (
@@ -58,15 +47,24 @@ export default function SmartReplySuggestions({ recentMessages = [], onSelect, e
                         <button
                             key={i}
                             onClick={() => { onSelect?.(s); setDismissed(true); }}
-                            className="flex-shrink-0 px-3 py-1.5 bg-white border border-gray-200 hover:border-violet-300 hover:bg-violet-50 rounded-full text-xs text-gray-700 hover:text-violet-700 transition-all shadow-sm"
+                            style={{
+                                flexShrink: 0, padding: '4px 12px', fontSize: '12px', fontWeight: 500,
+                                backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
+                                borderRadius: '99px', cursor: 'pointer', color: 'var(--text-secondary)',
+                                transition: '150ms ease', whiteSpace: 'nowrap', fontFamily: 'var(--font)',
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
                         >
                             {s}
                         </button>
                     ))}
                     <button
                         onClick={() => setDismissed(true)}
-                        className="flex-shrink-0 p-1 text-gray-300 hover:text-gray-500 transition-colors"
+                        style={{ flexShrink: 0, display: 'flex', padding: '3px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: '150ms ease' }}
                         title="Dismiss"
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         <X size={12} />
                     </button>

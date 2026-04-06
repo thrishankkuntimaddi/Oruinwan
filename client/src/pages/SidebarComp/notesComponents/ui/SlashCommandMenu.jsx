@@ -41,7 +41,6 @@ const SlashCommandMenu = ({ position, query, onSelect, onClose }) => {
         return () => document.removeEventListener('keydown', handler);
     }, [activeIdx, filtered, onSelect, onClose]);
 
-    // Scroll active item into view
     useEffect(() => {
         const el = menuRef.current?.querySelector(`[data-idx="${activeIdx}"]`);
         el?.scrollIntoView({ block: 'nearest' });
@@ -52,33 +51,52 @@ const SlashCommandMenu = ({ position, query, onSelect, onClose }) => {
     return (
         <div
             ref={menuRef}
-            className="fixed z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl w-72 max-h-80 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
-            style={{ left: position.x, top: position.y }}
+            style={{
+                position: 'fixed', zIndex: 50, left: position.x, top: position.y,
+                background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.8)',
+                width: '288px', maxHeight: '320px', overflowY: 'auto',
+            }}
         >
-            <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest">
+            {/* Header */}
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>
                     {query ? `Results for "/${query}"` : 'Add a block'}
                 </p>
             </div>
-            <div className="py-1">
+
+            <div style={{ padding: '4px 0' }}>
                 {filtered.map((block, idx) => {
                     const Icon = block.icon;
+                    const isActive = idx === activeIdx;
                     return (
                         <button
                             key={`${block.type}-${idx}`}
                             data-idx={idx}
                             onClick={() => onSelect(block)}
                             onMouseEnter={() => setActiveIdx(idx)}
-                            className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors ${idx === activeIdx ? 'bg-blue-50 dark:bg-blue-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'}`}
+                            style={{
+                                width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                                padding: '8px 12px', textAlign: 'left', background: isActive ? 'rgba(184,149,106,0.1)' : 'transparent',
+                                border: 'none', cursor: 'pointer', transition: 'background 100ms ease',
+                            }}
                         >
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${idx === activeIdx ? 'bg-blue-100 dark:bg-blue-800 text-blue-600 dark:text-blue-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                                <Icon size={15} />
+                            <div style={{
+                                width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                flexShrink: 0,
+                                background: isActive ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.05)',
+                                border: `1px solid ${isActive ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.06)'}`,
+                                color: isActive ? '#b8956a' : 'rgba(228,228,228,0.4)',
+                            }}>
+                                <Icon size={14} />
                             </div>
-                            <div className="min-w-0">
-                                <p className={`text-sm font-medium leading-tight ${idx === activeIdx ? 'text-blue-700 dark:text-blue-300' : 'text-gray-700 dark:text-gray-200'}`}>
+                            <div style={{ minWidth: 0 }}>
+                                <p style={{ fontSize: '12px', fontWeight: 600, lineHeight: 1.3, color: isActive ? '#b8956a' : '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>
                                     {block.label}
                                 </p>
-                                <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight truncate">{block.desc}</p>
+                                <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {block.desc}
+                                </p>
                             </div>
                         </button>
                     );

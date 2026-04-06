@@ -1,26 +1,50 @@
 import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 
-/**
- * HelpBugView Component
- * Bug report submission form
- */
-const HelpBugView = ({ onBack }) => {
-    return (
-        <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">
-            <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
-                <button onClick={onBack} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
-                    <ChevronLeft size={14} className="mr-1" /> Back
-                </button>
-                <span className="font-bold text-gray-900 dark:text-white text-sm">Report Bug</span>
-                <div className="w-8"></div>
-            </div>
-            <div className="p-4 space-y-3">
-                <textarea className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 h-32 bg-white dark:bg-gray-800 text-gray-900 dark:text-white" placeholder="Describe the issue..." />
-                <button className="w-full bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-red-700 transition-all">Submit Report</button>
-            </div>
-        </div>
-    );
+const panelStyle = {
+    width: '256px', background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
+    boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden',
+    fontFamily: 'Inter, system-ui, sans-serif',
 };
+const headerStyle = {
+    padding: '12px 16px', display: 'flex', alignItems: 'center',
+    justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)',
+    background: 'rgba(255,255,255,0.02)',
+};
+const inp = {
+    width: '100%', padding: '8px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.1)', color: '#e4e4e4', outline: 'none',
+    boxSizing: 'border-box', fontFamily: 'Inter,system-ui,sans-serif', colorScheme: 'dark',
+    resize: 'vertical', lineHeight: 1.6, height: '112px',
+};
+
+const HelpBugView = ({ onBack }) => (
+    <div style={panelStyle}>
+        <div style={headerStyle}>
+            <button onClick={onBack}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+            >
+                <ChevronLeft size={13} /> Back
+            </button>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Report Bug</span>
+            <div style={{ width: '40px' }} />
+        </div>
+        <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <textarea style={inp} placeholder="Describe the issue..."
+                onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.5)'}
+                onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'}
+            />
+            <button
+                style={{ width: '100%', padding: '8px 16px', fontSize: '13px', fontWeight: 700, background: '#f87171', color: '#0c0c0c', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'opacity 150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+                Submit Report
+            </button>
+        </div>
+    </div>
+);
 
 export default HelpBugView;

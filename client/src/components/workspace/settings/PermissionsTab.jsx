@@ -1,94 +1,72 @@
 import React from 'react';
+import { Info } from 'lucide-react';
 
-/**
- * PermissionsTab Component
- * Manages workspace permission settings with toggle switches
- */
-const PermissionsTab = ({
-    isAdmin,
-    permissions,
-    savingPermissions,
-    handlePermissionChange
-}) => {
-    return (
-        <div className="space-y-6">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Control what members can do in this workspace.</p>
+const TOGGLES = [
+    { key: 'allowMemberChannelCreation', label: 'Channel Creation',        sub: 'Allow members to create new channels' },
+    { key: 'allowMemberInvite',          label: 'Invite Members',          sub: 'Allow members to invite new people' },
+    { key: 'requireAdminApproval',       label: 'Admin Approval Required', sub: 'Require admin approval for new members' },
+    { key: 'isDiscoverable',             label: 'Workspace Discoverable',  sub: 'Make workspace visible in search' },
+];
 
-            <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
-                <div>
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Channel Creation</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Allow members to create new channels</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={permissions.allowMemberChannelCreation}
-                        onChange={(e) => handlePermissionChange('allowMemberChannelCreation', e.target.checked)}
+/* Flat square toggle — no Tailwind peer classes */
+const Toggle = ({ checked, onChange, disabled }) => (
+    <button
+        role="switch"
+        aria-checked={checked}
+        onClick={() => !disabled && onChange(!checked)}
+        style={{
+            width: '36px', height: '20px', borderRadius: '10px', position: 'relative', flexShrink: 0,
+            background: checked ? 'var(--accent)' : 'var(--bg-hover)',
+            border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-default)'}`,
+            cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+            transition: '150ms ease', outline: 'none',
+        }}
+    >
+        <span style={{
+            position: 'absolute', top: '2px',
+            left: checked ? '17px' : '2px',
+            width: '14px', height: '14px', borderRadius: '50%',
+            background: '#fff', transition: '150ms ease',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        }} />
+    </button>
+);
+
+const PermissionsTab = ({ isAdmin, permissions, savingPermissions, handlePermissionChange }) => (
+    <div style={{ fontFamily: 'var(--font)' }}>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+            Control what members can do in this workspace.
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {TOGGLES.map(({ key, label, sub }, i) => (
+                <div key={key} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 0',
+                    borderBottom: i < TOGGLES.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+                }}>
+                    <div>
+                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{sub}</div>
+                    </div>
+                    <Toggle
+                        checked={!!permissions[key]}
+                        onChange={(val) => handlePermissionChange(key, val)}
                         disabled={savingPermissions || !isAdmin}
-                        className="sr-only peer"
                     />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
-                </label>
-            </div>
-
-            <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
-                <div>
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Invite Members</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Allow members to invite new people</p>
                 </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={permissions.allowMemberInvite}
-                        onChange={(e) => handlePermissionChange('allowMemberInvite', e.target.checked)}
-                        disabled={savingPermissions || !isAdmin}
-                        className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
-                </label>
-            </div>
-
-            <div className="flex items-center justify-between py-4 border-b border-gray-100 dark:border-gray-800">
-                <div>
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Admin Approval Required</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Require admin approval for new members</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={permissions.requireAdminApproval}
-                        onChange={(e) => handlePermissionChange('requireAdminApproval', e.target.checked)}
-                        disabled={savingPermissions || !isAdmin}
-                        className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
-                </label>
-            </div>
-
-            <div className="flex items-center justify-between py-4">
-                <div>
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">Workspace Discoverable</h4>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Make workspace visible in search</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                        type="checkbox"
-                        checked={permissions.isDiscoverable}
-                        onChange={(e) => handlePermissionChange('isDiscoverable', e.target.checked)}
-                        disabled={savingPermissions || !isAdmin}
-                        className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 peer-disabled:opacity-50"></div>
-                </label>
-            </div>
-
-            {!isAdmin && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mt-4">
-                    <p className="text-sm text-yellow-800"><strong>Note:</strong> Only workspace administrators can change permissions.</p>
-                </div>
-            )}
+            ))}
         </div>
-    );
-};
+
+        {!isAdmin && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px', marginTop: '16px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
+                <Info size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0 }}>
+                    <strong style={{ color: 'var(--text-primary)' }}>Note:</strong> Only workspace administrators can change permissions.
+                </p>
+            </div>
+        )}
+    </div>
+);
 
 export default PermissionsTab;

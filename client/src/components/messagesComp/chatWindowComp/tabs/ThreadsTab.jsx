@@ -12,118 +12,62 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Fetch all messages and filter for threads (replyCount > 0)
     const fetchThreads = useCallback(async () => {
         setLoading(true);
-
         try {
-            // Use dedicated threads endpoint for this channel
             const res = await api.get(`/api/threads/channels/${channelId}/threads`);
             const activeThreads = res.data.threads || [];
-
-
-
-            // Decrypt thread preview messages
             let decryptedThreads = activeThreads;
             if (activeThreads.length > 0) {
                 try {
-                    decryptedThreads = await batchDecryptMessages(
-                        activeThreads,
-                        channelId,
-                        'channel',
-                        null
-                    );
-
+                    decryptedThreads = await batchDecryptMessages(activeThreads, channelId, 'channel', null);
                 } catch (err) {
                     console.error('[THREADS_TAB][DECRYPT] Failed to decrypt threads:', err);
-                    // Keep encrypted threads if decryption fails
                     decryptedThreads = activeThreads;
                 }
             }
-
             setThreads(decryptedThreads);
         } catch (err) {
             console.error('[THREADS_TAB][ERROR] Failed to fetch threads:', err);
-            setThreads([]); // Empty array on error, no dummy data
+            setThreads([]);
         } finally {
             setLoading(false);
         }
     }, [channelId]);
 
-    // Initial fetch
-    useEffect(() => {
-        fetchThreads();
-    }, [fetchThreads]);
+    useEffect(() => { fetchThreads(); }, [fetchThreads]);
 
-    // Real-time updates - OPTIMIZED
     useEffect(() => {
         if (!socket) return;
 
-        // ✅ Handle when a new thread is created (first reply)
         const handleThreadCreated = async (data) => {
-
-
-            // ✅ Only add if it's for THIS channel (prevent cross-channel pollution)
-            if (data.channelId && data.channelId !== channelId) {
-                return;
-            }
-
-            // Fetch and decrypt the new parent message
+            if (data.channelId && data.channelId !== channelId) return;
             if (data.parentMessage) {
                 try {
-                    const decrypted = await batchDecryptMessages(
-                        [data.parentMessage],
-                        channelId,
-                        'channel',
-                        null
-                    );
+                    const decrypted = await batchDecryptMessages([data.parentMessage], channelId, 'channel', null);
                     const decryptedParent = decrypted[0] || data.parentMessage;
-
-                    // Add to thread list at the top
                     setThreads(prev => [decryptedParent, ...prev]);
                 } catch (err) {
-                    console.error('[THREADS_TAB][DECRYPT] Failed to decrypt new thread:', err);
-                    // Fall back to adding encrypted version
                     setThreads(prev => [data.parentMessage, ...prev]);
                 }
             }
         };
 
-        // ✅ Handle reply count updates
         const handleMessageUpdated = (data) => {
             const { messageId, updates } = data;
-
             if (updates?.replyCount !== undefined) {
-
-
                 setThreads(prev => prev.map(thread =>
-                    thread._id === messageId
-                        ? { ...thread, replyCount: updates.replyCount }
-                        : thread
+                    thread._id === messageId ? { ...thread, replyCount: updates.replyCount } : thread
                 ));
             }
         };
 
-        // ✅ Handle individual thread replies (update last reply time, move to top)
         const handleThreadReply = (data) => {
             const { parentId, reply } = data;
-
-
-
-            // Move thread to top and update metadata
             setThreads(prev => {
                 const thread = prev.find(t => t._id === parentId);
-                if (!thread) {
-                    return prev;
-                }
-
-                const updated = {
-                    ...thread,
-                    lastReplyAt: reply.createdAt,
-                    lastReplyUser: reply.sender
-                };
-
-                // Remove from current position and add to top
+                if (!thread) return prev;
+                const updated = { ...thread, lastReplyAt: reply.createdAt, lastReplyUser: reply.sender };
                 const others = prev.filter(t => t._id !== parentId);
                 return [updated, ...others];
             });
@@ -140,133 +84,210 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
         };
     }, [socket, channelId]);
 
-
     const filteredThreads = threads.filter(t => {
         const text = t.decryptedContent || t.payload?.text || t.text || '';
         return text.toLowerCase().includes(searchTerm.toLowerCase());
     });
 
     return (
-        <div className="flex w-full h-full bg-gray-50 dark:bg-gray-900">
+        <div style={{ display: 'flex', width: '100%', height: '100%', backgroundColor: 'var(--bg-base)' }}>
             {/* Left Column: Thread List */}
-            <div className="flex-shrink-0 w-[280px] flex flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+            <div style={{
+                flexShrink: 0, width: '280px', display: 'flex', flexDirection: 'column',
+                borderRight: '1px solid var(--border-default)',
+                backgroundColor: 'var(--bg-surface)',
+            }}>
                 {/* Header */}
-                <div className="p-4 border-b border-gray-100 dark:border-gray-800">
-                    <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                        <MessageSquare className="text-blue-500" size={20} />
+                <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
+                    <h2 style={{
+                        fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)',
+                        marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
+                        <MessageSquare size={16} style={{ color: 'var(--text-muted)' }} />
                         Active Threads
-                        <span className="text-xs font-normal text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full ml-auto">
+                        <span style={{
+                            fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)',
+                            backgroundColor: 'var(--bg-active)', padding: '1px 8px', borderRadius: '2px',
+                            marginLeft: 'auto',
+                            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                        }}>
                             {threads.length}
                         </span>
                     </h2>
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                    <div style={{ position: 'relative' }}>
+                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={13} />
                         <input
                             type="text"
                             placeholder="Search threads..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-800 border border-transparent focus:bg-white dark:focus:bg-gray-950 focus:border-blue-500 rounded-lg text-sm transition-all outline-none"
+                            style={{
+                                width: '100%', paddingLeft: '32px', paddingRight: '12px',
+                                paddingTop: '7px', paddingBottom: '7px',
+                                backgroundColor: 'var(--bg-input)',
+                                border: '1px solid var(--border-default)',
+                                borderRadius: '2px',
+                                color: 'var(--text-primary)', fontSize: '13px',
+                                outline: 'none', boxSizing: 'border-box',
+                                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                transition: 'border-color 150ms ease',
+                            }}
+                            onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                         />
                     </div>
                 </div>
 
-                {/* List */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                {/* Thread List */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
                     {loading ? (
-                        <div className="space-y-1 p-2 animate-pulse">
+                        <div style={{ padding: '8px' }}>
                             {[75, 55, 90, 60, 80].map((w, i) => (
-                                <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white dark:bg-gray-800/40">
-                                    {/* Avatar */}
-                                    <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                                    {/* Content */}
-                                    <div className="flex-1 min-w-0 space-y-1.5">
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700 rounded" />
-                                            <div className="h-2 w-10 bg-gray-100 dark:bg-gray-700/50 rounded" />
-                                        </div>
-                                        <div className="h-2.5 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w}%` }} />
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                    padding: '10px 12px', marginBottom: '4px',
+                                    backgroundColor: 'var(--bg-active)', borderRadius: '2px',
+                                }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', marginBottom: '6px', width: '60%' }} />
+                                        <div style={{ height: '10px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${w}%` }} />
                                     </div>
-                                    {/* Reply badge */}
-                                    <div className="w-8 h-5 bg-blue-50 dark:bg-blue-900/20 rounded flex-shrink-0" />
+                                    <div style={{ width: 28, height: 18, backgroundColor: 'var(--bg-hover)', borderRadius: '2px', flexShrink: 0 }} />
                                 </div>
                             ))}
                         </div>
                     ) : filteredThreads.length === 0 ? (
-                        <div className="text-center py-10 opacity-40">
-                            <ListFilter size={48} className="mx-auto mb-2 text-gray-300" />
-                            <p className="text-sm font-medium">No threads found</p>
+                        <div style={{ textAlign: 'center', padding: '40px 16px', opacity: 0.4 }}>
+                            <ListFilter size={40} style={{ margin: '0 auto 8px', color: 'var(--text-muted)' }} />
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>No threads found</p>
                         </div>
                     ) : (
-                        filteredThreads.map(thread => (
-                            <div
-                                key={thread._id}
-                                onClick={() => setSelectedThread(thread)}
-                                className={`group flex items-center gap-2.5 px-3 py-2 rounded-lg cursor-pointer border transition-all ${selectedThread?._id === thread._id
-                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800/50'
-                                    : 'bg-white dark:bg-gray-800/40 border-transparent hover:border-gray-200 dark:hover:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/70'
-                                    }`}
-                            >
-                                {/* Avatar */}
-                                <img
-                                    src={getAvatarUrl(thread.sender || { username: thread.senderName || '?' })}
-                                    alt={thread.sender?.username || thread.senderName || 'User'}
-                                    className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-gray-200 dark:border-gray-700"
-                                    onError={(e) => {
-                                        const name = thread.sender?.username || thread.senderName || '?';
-                                        e.target.style.display = 'none';
-                                        const div = document.createElement('div');
-                                        div.className = 'w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-[11px] font-bold text-white flex-shrink-0';
-                                        div.textContent = name.charAt(0).toUpperCase();
-                                        e.target.parentNode.insertBefore(div, e.target);
+                        filteredThreads.map(thread => {
+                            const isSelected = selectedThread?._id === thread._id;
+                            return (
+                                <div
+                                    key={thread._id}
+                                    onClick={() => setSelectedThread(thread)}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                        padding: '10px 12px', marginBottom: '2px',
+                                        borderRadius: '2px', cursor: 'pointer',
+                                        border: `1px solid ${isSelected ? 'var(--border-accent)' : 'transparent'}`,
+                                        backgroundColor: isSelected ? 'var(--bg-active)' : 'transparent',
+                                        transition: 'background-color 150ms ease, border-color 150ms ease',
                                     }}
-                                />
+                                    onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; } }}
+                                    onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.backgroundColor = 'transparent'; } }}
+                                >
+                                    {/* Avatar */}
+                                    <img
+                                        src={getAvatarUrl(thread.sender || { username: thread.senderName || '?' })}
+                                        alt={thread.sender?.username || thread.senderName || 'User'}
+                                        style={{
+                                            width: 28, height: 28, borderRadius: '50%',
+                                            objectFit: 'cover', flexShrink: 0,
+                                            border: '1px solid var(--border-subtle)',
+                                        }}
+                                        onError={(e) => {
+                                            const name = thread.sender?.username || thread.senderName || '?';
+                                            e.target.style.display = 'none';
+                                            const div = document.createElement('div');
+                                            div.style.cssText = 'width:28px;height:28px;border-radius:50%;background:var(--bg-active);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-secondary);flex-shrink:0';
+                                            div.textContent = name.charAt(0).toUpperCase();
+                                            e.target.parentNode.insertBefore(div, e.target);
+                                        }}
+                                    />
 
-                                {/* Content */}
-                                <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-1.5 mb-0.5">
-                                        <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300 truncate">
-                                            {thread.sender?.username || thread.senderName || 'Unknown'}
-                                        </span>
-                                        <span className="text-[10px] text-gray-400 flex-shrink-0">
-                                            {formatTime(thread.createdAt)}
-                                        </span>
+                                    {/* Content */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                            <span style={{
+                                                fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)',
+                                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                            }}>
+                                                {thread.sender?.username || thread.senderName || 'Unknown'}
+                                            </span>
+                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0, fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+                                                {formatTime(thread.createdAt)}
+                                            </span>
+                                        </div>
+                                        <p style={{
+                                            fontSize: '12px', color: 'var(--text-secondary)',
+                                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                            lineHeight: 1.4, margin: 0,
+                                            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                        }}>
+                                            {thread.decryptedContent || thread.payload?.text || thread.text || '— Encrypted message'}
+                                        </p>
                                     </div>
-                                    <p className="text-[12px] text-gray-600 dark:text-gray-400 truncate leading-tight">
-                                        {thread.decryptedContent || thread.payload?.text || thread.text || '🔒 Encrypted message'}
-                                    </p>
+
+                                    {/* Reply count badge */}
+                                    <span style={{
+                                        flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '4px',
+                                        padding: '2px 6px', borderRadius: '2px',
+                                        backgroundColor: 'var(--bg-active)',
+                                        fontSize: '11px', fontWeight: 500, color: 'var(--accent)',
+                                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                    }}>
+                                        <MessageSquare size={9} />
+                                        {thread.replyCount}
+                                    </span>
+
+                                    <ArrowRight
+                                        size={12}
+                                        style={{
+                                            flexShrink: 0,
+                                            color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
+                                            opacity: isSelected ? 1 : 0,
+                                            transform: isSelected ? 'translateX(0)' : 'translateX(-4px)',
+                                            transition: 'opacity 150ms ease, transform 150ms ease, color 150ms ease',
+                                        }}
+                                    />
                                 </div>
-
-                                {/* Reply badge */}
-                                <span className="flex-shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/30 text-[10px] font-semibold text-blue-600 dark:text-blue-400">
-                                    <MessageSquare size={9} />
-                                    {thread.replyCount}
-                                </span>
-
-                                <ArrowRight size={13} className={`flex-shrink-0 text-gray-400 opacity-0 -translate-x-1 transition-all ${selectedThread?._id === thread._id ? 'opacity-100 translate-x-0 text-blue-500' : 'group-hover:opacity-100 group-hover:translate-x-0'}`} />
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>
 
             {/* Right Column: Thread Panel */}
-            <div className="flex-1 flex flex-col bg-white dark:bg-gray-950/50 overflow-hidden">
+            <div style={{
+                flex: 1, display: 'flex', flexDirection: 'column',
+                backgroundColor: 'var(--bg-base)', overflow: 'hidden',
+            }}>
                 {selectedThread ? (
-                    <div className="flex-1 flex flex-col h-full overflow-hidden">
-                        {/* Custom Close Header */}
-                        <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                                <MessageSquare size={16} className="text-blue-500" />
-                                <span className="text-sm font-bold text-gray-800 dark:text-gray-100">Thread</span>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                        {/* Thread Close Header */}
+                        <div style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '10px 16px',
+                            borderBottom: '1px solid var(--border-default)',
+                            backgroundColor: 'var(--bg-surface)',
+                            flexShrink: 0,
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <MessageSquare size={14} style={{ color: 'var(--text-muted)' }} />
+                                <span style={{
+                                    fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)',
+                                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                                }}>Thread</span>
                             </div>
                             <button
                                 onClick={() => setSelectedThread(null)}
-                                className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+                                style={{
+                                    padding: '5px', borderRadius: '2px', background: 'none', border: 'none',
+                                    cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center',
+                                    transition: 'color 150ms ease',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                 title="Close Thread"
                             >
-                                <X size={18} />
+                                <X size={16} />
                             </button>
                         </div>
 
@@ -283,12 +304,28 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                         />
                     </div>
                 ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-600 p-8 text-center animate-fade-in">
-                        <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-6">
-                            <MessageSquare size={48} className="opacity-50" />
+                    <div style={{
+                        flex: 1, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
+                        padding: '32px', textAlign: 'center',
+                        animation: 'fadeIn 260ms cubic-bezier(0.16,1,0.3,1)',
+                    }}>
+                        <div style={{
+                            width: '72px', height: '72px', backgroundColor: 'var(--bg-active)',
+                            borderRadius: '2px', display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', marginBottom: '20px',
+                        }}>
+                            <MessageSquare size={36} style={{ color: 'var(--text-muted)', opacity: 0.5 }} />
                         </div>
-                        <h3 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">Select a Thread</h3>
-                        <p className="max-w-xs mx-auto text-sm">
+                        <h3 style={{
+                            fontSize: '16px', fontWeight: 500, color: 'var(--text-primary)',
+                            marginBottom: '8px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                        }}>Select a Thread</h3>
+                        <p style={{
+                            maxWidth: '240px', margin: '0 auto', fontSize: '13px',
+                            color: 'var(--text-secondary)', lineHeight: 1.65,
+                            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                        }}>
                             Click on any conversation from the list to view the full thread and reply.
                         </p>
                     </div>

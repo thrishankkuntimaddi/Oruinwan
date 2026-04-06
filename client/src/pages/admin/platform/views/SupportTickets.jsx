@@ -3,24 +3,32 @@ import api from '@services/api';
 import { MessageCircle, X } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
 
-const SupportTickets = ({ navigateToChat }) => {
+const statusStyle = (status) => {
+    const map = {
+        open: { color: 'var(--state-success)', border: 'var(--state-success)' },
+        'in-progress': { color: 'var(--accent)', border: 'var(--accent)' },
+        resolved: { color: 'var(--text-muted)', border: 'var(--border-accent)' },
+        closed: { color: 'var(--text-muted)', border: 'var(--border-default)' },
+    };
+    return map[status] || map.closed;
+};
+
+const SupportTickets = () => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedTicket, setSelectedTicket] = useState(null);
-    const [reply, setReply] = useState("");
+    const [reply, setReply] = useState('');
     const { showToast } = useToast();
 
-    useEffect(() => {
-        fetchTickets();
-    }, []);
+    useEffect(() => { fetchTickets(); }, []);
 
     const fetchTickets = async () => {
         try {
-            const res = await api.get(`/api/admin/tickets`);
+            const res = await api.get('/api/admin/tickets');
             setTickets(res.data);
-            setLoading(false);
         } catch (err) {
             console.error(err);
+        } finally {
             setLoading(false);
         }
     };
@@ -31,10 +39,8 @@ const SupportTickets = ({ navigateToChat }) => {
             const res = await api.put(`/api/admin/tickets/${selectedTicket._id}`, { status });
             setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
             setSelectedTicket(res.data);
-            showToast(`Status updated to ${status}`, "success");
-        } catch (err) {
-            showToast("Failed to update status", "error");
-        }
+            showToast(`Status updated to ${status}`, 'success');
+        } catch { showToast('Failed to update status', 'error'); }
     };
 
     const handleReply = async () => {
@@ -43,140 +49,198 @@ const SupportTickets = ({ navigateToChat }) => {
             const res = await api.put(`/api/admin/tickets/${selectedTicket._id}`, { message: reply });
             setTickets(prev => prev.map(t => t._id === selectedTicket._id ? res.data : t));
             setSelectedTicket(res.data);
-            setReply("");
-            showToast("Reply sent", "success");
-        } catch (err) {
-            showToast("Failed to reply", "error");
-        }
+            setReply('');
+            showToast('Reply sent', 'success');
+        } catch { showToast('Failed to reply', 'error'); }
     };
 
-    const StatusBadge = ({ status }) => {
-        const styles = {
-            open: "bg-blue-50 text-blue-600",
-            "in-progress": "bg-yellow-50 text-yellow-600",
-            resolved: "bg-green-50 text-green-600",
-            closed: "bg-gray-100 text-gray-500"
-        };
-        return (
-            <span className={`px-2 py-1 rounded-lg text-xs font-bold uppercase ${styles[status] || styles.closed}`}>
-                {status}
-            </span>
-        );
-    };
-
-    if (loading) return <div className="p-8 text-center text-gray-500">Loading tickets...</div>;
+    if (loading) return <LoadSpinner />;
 
     return (
-        <div className="h-[calc(100vh-140px)] flex gap-6">
+        <div style={{ height: 'calc(100vh - 140px)', display: 'flex', gap: '1px', background: 'var(--border-subtle)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             {/* Ticket List */}
-            <div className={`flex-1 flex flex-col bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors ${selectedTicket ? 'hidden md:flex' : 'flex'}`}>
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white">Support Tickets</h2>
-                    <span className="text-xs font-bold bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full text-gray-500 dark:text-gray-300">{tickets.length}</span>
+            <div style={{ width: '320px', flexShrink: 0, background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Support Tickets</span>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', padding: '2px 6px', border: '1px solid var(--border-accent)' }}>{tickets.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto">
+                <div style={{ flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
                     {tickets.map(ticket => (
-                        <div
+                        <TicketListItem
                             key={ticket._id}
+                            ticket={ticket}
+                            selected={selectedTicket?._id === ticket._id}
                             onClick={() => setSelectedTicket(ticket)}
-                            className={`p-4 border-b border-gray-50 dark:border-gray-700 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-all ${selectedTicket?._id === ticket._id ? 'bg-indigo-50/50 dark:bg-indigo-900/10 border-l-4 border-l-indigo-500' : 'border-l-4 border-l-transparent'}`}
-                        >
-                            <div className="flex justify-between items-start mb-2">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${ticket.priority === 'critical' ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                                    {ticket.priority}
-                                </span>
-                                <span className="text-xs text-gray-400">{new Date(ticket.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-1 truncate">{ticket.subject}</h3>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate mb-2">{ticket.description}</p>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs font-medium text-gray-400">{ticket.companyId?.name}</span>
-                                <StatusBadge status={ticket.status} />
-                            </div>
-                        </div>
+                        />
                     ))}
                     {tickets.length === 0 && (
-                        <div className="p-8 text-center text-gray-400 text-sm">No tickets found</div>
+                        <div style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>No tickets found</div>
                     )}
                 </div>
             </div>
 
             {/* Ticket Detail */}
             {selectedTicket ? (
-                <div className="flex-[2] bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col overflow-hidden transition-colors">
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start bg-gray-50/50 dark:bg-gray-700/30">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <StatusBadge status={selectedTicket.status} />
-                                <span className="text-xs text-gray-400">ID: {selectedTicket._id.slice(-6)}</span>
-                            </div>
-                            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1">{selectedTicket.subject}</h2>
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                                From <span className="font-bold text-gray-900 dark:text-gray-200">{selectedTicket.creatorId?.username}</span> ({selectedTicket.companyId?.name})
-                            </p>
+                <div style={{ flex: 1, background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    {/* Detail Header */}
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                            <StatusBadge status={selectedTicket.status} />
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {selectedTicket._id.slice(-6)}</span>
+                            <button onClick={() => setSelectedTicket(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+                                <X size={16} />
+                            </button>
                         </div>
-                        <button onClick={() => setSelectedTicket(null)} className="md:hidden p-2 bg-gray-200 dark:bg-gray-600 rounded-full"><X size={16} /></button>
+                        <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>{selectedTicket.subject}</h2>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                            From <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{selectedTicket.creatorId?.username}</span> ({selectedTicket.companyId?.name})
+                        </p>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50/30 dark:bg-gray-800">
-                        {/* Original Description */}
-                        <div className="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                            <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Issue Description</h4>
-                            <p className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">{selectedTicket.description}</p>
+                    {/* Thread */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }} className="custom-scrollbar">
+                        {/* Original */}
+                        <div style={{ background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Issue Description</div>
+                            <p style={{ fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{selectedTicket.description}</p>
                         </div>
-
-                        {/* Thread */}
-                        {selectedTicket.messages.map((msg, i) => (
-                            <div key={i} className={`flex gap-4 ${msg.sender?._id !== selectedTicket.creatorId?._id ? 'flex-row-reverse' : ''}`}>
-                                <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${msg.sender?._id !== selectedTicket.creatorId?._id ? 'bg-indigo-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                                    {msg.sender?.username?.charAt(0) || '?'}
+                        {selectedTicket.messages.map((msg, i) => {
+                            const isAdmin = msg.sender?._id !== selectedTicket.creatorId?._id;
+                            return (
+                                <div key={i} style={{ display: 'flex', gap: '10px', flexDirection: isAdmin ? 'row-reverse' : 'row' }}>
+                                    <div style={{ width: '28px', height: '28px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: isAdmin ? 'var(--bg-base)' : 'var(--text-primary)', background: isAdmin ? 'var(--accent)' : 'var(--bg-active)', border: '1px solid var(--border-accent)' }}>
+                                        {msg.sender?.username?.charAt(0) || '?'}
+                                    </div>
+                                    <div style={{ maxWidth: '80%', padding: '10px 14px', background: isAdmin ? 'var(--accent)' : 'var(--bg-active)', border: `1px solid ${isAdmin ? 'var(--accent)' : 'var(--border-subtle)'}` }}>
+                                        <p style={{ fontSize: '13px', color: isAdmin ? 'var(--bg-base)' : 'var(--text-primary)', margin: 0 }}>{msg.message}</p>
+                                        <p style={{ fontSize: '10px', color: isAdmin ? 'rgba(12,12,12,0.6)' : 'var(--text-muted)', marginTop: '4px' }}>{new Date(msg.createdAt).toLocaleString()}</p>
+                                    </div>
                                 </div>
-                                <div className={`max-w-[80%] p-4 rounded-2xl text-sm ${msg.sender?._id !== selectedTicket.creatorId?._id ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 text-gray-800 dark:text-gray-200'}`}>
-                                    <p>{msg.message}</p>
-                                    <p className={`text-[10px] mt-2 opacity-60 ${msg.sender?._id !== selectedTicket.creatorId?._id ? 'text-indigo-100' : 'text-gray-400'}`}>
-                                        {new Date(msg.createdAt).toLocaleString()}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
-                    <div className="p-4 border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800">
-                        <div className="flex gap-2 mb-4">
+                    {/* Reply Box */}
+                    <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
                             {['open', 'in-progress', 'resolved'].map(s => (
-                                <button
-                                    key={s}
-                                    onClick={() => handleUpdateStatus(s)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold border ${selectedTicket.status === s ? 'bg-gray-900 dark:bg-indigo-600 text-white border-gray-900 dark:border-indigo-600' : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:border-gray-400'}`}
-                                >
-                                    Mark {s}
-                                </button>
+                                <StatusBtn key={s} label={`Mark ${s}`} active={selectedTicket.status === s} onClick={() => handleUpdateStatus(s)} />
                             ))}
                         </div>
-                        <div className="flex gap-2">
+                        <div style={{ display: 'flex', gap: '8px' }}>
                             <textarea
-                                className="flex-1 border border-gray-200 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 resize-none h-20"
-                                placeholder="Type a reply..."
                                 value={reply}
                                 onChange={e => setReply(e.target.value)}
+                                placeholder="Type a reply..."
+                                style={{ flex: 1, padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', height: '72px', fontFamily: 'inherit' }}
                             />
-                            <button
-                                onClick={handleReply}
-                                className="px-6 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors"
-                            >
+                            <button onClick={handleReply} style={{ padding: '0 20px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}>
                                 Send
                             </button>
                         </div>
                     </div>
                 </div>
             ) : (
-                <div className="hidden md:flex flex-[2] bg-gray-50 dark:bg-gray-800/50 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700 items-center justify-center text-gray-400 flex-col gap-4">
-                    <MessageCircle size={48} className="opacity-20" />
-                    <p className="font-medium">Select a ticket to view details</p>
+                <div style={{ flex: 1, background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px' }}>
+                    <MessageCircle size={40} style={{ color: 'var(--text-muted)', opacity: 0.3 }} />
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Select a ticket to view details</p>
                 </div>
             )}
         </div>
     );
 };
+
+const TicketListItem = ({ ticket, selected, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    const st = statusStyle(ticket.status);
+    return (
+        <div
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '14px 16px',
+                borderBottom: '1px solid var(--border-subtle)',
+                borderLeft: selected ? '2px solid var(--accent)' : '2px solid transparent',
+                background: selected ? 'var(--bg-active)' : hov ? 'var(--bg-hover)' : 'transparent',
+                cursor: 'pointer',
+                transition: 'background 150ms ease'
+            }}
+        >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                <span style={{
+                    fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em',
+                    color: ticket.priority === 'critical' ? 'var(--state-danger)' : 'var(--text-muted)',
+                    padding: '1px 5px',
+                    border: `1px solid ${ticket.priority === 'critical' ? 'var(--state-danger)' : 'var(--border-default)'}`
+                }}>
+                    {ticket.priority}
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(ticket.createdAt).toLocaleDateString()}</span>
+            </div>
+            <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.subject}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>{ticket.description}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{ticket.companyId?.name}</span>
+                <StatusBadge status={ticket.status} />
+            </div>
+        </div>
+    );
+};
+
+const StatusBadge = ({ status }) => {
+    const st = statusStyle(status);
+    return (
+        <span style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: st.color, padding: '1px 6px', border: `1px solid ${st.border}` }}>
+            {status}
+        </span>
+    );
+};
+
+const StatusBtn = ({ label, active, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{
+                padding: '5px 10px',
+                background: active ? 'var(--bg-active)' : 'transparent',
+                border: active ? '1px solid var(--accent)' : '1px solid var(--border-default)',
+                color: active ? 'var(--accent)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '11px', fontWeight: 500,
+                borderRadius: '2px', cursor: 'pointer',
+                transition: 'all 150ms ease'
+            }}
+        >
+            {label}
+        </button>
+    );
+};
+
+const LoadSpinner = () => (
+    <div style={{ padding: '20px', background: 'var(--bg-base)' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+            <div className="sk" style={{ height: '32px', flex: 1 }} />
+            <div className="sk" style={{ height: '32px', width: '110px' }} />
+        </div>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '16px 3fr 1.5fr 1fr 1fr 70px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '12px' }}>
+                {[0,120,80,60,90,0].map((w,i) => <div key={i} className="sk" style={{ height: '8px', width: `${w || 10}px` }} />)}
+            </div>
+            {[1,2,3,4,5].map(i => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '16px 3fr 1.5fr 1fr 1fr 70px', padding: '11px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '12px', alignItems: 'center' }}>
+                    <div className="sk" style={{ width: '8px', height: '8px', borderRadius: '50%' }} />
+                    <div><div className="sk" style={{ height: '10px', width: '70%', marginBottom: '4px' }} /><div className="sk" style={{ height: '8px', width: '50%' }} /></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}><div className="sk" style={{ width: '18px', height: '18px', flexShrink: 0 }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                    <div className="sk" style={{ height: '18px', width: '65px' }} />
+                    <div className="sk" style={{ height: '9px', width: '70px' }} />
+                    <div className="sk" style={{ height: '24px', width: '100%' }} />
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default SupportTickets;

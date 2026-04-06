@@ -107,12 +107,12 @@ function SystemEvent({ event, currentUserId }) {
     const icon = ICONS[ev] || <Info size={14} />;
 
     return (
-        <div className="flex items-center justify-center my-1.5 px-4">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100/80 dark:bg-gray-800/80 text-xs text-gray-500 dark:text-gray-400 font-medium">
-                {icon}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '6px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 12px', borderRadius: '99px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                <span style={{ color: 'var(--text-muted)', display: 'flex' }}>{icon}</span>
                 <span>{text}</span>
                 {ts && (
-                    <span className="opacity-60 ml-1">
+                    <span style={{ opacity: 0.55, marginLeft: '4px' }}>
                         {new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                 )}

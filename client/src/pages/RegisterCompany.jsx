@@ -106,11 +106,25 @@ const RegisterCompany = () => {
     // Debounced validation for company domain
     useEffect(() => {
         const timer = setTimeout(async () => {
-            if (formData.companyDomain && formData.companyDomain.trim().length >= 3) {
+            const domain = formData.companyDomain.trim();
+            if (!domain) {
+                setValidationStatus(prev => ({ ...prev, companyDomain: 'idle' }));
+                return;
+            }
+            // Format check first — must be like acme.com / co.uk / startup.io
+            const domainRegex = /^(?!-)([a-zA-Z0-9-]{1,63}(?:\.[a-zA-Z0-9-]{1,63})*)\.[a-zA-Z]{2,}$/;
+            if (!domainRegex.test(domain)) {
+                setErrors(prev => ({ ...prev, companyDomain: 'Invalid domain format (e.g. acme.com)' }));
+                setValidationStatus(prev => ({ ...prev, companyDomain: 'taken' }));
+                return;
+            }
+            // Format is valid — clear any format error and check availability
+            setErrors(prev => ({ ...prev, companyDomain: '' }));
+            if (domain.length >= 4) {
                 setValidationStatus(prev => ({ ...prev, companyDomain: 'checking' }));
                 try {
                     const res = await api.post(`/api/companies/check-domain`, {
-                        domain: formData.companyDomain
+                        domain
                     });
                     if (res.data.exists) {
                         setErrors(prev => ({ ...prev, companyDomain: 'Domain already registered' }));
@@ -128,6 +142,7 @@ const RegisterCompany = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [formData.companyDomain]);
+
 
     // Debounced validation for personal email
     useEffect(() => {
@@ -207,7 +222,7 @@ const RegisterCompany = () => {
         const newErrors = {};
         if (!formData.companyName.trim()) newErrors.companyName = "Company Name is required";
         if (!formData.companyDomain.trim()) newErrors.companyDomain = "Domain is required";
-        else if (!/^[a-zA-Z0-9-]+\.[a-zA-Z]{2 }$/.test(formData.companyDomain)) newErrors.companyDomain = "Invalid domain format (e.g. acme.com)";
+        else if (!/^(?!-)([a-zA-Z0-9-]{1,63}(?:\.[a-zA-Z0-9-]{1,63})*)\.[a-zA-Z]{2,}$/.test(formData.companyDomain.trim())) newErrors.companyDomain = "Invalid domain format (e.g. acme.com)";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };

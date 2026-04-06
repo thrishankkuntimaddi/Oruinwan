@@ -1,93 +1,80 @@
 import React from 'react';
 import { Outlet } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import ManagerSidebar from '../manager/ManagerSidebar';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext';
-import { Sun, Moon, Shield } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Shield } from 'lucide-react';
 
 const ManagerLayout = () => {
     const { company, isCompanyOwner, isCompanyAdmin } = useCompany();
     const { user } = useAuth();
-    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
 
     const showAdminButton = isCompanyOwner() || isCompanyAdmin();
 
-    // Only pass departments with a real MongoDB ObjectId — prevents "dummy" or
-    // partially-hydrated IDs from triggering API calls in child components.
     const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(String(id ?? ''));
 
     const selectedDept = (() => {
         const depts = company?.departments ?? [];
-        // Prefer a department the current user heads
-        const managed = depts.find(d =>
-            d.head?._id === user?._id || d.head === user?._id
-        );
+        const managed = depts.find(d => d.head?._id === user?._id || d.head === user?._id);
         const candidate = managed ?? depts[0] ?? null;
-        // Discard if the _id is not a valid ObjectId
         return candidate && isValidObjectId(candidate._id) ? candidate : null;
     })();
 
-
-
     return (
-        <div className="flex h-screen bg-gray-50 dark:bg-gray-900 font-sans text-gray-900 dark:text-gray-100 overflow-hidden transition-colors duration-200">
+        <div style={{
+            display: 'flex', height: '100vh', overflow: 'hidden',
+            background: 'var(--bg-base)',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        }}>
             <ManagerSidebar />
 
-            <div className="flex-1 flex flex-col h-full overflow-hidden relative">
-                {/* Top Context Bar - Sticky */}
-                <header className="h-20 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between px-8 sticky top-0 z-10 transition-colors duration-200">
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-0.5">
-                                Workspace Manager
-                            </span>
-                            <h1 className="text-xl font-black text-gray-900 dark:text-white leading-none tracking-tight">
-                                {company?.displayName || company?.name || 'My Company'}
-                            </h1>
-                        </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', minWidth: 0 }}>
+                {/* Top Context Bar */}
+                <header style={{
+                    height: '56px', flexShrink: 0,
+                    padding: '0 28px',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    background: 'var(--bg-surface)',
+                    borderBottom: '1px solid var(--border-subtle)',
+                    zIndex: 10,
+                }}>
+                    <div>
+                        <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                            Workspace Manager
+                        </p>
+                        <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0 }}>
+                            {company?.displayName || company?.name || 'My Company'}
+                        </h1>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                        {/* Admin Console Button (for dual roles) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         {showAdminButton && (
-                            <button
-                                onClick={() => navigate('/admin/dashboard')}
-                                className="px-4 py-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors flex items-center gap-2"
-                            >
-                                <Shield size={16} />
-                                Admin Console
-                            </button>
+                            <AdminConsoleBtn onClick={() => navigate('/admin/dashboard')} />
                         )}
-
-                        {/* Date */}
-                        <div className="hidden md:flex flex-col items-end mr-4">
-                            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                            </span>
-                        </div>
-
-                        {/* Theme Toggle */}
-                        <button
-                            onClick={toggleTheme}
-                            className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-all border border-transparent hover:border-indigo-100 dark:hover:border-indigo-900"
-                            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                        >
-                            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-                        </button>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                            {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+                        </span>
                     </div>
                 </header>
 
-                {/* Main Content Area */}
-                <main className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-900 transition-colors duration-200 relative">
-                    <Outlet context={{
-                        selectedDepartment: selectedDept
-                    }} />
+                {/* Main Content */}
+                <main style={{ flex: 1, overflow: 'hidden', background: 'var(--bg-base)', position: 'relative' }}>
+                    <Outlet context={{ selectedDepartment: selectedDept }} />
                 </main>
             </div>
         </div>
+    );
+};
+
+const AdminConsoleBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: hov ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--accent)' : 'var(--text-secondary)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+            <Shield size={12} /> Admin Console
+        </button>
     );
 };
 

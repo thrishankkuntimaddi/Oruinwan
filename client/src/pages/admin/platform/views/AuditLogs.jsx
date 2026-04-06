@@ -2,341 +2,115 @@ import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { Search, Download, User, Activity, AlertCircle, RefreshCw } from 'lucide-react';
 
+const actionColor = (action) => {
+    if (action.includes('create') || action.includes('register')) return { color: 'var(--state-success)', border: 'var(--state-success)' };
+    if (action.includes('delete') || action.includes('reject')) return { color: 'var(--state-danger)', border: 'var(--state-danger)' };
+    if (action.includes('update') || action.includes('edit')) return { color: 'var(--text-secondary)', border: 'var(--border-accent)' };
+    if (action.includes('approve')) return { color: 'var(--accent)', border: 'var(--accent)' };
+    return { color: 'var(--text-muted)', border: 'var(--border-default)' };
+};
+
 const AuditLogs = () => {
     const [logs, setLogs] = useState([]);
     const [filteredLogs, setFilteredLogs] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [filters, setFilters] = useState({
-        search: '',
-        action: 'all',
-        user: '',
-        dateFrom: '',
-        dateTo: '',
-        resource: 'all'
-    });
+    const [filters, setFilters] = useState({ search: '', action: 'all', user: '', dateFrom: '', dateTo: '', resource: 'all' });
 
     const applyFilters = useCallback(() => {
-        let filtered = [...logs];
-
-        // Search filter
-        if (filters.search) {
-            filtered = filtered.filter(log =>
-                log.description?.toLowerCase().includes(filters.search.toLowerCase()) ||
-                log.action?.toLowerCase().includes(filters.search.toLowerCase())
-            );
-        }
-
-        // Action type filter
-        if (filters.action !== 'all') {
-            filtered = filtered.filter(log => log.action === filters.action);
-        }
-
-        // Resource filter
-        if (filters.resource !== 'all') {
-            filtered = filtered.filter(log => log.resource === filters.resource);
-        }
-
-        // User filter
-        if (filters.user) {
-            filtered = filtered.filter(log =>
-                log.userId?.username?.toLowerCase().includes(filters.user.toLowerCase())
-            );
-        }
-
-        // Date range filter
-        if (filters.dateFrom) {
-            filtered = filtered.filter(log =>
-                new Date(log.createdAt) >= new Date(filters.dateFrom)
-            );
-        }
-        if (filters.dateTo) {
-            filtered = filtered.filter(log =>
-                new Date(log.createdAt) <= new Date(filters.dateTo + 'T23:59:59')
-            );
-        }
-
-        setFilteredLogs(filtered);
+        let f = [...logs];
+        if (filters.search) f = f.filter(l => l.description?.toLowerCase().includes(filters.search.toLowerCase()) || l.action?.toLowerCase().includes(filters.search.toLowerCase()));
+        if (filters.action !== 'all') f = f.filter(l => l.action === filters.action);
+        if (filters.resource !== 'all') f = f.filter(l => l.resource === filters.resource);
+        if (filters.user) f = f.filter(l => l.userId?.username?.toLowerCase().includes(filters.user.toLowerCase()));
+        if (filters.dateFrom) f = f.filter(l => new Date(l.createdAt) >= new Date(filters.dateFrom));
+        if (filters.dateTo) f = f.filter(l => new Date(l.createdAt) <= new Date(filters.dateTo + 'T23:59:59'));
+        setFilteredLogs(f);
     }, [logs, filters]);
 
-    useEffect(() => {
-        fetchLogs();
-        // Set up auto-refresh every 10 seconds for real-time feel
-        const interval = setInterval(fetchLogs, 10000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        applyFilters();
-    }, [applyFilters]);
+    useEffect(() => { fetchLogs(); const iv = setInterval(fetchLogs, 10000); return () => clearInterval(iv); }, []);
+    useEffect(() => { applyFilters(); }, [applyFilters]);
 
     const fetchLogs = async () => {
         try {
-            const res = await api.get(`/api/admin/audit-logs`);
+            const res = await api.get('/api/admin/audit-logs');
             setLogs(res.data);
-            setLoading(false);
-        } catch (err) {
-            console.error('Failed to fetch audit logs:', err);
-            setLoading(false);
-        }
-    }
-
-        ;
+        } catch (err) { console.error('Failed to fetch audit logs:', err); }
+        finally { setLoading(false); }
+    };
 
     const exportToCSV = () => {
         const headers = ['Timestamp', 'User', 'Action', 'Resource', 'Description'];
-        const csvData = filteredLogs.map(log => [
-            new Date(log.createdAt).toLocaleString(),
-            log.userId?.username || 'System',
-            log.action,
-            log.resource || 'N/A',
-            log.description
-        ]);
-
-        const csvContent = [
-            headers.join(','),
-            ...csvData.map(row => row.map(cell => `"${cell}"`).join(','))
-        ].join('\n');
-
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        const csvData = filteredLogs.map(log => [new Date(log.createdAt).toLocaleString(), log.userId?.username || 'System', log.action, log.resource || 'N/A', log.description]);
+        const content = [headers.join(','), ...csvData.map(r => r.map(c => `"${c}"`).join(','))].join('\n');
+        const url = URL.createObjectURL(new Blob([content], { type: 'text/csv' }));
+        const a = Object.assign(document.createElement('a'), { href: url, download: `audit-logs-${new Date().toISOString().split('T')[0]}.csv` });
+        a.click(); URL.revokeObjectURL(url);
     };
 
     const exportToJSON = () => {
-        const jsonData = JSON.stringify(filteredLogs, null, 2);
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `audit-logs-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        window.URL.revokeObjectURL(url);
+        const url = URL.createObjectURL(new Blob([JSON.stringify(filteredLogs, null, 2)], { type: 'application/json' }));
+        const a = Object.assign(document.createElement('a'), { href: url, download: `audit-logs-${new Date().toISOString().split('T')[0]}.json` });
+        a.click(); URL.revokeObjectURL(url);
     };
 
-    const getActionColor = (action) => {
-        if (action.includes('create') || action.includes('register')) return 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20';
-        if (action.includes('delete') || action.includes('reject')) return 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20';
-        if (action.includes('update') || action.includes('edit')) return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20';
-        if (action.includes('approve')) return 'text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20';
-        return 'text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20';
-    };
+    const uniqueActions = [...new Set(logs.map(l => l.action))];
+    const uniqueResources = [...new Set(logs.filter(l => l.resource).map(l => l.resource))];
 
-    const getActionIcon = (action) => {
-        if (action.includes('create') || action.includes('register')) return '✨';
-        if (action.includes('delete')) return '🗑️';
-        if (action.includes('update')) return '✏️';
-        if (action.includes('approve')) return '✅';
-        if (action.includes('reject')) return '❌';
-        return '📝';
-    };
-
-    // Get unique actions and resources for filter dropdowns
-    const uniqueActions = [...new Set(logs.map(log => log.action))];
-    const uniqueResources = [...new Set(logs.filter(log => log.resource).map(log => log.resource))];
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-            </div>
-        );
-    }
+    if (loading) return <Spinner />;
 
     return (
-        <div className="space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
-                    <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2 flex items-center gap-3">
-                        <Activity size={32} />
+                    <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <Activity size={18} style={{ color: 'var(--accent)' }} />
                         Audit Logs
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400">
-                        Track all system activities and changes
-                    </p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Track all system activities and changes</p>
                 </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={fetchLogs}
-                        className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700 transition-all flex items-center gap-2 text-gray-700 dark:text-gray-200"
-                    >
-                        <RefreshCw size={16} />
-                        Refresh
-                    </button>
-                </div>
+                <RefreshBtn onClick={fetchLogs} />
             </div>
 
             {/* Filters */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    {/* Search */}
-                    <div className="xl:col-span-2">
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                            Search
-                        </label>
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search logs..."
-                                value={filters.search}
-                                onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 text-gray-900 dark:text-white"
-                            />
-                        </div>
+            <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '16px 20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px' }}>
+                    <div style={{ position: 'relative' }}>
+                        <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                        <input type="text" placeholder="Search logs..." value={filters.search} onChange={e => setFilters(p => ({ ...p, search: e.target.value }))} style={inputSt} />
                     </div>
-
-                    {/* Action Type */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                            Action Type
-                        </label>
-                        <select
-                            value={filters.action}
-                            onChange={(e) => setFilters(prev => ({ ...prev, action: e.target.value }))}
-                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 text-gray-900 dark:text-white"
-                        >
-                            <option value="all">All Actions</option>
-                            {uniqueActions.map(action => (
-                                <option key={action} value={action}>{action}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Resource */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                            Resource
-                        </label>
-                        <select
-                            value={filters.resource}
-                            onChange={(e) => setFilters(prev => ({ ...prev, resource: e.target.value }))}
-                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 text-gray-900 dark:text-white"
-                        >
-                            <option value="all">All Resources</option>
-                            {uniqueResources.map(resource => (
-                                <option key={resource} value={resource}>{resource}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Date From */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                            From Date
-                        </label>
-                        <input
-                            type="date"
-                            value={filters.dateFrom}
-                            onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
-                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 text-gray-900 dark:text-white"
-                        />
-                    </div>
-
-                    {/* Date To */}
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
-                            To Date
-                        </label>
-                        <input
-                            type="date"
-                            value={filters.dateTo}
-                            onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
-                            className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900 text-gray-900 dark:text-white"
-                        />
-                    </div>
+                    <FilterSelect value={filters.action} onChange={v => setFilters(p => ({ ...p, action: v }))} label="Action Type" options={[{ value: 'all', label: 'All Actions' }, ...uniqueActions.map(a => ({ value: a, label: a }))]} />
+                    <FilterSelect value={filters.resource} onChange={v => setFilters(p => ({ ...p, resource: v }))} label="Resource" options={[{ value: 'all', label: 'All Resources' }, ...uniqueResources.map(r => ({ value: r, label: r }))]} />
+                    <input type="date" value={filters.dateFrom} onChange={e => setFilters(p => ({ ...p, dateFrom: e.target.value }))} style={inputSt} />
+                    <input type="date" value={filters.dateTo} onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))} style={inputSt} />
                 </div>
 
-                {/* Filter Stats & Export */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Showing <span className="font-bold text-gray-900 dark:text-white">{filteredLogs.length}</span> of {logs.length} logs
+                {/* Stats and export */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                        Showing <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{filteredLogs.length}</span> of {logs.length} logs
                     </p>
-                    <div className="flex gap-2">
-                        <button
-                            onClick={exportToCSV}
-                            className="px-4 py-2 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-all flex items-center gap-2 text-sm"
-                        >
-                            <Download size={16} />
-                            Export CSV
-                        </button>
-                        <button
-                            onClick={exportToJSON}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 text-sm"
-                        >
-                            <Download size={16} />
-                            Export JSON
-                        </button>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <ExportBtn label="CSV" onClick={exportToCSV} />
+                        <ExportBtn label="JSON" onClick={exportToJSON} />
                     </div>
                 </div>
             </div>
 
-            {/* Logs Timeline */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-                    <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Activity size={20} />
-                        Activity Timeline
-                    </h2>
+            {/* Timeline */}
+            <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Activity size={14} style={{ color: 'var(--text-muted)' }} />
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Activity Timeline</span>
                 </div>
-                <div className="max-h-[600px] overflow-y-auto">
-                    {filteredLogs.length > 0 ? (
-                        <div className="divide-y divide-gray-50 dark:divide-gray-700">
-                            {filteredLogs.map((log, index) => (
-                                <div key={index} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                    <div className="flex items-start gap-4">
-                                        {/* Icon */}
-                                        <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-xl flex-shrink-0">
-                                            {getActionIcon(log.action)}
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-start justify-between gap-4 mb-2">
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getActionColor(log.action)}`}>
-                                                            {log.action}
-                                                        </span>
-                                                        {log.resource && (
-                                                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs font-bold">
-                                                                {log.resource}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="text-sm text-gray-900 dark:text-white font-medium">
-                                                        {log.description}
-                                                    </p>
-                                                </div>
-                                                <span className="text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                                                    {new Date(log.createdAt).toLocaleString()}
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
-                                                <span className="flex items-center gap-1">
-                                                    <User size={12} />
-                                                    {log.userId?.username || 'System'}
-                                                </span>
-                                                {log.resourceId && (
-                                                    <span className="flex items-center gap-1">
-                                                        ID: {log.resourceId.slice(-6)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="p-12 text-center text-gray-400">
-                            <AlertCircle size={48} className="mx-auto mb-4 opacity-20" />
-                            <p className="font-bold">No logs found</p>
-                            <p className="text-sm mt-1">Try adjusting your filters</p>
+                <div style={{ maxHeight: '560px', overflowY: 'auto' }} className="custom-scrollbar">
+                    {filteredLogs.length > 0 ? filteredLogs.map((log, i) => (
+                        <LogRow key={i} log={log} />
+                    )) : (
+                        <div style={{ padding: '48px', textAlign: 'center' }}>
+                            <AlertCircle size={40} style={{ color: 'var(--text-muted)', opacity: 0.3, margin: '0 auto 12px' }} />
+                            <p style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-muted)' }}>No logs found</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Try adjusting your filters</p>
                         </div>
                     )}
                 </div>
@@ -344,5 +118,99 @@ const AuditLogs = () => {
         </div>
     );
 };
+
+const inputSt = {
+    width: '100%', padding: '8px 10px 8px 30px',
+    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)', fontSize: '12px', outline: 'none',
+    fontFamily: 'inherit', boxSizing: 'border-box'
+};
+
+const LogRow = ({ log }) => {
+    const [hov, setHov] = React.useState(false);
+    const ac = actionColor(log.action || '');
+    return (
+        <div
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', background: hov ? 'var(--bg-hover)' : 'transparent', transition: 'background 150ms ease' }}
+        >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ width: '32px', height: '32px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                    {log.action?.includes('create') || log.action?.includes('register') ? '✨' : log.action?.includes('delete') ? '🗑️' : log.action?.includes('update') ? '✏️' : log.action?.includes('approve') ? '✅' : log.action?.includes('reject') ? '❌' : '📝'}
+                </div>
+                <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ac.color, padding: '1px 6px', border: `1px solid ${ac.border}` }}>
+                                    {log.action}
+                                </span>
+                                {log.resource && (
+                                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', padding: '1px 6px', border: '1px solid var(--border-subtle)' }}>
+                                        {log.resource}
+                                    </span>
+                                )}
+                            </div>
+                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', margin: 0 }}>{log.description}</p>
+                        </div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>{new Date(log.createdAt).toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <User size={11} /> {log.userId?.username || 'System'}
+                        </span>
+                        {log.resourceId && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>ID: {log.resourceId.slice(-6)}</span>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const FilterSelect = ({ value, onChange, options }) => (
+    <select value={value} onChange={e => onChange(e.target.value)} style={{ padding: '8px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'inherit', width: '100%' }}>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+);
+
+const ExportBtn = ({ label, onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+            <Download size={13} /> Export {label}
+        </button>
+    );
+};
+
+const RefreshBtn = ({ onClick }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
+            <RefreshCw size={14} /> Refresh
+        </button>
+    );
+};
+
+const Spinner = () => (
+    <div style={{ padding: '20px', background: 'var(--bg-base)' }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+            <div className="sk" style={{ height: '32px', flex: 1 }} />
+            <div className="sk" style={{ height: '32px', width: '100px' }} />
+            <div className="sk" style={{ height: '32px', width: '100px' }} />
+        </div>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
+            {[1,2,3,4,5,6].map(i => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '28px 3fr 1.5fr 1fr 80px', padding: '11px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '12px', alignItems: 'center' }}>
+                    <div className="sk" style={{ width: '20px', height: '20px' }} />
+                    <div><div className="sk" style={{ height: '10px', width: '80%', marginBottom: '4px' }} /><div className="sk" style={{ height: '8px', width: '60%' }} /></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}><div className="sk" style={{ width: '20px', height: '20px', borderRadius: '50%' }} /><div className="sk" style={{ height: '9px', width: '80px' }} /></div>
+                    <div className="sk" style={{ height: '9px', width: '80px' }} />
+                    <div className="sk" style={{ height: '18px', width: '60px' }} />
+                </div>
+            ))}
+        </div>
+    </div>
+);
 
 export default AuditLogs;

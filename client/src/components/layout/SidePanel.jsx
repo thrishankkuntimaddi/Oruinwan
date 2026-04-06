@@ -109,14 +109,46 @@ export const ChannelList = () => {
     };
 
     const SectionHeader = ({ label, isOpen, onClick, onAdd }) => (
-        <div className="flex items-center justify-between px-4 py-1 group cursor-pointer hover:text-gray-900 text-gray-500">
-            <div className="flex items-center" onClick={onClick}>
-                <span className={`mr-2 text-[10px] transition-transform ${isOpen ? "rotate-90" : ""}`}>▶</span>
-                <span className="uppercase text-xs font-bold tracking-wide">{label}</span>
+        <div
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 12px', cursor: 'pointer' }}
+            className="group"
+        >
+            <div
+                onClick={onClick}
+                style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1 }}
+            >
+                <span style={{
+                    fontSize: '9px', color: 'rgba(228,228,228,0.3)',
+                    transition: 'transform 150ms ease',
+                    display: 'inline-block',
+                    transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
+                }}>▶</span>
+                <span style={{
+                    fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em',
+                    textTransform: 'uppercase', color: 'rgba(228,228,228,0.35)',
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                }}>
+                    {label}
+                </span>
             </div>
             {onAdd && (
-                <button className="opacity-0 group-hover:opacity-100 hover:bg-gray-200 rounded p-0.5 text-gray-600" onClick={onAdd}>
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                <button
+                    onClick={onAdd}
+                    title={`Add ${label}`}
+                    style={{
+                        width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        color: 'rgba(228,228,228,0.35)', borderRadius: '2px',
+                        transition: 'color 150ms ease, background 150ms ease',
+                        fontSize: '16px', lineHeight: 1, padding: 0,
+                        flexShrink: 0,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; e.currentTarget.style.background = 'rgba(184,149,106,0.1)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+                >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 4v16m8-8H4" />
+                    </svg>
                 </button>
             )}
         </div>

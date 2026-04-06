@@ -1,19 +1,6 @@
 /**
  * attachMenu.jsx — Full Attachment Menu for both channels and DMs
- *
- * Items:
- *   📷 Photo        — image/* upload → onSendAttachment
- *   🎬 Video        — video/* upload → onSendAttachment
- *   📎 Document     — doc/pdf/etc upload → onSendAttachment
- *   🎵 Voice Note   — opens VoiceRecorder overlay (via onOpenVoiceRecorder)
- *   👤 Contact      — workspace member picker (via onAttach('contact'))
- *   📊 Poll         — create poll (via onCreatePoll) — channels AND DMs
- *   📅 Meeting      — schedule meeting (via onAttach('meeting'))
- *
- * ── Apps Section (mock, no API calls) ──
- *   🐙 GitHub Issue — opens CreateGitHubIssueModal
- *   🎫 Jira Ticket  — opens CreateJiraTicketModal
- *   📅 Schedule Meeting — existing meeting flow
+ * Monolith Flow Design System — dark token based
  */
 import React, { useRef, useState } from "react";
 import { Image, FileText, User, BarChart2, Video, Loader2, Mic, Calendar } from "lucide-react";
@@ -21,131 +8,148 @@ import api from '@services/api';
 import CreateGitHubIssueModal from "../../../../components/apps/modals/CreateGitHubIssueModal";
 import CreateJiraTicketModal from "../../../../components/apps/modals/CreateJiraTicketModal";
 
+// Icon background tints mapped to CSS token colors (no Tailwind)
+const ITEM_COLORS = {
+    Photo:    { bg: 'rgba(156,127,212,0.12)', color: '#9c7fd4' },
+    Video:    { bg: 'rgba(99,179,237,0.12)',  color: '#63b3ed' },
+    Document: { bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
+    'Voice Note': { bg: 'rgba(198,60,60,0.1)', color: 'var(--state-danger)' },
+    Contact:  { bg: 'rgba(72,187,120,0.1)',   color: 'var(--state-success)' },
+    Poll:     { bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
+    Meeting:  { bg: 'rgba(99,179,237,0.1)',   color: '#63b3ed' },
+};
+
+function AttachItem({ label, icon, emoji, onClick }) {
+    const [hovered, setHovered] = useState(false);
+    const c = ITEM_COLORS[label] || { bg: 'var(--bg-hover)', color: 'var(--text-muted)' };
+    return (
+        <button
+            onClick={onClick}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px',
+                padding: '8px 4px', borderRadius: '2px', background: 'none', border: 'none',
+                cursor: 'pointer', transition: '150ms ease',
+                backgroundColor: hovered ? 'var(--bg-hover)' : 'transparent',
+            }}
+        >
+            <div style={{
+                width: '38px', height: '38px', borderRadius: '2px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                backgroundColor: c.bg, color: c.color, fontSize: '18px',
+                transition: '150ms ease', transform: hovered ? 'scale(1.08)' : 'scale(1)',
+            }}>
+                {emoji || icon}
+            </div>
+            <span style={{ fontSize: '10px', fontWeight: 500, color: hovered ? 'var(--text-primary)' : 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.2, maxWidth: '52px' }}>
+                {label}
+            </span>
+        </button>
+    );
+}
+
 export default function AttachMenu({
-  onAttach,
-  onSendAttachment,
-  onCreatePoll,
-  onOpenVoiceRecorder,
-  conversationId,
-  conversationType = "channel",
-  onClose,
-  onInsertText,          // inserts text into chat input (for app actions)
+    onAttach, onSendAttachment, onCreatePoll, onOpenVoiceRecorder,
+    conversationId, conversationType = "channel", onClose, onInsertText,
 }) {
-  const photoInputRef = useRef(null);
-  const videoInputRef = useRef(null);
-  const fileInputRef = useRef(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState(null);
+    const photoInputRef = useRef(null);
+    const videoInputRef = useRef(null);
+    const fileInputRef  = useRef(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState(null);
+    const [showGitHubModal, setShowGitHubModal] = useState(false);
+    const [showJiraModal, setShowJiraModal] = useState(false);
 
-  // App modal state (local only)
-  const [showGitHubModal, setShowGitHubModal] = useState(false);
-  const [showJiraModal, setShowJiraModal] = useState(false);
+    const uploadFile = async (file) => {
+        if (!onSendAttachment) return;
+        setUploading(true); setUploadError(null);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("conversationType", conversationType || "channel");
+            if (conversationId) formData.append("conversationId", conversationId);
+            const { data: attachment } = await api.post("/api/v2/uploads", formData, { headers: { "Content-Type": "multipart/form-data" } });
+            onSendAttachment(attachment);
+            onClose?.();
+        } catch (err) {
+            setUploadError(err.response?.data?.error || "Upload failed");
+        } finally { setUploading(false); }
+    };
 
-  const uploadFile = async (file) => {
-    if (!onSendAttachment) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("conversationType", conversationType || "channel");
-      if (conversationId) formData.append("conversationId", conversationId);
-      const { data: attachment } = await api.post("/api/v2/uploads", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      onSendAttachment(attachment);
-      onClose?.();
-    } catch (err) {
-      console.error("[AttachMenu] Upload failed:", err);
-      setUploadError(err.response?.data?.error || "Upload failed");
-    } finally {
-      setUploading(false);
-    }
-  };
+    const handlePhotoChange = (e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; };
+    const handleVideoChange = (e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; };
+    const handleFileChange  = (e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; };
 
-  const handlePhotoChange = (e) => { const file = e.target.files?.[0]; if (file) uploadFile(file); e.target.value = ""; };
-  const handleVideoChange = (e) => { const file = e.target.files?.[0]; if (file) uploadFile(file); e.target.value = ""; };
-  const handleFileChange = (e) => { const file = e.target.files?.[0]; if (file) uploadFile(file); e.target.value = ""; };
+    const items = [
+        { label: "Photo",      icon: <Image size={16} />,    action: () => photoInputRef.current?.click() },
+        { label: "Video",      icon: <Video size={16} />,    action: () => videoInputRef.current?.click() },
+        { label: "Document",   icon: <FileText size={16} />, action: () => fileInputRef.current?.click() },
+        { label: "Voice Note", icon: <Mic size={16} />,      action: () => { onClose?.(); onOpenVoiceRecorder?.(); }, hide: !onOpenVoiceRecorder },
+        { label: "Contact",    icon: <User size={16} />,     action: () => { onAttach?.("contact"); onClose?.(); } },
+        { label: "Poll",       icon: <BarChart2 size={16} />,action: () => { onCreatePoll?.(); onClose?.(); }, hide: !onCreatePoll || conversationType === 'dm' },
+        { label: "Meeting",    icon: <Calendar size={16} />, action: () => { onAttach?.("meeting"); onClose?.(); } },
+    ].filter(i => !i.hide);
 
-  const items = [
-    { label: "Photo", icon: <Image size={16} />, color: "bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400", action: () => photoInputRef.current?.click() },
-    { label: "Video", icon: <Video size={16} />, color: "bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400", action: () => videoInputRef.current?.click() },
-    { label: "Document", icon: <FileText size={16} />, color: "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400", action: () => fileInputRef.current?.click() },
-    { label: "Voice Note", icon: <Mic size={16} />, color: "bg-red-50 text-red-500 dark:bg-red-900/30 dark:text-red-400", action: () => { onClose?.(); onOpenVoiceRecorder?.(); }, hide: !onOpenVoiceRecorder },
-    { label: "Contact", icon: <User size={16} />, color: "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400", action: () => { onAttach?.("contact"); onClose?.(); } },
-    { label: "Poll", icon: <BarChart2 size={16} />, color: "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400", action: () => { onCreatePoll?.(); onClose?.(); }, hide: !onCreatePoll || conversationType === 'dm' },
-    { label: "Meeting", icon: <Calendar size={16} />, color: "bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400", action: () => { onAttach?.("meeting"); onClose?.(); } },
-  ];
+    const appItems = [
+        { label: "GitHub Issue",      emoji: "🐙", action: () => setShowGitHubModal(true) },
+        { label: "Jira Ticket",       emoji: "🎫", action: () => setShowJiraModal(true) },
+        { label: "Schedule Meeting",  emoji: "📅", action: () => { onAttach?.("meeting"); onClose?.(); } },
+    ];
 
-  const appItems = [
-    { label: "GitHub Issue", emoji: "🐙", color: "bg-gray-100 dark:bg-gray-700", action: () => setShowGitHubModal(true) },
-    { label: "Jira Ticket", emoji: "🎫", color: "bg-blue-50 dark:bg-blue-900/30", action: () => setShowJiraModal(true) },
-    { label: "Schedule Meeting", emoji: "📅", color: "bg-teal-50 dark:bg-teal-900/30", action: () => { onAttach?.("meeting"); onClose?.(); } },
-  ];
+    return (
+        <>
+            <div
+                onClick={e => e.stopPropagation()}
+                style={{
+                    backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
+                    borderRadius: '2px', padding: '10px', zIndex: 50, width: '220px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)', fontFamily: 'var(--font)',
+                }}
+            >
+                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
+                <input ref={videoInputRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={handleVideoChange} />
+                <input ref={fileInputRef}  type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.7z,.ppt,.pptx" style={{ display: 'none' }} onChange={handleFileChange} />
 
-  return (
-    <>
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl shadow-2xl p-3 z-50 w-[220px] animate-in fade-in slide-in-from-bottom-2 origin-bottom-right"
-      >
-        <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
-        <input ref={videoInputRef} type="file" accept="video/*" className="hidden" onChange={handleVideoChange} />
-        <input ref={fileInputRef} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.7z,.ppt,.pptx" className="hidden" onChange={handleFileChange} />
+                {uploading && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '16px 0', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading…
+                    </div>
+                )}
+                {uploadError && (
+                    <div style={{ padding: '4px 0', fontSize: '11px', color: 'var(--state-danger)', textAlign: 'center' }}>{uploadError}</div>
+                )}
 
-        {uploading && (
-          <div className="flex items-center justify-center gap-2 py-4 text-xs text-gray-500 dark:text-gray-400">
-            <Loader2 size={14} className="animate-spin text-blue-500" />
-            Uploading…
-          </div>
-        )}
-        {uploadError && <div className="px-2 py-1 text-xs text-red-500 text-center">{uploadError}</div>}
+                {!uploading && (
+                    <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px' }}>
+                            {items.map(item => (
+                                <AttachItem key={item.label} label={item.label} icon={item.icon} onClick={item.action} />
+                            ))}
+                        </div>
 
-        {!uploading && (
-          <>
-            {/* Standard attachment items */}
-            <div className="grid grid-cols-3 gap-1.5">
-              {items.filter((item) => !item.hide).map((item) => (
-                <button key={item.label} className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors group" onClick={item.action}>
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-110 ${item.color}`}>{item.icon}</div>
-                  <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300 leading-tight text-center">{item.label}</span>
-                </button>
-              ))}
+                        {/* Apps divider */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '8px 0 6px' }}>
+                            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+                            <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Apps</span>
+                            <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px' }}>
+                            {appItems.map(item => (
+                                <AttachItem key={item.label} label={item.label} emoji={item.emoji} onClick={item.action} />
+                            ))}
+                        </div>
+                    </>
+                )}
             </div>
 
-            {/* Apps divider */}
-            <div className="mt-3 mb-2 flex items-center gap-2">
-              <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
-              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Apps</span>
-              <div className="flex-1 h-px bg-gray-100 dark:bg-gray-700" />
-            </div>
-
-            {/* App action items */}
-            <div className="grid grid-cols-3 gap-1.5">
-              {appItems.map((item) => (
-                <button key={item.label} className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/60 transition-colors group" onClick={item.action}>
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0 text-xl transition-transform group-hover:scale-110 ${item.color}`}>{item.emoji}</div>
-                  <span className="text-[10px] font-medium text-gray-600 dark:text-gray-300 leading-tight text-center">{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* App modals — rendered at root level to avoid z-index conflicts */}
-      {showGitHubModal && (
-        <CreateGitHubIssueModal
-          onClose={() => { setShowGitHubModal(false); onClose?.(); }}
-          onInsertText={onInsertText}
-        />
-      )}
-      {showJiraModal && (
-        <CreateJiraTicketModal
-          onClose={() => { setShowJiraModal(false); onClose?.(); }}
-          onInsertText={onInsertText}
-        />
-      )}
-    </>
-  );
+            {showGitHubModal && (
+                <CreateGitHubIssueModal onClose={() => { setShowGitHubModal(false); onClose?.(); }} onInsertText={onInsertText} />
+            )}
+            {showJiraModal && (
+                <CreateJiraTicketModal onClose={() => { setShowJiraModal(false); onClose?.(); }} onInsertText={onInsertText} />
+            )}
+        </>
+    );
 }

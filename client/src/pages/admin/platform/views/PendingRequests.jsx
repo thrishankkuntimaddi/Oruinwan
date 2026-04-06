@@ -1,221 +1,207 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import api from '@services/api';
-import { Check, X, Globe, ExternalLink } from "lucide-react";
-import { useToast } from "../../../../contexts/ToastContext";
+import { Check, X, Globe, ExternalLink } from 'lucide-react';
+import { useToast } from '../../../../contexts/ToastContext';
 
 const PendingRequests = () => {
     const [companies, setCompanies] = useState([]);
     const [selectedCompany, setSelectedCompany] = useState(null);
-    const [reason, setReason] = useState("");
+    const [reason, setReason] = useState('');
     const { showToast } = useToast();
 
-    useEffect(() => {
-        fetchPending();
-    }, []);
+    useEffect(() => { fetchPending(); }, []);
 
     const fetchPending = async () => {
         try {
-
-            const res = await api.get(`/api/admin/pending-companies`);
-
+            const res = await api.get('/api/admin/pending-companies');
             setCompanies(res.data);
         } catch (err) {
-            console.error("❌ Error fetching pending companies:", err);
+            console.error('❌ Error fetching pending companies:', err);
         }
     };
 
     const handleApprove = async (id) => {
         try {
             await api.post(`/api/admin/approve-company/${id}`, { message: reason });
-            showToast("Company Approved! Email sent.", "success");
+            showToast('Company Approved! Email sent.', 'success');
             setCompanies(prev => prev.filter(c => c._id !== id));
             setSelectedCompany(null);
-            setReason("");
-        } catch (err) {
-            showToast("Failed to approve", "error");
-        }
+            setReason('');
+        } catch { showToast('Failed to approve', 'error'); }
     };
 
     const handleReject = async (id) => {
-        if (!reason.trim()) {
-            showToast("Please provide a rejection reason", "error");
-            return;
-        }
+        if (!reason.trim()) { showToast('Please provide a rejection reason', 'error'); return; }
         try {
             await api.post(`/api/admin/reject-company/${id}`, { message: reason });
-            showToast("Company Rejected", "info");
+            showToast('Company Rejected', 'info');
             setCompanies(prev => prev.filter(c => c._id !== id));
             setSelectedCompany(null);
-            setReason("");
-        } catch (err) {
-            showToast("Failed to reject", "error");
-        }
+            setReason('');
+        } catch { showToast('Failed to reject', 'error'); }
     };
 
     return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-black text-gray-900 dark:text-white">Pending Registrations</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', margin: 0 }}>Pending Registrations</h1>
 
             {companies.length === 0 ? (
-                <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-700 text-gray-900 dark:text-white transition-colors duration-300">
-                    <div className="w-16 h-16 bg-green-100 dark:bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600 dark:text-green-400">
-                        <Check size={32} />
-                    </div>
-                    <h2 className="text-xl font-bold">All Caught Up!</h2>
-                    <p className="text-gray-500 dark:text-gray-400">No pending verifications.</p>
+                <div style={{ padding: '64px 24px', textAlign: 'center', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+                    <Check size={32} style={{ color: 'var(--state-success)', margin: '0 auto 12px' }} />
+                    <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>All Caught Up!</h2>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No pending verifications.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1px', background: 'var(--border-subtle)' }}>
                     {companies.map(company => (
-                        <div key={company._id} className="bg-white rounded-3xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all flex flex-col">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 font-bold text-xl">
-                                    {company.name.charAt(0)}
-                                </div>
-                                <span className="text-xs font-bold px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full uppercase tracking-wide">Pending</span>
-                            </div>
-
-                            <h3 className="font-bold text-lg text-gray-900 mb-1">{company.name}</h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
-                                <Globe size={14} /> {company.domain || "No Domain"}
-                            </div>
-
-                            <div className="flex-1 space-y-3 mb-6">
-                                <div className="text-xs bg-gray-50 p-2 rounded-lg border border-gray-100">
-                                    <span className="block font-bold text-gray-700 mb-1">Documents</span>
-                                    {company.documents && company.documents.length > 0 ? (
-                                        company.documents.map((doc, i) => (
-                                            <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-indigo-600 hover:underline truncate">
-                                                <ExternalLink size={12} /> {doc.name}
-                                            </a>
-                                        ))
-                                    ) : <span className="text-gray-400">No docs uploaded</span>}
-                                </div>
-                                <div className="text-xs text-gray-400">
-                                    Submitted: {new Date(company.createdAt).toLocaleDateString()}
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setSelectedCompany(company)}
-                                className="w-full py-2 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-black transition-colors"
-                            >
-                                Review Application
-                            </button>
-                        </div>
+                        <CompanyCard key={company._id} company={company} onReview={() => setSelectedCompany(company)} />
                     ))}
                 </div>
             )}
 
-            {/* REVIEW MODAL - Simplified from original for brevity but keeping core logic */}
             {selectedCompany && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm overflow-y-auto">
-                    <div className="bg-white dark:bg-slate-800 rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden my-8 p-8 max-h-[90vh] overflow-y-auto custom-scrollbar transition-colors">
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1">Review Application</h2>
-                                <p className="text-gray-500 dark:text-gray-400">Detailed verification for <strong className="text-gray-900 dark:text-white">{selectedCompany.name}</strong></p>
-                            </div>
-                            <button onClick={() => setSelectedCompany(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                                <X size={24} className="text-gray-400" />
-                            </button>
-                        </div>
-
-                        {/* Details Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                            {/* Company Details */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2">Company Information</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Company Name</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.name}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Domain</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.domain || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Company Email</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.billingEmail || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Phone</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.settings?.phone || selectedCompany.ownerPhone || "N/A"}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Admin Details */}
-                            <div className="space-y-4">
-                                <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2">Admin Information</h3>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Full Name</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.username || selectedCompany.admins[0]?.user?.name || "N/A"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Personal Email</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.personalEmail || selectedCompany.admins[0]?.user?.email}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Job Title</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.jobTitle || selectedCompany.admins[0]?.user?.role || "Admin"}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-400 font-bold mb-1">Phone</p>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedCompany.admins[0]?.user?.phone || "N/A"}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Documents */}
-                        <div className="mb-8">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-slate-700 pb-2 mb-3">Supporting Documents</h3>
-                            <div className="flex gap-3 flex-wrap">
-                                {selectedCompany.documents && selectedCompany.documents.length > 0 ? (
-                                    selectedCompany.documents.map((doc, i) => (
-                                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors font-bold text-sm">
-                                            <ExternalLink size={16} /> {doc.name || `Document ${i + 1}`}
-                                        </a>
-                                    ))
-                                ) : <p className="text-sm text-gray-400 italic">No documents provided.</p>}
-                            </div>
-                        </div>
-
-                        {/* Action Message */}
-                        <div className="mb-6">
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">Message to User (Reason or Appreciation)</label>
-                            <textarea
-                                className="w-full px-4 py-3 border border-gray-200 dark:border-slate-600 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-800 text-gray-900 dark:text-white"
-                                placeholder="E.g. 'Congratulations! Welcome to the future of work.' or 'Please upload a valid business license.'"
-                                rows="4"
-                                value={reason}
-                                onChange={(e) => setReason(e.target.value)}
-                            />
-                            <p className="text-xs text-gray-400 mt-2">This message will be included in the email sent to the user.</p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-100 dark:border-slate-700">
-                            <button
-                                onClick={() => handleReject(selectedCompany._id)}
-                                className="py-4 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-black rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2"
-                            >
-                                <X size={20} /> Reject Application
-                            </button>
-                            <button
-                                onClick={() => handleApprove(selectedCompany._id)}
-                                className="py-4 bg-gray-900 text-white font-black rounded-xl hover:bg-black transition-all shadow-lg hover:shadow-xl hover:scale-[1.01] flex items-center justify-center gap-2"
-                            >
-                                <Check size={20} /> Approve & Onboard
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <ReviewModal
+                    company={selectedCompany}
+                    reason={reason}
+                    setReason={setReason}
+                    onClose={() => { setSelectedCompany(null); setReason(''); }}
+                    onApprove={() => handleApprove(selectedCompany._id)}
+                    onReject={() => handleReject(selectedCompany._id)}
+                />
             )}
         </div>
     );
 };
+
+const CompanyCard = ({ company, onReview }) => {
+    const [hov, setHov] = React.useState(false);
+    return (
+        <div
+            onMouseEnter={() => setHov(true)}
+            onMouseLeave={() => setHov(false)}
+            style={{ background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', transition: 'background 150ms ease' }}
+        >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ width: '36px', height: '36px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', fontWeight: 700, color: 'var(--accent)' }}>
+                    {company.name.charAt(0)}
+                </div>
+                <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--accent)', padding: '2px 6px', border: '1px solid var(--accent)' }}>Pending</span>
+            </div>
+
+            <div>
+                <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{company.name}</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)' }}>
+                    <Globe size={11} /> {company.domain || 'No Domain'}
+                </div>
+            </div>
+
+            <div style={{ background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '10px 12px' }}>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '6px' }}>Documents</div>
+                {company.documents?.length > 0 ? company.documents.map((doc, i) => (
+                    <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--accent)', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <ExternalLink size={11} /> {doc.name}
+                    </a>
+                )) : <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No docs uploaded</span>}
+            </div>
+
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Submitted: {new Date(company.createdAt).toLocaleDateString()}</div>
+
+            <button
+                onClick={onReview}
+                style={{ width: '100%', padding: '10px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-active)'}
+            >
+                Review Application
+            </button>
+        </div>
+    );
+};
+
+const ReviewModal = ({ company, reason, setReason, onClose, onApprove, onReject }) => (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', overflowY: 'auto' }}>
+        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '720px', maxHeight: '90vh', overflowY: 'auto', padding: '32px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }} className="custom-scrollbar">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+                <div>
+                    <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Review Application</h2>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Detailed verification for <strong style={{ color: 'var(--text-primary)' }}>{company.name}</strong></p>
+                </div>
+                <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '4px' }}>
+                    <X size={20} />
+                </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+                <InfoBlock title="Company Information" fields={[
+                    { label: 'Company Name', value: company.name },
+                    { label: 'Domain', value: company.domain || 'N/A' },
+                    { label: 'Company Email', value: company.billingEmail || 'N/A' },
+                    { label: 'Phone', value: company.settings?.phone || company.ownerPhone || 'N/A' },
+                ]} />
+                <InfoBlock title="Admin Information" fields={[
+                    { label: 'Full Name', value: company.admins[0]?.user?.username || company.admins[0]?.user?.name || 'N/A' },
+                    { label: 'Personal Email', value: company.admins[0]?.user?.personalEmail || company.admins[0]?.user?.email || 'N/A' },
+                    { label: 'Job Title', value: company.admins[0]?.user?.jobTitle || 'Admin' },
+                    { label: 'Phone', value: company.admins[0]?.user?.phone || 'N/A' },
+                ]} />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+                <SectionLabel text="Supporting Documents" />
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {company.documents?.length > 0 ? company.documents.map((doc, i) => (
+                        <a key={i} href={doc.url} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--accent)', fontSize: '12px', fontWeight: 500, textDecoration: 'none' }}>
+                            <ExternalLink size={13} /> {doc.name || `Document ${i + 1}`}
+                        </a>
+                    )) : <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No documents provided.</p>}
+                </div>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    Message to User
+                </label>
+                <textarea
+                    value={reason}
+                    onChange={e => setReason(e.target.value)}
+                    placeholder="e.g. 'Congratulations! Welcome to Chttrix.' or 'Please upload a valid business license.'"
+                    rows={4}
+                    style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                />
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>This message will be included in the email sent to the user.</p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '20px', borderTop: '1px solid var(--border-subtle)' }}>
+                <button onClick={onReject} style={{ padding: '14px', background: 'none', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '2px', transition: 'background 150ms ease' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(224,82,82,0.07)'} onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                    <X size={16} /> Reject Application
+                </button>
+                <button onClick={onApprove} style={{ padding: '14px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '2px', transition: 'background 150ms ease' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'} onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}>
+                    <Check size={16} /> Approve & Onboard
+                </button>
+            </div>
+        </div>
+    </div>
+);
+
+const InfoBlock = ({ title, fields }) => (
+    <div>
+        <SectionLabel text={title} />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px' }}>
+            {fields.map(f => (
+                <div key={f.label}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '2px' }}>{f.label}</p>
+                    <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{f.value}</p>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+const SectionLabel = ({ text }) => (
+    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.13em', textTransform: 'uppercase', padding: '0 0 8px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
+        {text}
+    </div>
+);
 
 export default PendingRequests;

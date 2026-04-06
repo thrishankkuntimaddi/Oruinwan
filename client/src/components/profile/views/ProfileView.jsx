@@ -2,190 +2,187 @@ import React from 'react';
 import { ChevronLeft, Trash2, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
 import { getAvatarUrl } from '../../../utils/avatarUtils';
 
-/**
- * ProfileView Component
- * Profile editing form with personal info and email management
- */
+const inp = {
+    width: '100%', padding: '8px 12px', fontSize: '13px',
+    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
+    color: '#e4e4e4', outline: 'none', boxSizing: 'border-box',
+    fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', transition: '150ms ease',
+};
+const lbl = {
+    display: 'block', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
+    textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', marginBottom: '6px',
+    fontFamily: 'Inter, system-ui, sans-serif',
+};
+const focusAmber = e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.5)';
+const blurDefault = e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+
 const ProfileView = ({
-    user,
-    formData,
-    setFormData,
-    phoneCode,
-    setPhoneCode,
-    emails,
-    newEmail,
-    setNewEmail,
-    onBack,
-    onSaveProfile,
-    onAddEmail,
-    onDeleteEmail,
-    onMakePrimary,
-    onVerifyEmail,
-    onResendCode
+    user, formData, setFormData, phoneCode, setPhoneCode,
+    emails, newEmail, setNewEmail,
+    onBack, onSaveProfile, onAddEmail, onDeleteEmail, onMakePrimary, onVerifyEmail, onResendCode
 }) => {
     return (
-        <div className="w-full md:w-80 max-w-sm bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[80vh] animate-fade-in">
-            <div className="p-4 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/50 sticky top-0 z-10">
-                <button onClick={onBack} className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white flex items-center text-xs font-bold transition-colors">
-                    <ChevronLeft size={14} className="mr-1" /> Back
+        <div style={{
+            width: '256px', background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden', display: 'flex',
+            flexDirection: 'column', maxHeight: '80vh', fontFamily: 'Inter, system-ui, sans-serif',
+        }}>
+            {/* Header */}
+            <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', flexShrink: 0 }}>
+                <button onClick={onBack}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
+                >
+                    <ChevronLeft size={13} /> Back
                 </button>
-                <span className="font-bold text-gray-900 dark:text-white text-sm">Edit Profile</span>
-                <div className="w-8"></div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Edit Profile</span>
+                <div style={{ width: '40px' }} />
             </div>
 
-            <div className="p-4 overflow-y-auto space-y-5 flex-1 custom-scrollbar">
-                <div className="flex justify-center">
-                    <div className="relative group" title="Profile Picture Upload - Coming Soon">
-                        <div className="w-20 h-20 rounded-full bg-gray-300 bg-cover bg-center shadow-md border-4 border-white" style={{ backgroundImage: `url(${getAvatarUrl(user)})` }}></div>
-                        <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-white text-xs font-bold">Change</span>
-                        </div>
-                        <button className="absolute bottom-0 right-0 bg-blue-600 text-white p-1.5 rounded-full shadow-sm hover:bg-blue-700 transition-colors border-2 border-white">
-                            <Plus size={12} />
+            {/* Scrollable body */}
+            <div style={{ padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }} className="custom-scrollbar">
+
+                {/* Avatar */}
+                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                    <div style={{ position: 'relative' }} title="Profile Picture Upload coming soon">
+                        <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundImage: `url(${getAvatarUrl(user)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+                        <button style={{ position: 'absolute', bottom: 0, right: 0, width: '18px', height: '18px', borderRadius: '50%', background: '#b8956a', border: '2px solid #111', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#0c0c0c' }}>
+                            <Plus size={11} />
                         </button>
                     </div>
                 </div>
 
-                <div className="space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Full Name</label>
-                        <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })} className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+                {/* Full Name */}
+                <div>
+                    <label style={lbl}>Full Name</label>
+                    <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })}
+                        style={inp} onFocus={focusAmber} onBlur={blurDefault} />
+                </div>
+
+                {/* Date of Birth */}
+                <div>
+                    <label style={lbl}>Date of Birth</label>
+                    <input type="date" value={formData.dob || ''} onChange={e => setFormData({ ...formData, dob: e.target.value })}
+                        max={new Date().toISOString().split('T')[0]} min="1900-01-01"
+                        style={inp} onFocus={focusAmber} onBlur={blurDefault} />
+                </div>
+
+                {/* Phone */}
+                <div>
+                    <label style={lbl}>Phone</label>
+                    <div style={{ display: 'flex' }}>
+                        <select value={phoneCode} onChange={e => setPhoneCode(e.target.value)}
+                            style={{ ...inp, width: '70px', flexShrink: 0, borderRight: 'none' }}
+                            onFocus={focusAmber} onBlur={blurDefault}
+                        >
+                            <option value="+1">+1</option>
+                            <option value="+44">+44</option>
+                            <option value="+91">+91</option>
+                            <option value="+81">+81</option>
+                        </select>
+                        <input type="tel" value={formData.phone || ''} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                            style={{ ...inp, flex: 1 }} onFocus={focusAmber} onBlur={blurDefault}
+                            placeholder={phoneCode === '+91' ? '98765 43210' : '123-456-7890'} />
                     </div>
+                </div>
 
-                    <div className="space-y-3">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Date of Birth</label>
-                            <input
-                                type="date"
-                                value={formData.dob || ""}
-                                onChange={e => setFormData({ ...formData, dob: e.target.value })}
-                                max={new Date().toISOString().split("T")[0]}
-                                min="1900-01-01"
-                                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Phone</label>
-                            <div className="flex">
-                                <select
-                                    value={phoneCode}
-                                    onChange={(e) => setPhoneCode(e.target.value)}
-                                    className="border border-r-0 border-gray-300 dark:border-gray-600 rounded-l-lg px-2 py-2 text-sm bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none"
-                                >
-                                    <option value="+1">+1</option>
-                                    <option value="+44">+44</option>
-                                    <option value="+91">+91</option>
-                                    <option value="+81">+81</option>
-                                </select>
-                                <input
-                                    type="tel"
-                                    value={formData.phone || ""}
-                                    onChange={e => setFormData({ ...formData, phone: e.target.value })}
-                                    className="w-full border border-gray-300 dark:border-gray-600 rounded-r-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                    placeholder={
-                                        phoneCode === "+91" ? "98765 43210" :
-                                            phoneCode === "+44" ? "7911 123456" :
-                                                phoneCode === "+81" ? "90-1234-5678" :
-                                                    "123-456-7890"
-                                    }
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">Email Addresses</label>
-                        <div className="space-y-3">
-                            {emails.map(email => (
-                                <div key={email.id || email._id} className="p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50/50 dark:bg-gray-800/50">
-                                    <div className="flex flex-col gap-2">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{email.email}</span>
-                                            {!email.isPrimary && (
-                                                <button onClick={() => onDeleteEmail(email.id)} className="text-gray-400 hover:text-red-500 transition-colors">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar whitespace-nowrap pb-1">
-                                            {email.verified ? (
-                                                <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
-                                                    <CheckCircle2 size={10} className="mr-1" /> Verified
-                                                </span>
-                                            ) : (
-                                                <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-2 py-0.5 rounded-full border border-yellow-200 dark:border-yellow-800">
-                                                    <AlertCircle size={10} className="mr-1" /> Unverified
-                                                </span>
-                                            )}
-                                            {email.isPrimary && (
-                                                <span className="flex-shrink-0 flex items-center text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
-                                                    Primary
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="flex items-center gap-3 pt-1 border-t border-gray-200/50 dark:border-gray-700/50">
-                                            {!email.verified && (
-                                                <>
-                                                    <button
-                                                        onClick={() => onVerifyEmail(email.id)}
-                                                        className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
-                                                    >
-                                                        Verify Now
-                                                    </button>
-                                                    <button
-                                                        onClick={() => onResendCode(email.id)}
-                                                        className="text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:underline"
-                                                    >
-                                                        Resend Code
-                                                    </button>
-                                                </>
-                                            )}
-                                            {email.verified && !email.isPrimary && (
-                                                <button onClick={() => onMakePrimary(email.id)} className="text-[10px] font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:underline">Set as Primary</button>
-                                            )}
-                                        </div>
-                                    </div>
+                {/* Email Addresses */}
+                <div>
+                    <label style={lbl}>Email Addresses</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {emails.map(email => (
+                            <div key={email.id || email._id} style={{ padding: '10px 12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                    <span style={{ fontSize: '12px', fontWeight: 500, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email.email}</span>
+                                    {!email.isPrimary && (
+                                        <button onClick={() => onDeleteEmail(email.id)}
+                                            style={{ background: 'none', border: 'none', color: 'rgba(228,228,228,0.3)', cursor: 'pointer', padding: '2px', transition: '150ms' }}
+                                            onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
+                                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
+                                        ><Trash2 size={13} /></button>
+                                    )}
                                 </div>
-                            ))}
-
-                            <div className="flex gap-2">
-                                <input
-                                    type="email"
-                                    value={newEmail}
-                                    onChange={(e) => setNewEmail(e.target.value)}
-                                    placeholder="Add another email..."
-                                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                />
-                                <button onClick={onAddEmail} className="bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 rounded-lg transition-colors">
-                                    <Plus size={18} />
-                                </button>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                    {email.verified ? (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 700, padding: '2px 7px', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.25)', color: '#34d399' }}>
+                                            <CheckCircle2 size={9} /> Verified
+                                        </span>
+                                    ) : (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '9px', fontWeight: 700, padding: '2px 7px', background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.25)', color: '#fbbf24' }}>
+                                            <AlertCircle size={9} /> Unverified
+                                        </span>
+                                    )}
+                                    {email.isPrimary && (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', fontSize: '9px', fontWeight: 700, padding: '2px 7px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.25)', color: '#b8956a' }}>
+                                            Primary
+                                        </span>
+                                    )}
+                                </div>
+                                {(!email.verified || (email.verified && !email.isPrimary)) && (
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px' }}>
+                                        {!email.verified && (
+                                            <>
+                                                <button onClick={() => onVerifyEmail(email.id)}
+                                                    style={{ fontSize: '10px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}>
+                                                    Verify Now
+                                                </button>
+                                                <button onClick={() => onResendCode(email.id)}
+                                                    style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
+                                                    onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
+                                                    Resend Code
+                                                </button>
+                                            </>
+                                        )}
+                                        {email.verified && !email.isPrimary && (
+                                            <button onClick={() => onMakePrimary(email.id)}
+                                                style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
+                                                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
+                                                Set as Primary
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+                        ))}
+                        {/* Add email */}
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                            <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
+                                placeholder="Add another email..." style={{ ...inp, flex: 1 }}
+                                onFocus={focusAmber} onBlur={blurDefault} />
+                            <button onClick={onAddEmail}
+                                style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(228,228,228,0.6)', cursor: 'pointer', transition: '150ms ease' }}
+                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#e4e4e4'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
+                            ><Plus size={16} /></button>
                         </div>
                     </div>
+                </div>
 
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1.5">About</label>
-                        <textarea
-                            value={formData.about || ""}
-                            onChange={e => setFormData({ ...formData, about: e.target.value })}
-                            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                            rows="3"
-                            placeholder="Tell us a bit about yourself..."
-                            maxLength={500}
-                        />
-                        <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 text-right">
-                            {(formData.about || "").length} / 500 characters
-                        </div>
+                {/* About */}
+                <div>
+                    <label style={lbl}>About</label>
+                    <textarea value={formData.about || ''} onChange={e => setFormData({ ...formData, about: e.target.value })}
+                        style={{ ...inp, resize: 'vertical', lineHeight: 1.6 }} rows={3}
+                        placeholder="Tell us a bit about yourself..." maxLength={500}
+                        onFocus={focusAmber} onBlur={blurDefault} />
+                    <div style={{ fontSize: '10px', color: 'rgba(228,228,228,0.25)', textAlign: 'right', marginTop: '4px' }}>
+                        {(formData.about || '').length} / 500
                     </div>
                 </div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 flex justify-end">
-                <button onClick={onSaveProfile} className="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-blue-700 transition-all">Save Changes</button>
+            {/* Footer */}
+            <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
+                <button onClick={onSaveProfile}
+                    style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 700, background: '#b8956a', color: '#0c0c0c', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                    Save Changes
+                </button>
             </div>
-        </div >
+        </div>
     );
 };
 

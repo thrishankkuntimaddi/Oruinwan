@@ -8,7 +8,7 @@
  *   msg.contact  — { name, email, phone, avatar }
  */
 import React from 'react';
-import { User, Mail, Phone, UserCircle } from 'lucide-react';
+import { Mail, Phone, UserCircle } from 'lucide-react';
 
 export default function ContactMessage({ msg }) {
     const contact = msg?.contact || msg?.payload?.contact;
@@ -17,56 +17,107 @@ export default function ContactMessage({ msg }) {
     const { name, email, phone, avatar } = contact;
 
     return (
-        <div className="mt-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 max-w-xs shadow-sm">
+        <div style={{
+            marginTop: '4px',
+            backgroundColor: 'var(--bg-active)',
+            border: '1px solid var(--border-accent)',
+            borderRadius: '2px',
+            padding: '12px',
+            maxWidth: '280px',
+        }}>
             {/* Header row */}
-            <div className="flex items-center gap-3 mb-3">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                 {avatar ? (
                     <img
                         src={avatar}
                         alt={name}
-                        className="w-11 h-11 rounded-full object-cover flex-shrink-0 border border-gray-100 dark:border-gray-700"
+                        style={{
+                            width: '36px', height: '36px', borderRadius: '2px',
+                            objectFit: 'cover', flexShrink: 0,
+                            border: '1px solid var(--border-default)',
+                        }}
                     />
                 ) : (
-                    <div className="w-11 h-11 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                        <UserCircle size={24} className="text-blue-500 dark:text-blue-400" />
+                    <div style={{
+                        width: '36px', height: '36px', borderRadius: '2px',
+                        backgroundColor: 'var(--bg-hover)',
+                        border: '1px solid var(--border-default)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        flexShrink: 0,
+                    }}>
+                        <UserCircle size={18} style={{ color: 'var(--text-muted)' }} />
                     </div>
                 )}
-                <div className="min-w-0">
-                    <p className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide">
+                <div style={{ minWidth: 0 }}>
+                    <div style={{
+                        fontSize: '9px', fontWeight: 700,
+                        color: 'var(--accent)',
+                        textTransform: 'uppercase', letterSpacing: '0.12em',
+                        marginBottom: '2px',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
                         Contact
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-tight truncate">
+                    </div>
+                    <div style={{
+                        fontSize: '13px', fontWeight: 500,
+                        color: 'var(--text-primary)',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>
                         {name || 'Unknown Contact'}
-                    </p>
+                    </div>
                 </div>
             </div>
 
             {/* Detail rows */}
-            <div className="space-y-1.5 border-t border-gray-100 dark:border-gray-700 pt-3">
+            <div style={{
+                borderTop: '1px solid var(--border-subtle)',
+                paddingTop: '10px',
+                display: 'flex', flexDirection: 'column', gap: '6px',
+            }}>
                 {email && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Mail size={13} className="flex-shrink-0 text-gray-400" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Mail size={12} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
                         <a
                             href={`mailto:${email}`}
-                            className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate transition-colors"
+                            style={{
+                                fontSize: '12px', color: 'var(--text-secondary)',
+                                textDecoration: 'none',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                transition: 'color 150ms ease',
+                                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
                         >
                             {email}
                         </a>
                     </div>
                 )}
                 {phone && (
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                        <Phone size={13} className="flex-shrink-0 text-gray-400" />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Phone size={12} style={{ flexShrink: 0, color: 'var(--text-muted)' }} />
                         <a
                             href={`tel:${phone}`}
-                            className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+                            style={{
+                                fontSize: '12px', color: 'var(--text-secondary)',
+                                textDecoration: 'none',
+                                transition: 'color 150ms ease',
+                                fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
                         >
                             {phone}
                         </a>
                     </div>
                 )}
                 {!email && !phone && (
-                    <p className="text-xs text-gray-400 italic">No contact details</p>
+                    <p style={{
+                        fontSize: '12px', color: 'var(--text-muted)',
+                        fontStyle: 'italic', margin: 0,
+                        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    }}>No contact details</p>
                 )}
             </div>
         </div>
