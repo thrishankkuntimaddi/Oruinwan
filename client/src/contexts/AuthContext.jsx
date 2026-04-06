@@ -186,7 +186,9 @@ export const AuthProvider = ({ children }) => {
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.error('❌ [PHASE 1] HARD crypto failure:', err);
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        // Surface to user — PasswordUnlockModal gives a retry path
         setEncryptionReady(false);
+        setRequiresPassword(true);
       }
     })();
   };

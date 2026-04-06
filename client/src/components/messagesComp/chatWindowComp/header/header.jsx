@@ -106,6 +106,11 @@ export default function Header({
 
   return (
     <>
+      <style>{`
+        @media (max-width: 768px) {
+          .hdr-extra { display: none !important; }
+        }
+      `}</style>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -225,6 +230,7 @@ export default function Header({
                 <>
                   {onStartHuddle && (
                     <button
+                      className="hdr-extra"
                       title={huddleActive ? 'In huddle' : 'Start huddle'}
                       onClick={onStartHuddle}
                       style={{
@@ -242,6 +248,7 @@ export default function Header({
 
                   {onCreatePoll && (
                     <button
+                      className="hdr-extra"
                       title="Create Poll"
                       onClick={() => { onCreatePoll(); }}
                       style={{
@@ -262,6 +269,7 @@ export default function Header({
               {chat.type === "dm" && (
                 <>
                   <button
+                    className="hdr-extra"
                     title={huddleActive ? "Leave Voice Call" : "Start Voice Call"}
                     onClick={() => onStartHuddle ? onStartHuddle() : showToast?.("Voice calls coming soon!", "info")}
                     style={{
@@ -276,6 +284,7 @@ export default function Header({
                     {huddleActive ? <PhoneOff size={18} /> : <Phone size={18} />}
                   </button>
                   <button
+                    className="hdr-extra"
                     title="Video Call (Coming Soon)"
                     onClick={() => showToast?.("Video calls coming soon!", "info")}
                     style={{
@@ -356,6 +365,7 @@ export default function Header({
               {/* Bookmarks Button */}
               {onShowBookmarks && (
                 <button
+                  className="hdr-extra"
                   title="Saved / Bookmarked messages"
                   onClick={onShowBookmarks}
                   style={{

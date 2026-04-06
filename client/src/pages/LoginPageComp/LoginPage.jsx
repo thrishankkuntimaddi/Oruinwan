@@ -63,11 +63,20 @@ const LoginPage = () => {
     if (user) return null;
 
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', background: '#0c0c0c', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            <style>{`* { box-sizing: border-box; } ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }`}</style>
+        <div className="login-root" style={{ minHeight: '100vh', display: 'flex', background: '#0c0c0c', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <style>{`
+                * { box-sizing: border-box; }
+                ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }
+                @media (max-width: 768px) {
+                    .login-brand-panel { display: none !important; }
+                    .login-form-panel { padding: 32px 20px !important; flex: 1 1 100% !important; }
+                    .login-root { display: block !important; }
+                }
+                @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+            `}</style>
 
-            {/* ── LEFT PANEL — Brand ── */}
-            <div style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', background: '#080808', borderRight: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
+            {/* ── LEFT PANEL — Brand (hidden on mobile) ── */}
+            <div className="login-brand-panel" style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', background: '#080808', borderRight: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
                 {/* Ambient glow */}
                 <div style={{ position: 'absolute', top: '20%', left: '30%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
                 <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(110,168,254,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -115,7 +124,7 @@ const LoginPage = () => {
             </div>
 
             {/* ── RIGHT PANEL — Forms ── */}
-            <div style={{ flex: '1 1 50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', overflowY: 'auto' }}>
+            <div className="login-form-panel" style={{ flex: '1 1 50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', overflowY: 'auto' }}>
                 <div style={{ width: '100%', maxWidth: '420px' }}>
                     {/* Registration success banner */}
                     {registrationMessage && (

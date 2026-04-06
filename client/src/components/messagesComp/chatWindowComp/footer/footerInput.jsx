@@ -376,7 +376,7 @@ export default function FooterInput({
               fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
               userSelect: 'none',
             }}>
-              {disabled ? "Channel encryption unavailable" : "Message..."}
+              {disabled ? "Connecting securely…" : "Message..."}
             </div>
           )}
         </div>
@@ -552,7 +552,7 @@ export default function FooterInput({
             <button
               onClick={handleSend}
               disabled={!hasText || blocked || disabled}
-              title={disabled ? "Cannot send - channel encryption unavailable" : "Send message"}
+              title={disabled ? "Setting up encryption… please wait" : "Send message"}
               style={{
                 marginLeft: '6px',
                 width: '32px', height: '32px',
