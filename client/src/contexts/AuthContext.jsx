@@ -158,6 +158,7 @@ export const AuthProvider = ({ children }) => {
         const result = await identityKeyService.initializeIdentityKeys(userId, null);
 
         if (result?.status === 'PASSWORD_REQUIRED') {
+          // Genuine case: user has PASSWORD-protected UMEK and no cached key
           console.log('🔐 [PHASE 1] Password-protected identity - cache missing, encryption deferred');
           setEncryptionReady(false);
           setRequiresPassword(true);
@@ -183,10 +184,25 @@ export const AuthProvider = ({ children }) => {
             .catch(() => { });
         }
       } catch (err) {
+        const isServerError = err.message && (
+          err.message.includes('500') ||
+          err.message.includes('Failed to unwrap UMEK') ||
+          err.message.includes('Crypto state fetch failed')
+        );
+
+        if (isServerError) {
+          // Transient server error — don't show password modal, just log it
+          // Encryption will be unavailable until the user manually retries via Settings
+          console.warn('⚠️ [PHASE 1] Transient server error during encryption init (not a password issue):', err.message);
+          setEncryptionReady(false);
+          // Do NOT setRequiresPassword(true) — that would wrongly prompt for a password
+          return;
+        }
+
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.error('❌ [PHASE 1] HARD crypto failure:', err);
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        // Surface to user — PasswordUnlockModal gives a retry path
+        // Only show password modal for genuine crypto failures (wrong key, bad decrypt, etc.)
         setEncryptionReady(false);
         setRequiresPassword(true);
       }
@@ -479,7 +495,23 @@ export const AuthProvider = ({ children }) => {
     // Dynamically import to avoid circular dependencies
     const identityKeyService = (await import('../services/identityKeyService')).default;
 
-    // Retry with password
+    // Step 1: Try without password first (SERVER_KEK users or already cached)
+    // This handles users whose UMEK is server-protected (no password needed)
+    try {
+      const resultNoPass = await identityKeyService.initializeIdentityKeys(userId, null);
+      if (resultNoPass?.status === 'READY') {
+        setRequiresPassword(false);
+        setEncryptionReady(true);
+        console.log('✅ [UNLOCK] Encryption unlocked via server KEK (no password needed)');
+        return;
+      }
+    } catch (serverKekErr) {
+      // SERVER_KEK failed — this is expected if user has PASSWORD protection
+      // Continue to password-based unlock below
+      console.warn('⚠️ [UNLOCK] Server KEK unlock failed, trying password:', serverKekErr.message);
+    }
+
+    // Step 2: Retry with password (PASSWORD protection mode)
     const result = await identityKeyService.initializeIdentityKeys(userId, password);
 
     // Check if password was incorrect (still returns PASSWORD_REQUIRED)

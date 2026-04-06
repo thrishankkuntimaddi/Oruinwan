@@ -43,7 +43,7 @@ const NotificationPanel = () => {
                 )}
             </button>
 
-            {open && <div className="fixed inset-0 z-[90]" onClick={() => setOpen(false)} />}
+            {open && <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setOpen(false)} />}
 
             {open && (
                 <div style={{
@@ -116,6 +116,7 @@ const NotificationPanel = () => {
 
             <style>{`
                 @keyframes mfFadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+                @keyframes hdrPing { 75%, 100% { transform: scale(2); opacity: 0; } }
                 .notif-row:hover .notif-dismiss { opacity: 1 !important; }
             `}</style>
         </div>
@@ -142,18 +143,21 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
         <header style={{
             position: 'fixed', top: 0, width: '100%',
             background: 'var(--bg-base)', borderBottom: '1px solid var(--border-subtle)',
-            zIndex: 50, padding: '0 24px', height: '48px',
+            zIndex: 50, height: '48px',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             fontFamily: 'var(--font)', boxSizing: 'border-box',
+            padding: '0 16px', gap: '8px', overflow: 'hidden',
         }}>
             {/* Logo */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '26px', height: '26px', borderRadius: '2px', objectFit: 'cover' }} />
-                <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', letterSpacing: '0.01em' }}>Chttrix</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '24px', height: '24px', borderRadius: '2px', objectFit: 'cover' }} />
+                <span className="psh-ws-label" style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>Chttrix</span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
+            {/* Right side buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, marginLeft: 'auto', position: 'relative' }}>
 
+                {/* Console buttons — only on md+ */}
                 {user?.companyRole === 'owner' && (
                     <button onClick={onOwnerConsoleClick} style={consoleBtn} className="hidden md:flex"
                         onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
@@ -176,21 +180,21 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                 )}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                    {/* Profile — desktop */}
+                    {/* Profile — desktop: show avatar + name */}
                     <button onClick={onProfileClick} title="View Profile" className="hidden sm:flex"
-                        style={{ ...btn, gap: '8px', padding: '5px 8px' }}
+                        style={{ ...btn, gap: '8px', padding: '4px 8px', maxWidth: '160px' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'none'}
                     >
-                        <img src={getAvatarUrl(user)} alt={user?.username || 'User'} style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-default)', flexShrink: 0 }} />
-                        <div style={{ textAlign: 'left' }}>
-                            <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2 }}>{user?.username || 'User'}</div>
-                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.2 }}>{user?.email}</div>
+                        <img src={getAvatarUrl(user)} alt={user?.username || 'User'} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-default)', flexShrink: 0 }} />
+                        <div style={{ textAlign: 'left', overflow: 'hidden', minWidth: 0 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.username || 'User'}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
                         </div>
                     </button>
 
-                    {/* Profile — mobile */}
-                    <button onClick={onProfileClick} title="View Profile" className="sm:hidden" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                    {/* Profile — mobile: avatar only */}
+                    <button onClick={onProfileClick} title="View Profile" className="sm:hidden" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img src={getAvatarUrl(user)} alt={user?.username || 'U'} style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-default)' }} />
                     </button>
 
@@ -212,7 +216,7 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
 
                         {showHelp && (
                             <>
-                                <div className="fixed inset-0 z-[90] cursor-default" onClick={() => setShowHelp(false)} />
+                                <div style={{ position: 'fixed', inset: 0, zIndex: 90, cursor: 'default' }} onClick={() => setShowHelp(false)} />
                                 <div style={{
                                     position: 'absolute', top: '44px', right: 0, width: '260px',
                                     background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
@@ -255,9 +259,9 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
 
                                     <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '7px 12px', background: 'var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                            <span className="relative flex h-2 w-2">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                            <span style={{ position: 'relative', display: 'inline-flex', width: '8px', height: '8px' }}>
+                                                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--state-success, #3ecf8e)', opacity: 0.6, animation: 'hdrPing 1.5s cubic-bezier(0,0,0.2,1) infinite' }}></span>
+                                                <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', width: '8px', height: '8px', background: 'var(--state-success, #3ecf8e)' }}></span>
                                             </span>
                                             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Systems Operational</span>
                                         </div>
@@ -288,5 +292,6 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
         </header>
     );
 };
+
 
 export default Header;

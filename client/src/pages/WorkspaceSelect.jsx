@@ -215,8 +215,8 @@ const WorkspaceSelect = () => {
             />
 
             {/* Main Content */}
-            <main className="pt-24 md:pt-32 pb-20 px-4 md:px-6 max-w-7xl mx-auto">
-                <div className="mb-12 text-center max-w-2xl mx-auto">
+            <main style={{ paddingTop: '80px', paddingBottom: '48px', paddingLeft: '16px', paddingRight: '16px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
+                <div style={{ marginBottom: '32px', textAlign: 'center', maxWidth: '560px', margin: '0 auto 32px' }}>
                     <h1 style={{
                         fontSize: '26px',
                         fontWeight: 600,

@@ -478,7 +478,7 @@ const MainLayout = ({ children, sidePanel }) => {
             )}
 
             {/* 1. Top Utility Bar */}
-            <div style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', background: 'var(--bg-base)', flexShrink: 0, zIndex: 60, position: 'relative', borderBottom: '1px solid var(--border-subtle)' }}>
+            <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 6px' : '0 8px', background: 'var(--bg-base)', flexShrink: 0, zIndex: 60, position: 'relative', borderBottom: '1px solid var(--border-subtle)', gap: '4px' }}>
 
                 {/* Mobile: left side — AI dismiss / back / section title */}
                 {isMobile && (
@@ -499,7 +499,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                 <ChevronLeft size={16} /> Back
                             </button>
                         ) : (
-                            <span style={{ padding: '0 4px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <span style={{ padding: '0 4px', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', whiteSpace: 'nowrap', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {getMobileSectionTitle()}
                             </span>
                         )}
@@ -507,19 +507,19 @@ const MainLayout = ({ children, sidePanel }) => {
                 )}
 
                 {/* Center: Search bar */}
-                <div className="flex-1 max-w-xl mx-auto relative z-[70]">
+                <div style={{ flex: 1, minWidth: 0, maxWidth: '560px', margin: '0 auto', position: 'relative', zIndex: 70 }}>
                     <SearchInlineBar workspaceId={activeWorkspace?.id || activeWorkspace?._id} />
                 </div>
 
 
                 {/* Right: Utilities */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end', flexShrink: 0, position: 'relative' }}>
 
-                    {/* Notification Bell */}
+                    {/* Notification Bell — always visible */}
                     <WorkspaceNotificationPanel />
 
-                    {/* Help Button */}
-                    <div style={{ position: 'relative' }}>
+                    {/* Help Button — desktop only (bottom nav on mobile) */}
+                    {!isMobile && <div style={{ position: 'relative' }}>
                         <button
                             onClick={() => setShowHelp(!showHelp)}
                             style={{ padding: '6px', borderRadius: '2px', background: showHelp ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: showHelp ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
@@ -578,10 +578,10 @@ const MainLayout = ({ children, sidePanel }) => {
                                 </div>
                             </>
                         )}
-                    </div>
+                    </div>}
 
-                    {/* ChttrixAI Button */}
-                    <button
+                    {/* ChttrixAI Button — desktop only (bottom nav tab on mobile) */}
+                    {!isMobile && <button
                         onClick={() => setShowAI(!showAI)}
                         style={{ padding: '6px', borderRadius: '2px', background: showAI ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: showAI ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
                         title="Toggle Chttrix AI"
@@ -589,7 +589,7 @@ const MainLayout = ({ children, sidePanel }) => {
                         onMouseLeave={e => { if (!showAI) e.currentTarget.style.color = 'var(--text-muted)'; }}
                     >
                         <Bot size={18} strokeWidth={2} />
-                    </button>
+                    </button>}
                 </div>
             </div>
 
