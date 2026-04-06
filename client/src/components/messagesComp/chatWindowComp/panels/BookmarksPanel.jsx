@@ -20,9 +20,10 @@ function fmtDate(ts) {
  * @param {object} props
  * @param {boolean} props.open
  * @param {function} props.onClose
+ * @param {boolean} [props.inline] - When true, renders as inline flex panel (no backdrop, no fixed pos)
  * @param {function} [props.onJumpToMessage] - Called with messageId to navigate
  */
-export default function BookmarksPanel({ open, onClose, onJumpToMessage }) {
+export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline = false }) {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -51,6 +52,77 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage }) {
     }, []);
 
     if (!open) return null;
+
+    // Inline mode: no backdrop, panel is a flex child in the chat layout
+    if (inline) {
+        return (
+            <div style={{
+                width: '280px', flexShrink: 0,
+                backgroundColor: 'var(--bg-surface)',
+                borderLeft: '1px solid var(--border-accent)',
+                display: 'flex', flexDirection: 'column',
+                fontFamily: FONT,
+                height: '100%', overflow: 'hidden',
+                animation: 'slideInRight 220ms cubic-bezier(0.16,1,0.3,1)',
+            }}>
+                {/* Header */}
+                <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 14px',
+                    borderBottom: '1px solid var(--border-default)',
+                    flexShrink: 0,
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Bookmark size={14} style={{ color: 'var(--accent)' }} />
+                        <span style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>Saved Messages</span>
+                        {messages.length > 0 && (
+                            <span style={{
+                                fontSize: '10px', fontWeight: 600,
+                                backgroundColor: 'rgba(184,149,106,0.10)',
+                                color: 'var(--accent)',
+                                border: '1px solid var(--border-accent)',
+                                borderRadius: '99px', padding: '1px 7px',
+                                fontFamily: FONT,
+                            }}>{messages.length}</span>
+                        )}
+                    </div>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            padding: '4px', background: 'none', border: 'none', outline: 'none',
+                            cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px',
+                            display: 'flex', transition: '100ms ease',
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    >
+                        <X size={14} />
+                    </button>
+                </div>
+
+                {/* Body */}
+                <div style={{ flex: 1, overflowY: 'auto' }}>
+                    {loading && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', fontFamily: FONT }}>
+                            <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                            <span>Loading...</span>
+                        </div>
+                    )}
+                    {error && (<div style={{ padding: '16px', textAlign: 'center', fontSize: '12px', color: 'var(--state-danger)', fontFamily: FONT }}>{error}</div>)}
+                    {!loading && !error && messages.length === 0 && (
+                        <div style={{ padding: '32px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                            <Bookmark size={18} style={{ color: 'var(--text-muted)' }} />
+                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 500, fontFamily: FONT }}>No saved messages</p>
+                            <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>Bookmark messages to find them here</p>
+                        </div>
+                    )}
+                    {!loading && messages.map(msg => (
+                        <BookmarkCard key={msg._id} msg={msg} onJumpToMessage={onJumpToMessage} onRemove={handleRemoveBookmark} />
+                    ))}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <>

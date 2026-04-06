@@ -2,6 +2,7 @@ import React from 'react';
 import { ConversationStream } from '../../events';
 import FooterInput from '../footer/footerInput.jsx';
 import ThreadPanel from '../ThreadPanel.jsx';
+import BookmarksPanel from '../panels/BookmarksPanel.jsx';
 import TasksTab from '../tabs/TasksTab.jsx';
 import ThreadsTab from '../tabs/ThreadsTab.jsx';
 import CanvasTab from '../tabs/CanvasTab.jsx';
@@ -87,6 +88,10 @@ const CentralContentView = ({
 
     // Reply callback — set by ChatWindowV2 via enhancedActions
     onReply,
+
+    // Bookmarks panel
+    showBookmarks = false,
+    onCloseBookmarks,
 
     // Phase 2/4 — feature flags (optional, default off for DMs)
     showScreenRecord = false,
@@ -233,6 +238,15 @@ const CentralContentView = ({
                     onClose={onThreadClose}
                     socket={rawSocket}
                     currentUserId={currentUserId}
+                />
+            )}
+
+            {/* Bookmarks Panel — inline flex sibling (same pattern as ThreadPanel) */}
+            {activeTab === 'chat' && showBookmarks && (
+                <BookmarksPanel
+                    open={showBookmarks}
+                    onClose={onCloseBookmarks}
+                    inline
                 />
             )}
         </div>

@@ -1343,6 +1343,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 // Phase 2/4 — enable rich composition features for channels
                 showSmartReply={chat?.type === 'channel'}
                 showScreenRecord={chat?.type === 'channel'}
+
+                // Bookmarks panel (inline, within chat layout)
+                showBookmarks={showBookmarks}
+                onCloseBookmarks={() => setShowBookmarks(false)}
             />
 
             {/* Error Display */}
@@ -1386,12 +1390,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onCreatePoll={handleCreatePoll}
                 channelName={chat?.name || ''}
             />
-            {/* Phase 1 — Bookmarks Panel (slide-in from right) */}
-            <BookmarksPanel
-                open={showBookmarks}
-                onClose={() => setShowBookmarks(false)}
-            />
-            {/* Phase 1 — Reminder Picker modal */}
+            {/* Phase 1 — Reminder Picker modal (BookmarksPanel is now inline in CentralContentView) */}
             {reminderMsgId && (
                 <ReminderPicker
                     messageId={reminderMsgId}
