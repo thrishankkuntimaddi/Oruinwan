@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     Hash, MessageSquare, FolderOpen, BookOpen, Newspaper, Video,
     Puzzle, Shield, Briefcase, ChevronRight, Bell, LogOut,
-    Settings, User, Zap, FileText, CheckSquare, Globe, ChevronDown,
+    Settings, User, Zap, FileText, CheckSquare, Globe, ChevronDown, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
@@ -244,6 +244,15 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                     <User size={17} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                     <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', textAlign: 'left' }}>Edit Profile</span>
                     <ChevronRight size={15} style={{ color: 'var(--text-muted)' }} />
+                </button>
+                <button
+                    onClick={() => window.location.reload()}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '13px 14px', background: 'none', border: 'none', borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', fontFamily: 'var(--font)', WebkitTapHighlightColor: 'transparent' }}
+                    onTouchStart={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                    onTouchEnd={e => e.currentTarget.style.background = 'none'}
+                >
+                    <RefreshCw size={17} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', textAlign: 'left' }}>Refresh App</span>
                 </button>
                 <button
                     onClick={() => logout()}
