@@ -11,6 +11,7 @@
 const crypto = require('crypto');
 const User = require('../../../models/User');
 const sendEmail = require('../../../utils/sendEmail');
+const { inviteTemplate } = require('../../../utils/emailTemplates');
 
 // INVITE_EXPIRY_MS — 72 hours as per spec
 const INVITE_EXPIRY_MS = 72 * 60 * 60 * 1000;
@@ -64,37 +65,9 @@ async function sendInviteEmail(toEmail, companyName, rawToken, options = {}) {
     const { name = '', jobTitle = '' } = options;
 
     const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/accept-invite?token=${rawToken}`;
-
-    const greeting = name ? `Hi ${name},` : "You've been invited!";
-    const roleNote = jobTitle ? `<p style="color:#6b7280">Your role: <strong>${jobTitle}</strong></p>` : '';
-
-    const html = `
-<div style="font-family:'Segoe UI',sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:28px 32px">
-    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Chttrix</h1>
-    <p style="color:rgba(255,255,255,.8);margin:6px 0 0;font-size:14px">Team Collaboration Platform</p>
-  </div>
-  <div style="padding:32px">
-    <h2 style="color:#111827;font-size:20px;margin:0 0 12px">${greeting}</h2>
-    <p style="color:#374151;line-height:1.6">
-      You've been invited to join <strong>${companyName}</strong> on Chttrix.
-    </p>
-    ${roleNote}
-    <div style="margin:28px 0">
-      <a href="${inviteLink}"
-         style="display:inline-block;background:#4f46e5;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
-        Accept Invitation &amp; Set Password
-      </a>
-    </div>
-    <p style="color:#9ca3af;font-size:13px">
-      This invitation expires in <strong>72 hours</strong>.<br>
-      If you didn't expect this email, you can safely ignore it.
-    </p>
-  </div>
-</div>`;
-
+    const tpl = inviteTemplate(name, companyName, inviteLink, { jobTitle });
     try {
-        await sendEmail({ to: toEmail, subject: `You're invited to join ${companyName} on Chttrix`, html });
+        await sendEmail({ to: toEmail, subject: tpl.subject, html: tpl.html, text: tpl.text });
         return { sent: true };
     } catch (err) {
         console.warn('[INVITE] Email failed for', toEmail, '—', err.message);

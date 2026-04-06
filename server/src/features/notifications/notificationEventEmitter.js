@@ -21,6 +21,7 @@
 
 const EventEmitter = require('events');
 const logger = require('../../../utils/logger');
+const { taskAssignedTemplate, meetingScheduledTemplate } = require('../../../utils/emailTemplates');
 
 class NotificationEventEmitter extends EventEmitter {}
 
@@ -91,17 +92,16 @@ emitter.on('task.assigned', async ({ io, assigneeId, assignerUsername, workspace
         // Email notification
         const emailService = getEmailService();
         if (await shouldNotify(assigneeId, workspaceId, 'email') && assigneeEmail) {
+            const tpl = taskAssignedTemplate(
+                null,         // we don't have assignee name here, falls back to generic
+                taskTitle,
+                assignerUsername,
+                `${process.env.FRONTEND_URL || '#'}/tasks/${taskId || ''}`
+            );
             await emailService.sendEmailNotification({
                 to: assigneeEmail,
-                subject: `[Chttrix] New task assigned: ${taskTitle}`,
-                html: `
-                    <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px">
-                        <h2 style="color:#4f46e5">📋 Task Assigned</h2>
-                        <p><strong>${assignerUsername}</strong> assigned you a task:</p>
-                        <p style="font-size:16px;font-weight:600;color:#111">${taskTitle}</p>
-                        <a href="${process.env.FRONTEND_URL || '#'}" style="display:inline-block;margin-top:12px;padding:10px 20px;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none">View Task</a>
-                    </div>
-                `,
+                subject: tpl.subject,
+                html: tpl.html,
             });
         }
     } catch (err) {
@@ -147,16 +147,11 @@ emitter.on('meeting.scheduled', async ({ io, recipientIds = [], workspaceId, tit
         for (let i = 0; i < recipientIds.length; i++) {
             const email = recipientEmails[i];
             if (email && await shouldNotify(recipientIds[i], workspaceId, 'email')) {
+                const tpl = meetingScheduledTemplate(null, title, null, `${process.env.FRONTEND_URL || '#'}/huddles`);
                 await emailService.sendEmailNotification({
                     to: email,
-                    subject: `[Chttrix] Meeting scheduled: ${title}`,
-                    html: `
-                        <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px">
-                            <h2 style="color:#4f46e5">📅 Meeting Scheduled</h2>
-                            <p>You have a new meeting: <strong>${title}</strong></p>
-                            <a href="${process.env.FRONTEND_URL || '#'}/huddles" style="display:inline-block;margin-top:12px;padding:10px 20px;background:#4f46e5;color:#fff;border-radius:6px;text-decoration:none">View Meeting</a>
-                        </div>
-                    `,
+                    subject: tpl.subject,
+                    html: tpl.html,
                 });
             }
         }

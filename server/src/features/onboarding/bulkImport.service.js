@@ -26,6 +26,7 @@ const Department = require('../../../models/Department');
 const BulkOnboardingJob = require('./BulkOnboardingJob');
 const { onboardIndividual, ASSIGNABLE_ROLES } = require('./onboarding.service');
 const sendEmail = require('../../../utils/sendEmail');
+const { bulkWelcomeTemplate } = require('../../../utils/emailTemplates');
 
 // ============================================================================
 // CONSTANTS
@@ -74,48 +75,9 @@ function _generateTempPassword() {
  * work (login) email address and temporary password.
  */
 async function _sendWelcomeEmail({ toEmail, name, workEmail, companyName, tempPassword }) {
-    const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
-    const html = `
-<div style="font-family:'Segoe UI',sans-serif;max-width:560px;margin:0 auto;background:#fff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden">
-  <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:28px 32px">
-    <h1 style="color:#fff;margin:0;font-size:22px;font-weight:700">Chttrix</h1>
-    <p style="color:rgba(255,255,255,.8);margin:6px 0 0;font-size:14px">Team Collaboration Platform</p>
-  </div>
-  <div style="padding:32px">
-    <h2 style="color:#111827;font-size:20px;margin:0 0 12px">Welcome to ${companyName}, ${name}! 🎉</h2>
-    <p style="color:#374151;line-height:1.6">
-      Your Chttrix account has been created. Use the credentials below to log in.
-    </p>
-    <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin:24px 0">
-      <p style="margin:0 0 10px;color:#6b7280;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Your Login Credentials</p>
-      <table style="width:100%;border-collapse:collapse">
-        <tr>
-          <td style="padding:8px 0;color:#6b7280;font-size:14px;width:110px">Work Email</td>
-          <td style="padding:8px 0;color:#111827;font-size:14px;font-weight:700">${workEmail}</td>
-        </tr>
-        <tr>
-          <td style="padding:8px 0;color:#6b7280;font-size:14px">Password</td>
-          <td style="padding:8px 0;font-size:16px;font-weight:700;color:#4f46e5;letter-spacing:.08em;font-family:monospace">${tempPassword}</td>
-        </tr>
-      </table>
-    </div>
-    <a href="${loginUrl}"
-       style="display:inline-block;background:#4f46e5;color:#fff;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">
-      Log In to Chttrix →
-    </a>
-    <p style="color:#9ca3af;font-size:13px;margin-top:24px">
-      <strong>Please change your password</strong> after your first login.<br>
-      If you didn't expect this email, contact your company administrator.
-    </p>
-  </div>
-</div>`;
-
+    const tpl = bulkWelcomeTemplate(name, workEmail, tempPassword, companyName);
     try {
-        await sendEmail({
-            to: toEmail,
-            subject: `Your Chttrix login credentials — ${companyName}`,
-            html,
-        });
+        await sendEmail({ to: toEmail, subject: tpl.subject, html: tpl.html, text: tpl.text });
         return { sent: true };
     } catch (err) {
         console.warn('[BULK] Welcome email failed for', toEmail, '—', err.message);
