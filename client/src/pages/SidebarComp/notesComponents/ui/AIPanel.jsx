@@ -56,7 +56,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%',
-      background: '#111111', borderLeft: '1px solid rgba(255,255,255,0.07)',
+      background: 'var(--bg-surface)', borderLeft: '1px solid rgba(255,255,255,0.07)',
       width: '288px', flexShrink: 0,
     }}>
       {/* Header */}
@@ -66,12 +66,12 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
             <Sparkles size={13} style={{ color: '#0c0c0c' }} />
           </div>
           <div>
-            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>AI Assistant</h3>
-            <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', fontFamily: 'monospace' }}>Note intelligence</p>
+            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>AI Assistant</h3>
+            <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>Note intelligence</p>
           </div>
         </div>
         <button onClick={onClose}
-          style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+          style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
         >
@@ -81,7 +81,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
 
       {/* Actions */}
       <div style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-        <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(228,228,228,0.3)', padding: '0 4px', marginBottom: '8px', fontFamily: 'monospace' }}>Actions</p>
+        <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', padding: '0 4px', marginBottom: '8px', fontFamily: 'monospace' }}>Actions</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           {AI_ACTIONS.map(action => {
             const Icon = action.icon;
@@ -99,8 +99,8 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
                   }
                 </div>
                 <div>
-                  <p style={{ fontSize: '12px', fontWeight: 600, color: '#e4e4e4', lineHeight: 1.3, fontFamily: 'Inter, system-ui, sans-serif' }}>{action.label}</p>
-                  <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', lineHeight: 1.3 }}>{action.desc}</p>
+                  <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.3, fontFamily: 'Inter, system-ui, sans-serif' }}>{action.label}</p>
+                  <p style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.3 }}>{action.desc}</p>
                 </div>
               </button>
             );
@@ -111,8 +111,8 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
       {/* Result area */}
       {result && (
         <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
-          <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.08)', padding: '12px', marginBottom: '10px' }}>
-            <pre style={{ fontSize: '11px', color: 'rgba(228,228,228,0.7)', whiteSpace: 'pre-wrap', fontFamily: 'Inter, system-ui, sans-serif', lineHeight: 1.6 }}>{result.text}</pre>
+          <div style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-default)', padding: '12px', marginBottom: '10px' }}>
+            <pre style={{ fontSize: '11px', color: 'var(--text-muted)', whiteSpace: 'pre-wrap', fontFamily: 'Inter, system-ui, sans-serif', lineHeight: 1.6 }}>{result.text}</pre>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={handleInsert}
@@ -121,7 +121,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
               <ChevronRight size={13} /> Insert into note
             </button>
             <button onClick={handleCopy}
-              style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: copied ? '#34d399' : 'rgba(228,228,228,0.5)', cursor: 'pointer', transition: 'all 150ms ease' }}
+              style={{ padding: '8px 10px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: copied ? '#34d399' : 'rgba(228,228,228,0.5)', cursor: 'pointer', transition: 'all 150ms ease' }}
               title="Copy to clipboard"
             >
               {copied ? <Check size={13} /> : <Copy size={13} />}
@@ -132,7 +132,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
 
       {/* Footer */}
       <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.25)', textAlign: 'center', fontFamily: 'monospace' }}>
+        <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'monospace' }}>
           Powered by Chttrix AI · Connect API for live results
         </p>
       </div>

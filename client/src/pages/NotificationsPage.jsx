@@ -161,7 +161,7 @@ export default function NotificationsPage() {
                                                 {!n.read && (
                                                     <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: T.accent, flexShrink: 0 }} />
                                                 )}
-                                                <span style={{ fontSize: '9px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '1px 5px', background: 'rgba(255,255,255,0.05)', border: `1px solid ${T.border}`, fontFamily: T.font, whiteSpace: 'nowrap' }}>
+                                                <span style={{ fontSize: '9px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '1px 5px', background: 'var(--bg-hover)', border: `1px solid ${T.border}`, fontFamily: T.font, whiteSpace: 'nowrap' }}>
                                                     {typeLabel}
                                                 </span>
                                             </div>
@@ -311,7 +311,7 @@ export default function NotificationsPage() {
                             </div>
                         ) : filtered.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', gap: '12px' }}>
-                                <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.04)', border: `1px solid ${T.border}` }}>
+                                <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-hover)', border: `1px solid ${T.border}` }}>
                                     <Bell size={24} style={{ color: T.dim }} />
                                 </div>
                                 <p style={{ fontSize: '14px', fontWeight: 600, color: T.muted, fontFamily: T.font }}>

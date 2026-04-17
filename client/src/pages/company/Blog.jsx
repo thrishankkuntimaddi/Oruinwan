@@ -44,14 +44,14 @@ export default function Blog() {
     return (
         <PublicPageShell title="Blog">
             {/* Hero */}
-            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '72px 0 56px' }}>
+            <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '72px 0 56px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
                         <BookOpen size={11} style={{ color: '#b8956a' }} />
                         <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Chttrix Blog</span>
                     </div>
-                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Ideas, updates, & engineering.</h1>
-                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.75', maxWidth: '520px', marginBottom: '28px' }}>
+                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Ideas, updates, & engineering.</h1>
+                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75', maxWidth: '520px', marginBottom: '28px' }}>
                         Product announcements, behind-the-scenes engineering, and thoughts on the future of work.
                     </p>
                     {/* Tag filters */}
@@ -76,10 +76,10 @@ export default function Blog() {
                         <div style={{ flex: 1 }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
                                 <span style={{ padding: '2px 8px', background: `${featured.tagColor}14`, border: `1px solid ${featured.tagColor}30`, fontSize: '10px', fontWeight: 700, color: featured.tagColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{featured.tag}</span>
-                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', fontFamily: 'monospace' }}>{featured.date} · {featured.readTime} read</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{featured.date} · {featured.readTime} read</span>
                             </div>
-                            <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '12px', lineHeight: 1.3 }}>{featured.title}</h2>
-                            <p style={{ fontSize: '14px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', marginBottom: '20px' }}>{featured.excerpt}</p>
+                            <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '12px', lineHeight: 1.3 }}>{featured.title}</h2>
+                            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '20px' }}>{featured.excerpt}</p>
                             <button style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                                 Read article <ArrowRight size={13} />
                             </button>
@@ -88,17 +88,17 @@ export default function Blog() {
                 )}
 
                 {/* Rest of posts */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
                     {rest.map(post => (
                         <div key={post.id} style={{ background: '#111', padding: '24px' }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px' }}>
                                 <span style={{ padding: '2px 8px', background: `${post.tagColor}12`, border: `1px solid ${post.tagColor}25`, fontSize: '10px', fontWeight: 700, color: post.tagColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{post.tag}</span>
-                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', fontFamily: 'monospace' }}>{post.readTime}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{post.readTime}</span>
                             </div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.01em', marginBottom: '8px', lineHeight: 1.35 }}>{post.title}</h3>
-                            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', lineHeight: '1.75', marginBottom: '18px' }}>{post.excerpt}</p>
+                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', marginBottom: '8px', lineHeight: 1.35 }}>{post.title}</h3>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '18px' }}>{post.excerpt}</p>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)' }}>{post.date}</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{post.date}</span>
                                 <button style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                                     Read <ArrowRight size={11} />
                                 </button>
@@ -108,7 +108,7 @@ export default function Blog() {
                 </div>
 
                 {filtered.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '64px 24px', color: 'rgba(228,228,228,0.25)' }}>
+                    <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--text-muted)' }}>
                         <p style={{ fontSize: '14px' }}>No posts in this category yet.</p>
                     </div>
                 )}

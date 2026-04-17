@@ -17,7 +17,7 @@ const T = {
 };
 
 const STATUS_META = {
-  'To Do':       { bg: 'rgba(255,255,255,0.06)',   color: 'rgba(228,228,228,0.45)' },
+  'To Do':       { bg: 'rgba(255,255,255,0.06)',   color: 'var(--text-muted)' },
   'In Progress': { bg: 'rgba(59,130,246,0.12)',    color: '#60a5fa' },
   'In Review':   { bg: 'rgba(139,92,246,0.12)',   color: '#a78bfa' },
   'Completed':   { bg: 'rgba(34,197,94,0.1)',     color: '#4ade80' },
@@ -138,15 +138,15 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: T.bg }}>
       {/* Toolbar */}
-      <div style={{ flexShrink: 0, background: '#111111', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: T.font }}>
+      <div style={{ flexShrink: 0, background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: T.font }}>
         <Activity size={14} style={{ color: T.accent }} />
-        <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.5)' }}>Sprint</span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Sprint</span>
 
         {/* Sprint selector dropdown */}
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button
             onClick={() => setOpen(v => !v)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', border: `1px solid ${T.border}`, padding: '5px 10px', background: 'rgba(255,255,255,0.04)', color: T.text, cursor: 'pointer', minWidth: '160px', fontFamily: T.font, transition: 'border-color 150ms ease' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', border: `1px solid ${T.border}`, padding: '5px 10px', background: 'var(--bg-hover)', color: T.text, cursor: 'pointer', minWidth: '160px', fontFamily: T.font, transition: 'border-color 150ms ease' }}
             onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
           >
@@ -185,7 +185,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
                       </div>
                       <span style={{ color: T.muted, flexShrink: 0 }}>{done}/{total}</span>
                     </div>
-                    <div style={{ height: '3px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{ height: '3px', background: 'var(--bg-active)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', width: `${pct}%`, background: '#22c55e', transition: 'width 300ms ease' }} />
                     </div>
                     {s.startDate && s.endDate && (
@@ -229,7 +229,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
       {/* Task list */}
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', background: T.bg }}>
         {/* Table header */}
-        <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '7px 16px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: '#111111', borderBottom: `1px solid ${T.border}`, color: T.muted, fontFamily: T.font, zIndex: 10 }}>
+        <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '7px 16px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, color: T.muted, fontFamily: T.font, zIndex: 10 }}>
           <span style={{ width: '8px' }} />
           <span style={{ flex: 1 }}>Summary</span>
           <span style={{ width: '96px', textAlign: 'center' }}>Due Date</span>

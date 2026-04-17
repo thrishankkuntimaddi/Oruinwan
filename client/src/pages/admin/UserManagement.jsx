@@ -149,7 +149,7 @@ const UserManagement = () => {
                                         <Pie data={roleStats} cx="50%" cy="50%" innerRadius={22} outerRadius={40} paddingAngle={4} dataKey="value" stroke="none">
                                             {roleStats.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                         </Pie>
-                                        <Tooltip contentStyle={{ backgroundColor: '#111111', border: '1px solid #222222', borderRadius: '2px', color: '#e4e4e4', fontSize: '11px' }} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid #222222', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '11px' }} />
                                     </PieChart>
                                 </ResponsiveContainer>
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -176,7 +176,7 @@ const UserManagement = () => {
                                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#222222" />
                                         <XAxis type="number" hide />
                                         <YAxis dataKey="name" type="category" width={70} tick={{ fontSize: 10, fill: '#7a7a7a' }} interval={0} />
-                                        <Tooltip contentStyle={{ backgroundColor: '#111111', border: '1px solid #222222', borderRadius: '2px', color: '#e4e4e4', fontSize: '11px' }} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid #222222', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '11px' }} />
                                         <Bar dataKey="value" fill="#b8956a" radius={[0, 2, 2, 0]} barSize={10}>
                                             {chartStats.data.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                                         </Bar>

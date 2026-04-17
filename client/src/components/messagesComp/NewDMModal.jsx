@@ -119,7 +119,7 @@ export default function NewDMModal({ onClose, onStart }) {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: '8px' }}>
               <span style={{ fontSize: '28px' }}>👥</span>
               <p style={{ fontSize: '13px', fontWeight: 600, color: T.muted, fontFamily: T.font }}>No members found</p>
-              {searchQuery && <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', fontFamily: T.font }}>Try a different search term</p>}
+              {searchQuery && <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: T.font }}>Try a different search term</p>}
             </div>
           )}
 

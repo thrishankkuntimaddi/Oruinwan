@@ -11,7 +11,7 @@ const STATUS_CONFIG = {
 const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) => {
     return (
         <div style={{
-            width: '256px', background: '#111111',
+            width: '256px', background: 'var(--bg-surface)',
             border: '1px solid rgba(255,255,255,0.1)',
             boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
             overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif',
@@ -33,19 +33,19 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                     <img src={getAvatarUrl(user)} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {user?.username}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px', fontFamily: 'monospace' }}>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px', fontFamily: 'monospace' }}>
                         {user?.email}
                     </div>
                 </div>
-                <ChevronRight size={14} style={{ color: 'rgba(228,228,228,0.25)', flexShrink: 0 }} />
+                <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
             </div>
 
             {/* ── Status Selector ── */}
             <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '3px', gap: '2px' }}>
+                <div style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', padding: '3px', gap: '2px' }}>
                     {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
                         const active = status === key;
                         return (
@@ -80,14 +80,14 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                     style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
                         padding: '9px 10px', fontSize: '13px', fontWeight: 500,
-                        color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none',
+                        color: 'var(--text-muted)', background: 'transparent', border: 'none',
                         cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
                         textAlign: 'left',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e4e4e4'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(228,228,228,0.7)'; }}
                 >
-                    <HelpCircle size={15} style={{ color: 'rgba(228,228,228,0.35)', flexShrink: 0 }} />
+                    <HelpCircle size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                     Help &amp; Support
                 </button>
 
@@ -122,7 +122,7 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                     style={{
                         width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
                         padding: '9px 10px', fontSize: '13px', fontWeight: 500,
-                        color: 'rgba(228,228,228,0.6)', background: 'transparent', border: 'none',
+                        color: 'var(--text-muted)', background: 'transparent', border: 'none',
                         cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
                         textAlign: 'left',
                     }}

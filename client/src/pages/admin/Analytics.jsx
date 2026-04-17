@@ -157,7 +157,7 @@ const Analytics = () => {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#222222" strokeOpacity={0.8} />
                                 <XAxis dataKey="date" stroke="#404040" style={{ fontSize: '11px' }} tickFormatter={d => new Date(d + 'T12:00:00Z').toLocaleDateString('en-US', { weekday: 'short' })} />
                                 <YAxis stroke="#404040" style={{ fontSize: '11px' }} />
-                                <Tooltip contentStyle={{ backgroundColor: '#111111', border: '1px solid #222222', borderRadius: '2px', color: '#e4e4e4', fontSize: '12px' }} />
+                                <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', border: '1px solid #222222', borderRadius: '2px', color: 'var(--text-primary)', fontSize: '12px' }} />
                                 <Bar dataKey="messageCount" fill="#b8956a" radius={[2, 2, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>

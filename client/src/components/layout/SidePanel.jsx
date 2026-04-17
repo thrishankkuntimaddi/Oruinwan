@@ -118,14 +118,14 @@ export const ChannelList = () => {
                 style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1 }}
             >
                 <span style={{
-                    fontSize: '9px', color: 'rgba(228,228,228,0.3)',
+                    fontSize: '9px', color: 'var(--text-muted)',
                     transition: 'transform 150ms ease',
                     display: 'inline-block',
                     transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
                 }}>▶</span>
                 <span style={{
                     fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em',
-                    textTransform: 'uppercase', color: 'rgba(228,228,228,0.35)',
+                    textTransform: 'uppercase', color: 'var(--text-muted)',
                     fontFamily: 'Inter, system-ui, sans-serif',
                 }}>
                     {label}
@@ -138,7 +138,7 @@ export const ChannelList = () => {
                     style={{
                         width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         background: 'transparent', border: 'none', cursor: 'pointer',
-                        color: 'rgba(228,228,228,0.35)', borderRadius: '2px',
+                        color: 'var(--text-muted)', borderRadius: '2px',
                         transition: 'color 150ms ease, background 150ms ease',
                         fontSize: '16px', lineHeight: 1, padding: 0,
                         flexShrink: 0,

@@ -65,7 +65,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         transition: '150ms ease',
                     }}>
-                        {isSelected && <span style={{ width: '8px', height: '8px', background: '#0c0c0c', borderRadius: '1px', display: 'block' }} />}
+                        {isSelected && <span style={{ width: '8px', height: '8px', background: 'var(--bg-base)', borderRadius: '1px', display: 'block' }} />}
                     </div>
                 )}
 

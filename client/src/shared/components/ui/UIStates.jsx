@@ -47,11 +47,11 @@ export function LoadingSkeleton({ rows = 5, avatar = true, className = '' }) {
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
                                 <div style={{ height: '9px', background: 'rgba(255,255,255,0.1)', width: `${widths[i % widths.length] * 0.6}px` }} />
-                                <div style={{ height: '7px', background: 'rgba(255,255,255,0.04)', width: '36px' }} />
+                                <div style={{ height: '7px', background: 'var(--bg-hover)', width: '36px' }} />
                             </div>
-                            <div style={{ height: '13px', background: 'rgba(255,255,255,0.06)', width: `${widths[i % widths.length]}%` }} />
+                            <div style={{ height: '13px', background: 'var(--bg-active)', width: `${widths[i % widths.length]}%` }} />
                             {i % 3 === 0 && (
-                                <div style={{ height: '11px', background: 'rgba(255,255,255,0.04)', width: `${widths[(i + 2) % widths.length] * 0.7}%` }} />
+                                <div style={{ height: '11px', background: 'var(--bg-hover)', width: `${widths[(i + 2) % widths.length] * 0.7}%` }} />
                             )}
                         </div>
                     </div>
@@ -130,8 +130,8 @@ export function EmptyBanner({ icon, title, subtitle, action, className = '' }) {
             }}
             className={className}
         >
-            <div style={{ width: '48px', height: '48px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
-                {icon ?? <Inbox size={22} style={{ color: 'rgba(228,228,228,0.2)' }} />}
+            <div style={{ width: '48px', height: '48px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '4px' }}>
+                {icon ?? <Inbox size={22} style={{ color: 'var(--text-muted)' }} />}
             </div>
             <div>
                 <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary, #e4e4e4)', marginBottom: '4px' }}>{title}</p>

@@ -21,7 +21,7 @@ const SectionHeader = ({ label, isOpen, onClick, onAdd }) => (
                 style={{
                     width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center',
                     background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'rgba(228,228,228,0.4)',
+                    color: 'var(--text-muted)',
                     borderRadius: '2px', flexShrink: 0,
                     transition: 'color 150ms ease, background 150ms ease',
                 }}

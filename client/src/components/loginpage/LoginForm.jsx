@@ -33,15 +33,15 @@ const LinkedInIcon = () => (
 const inp = (focused, hasError) => ({
     width: '100%', boxSizing: 'border-box',
     padding: '10px 36px 10px 12px',
-    background: '#141414',
+    background: 'var(--bg-input)',
     border: `1px solid ${hasError ? '#e05252' : focused ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`,
-    color: '#e4e4e4', fontSize: '13px', outline: 'none',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
     fontFamily: 'Inter, system-ui, sans-serif',
     transition: 'border-color 150ms ease',
 });
 
 const Label = ({ children }) => (
-    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.4)', display: 'block', marginBottom: '6px' }}>
+    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
         {children}
     </label>
 );
@@ -120,8 +120,8 @@ const LoginForm = ({ onSwitch, initialEmail = '' }) => {
     return (
         <div>
             <div style={{ marginBottom: '28px' }}>
-                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '6px' }}>Welcome back</h2>
-                <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)' }}>Enter your credentials to access your workspace.</p>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '6px' }}>Welcome back</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Enter your credentials to access your workspace.</p>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -136,7 +136,7 @@ const LoginForm = ({ onSwitch, initialEmail = '' }) => {
 
                 <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.4)' }}>Password</label>
+                        <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>Password</label>
                         <button type="button" onClick={() => navigate('/forgot-password')}
                             style={{ fontSize: '11px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
                             Forgot password?
@@ -149,7 +149,7 @@ const LoginForm = ({ onSwitch, initialEmail = '' }) => {
                             autoComplete="current-password"
                             style={{ ...inp(focusedField === 'password'), paddingRight: '40px' }} />
                         <button type="button" onClick={() => setShowPassword(!showPassword)}
-                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(228,228,228,0.35)', display: 'flex', alignItems: 'center' }}>
+                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
                             {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                     </div>
@@ -163,9 +163,9 @@ const LoginForm = ({ onSwitch, initialEmail = '' }) => {
 
             {/* Divider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
-                <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.2)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Or continue with</span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+                <div style={{ flex: 1, height: '1px', background: 'var(--bg-active)' }} />
+                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Or continue with</span>
+                <div style={{ flex: 1, height: '1px', background: 'var(--bg-active)' }} />
             </div>
 
             {/* OAuth buttons */}
@@ -176,7 +176,7 @@ const LoginForm = ({ onSwitch, initialEmail = '' }) => {
                     { icon: <LinkedInIcon />, label: 'LinkedIn', onClick: () => window.location.href = `${import.meta.env.VITE_BACKEND_URL}/api/auth/linkedin` },
                 ].map(btn => (
                     <button key={btn.label} type="button" onClick={btn.onClick}
-                        style={{ padding: '9px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', fontFamily: 'inherit', transition: 'all 150ms ease' }}
+                        style={{ padding: '9px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', fontFamily: 'inherit', transition: 'all 150ms ease' }}
                         onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}>
                         {btn.icon}

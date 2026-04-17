@@ -4,13 +4,13 @@ import { getAvatarUrl } from '../../../utils/avatarUtils';
 
 const inp = {
     width: '100%', padding: '8px 12px', fontSize: '13px',
-    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)',
-    color: '#e4e4e4', outline: 'none', boxSizing: 'border-box',
+    background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)',
+    color: 'var(--text-primary)', outline: 'none', boxSizing: 'border-box',
     fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', transition: '150ms ease',
 };
 const lbl = {
     display: 'block', fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em',
-    textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', marginBottom: '6px',
+    textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px',
     fontFamily: 'Inter, system-ui, sans-serif',
 };
 const focusAmber = e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.5)';
@@ -23,20 +23,20 @@ const ProfileView = ({
 }) => {
     return (
         <div style={{
-            width: '256px', background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
+            width: '256px', background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)',
             boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden', display: 'flex',
             flexDirection: 'column', maxHeight: '80vh', fontFamily: 'Inter, system-ui, sans-serif',
         }}>
             {/* Header */}
             <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', flexShrink: 0 }}>
                 <button onClick={onBack}
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
                 >
                     <ChevronLeft size={13} /> Back
                 </button>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Edit Profile</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Edit Profile</span>
                 <div style={{ width: '40px' }} />
             </div>
 
@@ -92,12 +92,12 @@ const ProfileView = ({
                     <label style={lbl}>Email Addresses</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {emails.map(email => (
-                            <div key={email.id || email._id} style={{ padding: '10px 12px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                            <div key={email.id || email._id} style={{ padding: '10px 12px', border: '1px solid var(--border-default)', background: 'rgba(255,255,255,0.02)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '12px', fontWeight: 500, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email.email}</span>
+                                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email.email}</span>
                                     {!email.isPrimary && (
                                         <button onClick={() => onDeleteEmail(email.id)}
-                                            style={{ background: 'none', border: 'none', color: 'rgba(228,228,228,0.3)', cursor: 'pointer', padding: '2px', transition: '150ms' }}
+                                            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px', transition: '150ms' }}
                                             onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                                             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
                                         ><Trash2 size={13} /></button>
@@ -120,7 +120,7 @@ const ProfileView = ({
                                     )}
                                 </div>
                                 {(!email.verified || (email.verified && !email.isPrimary)) && (
-                                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '6px' }}>
+                                    <div style={{ display: 'flex', gap: '12px', marginTop: '6px', borderTop: '1px solid var(--border-subtle)', paddingTop: '6px' }}>
                                         {!email.verified && (
                                             <>
                                                 <button onClick={() => onVerifyEmail(email.id)}
@@ -128,7 +128,7 @@ const ProfileView = ({
                                                     Verify Now
                                                 </button>
                                                 <button onClick={() => onResendCode(email.id)}
-                                                    style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
+                                                    style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
                                                     onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
                                                     Resend Code
                                                 </button>
@@ -136,7 +136,7 @@ const ProfileView = ({
                                         )}
                                         {email.verified && !email.isPrimary && (
                                             <button onClick={() => onMakePrimary(email.id)}
-                                                style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
+                                                style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'Inter,system-ui,sans-serif' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
                                                 Set as Primary
                                             </button>
@@ -151,7 +151,7 @@ const ProfileView = ({
                                 placeholder="Add another email..." style={{ ...inp, flex: 1 }}
                                 onFocus={focusAmber} onBlur={blurDefault} />
                             <button onClick={onAddEmail}
-                                style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(228,228,228,0.6)', cursor: 'pointer', transition: '150ms ease' }}
+                                style={{ padding: '8px 12px', background: 'var(--bg-active)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', cursor: 'pointer', transition: '150ms ease' }}
                                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#e4e4e4'; }}
                                 onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
                             ><Plus size={16} /></button>
@@ -166,7 +166,7 @@ const ProfileView = ({
                         style={{ ...inp, resize: 'vertical', lineHeight: 1.6 }} rows={3}
                         placeholder="Tell us a bit about yourself..." maxLength={500}
                         onFocus={focusAmber} onBlur={blurDefault} />
-                    <div style={{ fontSize: '10px', color: 'rgba(228,228,228,0.25)', textAlign: 'right', marginTop: '4px' }}>
+                    <div style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'right', marginTop: '4px' }}>
                         {(formData.about || '').length} / 500
                     </div>
                 </div>

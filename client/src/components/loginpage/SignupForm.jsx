@@ -23,15 +23,15 @@ const PWD_RULES = [
 const inp = (focused, err) => ({
     width: '100%', boxSizing: 'border-box',
     padding: '10px 12px',
-    background: '#141414',
+    background: 'var(--bg-input)',
     border: `1px solid ${err ? '#e05252' : focused ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`,
-    color: '#e4e4e4', fontSize: '13px', outline: 'none',
+    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
     fontFamily: 'Inter, system-ui, sans-serif',
     transition: 'border-color 150ms ease',
 });
 
 const Label = ({ children }) => (
-    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.4)', display: 'block', marginBottom: '6px' }}>
+    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
         {children}
     </label>
 );
@@ -143,8 +143,8 @@ const SignupForm = ({ onSwitch }) => {
         <div>
             <style>{`@keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }`}</style>
             <div style={{ marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '6px' }}>Create account</h2>
-                <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)' }}>Join thousands of teams already on Chttrix.</p>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '6px' }}>Create account</h2>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Join thousands of teams already on Chttrix.</p>
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -185,16 +185,16 @@ const SignupForm = ({ onSwitch }) => {
                         {/* Country selector */}
                         <div style={{ position: 'relative', width: '110px', flexShrink: 0 }}>
                             <button type="button" onClick={() => setShowCountryDd(!showCountryDd)}
-                                style={{ width: '100%', padding: '10px 8px', background: '#141414', border: `1px solid ${focused === 'phone' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`, color: '#e4e4e4', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                                style={{ width: '100%', padding: '10px 8px', background: 'var(--bg-input)', border: `1px solid ${focused === 'phone' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
                                 <span>{selectedCountry.flag} {selectedCountry.dial_code}</span>
-                                <ChevronDown size={11} style={{ color: 'rgba(228,228,228,0.3)', transform: showCountryDd ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
+                                <ChevronDown size={11} style={{ color: 'var(--text-muted)', transform: showCountryDd ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
                             </button>
                             {showCountryDd && (
                                 <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, width: '180px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '200px', overflowY: 'auto', marginTop: '2px' }}>
                                     {COUNTRIES.map(c => (
                                         <button key={c.code} type="button" onClick={() => { setSelectedCountry(c); setShowCountryDd(false); }}
-                                            style={{ width: '100%', padding: '8px 12px', background: selectedCountry.code === c.code ? 'rgba(184,149,106,0.1)' : 'none', border: 'none', color: '#e4e4e4', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', gap: '8px', alignItems: 'center', textAlign: 'left' }}>
-                                            <span>{c.flag}</span><span style={{ flex: 1 }}>{c.name}</span><span style={{ color: 'rgba(228,228,228,0.4)' }}>{c.dial_code}</span>
+                                            style={{ width: '100%', padding: '8px 12px', background: selectedCountry.code === c.code ? 'rgba(184,149,106,0.1)' : 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', gap: '8px', alignItems: 'center', textAlign: 'left' }}>
+                                            <span>{c.flag}</span><span style={{ flex: 1 }}>{c.name}</span><span style={{ color: 'var(--text-muted)' }}>{c.dial_code}</span>
                                         </button>
                                     ))}
                                 </div>
@@ -223,7 +223,7 @@ const SignupForm = ({ onSwitch }) => {
                             onFocus={() => setFocused('password')} onBlur={() => setFocused(null)}
                             style={{ ...inp(focused === 'password'), paddingRight: '36px' }} />
                         <button type="button" onClick={() => setShowPwd(!showPwd)}
-                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(228,228,228,0.35)', display: 'flex' }}>
+                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
                             {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                     </div>
@@ -249,7 +249,7 @@ const SignupForm = ({ onSwitch }) => {
                             onFocus={() => setFocused('confirmPassword')} onBlur={() => setFocused(null)}
                             style={{ ...inp(focused === 'confirmPassword', passwordsDontMatch), paddingRight: '36px', borderColor: passwordsMatch ? '#5aba8a' : passwordsDontMatch ? '#e05252' : focused === 'confirmPassword' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
                         <button type="button" onClick={() => setShowCfm(!showCfm)}
-                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(228,228,228,0.35)', display: 'flex' }}>
+                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
                             {showCfm ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                     </div>
@@ -262,7 +262,7 @@ const SignupForm = ({ onSwitch }) => {
                 </button>
             </form>
 
-            <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: 'rgba(228,228,228,0.35)' }}>
+            <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: 'var(--text-muted)' }}>
                 Already have an account?{' '}
                 <button onClick={onSwitch} style={{ background: 'none', border: 'none', color: '#b8956a', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px' }}>
                     Sign in

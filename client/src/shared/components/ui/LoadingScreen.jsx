@@ -103,7 +103,7 @@ const LoadingScreen = ({ onComplete }) => {
     return (
         <div style={{
             position: 'fixed', inset: 0, zIndex: 9999,
-            background: '#080808',
+            background: 'var(--bg-base)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             transition: 'opacity 650ms cubic-bezier(0.4,0,0.2,1)',
             opacity,
@@ -157,7 +157,7 @@ const LoadingScreen = ({ onComplete }) => {
                         <img src="/chttrix-logo.jpg" alt="Chttrix"
                             style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
                         <div>
-                            <div style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                            <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
                                 Chttrix
                             </div>
                             <div style={{ fontSize: '11px', color: 'rgba(184,149,106,0.7)', marginTop: '3px', fontFamily: 'Inter, system-ui, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>

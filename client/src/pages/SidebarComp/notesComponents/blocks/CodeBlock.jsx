@@ -31,9 +31,9 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-4">
-            <div style={{ border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
                 {/* Header bar */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: '#161616', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         {/* Traffic lights */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -41,12 +41,12 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#febc2e' }} />
                             <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#28c840' }} />
                         </div>
-                        <div style={{ width: '1px', height: '14px', background: 'rgba(255,255,255,0.08)' }} />
+                        <div style={{ width: '1px', height: '14px', background: 'var(--bg-active)' }} />
                         {/* Language picker */}
                         <div style={{ position: 'relative' }}>
                             <button
                                 onClick={() => setShowLangPicker(v => !v)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'monospace', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.5)'}
                             >
@@ -55,7 +55,7 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                 <ChevronDown size={9} style={{ transition: 'transform 200ms ease', transform: showLangPicker ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                             </button>
                             {showLangPicker && (
-                                <div style={{ position: 'absolute', left: 0, top: '100%', marginTop: '6px', background: '#161616', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', zIndex: 30, maxHeight: '200px', overflowY: 'auto', minWidth: '140px', padding: '4px 0' }}>
+                                <div style={{ position: 'absolute', left: 0, top: '100%', marginTop: '6px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', zIndex: 30, maxHeight: '200px', overflowY: 'auto', minWidth: '140px', padding: '4px 0' }}>
                                     {LANGUAGES.map(l => (
                                         <button
                                             key={l}
@@ -90,7 +90,7 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         </button>
                         <button
                             onClick={() => onRemoveBlock(block.id)}
-                            style={{ padding: '5px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                            style={{ padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                             className="group-hover:!opacity-100"
                             onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
@@ -111,7 +111,7 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         placeholder={`// ${lang} code...`}
                         style={{
                             width: '100%', fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: '12.5px',
-                            color: '#e4e4e4', background: 'transparent', padding: '14px 14px 14px 54px',
+                            color: 'var(--text-primary)', background: 'transparent', padding: '14px 14px 14px 54px',
                             outline: 'none', resize: 'none', minHeight: '110px', lineHeight: 1.75,
                             letterSpacing: '0.01em', boxSizing: 'border-box', tabSize: 2,
                         }}

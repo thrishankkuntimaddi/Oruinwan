@@ -2,7 +2,7 @@ import React from 'react';
 import { Clock, Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download, Info } from 'lucide-react';
 
 const BTN = {
-  base: { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'rgba(228,228,228,0.35)', transition: 'all 150ms ease' },
+  base: { display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 150ms ease' },
 };
 
 const NotesToolbar = ({
@@ -25,11 +25,11 @@ const NotesToolbar = ({
     <div style={{
       height: '52px', padding: '0 24px',
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      background: '#0e0e0e', borderBottom: '1px solid rgba(255,255,255,0.06)',
+      background: '#0e0e0e', borderBottom: '1px solid var(--border-subtle)',
       flexShrink: 0, zIndex: 10, position: 'relative',
     }}>
       {/* Left: last edited */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
         <Clock size={12} />
         <span>Last edited {formattedDate}</span>
       </div>
@@ -47,7 +47,7 @@ const NotesToolbar = ({
           <span>AI Draft</span>
         </button>
 
-        <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.08)', margin: '0 4px' }} />
+        <div style={{ width: '1px', height: '20px', background: 'var(--bg-active)', margin: '0 4px' }} />
 
         {/* Share */}
         <button onClick={handleShare}
@@ -88,20 +88,20 @@ const NotesToolbar = ({
                 { label: 'Download PDF', Icon: Download, action: handleDownloadPDF },
               ].map(({ label, Icon: Ic, action }) => (
                 <button key={label} onClick={action}
-                  style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                  style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  <Ic size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> {label}
+                  <Ic size={13} style={{ color: 'var(--text-muted)' }} /> {label}
                 </button>
               ))}
               <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
               <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }}
-                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                <Info size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Note Info
+                <Info size={13} style={{ color: 'var(--text-muted)' }} /> Note Info
               </button>
             </div>
           )}

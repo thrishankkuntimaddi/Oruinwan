@@ -53,7 +53,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
       onClick={e => e.target === e.currentTarget && onClose()}
     >
       <div style={{
-        background: '#161616', border: '1px solid rgba(255,255,255,0.1)',
+        background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)',
         boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
         width: '420px', maxHeight: '85vh',
         display: 'flex', flexDirection: 'column',
@@ -65,12 +65,12 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
               <Users size={14} style={{ color: '#b8956a' }} />
             </div>
             <div>
-              <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>Share Note</h3>
-              <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px', fontFamily: 'Inter, system-ui, sans-serif' }}>{note.title || 'Untitled Note'}</p>
+              <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>Share Note</h3>
+              <p style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px', fontFamily: 'Inter, system-ui, sans-serif' }}>{note.title || 'Untitled Note'}</p>
             </div>
           </div>
           <button onClick={onClose}
-            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
           ><X size={14} /></button>
@@ -78,7 +78,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
 
         {/* Visibility toggle */}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-          <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(228,228,228,0.3)', marginBottom: '10px', fontFamily: 'monospace' }}>Visibility</p>
+          <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'monospace' }}>Visibility</p>
           <div style={{ display: 'flex', gap: '8px' }}>
             {[
               { id: false, Icon: Lock, label: 'Private', sub: 'Only selected people', active: !isPublic },
@@ -103,14 +103,14 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
         {!isPublic && (
           <>
             <div style={{ padding: '12px 18px 8px', flexShrink: 0 }}>
-              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(228,228,228,0.3)', marginBottom: '8px', fontFamily: 'monospace' }}>
+              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                 Invite people {sharedCount > 0 && <span style={{ color: '#b8956a' }}>· {sharedCount} selected</span>}
               </p>
               <div style={{ position: 'relative' }}>
-                <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input type="text" placeholder="Search by name or email..."
                   value={search} onChange={e => setSearch(e.target.value)}
-                  style={{ width: '100%', paddingLeft: '30px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', fontSize: '12px', background: '#111', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', colorScheme: 'dark' }}
+                  style={{ width: '100%', paddingLeft: '30px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', fontSize: '12px', background: '#111', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', colorScheme: 'dark' }}
                   onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.4)'}
                   onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
                 />
@@ -123,7 +123,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
                   <div style={{ width: '20px', height: '20px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
                 </div>
               ) : filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(228,228,228,0.3)' }}>
+                <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>
                   <Users size={28} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
                   <p style={{ fontSize: '12px' }}>{search ? 'No members match your search' : 'No other members in this workspace'}</p>
                 </div>
@@ -151,7 +151,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
                         )}
                         <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
                           <p style={{ fontSize: '12px', fontWeight: 600, color: isSelected ? '#b8956a' : '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{name}</p>
-                          {email && <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</p>}
+                          {email && <p style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</p>}
                         </div>
                         <div style={{ width: '18px', height: '18px', border: `2px solid ${isSelected ? '#b8956a' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? '#b8956a' : 'transparent', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
                           {isSelected && <Check size={10} style={{ color: '#0c0c0c' }} strokeWidth={3} />}
@@ -170,15 +170,15 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
             <div style={{ width: '56px', height: '56px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
               <Globe size={24} style={{ color: '#b8956a' }} />
             </div>
-            <p style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', marginBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>Visible to all workspace members</p>
-            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)' }}>Anyone in this workspace will be able to view this note.</p>
+            <p style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>Visible to all workspace members</p>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Anyone in this workspace will be able to view this note.</p>
           </div>
         )}
 
         {/* Footer */}
         <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '8px', flexShrink: 0 }}>
           <button onClick={onClose}
-            style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+            style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
             onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
           >Cancel</button>

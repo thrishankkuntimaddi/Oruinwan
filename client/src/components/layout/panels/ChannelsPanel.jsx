@@ -345,14 +345,14 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
 
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
             {/* Header */}
-            <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#0c0c0c', flexShrink: 0, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0, borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h2 style={{ fontWeight: 700, fontSize: '14px', color: '#e4e4e4', lineHeight: '1.2', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    <h2 style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.2', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {activeWorkspace?.name || 'Channels'}
                     </h2>
-                    <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>Channels</span>
+                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>Channels</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <button
@@ -373,7 +373,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                             setShowCreateChannelModal(true);
                         }}
                         disabled={(() => { const userRole = activeWorkspace?.role?.toLowerCase() || ''; const isAdmin = userRole === 'admin' || userRole === 'owner'; return !isAdmin && activeWorkspace?.settings?.allowMemberChannelCreation === false; })()}
-                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         title="Create Channel"
                         onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
@@ -386,13 +386,13 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
             {/* Search */}
             <div style={{ padding: '12px 16px 8px' }}>
                 <div style={{ position: 'relative' }}>
-                    <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)' }} size={14} />
+                    <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={14} />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search channels..."
-                        style={{ width: '100%', paddingLeft: '32px', paddingRight: '12px', paddingTop: '7px', paddingBottom: '7px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
+                        style={{ width: '100%', paddingLeft: '32px', paddingRight: '12px', paddingTop: '7px', paddingBottom: '7px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
                     />
                 </div>
             </div>
@@ -408,7 +408,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                             <Trash2 size={15} />
                         </button>
                         <button onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
-                            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer' }} title="Cancel">
+                            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Cancel">
                             <X size={15} />
                         </button>
                     </div>
@@ -417,15 +417,15 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
 
             {/* Channel List */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px 4px' }}>
-                <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', padding: '4px 16px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '4px 16px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                     {activeWorkspace?.name || 'Workspace'} Channels
                 </p>
                 {isLoadingChannels ? (
                     <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                         {[70, 50, 85, 60, 75, 45].map((w, i) => (
                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px' }}>
-                                <div style={{ width: '24px', height: '24px', background: 'rgba(255,255,255,0.06)', flexShrink: 0 }} />
-                                <div style={{ height: '10px', background: 'rgba(255,255,255,0.06)', width: `${w}%` }} />
+                                <div style={{ width: '24px', height: '24px', background: 'var(--bg-active)', flexShrink: 0 }} />
+                                <div style={{ height: '10px', background: 'var(--bg-active)', width: `${w}%` }} />
                             </div>
                         ))}
                     </div>
@@ -435,19 +435,19 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     ))
                 ) : searchQuery ? (
                     <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-                        <div style={{ width: '36px', height: '36px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                            <Search size={16} style={{ color: 'rgba(228,228,228,0.3)' }} />
+                        <div style={{ width: '36px', height: '36px', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
+                            <Search size={16} style={{ color: 'var(--text-muted)' }} />
                         </div>
-                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', fontFamily: 'Inter, system-ui, sans-serif' }}>No results for &ldquo;{searchQuery}&rdquo;</p>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Try a different search term</p>
+                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No results for &ldquo;{searchQuery}&rdquo;</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Try a different search term</p>
                     </div>
                 ) : (
                     <div style={{ padding: '40px 16px', textAlign: 'center' }}>
                         <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                             <Hash size={20} style={{ color: '#b8956a' }} />
                         </div>
-                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(228,228,228,0.6)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No channels yet</p>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', marginBottom: '16px', lineHeight: '1.5', fontFamily: 'Inter, system-ui, sans-serif' }}>Create a channel to start collaborating</p>
+                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No channels yet</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5', fontFamily: 'Inter, system-ui, sans-serif' }}>Create a channel to start collaborating</p>
                         {(() => {
                             const userRole = activeWorkspace?.role?.toLowerCase() || '';
                             const isAdmin = userRole === 'admin' || userRole === 'owner';

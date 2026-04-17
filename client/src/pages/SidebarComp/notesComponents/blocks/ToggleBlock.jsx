@@ -43,12 +43,12 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         onChange={e => { e.stopPropagation(); setTitle(e.target.value); }}
                         onClick={e => e.stopPropagation()}
                         placeholder="Section title..."
-                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}
                         className="placeholder-gray-700"
                     />
                     <button
                         onClick={e => { e.stopPropagation(); onRemoveBlock(block.id); }}
-                        style={{ padding: '3px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                        style={{ padding: '3px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                         className="group-hover:!opacity-100"
                         onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
@@ -59,12 +59,12 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
                 {/* Body — animated slide */}
                 {open && (
-                    <div style={{ padding: '10px 16px 14px', borderTop: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.015)' }}>
+                    <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.015)' }}>
                         <textarea
                             value={body}
                             onChange={e => setBody(e.target.value)}
                             placeholder="Add content..."
-                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', color: 'rgba(228,228,228,0.7)', lineHeight: 1.65, minHeight: '50px', fontFamily: 'Inter, system-ui, sans-serif' }}
+                            style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.65, minHeight: '50px', fontFamily: 'Inter, system-ui, sans-serif' }}
                             onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                             autoFocus
                         />

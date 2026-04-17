@@ -45,7 +45,7 @@ export default function Status() {
     return (
         <PublicPageShell title="Status">
             {/* Hero */}
-            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '72px 0 56px' }}>
+            <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '72px 0 56px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
                         <div>
@@ -53,11 +53,11 @@ export default function Status() {
                                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#5aba8a', animation: 'pulse 2s ease-in-out infinite' }} />
                                 <span style={{ fontSize: '12px', fontWeight: 700, color: '#5aba8a', letterSpacing: '0.03em' }}>All Systems Operational</span>
                             </div>
-                            <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '10px' }}>System Status</h1>
-                            <p style={{ fontSize: '14px', color: 'rgba(228,228,228,0.4)' }}>Real-time status for all Chttrix services</p>
+                            <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '10px' }}>System Status</h1>
+                            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Real-time status for all Chttrix services</p>
                         </div>
                         <button onClick={refresh}
-                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(228,228,228,0.5)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 150ms ease' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 16px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 150ms ease' }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e4e4e4'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; }}>
                             <RefreshCw size={12} style={{ animation: spinning ? 'spin 0.8s linear infinite' : 'none' }} />
@@ -73,26 +73,26 @@ export default function Status() {
                 <div style={{ marginBottom: '56px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                         <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)' }}>Services</p>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', fontFamily: 'monospace' }}>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                             Last updated: {lastUpdated.toLocaleTimeString()}
                         </p>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
                         {SERVICES.map(svc => (
                             <div key={svc.name} style={{ background: '#111', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <StatusDot s={svc.status} />
-                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#e4e4e4' }}>{svc.name}</span>
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{svc.name}</span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
                                     <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginBottom: '1px' }}>30d uptime</p>
+                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '1px' }}>30d uptime</p>
                                         <p style={{ fontSize: '12px', fontWeight: 700, color: '#5aba8a', fontFamily: 'monospace' }}>{svc.uptime}</p>
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginBottom: '1px' }}>Latency</p>
-                                        <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(228,228,228,0.5)', fontFamily: 'monospace' }}>{svc.latency}</p>
+                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '1px' }}>Latency</p>
+                                        <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{svc.latency}</p>
                                     </div>
                                     <div style={{ padding: '3px 8px', background: 'rgba(90,186,138,0.08)', border: '1px solid rgba(90,186,138,0.2)', fontSize: '10px', fontWeight: 700, color: '#5aba8a', textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: '90px', textAlign: 'center' }}>
                                         Operational
@@ -106,26 +106,26 @@ export default function Status() {
                 {/* Incident history */}
                 <div>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Recent Incidents & Maintenance</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
                         {INCIDENTS.map(inc => (
                             <div key={inc.title} style={{ background: '#111', padding: '20px 24px' }}>
                                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                                     <IncidentIcon s={inc.status} />
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
-                                            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>{inc.title}</h3>
-                                            <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'rgba(228,228,228,0.35)' }}>
+                                            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{inc.title}</h3>
+                                            <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
                                                 <span>{inc.date}</span>
                                                 <span>Duration: {inc.duration}</span>
                                             </div>
                                         </div>
-                                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.7' }}>{inc.desc}</p>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.7' }}>{inc.desc}</p>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.2)', marginTop: '16px' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>
                         No incidents currently active. Subscribe to status updates at <span style={{ color: 'rgba(184,149,106,0.6)', fontFamily: 'monospace' }}>status@chttrix.io</span>
                     </p>
                 </div>

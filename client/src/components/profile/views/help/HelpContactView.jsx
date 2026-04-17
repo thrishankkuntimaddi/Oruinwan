@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 
 const panelStyle = {
-    width: '256px', background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
+    width: '256px', background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden',
     fontFamily: 'Inter, system-ui, sans-serif',
 };
@@ -12,8 +12,8 @@ const headerStyle = {
     background: 'rgba(255,255,255,0.02)',
 };
 const inp = {
-    width: '100%', padding: '8px 12px', fontSize: '13px', background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.1)', color: '#e4e4e4', outline: 'none',
+    width: '100%', padding: '8px 12px', fontSize: '13px', background: 'var(--bg-hover)',
+    border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-primary)', outline: 'none',
     boxSizing: 'border-box', fontFamily: 'Inter,system-ui,sans-serif', colorScheme: 'dark',
     transition: '150ms ease',
 };
@@ -24,13 +24,13 @@ const HelpContactView = ({ onBack }) => (
     <div style={panelStyle}>
         <div style={headerStyle}>
             <button onClick={onBack}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
                 onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
             >
                 <ChevronLeft size={13} /> Back
             </button>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Contact</span>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Contact</span>
             <div style={{ width: '40px' }} />
         </div>
         <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>

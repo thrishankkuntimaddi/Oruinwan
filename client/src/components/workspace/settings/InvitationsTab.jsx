@@ -184,7 +184,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
         const badges = {
             pending:  { text: 'Pending',  bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.3)',  color: '#fbbf24', Icon: Clock       },
             accepted: { text: 'Accepted', bg: 'rgba(52,211,153,0.1)',  border: 'rgba(52,211,153,0.3)', color: '#34d399', Icon: CheckCircle },
-            expired:  { text: 'Expired',  bg: 'rgba(255,255,255,0.05)',border: 'rgba(255,255,255,0.1)',color: 'rgba(228,228,228,0.4)', Icon: XCircle },
+            expired:  { text: 'Expired',  bg: 'rgba(255,255,255,0.05)',border: 'rgba(255,255,255,0.1)',color: 'var(--text-muted)', Icon: XCircle },
             revoked:  { text: 'Revoked',  bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.2)',color: '#f87171', Icon: XCircle    },
         };
         const b = badges[status] || badges.expired;
@@ -243,10 +243,10 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                             <CheckCircle style={{ width: '15px', height: '15px' }} />
                         </div>
                         <div>
-                            <div style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                                 {selectedInvites.size} {selectedInvites.size === 1 ? 'Invitation' : 'Invitations'} Selected
                             </div>
-                            <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                                 {selectedPending > 0 && `${selectedPending} pending`}
                                 {selectedPending > 0 && selectedDeletable > 0 && ', '}
                                 {selectedDeletable > 0 && `${selectedDeletable} deletable`}
@@ -269,13 +269,13 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                             </button>
                         )}
                         {selectedPending === 0 && selectedDeletable === 0 && (
-                            <div style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.05)', color: 'rgba(228,228,228,0.4)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ padding: '6px 12px', background: 'var(--bg-hover)', color: 'var(--text-muted)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                 <AlertTriangle style={{ width: '13px', height: '13px' }} />
                                 No actions available
                             </div>
                         )}
                         <button onClick={() => setSelectedInvites(new Set())}
-                            style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(228,228,228,0.5)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            style={{ padding: '6px 12px', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
                             Clear
                         </button>
                     </div>
@@ -283,24 +283,24 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
             )}
 
             {/* Search and Filters Container */}
-            <div style={{ padding: '20px 32px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ padding: '20px 32px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
                 {/* Search + Clean button */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
-                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', width: '15px', height: '15px' }} />
+                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', width: '15px', height: '15px' }} />
                         <input
                             type="text"
                             placeholder="Search invitations by email, role, or inviter..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            style={{ width: '100%', paddingLeft: '34px', paddingRight: '12px', paddingTop: '9px', paddingBottom: '9px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '13px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', transition: 'border-color 150ms ease' }}
+                            style={{ width: '100%', paddingLeft: '34px', paddingRight: '12px', paddingTop: '9px', paddingBottom: '9px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', transition: 'border-color 150ms ease' }}
                             onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.4)'}
                             onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                         />
                     </div>
                     {invitations.expired.length > 0 && (
                         <button onClick={handleCleanupExpired} disabled={bulkActionLoading}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(228,228,228,0.5)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', whiteSpace: 'nowrap', transition: '150ms ease', opacity: bulkActionLoading ? 0.5 : 1 }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', whiteSpace: 'nowrap', transition: '150ms ease', opacity: bulkActionLoading ? 0.5 : 1 }}
                             onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
                         >
@@ -349,23 +349,23 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                 {loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 0' }}>
                         {[75,55,85,60,70].map((w, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', padding: '12px' }}>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '12px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-active)', flexShrink: 0 }} />
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ height: '10px', background: 'rgba(255,255,255,0.08)', width: `${w}%` }} />
-                                    <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', width: `${w - 25}%` }} />
+                                    <div style={{ height: '10px', background: 'var(--bg-active)', width: `${w}%` }} />
+                                    <div style={{ height: '8px', background: 'var(--bg-hover)', width: `${w - 25}%` }} />
                                 </div>
-                                <div style={{ width: '64px', height: '24px', background: 'rgba(255,255,255,0.06)' }} />
+                                <div style={{ width: '64px', height: '24px', background: 'var(--bg-active)' }} />
                             </div>
                         ))}
-                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>Loading invitations...</p>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>Loading invitations...</p>
                     </div>
                 ) : filteredInvites.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '48px 0' }}>
                         <Mail style={{ width: '40px', height: '40px', color: 'rgba(255,255,255,0.1)', margin: '0 auto 12px', display: 'block' }} />
-                        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>No invitations found</p>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No invitations found</p>
                         {filter !== 'all' && (
-                            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.2)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Try changing the filter or search query</p>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Try changing the filter or search query</p>
                         )}
                     </div>
                 ) : (
@@ -403,7 +403,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                             {invite.inviteType === 'email' ? (
                                                                 <>
                                                                     <Mail style={{ width: '13px', height: '13px', color: '#38bdf8', flexShrink: 0 }} />
-                                                                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                                                                         {invite.email}
                                                                     </span>
                                                                 </>
@@ -411,8 +411,8 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                                 <>
                                                                     <Link2 style={{ width: '13px', height: '13px', color: '#a78bfa', flexShrink: 0 }} />
                                                                     <div>
-                                                                        <span style={{ fontSize: '13px', fontWeight: 600, color: '#e4e4e4', display: 'block', fontFamily: 'Inter, system-ui, sans-serif' }}>Shareable Link</span>
-                                                                        <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>Anyone with this link can join as {invite.role}</span>
+                                                                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', fontFamily: 'Inter, system-ui, sans-serif' }}>Shareable Link</span>
+                                                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>Anyone with this link can join as {invite.role}</span>
                                                                     </div>
                                                                 </>
                                                             )}
@@ -426,8 +426,8 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                         </div>
 
                                                         {/* Metadata row */}
-                                                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                                                            <span style={{ padding: '1px 6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '10px', fontWeight: 700, color: '#b8956a', textTransform: 'capitalize' }}>
+                                                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                                                            <span style={{ padding: '1px 6px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', fontSize: '10px', fontWeight: 700, color: '#b8956a', textTransform: 'capitalize' }}>
                                                                 {invite.role}
                                                             </span>
                                                             <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -450,7 +450,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
 
                                                 {/* Action buttons */}
                                                 {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
-                                                    <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                                    <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
                                                         <button
                                                             onClick={() => handleResend(invite.id)}
                                                             disabled={actionLoading[invite.id]}

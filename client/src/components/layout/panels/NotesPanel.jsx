@@ -85,10 +85,10 @@ function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
                 onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
                 onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
             >
-                {isOpen ? <ChevronDown size={10} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} /> : <ChevronRight size={10} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />}
-                {Icon && <Icon size={11} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />}
-                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.35)', flex: 1, fontFamily: 'monospace' }}>{label}</span>
-                {count > 0 && <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.06)', color: 'rgba(228,228,228,0.35)', padding: '1px 6px', fontWeight: 700, fontFamily: 'monospace' }}>{count}</span>}
+                {isOpen ? <ChevronDown size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <ChevronRight size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+                {Icon && <Icon size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', flex: 1, fontFamily: 'monospace' }}>{label}</span>
+                {count > 0 && <span style={{ fontSize: '10px', background: 'var(--bg-active)', color: 'var(--text-muted)', padding: '1px 6px', fontWeight: 700, fontFamily: 'monospace' }}>{count}</span>}
             </button>
             {isOpen && <div style={{ maxHeight: '256px', overflowY: 'auto', scrollbarWidth: 'thin' }}>{children}</div>}
         </div>
@@ -99,15 +99,15 @@ function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
 function DeleteDialog({ note, onConfirm, onCancel }) {
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
-            <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.1)', width: '320px', padding: '24px', margin: '0 16px', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+            <div style={{ background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', width: '320px', padding: '24px', margin: '0 16px', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
                 <div style={{ width: '40px', height: '40px', background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
                     <Trash2 size={18} style={{ color: '#f87171' }} />
                 </div>
-                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', marginBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>Delete Note?</h3>
-                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', marginBottom: '20px', lineHeight: 1.5 }}>"{note?.title || 'Untitled'}" will be permanently deleted. This cannot be undone.</p>
+                <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>Delete Note?</h3>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.5 }}>"{note?.title || 'Untitled'}" will be permanently deleted. This cannot be undone.</p>
                 <div style={{ display: 'flex', gap: '8px' }}>
                     <button onClick={onCancel}
-                        style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 500, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                     >Cancel</button>
@@ -124,7 +124,7 @@ function DeleteDialog({ note, onConfirm, onCancel }) {
 function MovePicker({ groups, noteGroup, onMove, onClose }) {
     return (
         <div style={{ position: 'absolute', right: '100%', top: 0, marginRight: '4px', width: '176px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', padding: '4px 0', zIndex: 70 }}>
-            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.3)', padding: '6px 12px', fontFamily: 'monospace' }}>Move to group</p>
+            <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', padding: '6px 12px', fontFamily: 'monospace' }}>Move to group</p>
             <button onClick={() => onMove(null)}
                 style={{ width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: !noteGroup ? 'rgba(184,149,106,0.1)' : 'transparent', color: !noteGroup ? '#b8956a' : 'rgba(228,228,228,0.6)', fontWeight: !noteGroup ? 700 : 400, border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
                 onMouseEnter={e => { if (noteGroup) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
@@ -136,7 +136,7 @@ function MovePicker({ groups, noteGroup, onMove, onClose }) {
                     onMouseEnter={e => { if (noteGroup !== g) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                     onMouseLeave={e => { if (noteGroup !== g) e.currentTarget.style.background = 'transparent'; }}
                 >
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FolderOpen size={11} style={{ color: 'rgba(228,228,228,0.3)' }} />{g}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FolderOpen size={11} style={{ color: 'var(--text-muted)' }} />{g}</span>
                     {noteGroup === g && <Check size={12} style={{ color: '#b8956a' }} />}
                 </button>
             ))}
@@ -340,16 +340,16 @@ const NotesPanel = () => {
                             <span style={{ fontSize: '12px', fontWeight: isActive ? 700 : 500, color: isActive ? '#b8956a' : '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4, fontFamily: 'Inter, system-ui, sans-serif' }}>
                                 {note.title || 'Untitled'}
                             </span>
-                            <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', flexShrink: 0, marginTop: '1px', fontFamily: 'monospace' }}>{formatDate(note.updatedAt)}</span>
+                            <span style={{ fontSize: '10px', color: 'var(--text-muted)', flexShrink: 0, marginTop: '1px', fontFamily: 'monospace' }}>{formatDate(note.updatedAt)}</span>
                         </div>
-                        {preview && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{preview}</p>}
+                        {preview && <p style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '2px' }}>{preview}</p>}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
                             {note.isPinned && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', color: '#b8956a', fontWeight: 500 }}><Star size={8} style={{ fill: 'currentColor' }} /> Starred</span>}
                             {noteGroup_ && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', fontSize: '10px', color: 'rgba(167,139,250,0.7)', fontWeight: 500 }}><FolderOpen size={8} /> {noteGroup_}</span>}
                         </div>
                     </div>
                     <button onClick={e => openNoteMenu(e, note.id)}
-                        style={{ opacity: 0, flexShrink: 0, padding: '3px', marginTop: '2px', color: 'rgba(228,228,228,0.35)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        style={{ opacity: 0, flexShrink: 0, padding: '3px', marginTop: '2px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease' }}
                         className="group-hover-show"
                         title="Options"
                         onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#e4e4e4'; }}
@@ -364,13 +364,13 @@ const NotesPanel = () => {
 
     return (
         <>
-            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' }}>
 
                 {/* ── Header ── */}
-                <div style={{ padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+                <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <BookOpen size={14} style={{ color: 'rgba(228,228,228,0.4)' }} />
-                        <span style={{ fontWeight: 700, fontSize: '15px', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>Notes</span>
+                        <BookOpen size={14} style={{ color: 'var(--text-muted)' }} />
+                        <span style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Notes</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <div style={{ position: 'relative' }} ref={sortMenuRef}>
@@ -401,7 +401,7 @@ const NotesPanel = () => {
                 </div>
 
                 {/* ── Tab strip: Workspace | Channel Canvas ── */}
-                <div style={{ display: 'flex', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                     {[
                         { id: 'workspace', label: 'Workspace', count: activeNotes.length },
                         { id: 'canvas', label: 'Channel Canvas', count: totalCanvas },
@@ -422,11 +422,11 @@ const NotesPanel = () => {
                 {/* ── Search ── */}
                 <div style={{ padding: '8px 12px', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
-                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} size={11} />
+                        <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} size={11} />
                         <input type="text" placeholder="Search…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                            style={{ width: '100%', paddingLeft: '28px', paddingRight: '28px', paddingTop: '6px', paddingBottom: '6px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
+                            style={{ width: '100%', paddingLeft: '28px', paddingRight: '28px', paddingTop: '6px', paddingBottom: '6px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
                         {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer' }}>
+                            <button onClick={() => setSearchQuery('')} style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
                                 <X size={11} />
                             </button>
                         )}
@@ -484,12 +484,12 @@ const NotesPanel = () => {
                         {/* Group name input */}
                         {showGroupInput && (
                             <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#161616', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 10px' }}>
-                                    <FolderPlus size={12} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 10px' }}>
+                                    <FolderPlus size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                                     <input ref={groupInputRef} value={newGroupName} onChange={e => setNewGroupName(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') handleCreateGroup(); if (e.key === 'Escape') setShowGroupInput(false); }}
                                         placeholder="Group name…"
-                                        style={{ flex: 1, background: 'transparent', fontSize: '12px', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                        style={{ flex: 1, background: 'transparent', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}
                                     />
                                     <button onClick={handleCreateGroup}
                                         style={{ fontSize: '11px', fontWeight: 700, color: '#b8956a', background: 'transparent', border: 'none', cursor: 'pointer', flexShrink: 0 }}>Create</button>
@@ -561,10 +561,10 @@ const NotesPanel = () => {
                                                 onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
                                                 onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = isOpen ? 'rgba(255,255,255,0.05)' : 'transparent'; }}
                                             >
-                                                {isOpen ? <ChevronDown size={10} style={{ color: 'rgba(228,228,228,0.3)' }} /> : <ChevronRight size={10} style={{ color: 'rgba(228,228,228,0.3)' }} />}
-                                                <Hash size={11} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
-                                                <span style={{ flex: 1, fontSize: '12px', fontWeight: 600, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{chName}</span>
-                                                <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', background: 'rgba(255,255,255,0.07)', padding: '1px 6px', fontFamily: 'monospace' }}>{ch.canvasTabs.length}</span>
+                                                {isOpen ? <ChevronDown size={10} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={10} style={{ color: 'var(--text-muted)' }} />}
+                                                <Hash size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
+                                                <span style={{ flex: 1, fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{chName}</span>
+                                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.07)', padding: '1px 6px', fontFamily: 'monospace' }}>{ch.canvasTabs.length}</span>
                                             </button>
 
                                             {isOpen && (
@@ -584,7 +584,7 @@ const NotesPanel = () => {
                                                                         {tab.name || 'Untitled Canvas'}
                                                                     </p>
                                                                     {tab.lastEditedAt && (
-                                                                        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginTop: '2px', fontFamily: 'monospace' }}>{formatDate(tab.lastEditedAt)}</p>
+                                                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'monospace' }}>{formatDate(tab.lastEditedAt)}</p>
                                                                     )}
                                                                 </div>
                                                             </button>
@@ -666,9 +666,9 @@ const NotesPanel = () => {
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             <typeConf.Icon size={12} className={`flex-shrink-0 ${typeConf.color}`} style={{ opacity: 0.5 }} />
-                                            <span style={{ flex: 1, fontSize: '12px', color: 'rgba(228,228,228,0.4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{note.title || 'Untitled'}</span>
+                                            <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{note.title || 'Untitled'}</span>
                                             <button onClick={e => { e.stopPropagation(); toggleArchive(note.id); }}
-                                                style={{ padding: '4px', color: 'rgba(228,228,228,0.25)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', flexShrink: 0 }}
+                                                style={{ padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', flexShrink: 0 }}
                                                 title="Restore"
                                                 onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                                                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}>
@@ -703,23 +703,23 @@ const NotesPanel = () => {
                     {/* Move to ▶ */}
                     <div style={{ position: 'relative' }}>
                         <button onClick={() => setShowMovePicker(v => !v)}
-                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
+                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
-                            <Move size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Move to…
-                            <ChevronRight size={11} style={{ marginLeft: 'auto', color: 'rgba(228,228,228,0.3)' }} />
+                            <Move size={13} style={{ color: 'var(--text-muted)' }} /> Move to…
+                            <ChevronRight size={11} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
                         </button>
                         {showMovePicker && <MovePicker groups={groups} noteGroup={(ctxNote.tags || []).find(t => groups.includes(t)) || null} onMove={handleMove} onClose={() => setShowMovePicker(false)} />}
                     </div>
 
                     {/* Archive */}
                     <button onClick={() => { toggleArchive(ctxNote.id); setNoteMenu(null); }}
-                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
+                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                        {ctxNote.isArchived ? <><ArchiveRestore size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Restore</> : <><Archive size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Archive</>}
+                        {ctxNote.isArchived ? <><ArchiveRestore size={13} style={{ color: 'var(--text-muted)' }} /> Restore</> : <><Archive size={13} style={{ color: 'var(--text-muted)' }} /> Archive</>}
                     </button>
 
                     <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />

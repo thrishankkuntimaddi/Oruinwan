@@ -71,14 +71,14 @@ const ImageBlock = ({
 
     return (
         <div className="group relative mb-4">
-            <div style={{ width: '100%', maxWidth: '672px', overflow: 'hidden', background: '#111', border: '1px solid rgba(255,255,255,0.08)', position: 'relative' }} className="group">
+            <div style={{ width: '100%', maxWidth: '672px', overflow: 'hidden', background: '#111', border: '1px solid var(--border-default)', position: 'relative' }} className="group">
                 <div className="min-h-64 flex items-center justify-center text-gray-400 dark:text-gray-500 relative">
                     {block.content ? (
                         <img src={block.content} alt="Note" className="w-full h-full object-contain max-h-96" />
                     ) : (
                         <div className="flex flex-col items-center p-8">
                             <ImageIcon size={48} className="mb-4 text-gray-300" />
-                            <p style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(228,228,228,0.35)', marginBottom: '16px' }}>Add an image</p>
+                            <p style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', marginBottom: '16px' }}>Add an image</p>
                             <div className="flex flex-col gap-3 w-full max-w-md">
                                 <input
                                     type="file"
@@ -113,7 +113,7 @@ const ImageBlock = ({
                     )}
                     <button
                         onClick={() => onRemoveBlock(block.id)}
-                        style={{ position: 'absolute', top: '8px', right: '8px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'rgba(228,228,228,0.6)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
+                        style={{ position: 'absolute', top: '8px', right: '8px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'var(--text-muted)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
                         className="group-hover:!opacity-100"
                         onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.6)'}
@@ -124,7 +124,7 @@ const ImageBlock = ({
                     {block.content && !block.content.startsWith('data:') && (
                         <button
                             onClick={handleDownload}
-                        style={{ position: 'absolute', top: '8px', right: '44px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'rgba(228,228,228,0.6)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
+                        style={{ position: 'absolute', top: '8px', right: '44px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'var(--text-muted)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
                         className="group-hover:!opacity-100"
                         onMouseEnter={e => e.currentTarget.style.color = '#34d399'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.6)'}
@@ -136,7 +136,7 @@ const ImageBlock = ({
                     {block.content && (
                         <button
                             onClick={() => onBlockChange(block.id, '')}
-                        style={{ position: 'absolute', top: '8px', left: '8px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'rgba(228,228,228,0.6)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
+                        style={{ position: 'absolute', top: '8px', left: '8px', padding: '6px', background: 'rgba(0,0,0,0.55)', color: 'var(--text-muted)', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', backdropFilter: 'blur(4px)' }}
                         className="group-hover:!opacity-100"
                         onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}

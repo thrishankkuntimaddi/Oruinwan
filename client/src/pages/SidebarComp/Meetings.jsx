@@ -71,7 +71,7 @@ const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
 
 // ── Landing / No Huddle Selected View ─────────────────────────────────────
 const LandingView = ({ onStart, onSchedule, starting }) => (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px', background: '#0c0c0c', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
         {/* Ambient glow */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '30%', left: '20%', width: '40vw', height: '40vw', background: 'rgba(184,149,106,0.04)', borderRadius: '50%', filter: 'blur(100px)' }} />
@@ -83,10 +83,10 @@ const LandingView = ({ onStart, onSchedule, starting }) => (
                 <Video size={34} style={{ color: '#b8956a' }} />
             </div>
 
-            <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#e4e4e4', marginBottom: '10px', letterSpacing: '-0.02em', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <h2 style={{ fontSize: '28px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px', letterSpacing: '-0.02em', fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Video Huddles Center
             </h2>
-            <p style={{ color: 'rgba(228,228,228,0.45)', maxWidth: '360px', marginBottom: '32px', fontSize: '14px', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <p style={{ color: 'var(--text-muted)', maxWidth: '360px', marginBottom: '32px', fontSize: '14px', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Start a real-time video call with your team, or select an active huddle from the sidebar to join.
             </p>
 
@@ -110,7 +110,7 @@ const LandingView = ({ onStart, onSchedule, starting }) => (
                 </button>
                 <button
                     onClick={onSchedule}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '10px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(228,228,228,0.6)', fontWeight: 500, fontSize: '13px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%', padding: '10px 24px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontWeight: 500, fontSize: '13px', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e4e4e4'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}
                 >
@@ -122,7 +122,7 @@ const LandingView = ({ onStart, onSchedule, starting }) => (
             {/* Feature Pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '36px' }}>
                 {["HD Video", "Screen Share", "Real-time Audio", "Participants List", "In-call Chat"].map(f => (
-                    <span key={f} style={{ padding: '4px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(228,228,228,0.35)', fontSize: '11px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    <span key={f} style={{ padding: '4px 12px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {f}
                     </span>
                 ))}
@@ -145,7 +145,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
     }, []);
 
     return (
-        <div className="h-full w-full flex flex-col text-white overflow-hidden relative" style={{ background: '#0c0c0c' }}>
+        <div className="h-full w-full flex flex-col text-white overflow-hidden relative" style={{ background: 'var(--bg-base)' }}>
             {/* Ambient Background — amber tones only */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full" style={{ background: 'rgba(184,149,106,0.04)', filter: 'blur(150px)', animation: 'pulse 4s ease-in-out infinite' }} />
@@ -301,7 +301,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
 
 // ── Connecting State ───────────────────────────────────────────────────────
 const ConnectingView = () => (
-    <div className="h-full flex flex-col items-center justify-center text-white" style={{ background: '#0c0c0c' }}>
+    <div className="h-full flex flex-col items-center justify-center text-white" style={{ background: 'var(--bg-base)' }}>
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] rounded-full" style={{ background: 'rgba(184,149,106,0.06)', filter: 'blur(150px)' }} />
         </div>
@@ -316,7 +316,7 @@ const ConnectingView = () => (
             </div>
             <div className="text-center">
                 <h3 className="text-xl font-bold text-white mb-1">Connecting...</h3>
-                <p className="text-sm" style={{ color: 'rgba(228,228,228,0.4)' }}>Establishing secure connection</p>
+                <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Establishing secure connection</p>
             </div>
         </div>
     </div>

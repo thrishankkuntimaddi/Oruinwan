@@ -25,7 +25,7 @@ const T = {
 
 // ─── Statuses ─────────────────────────────────────────────────────────────────
 const WS_STATUSES = [
-    { key: 'To Do',      label: 'TO DO',       color: 'rgba(228,228,228,0.5)',  bg: 'rgba(255,255,255,0.06)' },
+    { key: 'To Do',      label: 'TO DO',       color: 'var(--text-muted)',  bg: 'rgba(255,255,255,0.06)' },
     { key: 'In Progress',label: 'IN PROGRESS',  color: '#60a5fa',               bg: 'rgba(96,165,250,0.1)'   },
     { key: 'In Review',  label: 'IN REVIEW',    color: '#a78bfa',               bg: 'rgba(167,139,250,0.1)'  },
     { key: 'Completed',  label: 'COMPLETED',    color: '#34d399',               bg: 'rgba(52,211,153,0.1)'   },

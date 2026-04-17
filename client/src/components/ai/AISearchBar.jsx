@@ -97,7 +97,7 @@ export default function AISearchBar({ workspaceId, token, onClose }) {
                         }} />
                     )}
                     <kbd style={{
-                        padding: '2px 6px', background: 'rgba(255,255,255,0.08)',
+                        padding: '2px 6px', background: 'var(--bg-active)',
                         border: '1px solid rgba(255,255,255,0.15)', borderRadius: 4,
                         fontSize: 11, color: '#64748b',
                     }}>ESC</kbd>

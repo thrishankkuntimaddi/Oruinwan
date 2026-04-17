@@ -25,7 +25,7 @@ function MarkdownPreview({ content }) {
         .replace(/\n/g, '<br/>');
     return (
         <div
-            style={{ lineHeight: 1.7, fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px', color: 'rgba(228,228,228,0.8)' }}
+            style={{ lineHeight: 1.7, fontFamily: 'Inter, system-ui, sans-serif', fontSize: '14px', color: 'var(--text-muted)' }}
             dangerouslySetInnerHTML={{ __html: `<p style="margin-bottom:12px;color:rgba(228,228,228,0.8);font-family:Inter,system-ui,sans-serif;font-size:14px;line-height:1.7">${html}</p>` }}
         />
     );
@@ -37,21 +37,21 @@ function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }
     const options = allPages.filter(p => p._id !== currentPageId && (!search || p.title.toLowerCase().includes(search.toLowerCase())));
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-            <div style={{ background: '#161616', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)', width: '100%', maxWidth: '360px', margin: '0 16px', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.7)', width: '100%', maxWidth: '360px', margin: '0 16px', overflow: 'hidden' }}>
                 <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                    <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>Link a Page</h3>
+                    <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Link a Page</h3>
                 </div>
                 <div style={{ padding: '14px 18px' }}>
                     <input autoFocus value={search} onChange={e => setSearch(e.target.value)} placeholder="Search pages..."
-                        style={{ width: '100%', padding: '8px 12px', fontSize: '12px', background: '#111', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark' }}
+                        style={{ width: '100%', padding: '8px 12px', fontSize: '12px', background: '#111', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', marginBottom: '10px', boxSizing: 'border-box', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark' }}
                         onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.4)'}
                         onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'}
                     />
                     <div style={{ maxHeight: '210px', overflowY: 'auto' }}>
-                        {options.length === 0 && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', textAlign: 'center', padding: '16px 0', fontFamily: 'monospace' }}>No pages found</p>}
+                        {options.length === 0 && <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', padding: '16px 0', fontFamily: 'monospace' }}>No pages found</p>}
                         {options.map(p => (
                             <button key={p._id} onClick={() => onLink(p._id)}
-                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', textAlign: 'left', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', textAlign: 'left', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                                 onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                             >
@@ -62,7 +62,7 @@ function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }
                 </div>
                 <div style={{ padding: '10px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'flex-end' }}>
                     <button onClick={onClose}
-                        style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        style={{ fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                         onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
                     >Cancel</button>
@@ -76,9 +76,9 @@ function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }
 function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
     const handbookPages = pages.filter(p => p.isHandbook);
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
             <div style={{ height: '52px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-                <h1 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h1 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '16px' }}>📘</span> Company Handbook
                 </h1>
                 <button
@@ -105,7 +105,7 @@ function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
                             <button
                                 key={p._id}
                                 onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${p._id}`)}
-                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', textAlign: 'left', transition: 'border-color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', cursor: 'pointer', textAlign: 'left', transition: 'border-color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                             >
                                 <span className="text-xl">{p.icon || '📄'}</span>
                                 <div className="flex-1 min-w-0">
@@ -292,7 +292,7 @@ const KnowledgePage = () => {
     if (!pageData) return null;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
             {/* Toolbar */}
             <div className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
                 <div className="flex items-center gap-3">
@@ -320,7 +320,7 @@ const KnowledgePage = () => {
                         {/* Link */}
                         <button
                             onClick={() => setShowLinkModal(true)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif' }} onMouseEnter={e => e.currentTarget.style.color = '#b8956a'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif' }} onMouseEnter={e => e.currentTarget.style.color = '#b8956a'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
                         >
                             <Link2 size={13} /> Link page
                         </button>
@@ -352,7 +352,7 @@ const KnowledgePage = () => {
                         onChange={handleTitleChange}
                         placeholder="Untitled Page"
                         style={{
-                            fontSize: '2.25rem', fontWeight: 800, color: '#e4e4e4',
+                            fontSize: '2.25rem', fontWeight: 800, color: 'var(--text-primary)',
                             border: 'none', outline: 'none', padding: 0, marginBottom: '12px',
                             width: '100%', background: 'transparent', fontFamily: 'Inter, system-ui, sans-serif',
                             lineHeight: 1.15,
@@ -381,7 +381,7 @@ const KnowledgePage = () => {
                             />
                         ) : (
                             <button onClick={() => setShowTagInput(true)}
-                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'rgba(228,228,228,0.3)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
                             >
@@ -435,13 +435,13 @@ const KnowledgePage = () => {
                                     <button
                                         key={bl._id}
                                         onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${bl._id}`)}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: '#161616', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 150ms ease', marginBottom: '6px' }}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', cursor: 'pointer', width: '100%', textAlign: 'left', transition: 'background 150ms ease', marginBottom: '6px' }}
                                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                                         onMouseLeave={e => e.currentTarget.style.background = '#161616'}
                                     >
                                         <span style={{ fontSize: '13px' }}>{bl.icon || '📄'}</span>
-                                        <span style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(228,228,228,0.7)', fontFamily: 'Inter, system-ui, sans-serif' }}>{bl.title}</span>
-                                        <ChevronRight size={11} style={{ marginLeft: 'auto', color: 'rgba(228,228,228,0.25)' }} />
+                                        <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>{bl.title}</span>
+                                        <ChevronRight size={11} style={{ marginLeft: 'auto', color: 'var(--text-muted)' }} />
                                     </button>
                                 ))}
                             </div>
