@@ -272,26 +272,26 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
         {/* ── Banner alerts ── */}
         {isEditing && !isReadOnly && isAssigner && initialData?.status !== "Completed" && (
-          <div className="flex items-center gap-2.5 px-5 py-2 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-100 dark:border-blue-800/30 text-blue-700 dark:text-blue-400 text-xs font-medium flex-shrink-0">
-            <Shield size={13} className="flex-shrink-0" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 20px', background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid rgba(59,130,246,0.15)', color: '#3b82f6', fontSize: '12px', fontWeight: 500, flexShrink: 0 }}>
+            <Shield size={13} style={{ flexShrink: 0 }} />
             You are the assigner — you have full editing access.
           </div>
         )}
         {isEditing && isReadOnly && initialData?.status !== "Completed" && (
-          <div className="flex items-center gap-2.5 px-5 py-2 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-800/30 text-amber-700 dark:text-amber-400 text-xs font-medium flex-shrink-0">
-            <Eye size={13} className="flex-shrink-0" />
-            View-only. Only <strong className="ml-1">{initialData?.assigner || "the assigner"}</strong>&nbsp;can edit this task.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 20px', background: 'rgba(184,149,106,0.08)', borderBottom: '1px solid rgba(184,149,106,0.2)', color: '#b8956a', fontSize: '12px', fontWeight: 500, flexShrink: 0 }}>
+            <Eye size={13} style={{ flexShrink: 0 }} />
+            View-only. Only <strong style={{ marginLeft: '4px' }}>{initialData?.assigner || "the assigner"}</strong>&nbsp;can edit this task.
           </div>
         )}
         {initialData?.status === "Completed" && initialData?.completionNote && (
-          <div className="flex items-start gap-2.5 px-5 py-3 bg-emerald-50 dark:bg-emerald-900/20 border-b border-emerald-100 dark:border-emerald-800/30 flex-shrink-0">
-            <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-emerald-800 dark:text-emerald-300 mb-0.5">Completion note</p>
-              <p className="text-xs text-emerald-700 dark:text-emerald-400 italic">"{initialData.completionNote}"</p>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 20px', background: 'rgba(52,211,153,0.07)', borderBottom: '1px solid rgba(52,211,153,0.18)', flexShrink: 0 }}>
+            <CheckCircle2 size={14} style={{ color: '#34d399', flexShrink: 0, marginTop: '1px' }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: '11px', fontWeight: 700, color: '#34d399', marginBottom: '2px' }}>Completion note</p>
+              <p style={{ fontSize: '11px', color: 'rgba(52,211,153,0.8)', fontStyle: 'italic' }}>&#34;{initialData.completionNote}&#34;</p>
             </div>
             {initialData.completedAt && (
-              <span className="text-[10px] text-emerald-500 font-semibold whitespace-nowrap">
+              <span style={{ fontSize: '10px', color: '#34d399', fontWeight: 700, whiteSpace: 'nowrap' }}>
                 {new Date(initialData.completedAt).toLocaleDateString()}
               </span>
             )}
@@ -337,12 +337,12 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
             {/* Attachments / Resources */}
             <div>
-              <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                 <Paperclip size={11} /> Resources
               </label>
-              <div className="space-y-2">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {!isReadOnly && (
-                  <div className="flex gap-2">
+                  <div style={{ display: 'flex', gap: '8px' }}>
                     <input
                       type="text"
                       placeholder="Paste a URL (Figma, Notion, GitHub…)"
@@ -354,7 +354,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                           setNewAttachmentUrl("");
                         }
                       }}
-                      className="flex-1 px-3.5 py-2 text-[12.5px] bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-800 dark:text-white placeholder-gray-300 dark:placeholder-gray-600 transition-all"
+                      style={{ flex: 1, padding: '7px 12px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
+                      onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
+                      onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                     />
                     <button
                       onClick={() => {
@@ -362,22 +364,30 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                         setAttachments([...attachments, { name: newAttachmentUrl, url: newAttachmentUrl, type: "link" }]);
                         setNewAttachmentUrl("");
                       }}
-                      className="px-3 py-2 bg-gray-900 dark:bg-blue-600 text-white rounded-xl text-xs font-semibold hover:bg-gray-800 dark:hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-1"
+                      style={{ padding: '7px 12px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', transition: 'opacity 150ms ease' }}
+                      onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                      onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                     >
                       <Plus size={13} />
                     </button>
                   </div>
                 )}
                 {attachments.length > 0 ? (
-                  <div className="space-y-1.5">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {attachments.map((att, i) => (
-                      <div key={i} className="group flex items-center gap-2.5 px-3 py-2 bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/50 rounded-xl hover:border-blue-200 dark:hover:border-blue-700/50 transition-all">
-                        <LinkIcon size={12} className="text-blue-400 flex-shrink-0" />
-                        <a href={att.url} target="_blank" rel="noopener noreferrer" className="flex-1 text-[12px] text-blue-600 dark:text-blue-400 truncate hover:underline font-medium">
+                      <div key={i} className="group" style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', transition: 'border-color 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
+                        onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}>
+                        <LinkIcon size={12} style={{ color: '#60a5fa', flexShrink: 0 }} />
+                        <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, fontSize: '12px', color: '#60a5fa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500, textDecoration: 'none' }}
+                          onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                          onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}>
                           {att.name || att.url}
                         </a>
                         {!isReadOnly && (
-                          <button onClick={() => setAttachments(attachments.filter((_, j) => j !== i))} className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all p-0.5">
+                          <button onClick={() => setAttachments(attachments.filter((_, j) => j !== i))} style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '2px', transition: 'color 150ms ease', flexShrink: 0, opacity: 0 }} className="group-hover:opacity-100"
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--state-danger)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
                             <X size={13} />
                           </button>
                         )}
@@ -385,7 +395,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     ))}
                   </div>
                 ) : (
-                  <p className="text-[11.5px] text-gray-300 dark:text-gray-600 italic px-1">No resources added yet.</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '4px' }}>No resources added yet.</p>
                 )}
               </div>
             </div>
@@ -393,29 +403,29 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             {/* Member multi-select section — shown inline on left for individual type */}
             {assignmentType === "individual" && (
               <div>
-                <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                   <Users size={11} /> Assign Members
                 </label>
-                <div className="border border-gray-200 dark:border-gray-700/60 rounded-xl overflow-hidden">
+                <div style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
                   {/* search */}
                   {!isReadOnly && (
-                    <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-800">
+                    <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
                       <input
                         type="text"
                         placeholder="Search members…"
                         value={memberSearch}
                         onChange={(e) => setMemberSearch(e.target.value)}
-                        className="w-full text-[12px] bg-transparent outline-none text-gray-700 dark:text-gray-200 placeholder-gray-300 dark:placeholder-gray-600"
+                        style={{ width: '100%', fontSize: '12px', background: 'transparent', outline: 'none', color: 'var(--text-primary)', border: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}
                       />
                     </div>
                   )}
-                  <div className="max-h-44 overflow-y-auto divide-y divide-gray-50 dark:divide-gray-800/60" style={{ scrollbarWidth: "thin" }}>
+                  <div style={{ maxHeight: '176px', overflowY: 'auto', scrollbarWidth: 'thin' }}>
                     {loadingMembers ? (
-                      <div className="flex items-center gap-2 justify-center py-6 text-gray-400 text-xs">
-                        <Loader2 size={14} className="animate-spin" /> Loading members…
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: '12px' }}>
+                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> Loading members…
                       </div>
                     ) : filteredMembers.length === 0 ? (
-                      <p className="text-center text-[12px] text-gray-400 py-5">No members found.</p>
+                      <p style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', padding: '20px 0' }}>No members found.</p>
                     ) : filteredMembers.map((m) => {
                       const id = m._id || m.id;
                       const sel = selectedMembers.includes(id);
@@ -425,14 +435,16 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                           type="button"
                           disabled={isReadOnly}
                           onClick={() => toggleMember(id)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 text-left transition-all ${sel ? "bg-blue-50 dark:bg-blue-900/20" : "hover:bg-gray-50 dark:hover:bg-gray-800/60"} ${isReadOnly ? "cursor-default" : ""}`}
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', textAlign: 'left', background: sel ? 'rgba(59,130,246,0.08)' : 'transparent', border: 'none', borderBottom: '1px solid var(--border-subtle)', cursor: isReadOnly ? 'default' : 'pointer', transition: 'background 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                          onMouseEnter={e => { if (!sel && !isReadOnly) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                          onMouseLeave={e => { if (!sel) e.currentTarget.style.background = sel ? 'rgba(59,130,246,0.08)' : 'transparent'; }}
                         >
                           <Avatar name={m.username || m.email} size="sm" />
-                          <span className={`flex-1 text-[12.5px] font-medium ${sel ? "text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-200"}`}>
+                          <span style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: sel ? '#3b82f6' : 'var(--text-primary)' }}>
                             {m.username || m.email}
                           </span>
-                          <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 transition-all ${sel ? "bg-blue-600 border-blue-600" : "border-gray-300 dark:border-gray-600"}`}>
-                            {sel && <Check size={10} className="text-white" strokeWidth={3} />}
+                          <div style={{ width: '16px', height: '16px', border: `2px solid ${sel ? '#3b82f6' : 'var(--border-accent)'}`, background: sel ? '#3b82f6' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
+                            {sel && <Check size={10} style={{ color: '#ffffff' }} strokeWidth={3} />}
                           </div>
                         </button>
                       );
@@ -442,19 +454,19 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
                 {/* Selected summary */}
                 {selectedMembers.length > 0 && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <div className="flex -space-x-2">
+                  <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', marginLeft: '-8px' }}>
                       {selectedMembers.slice(0, 4).map((id) => {
                         const m = availableMembers.find((x) => (x._id || x.id) === id);
                         return m ? <Avatar key={id} name={m.username || m.email} size="sm" /> : null;
                       })}
                       {selectedMembers.length > 4 && (
-                        <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 ring-2 ring-white dark:ring-gray-900">
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: 'var(--bg-active)', border: '2px solid var(--bg-surface)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)' }}>
                           +{selectedMembers.length - 4}
                         </div>
                       )}
                     </div>
-                    <span className="text-[11.5px] text-gray-400">
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
                       {selectedMembers.length} member{selectedMembers.length > 1 ? "s" : ""} selected
                     </span>
                   </div>
@@ -462,14 +474,14 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
                 {/* Task mode toggle for multiple assigns */}
                 {selectedMembers.length > 1 && !isReadOnly && (
-                  <div className="mt-3 p-3 bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-xl">
-                    <p className="text-[10.5px] font-bold uppercase tracking-widest text-blue-500 mb-2">Task Mode</p>
-                    <div className="grid grid-cols-2 gap-2">
+                  <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#3b82f6', marginBottom: '8px' }}>Task Mode</p>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                       {[{ id: "split", emoji: "📋", label: "Split", sub: "Each gets their own copy" }, { id: "shared", emoji: "🤝", label: "Shared", sub: "Collaborate together" }].map((m) => (
                         <button key={m.id} type="button" onClick={() => setTaskMode(m.id)}
-                          className={`px-3 py-2.5 rounded-xl border text-left transition-all ${taskMode === m.id ? "bg-blue-600 border-blue-600 text-white shadow-lg shadow-blue-500/25" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-blue-300"}`}>
-                          <div className="text-sm font-bold">{m.emoji} {m.label}</div>
-                          <div className={`text-[10px] mt-0.5 ${taskMode === m.id ? "text-blue-200" : "text-gray-400"}`}>{m.sub}</div>
+                          style={{ padding: '10px', border: `1px solid ${taskMode === m.id ? '#3b82f6' : 'var(--border-default)'}`, background: taskMode === m.id ? '#3b82f6' : 'var(--bg-hover)', cursor: 'pointer', textAlign: 'left', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: taskMode === m.id ? '#ffffff' : 'var(--text-primary)' }}>{m.emoji} {m.label}</div>
+                          <div style={{ fontSize: '10px', marginTop: '2px', color: taskMode === m.id ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)' }}>{m.sub}</div>
                         </button>
                       ))}
                     </div>
@@ -481,20 +493,20 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             {/* Channel assignment */}
             {assignmentType === "channel" && (
               <div>
-                <label className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                   <Hash size={11} /> Full Channel
                 </label>
                 <select
                   value={selectedChannel}
                   onChange={(e) => setSelectedChannel(e.target.value)}
                   disabled={isReadOnly || (!!project && channels.some((c) => c.label === project || c.id === project))}
-                  className="w-full px-3.5 py-2.5 text-[13px] bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700/60 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-gray-700 dark:text-gray-200 font-medium disabled:opacity-60 disabled:cursor-not-allowed"
+                  style={{ width: '100%', padding: '8px 10px', fontSize: '13px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', opacity: (isReadOnly || (!!project && channels.some((c) => c.label === project || c.id === project))) ? 0.6 : 1, cursor: (isReadOnly || (!!project && channels.some((c) => c.label === project || c.id === project))) ? 'not-allowed' : 'pointer' }}
                 >
                   <option value="">Select target channel</option>
                   {channels.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                 </select>
                 {selectedChannel && (
-                  <p className="flex items-center gap-1.5 mt-1.5 text-[11.5px] text-blue-500 font-medium">
+                  <p style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '11px', color: '#3b82f6', fontWeight: 500 }}>
                     <Users size={11} /> All channel members will be notified.
                   </p>
                 )}
@@ -508,18 +520,18 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             {/* Status */}
             {isEditing && (
               <div>
-                <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Status</p>
+                <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Status</p>
                 {isReadOnly ? (
-                  <span className={`inline-flex items-center gap-1.5 text-[12px] font-semibold px-2.5 py-1 rounded-lg ${statConf.badge}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${statConf.dot}`} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, padding: '4px 10px', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}>
+                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: statConf.dot?.replace('bg-', '') || '#888' }} />
                     {status}
                   </span>
                 ) : (
                   <Dropdown
                     trigger={
-                      <button className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg border text-[12px] font-semibold cursor-pointer transition-all hover:shadow-sm ${statConf.badge} border-transparent`}>
-                        <span className="flex items-center gap-1.5">
-                          <span className={`w-1.5 h-1.5 rounded-full ${statConf.dot}`} />
+                      <button style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px' }}>{statConf.icon}</span>
                           {status}
                         </span>
                         <ChevronDown size={12} />
@@ -530,10 +542,12 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                       const c = STATUS_CONFIG[s];
                       return (
                         <button key={s} onClick={() => { setStatus(s); close(); }}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2 text-[12.5px] font-medium transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/60 ${status === s ? "text-blue-600 bg-blue-50 dark:bg-blue-900/20 dark:text-blue-400" : "text-gray-700 dark:text-gray-200"}`}>
-                          <span className={`w-2 h-2 rounded-full ${c.dot}`} />
+                          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, background: status === s ? 'rgba(59,130,246,0.08)' : 'transparent', color: status === s ? '#3b82f6' : 'var(--text-primary)', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                          onMouseEnter={e => { if (status !== s) e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                          onMouseLeave={e => { if (status !== s) e.currentTarget.style.background = 'transparent'; }}>
+                          <span style={{ fontSize: '13px' }}>{c.icon}</span>
                           {s}
-                          {status === s && <Check size={11} className="ml-auto text-blue-500" />}
+                          {status === s && <Check size={11} style={{ marginLeft: 'auto', color: '#3b82f6' }} />}
                         </button>
                       );
                     })}
@@ -582,10 +596,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
             {/* Channel */}
             <div>
-              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Channel</p>
+              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Channel</p>
               {isReadOnly ? (
-                <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-200">
-                  <Hash size={11} className="text-gray-400" />{project || "—"}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  <Hash size={11} style={{ color: 'var(--text-muted)' }} />{project || "—"}
                 </span>
               ) : (
                 <select
@@ -606,17 +620,17 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
             {/* Due date */}
             <div>
-              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Due Date</p>
+              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Due Date</p>
               {isReadOnly ? (
-                <div className="space-y-0.5">
-                  <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-200">
-                    <Calendar size={11} className="text-gray-400" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <Calendar size={11} style={{ color: 'var(--text-muted)' }} />
                     {dueDate ? new Date(dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
                   </span>
-                  {dueDateLabel && <p className={`text-[10.5px] font-semibold ml-4 ${dueDateLabel.color}`}>{dueDateLabel.text}</p>}
+                  {dueDateLabel && <p style={{ fontSize: '10px', fontWeight: 700, marginLeft: '16px', color: dueDateLabel.color?.includes('red') ? 'var(--state-danger)' : dueDateLabel.color?.includes('orange') ? '#fb923c' : dueDateLabel.color?.includes('amber') ? '#f59e0b' : 'var(--text-muted)' }}>{dueDateLabel.text}</p>}
                 </div>
               ) : (
-                <div className="space-y-1">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <input
                     type="date"
                     value={dueDate}
@@ -625,19 +639,19 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     max="2100-12-31"
                     style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'light', boxSizing: 'border-box' }}
                   />
-                  {dueDateLabel && <p className={`text-[10.5px] font-semibold ${dueDateLabel.color}`}>{dueDateLabel.text}</p>}
+                  {dueDateLabel && <p style={{ fontSize: '10px', fontWeight: 700, color: dueDateLabel.color?.includes('red') ? 'var(--state-danger)' : dueDateLabel.color?.includes('orange') ? '#fb923c' : dueDateLabel.color?.includes('amber') ? '#f59e0b' : 'var(--text-muted)' }}>{dueDateLabel.text}</p>}
                 </div>
               )}
             </div>
 
             {/* Assign to type */}
             <div>
-              <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">Assignee</p>
+              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Assignee</p>
               {isReadOnly ? (
-                <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-gray-700 dark:text-gray-200">
-                  {assignmentType === "self" && <><User size={11} className="text-gray-400" /> Me</>}
-                  {assignmentType === "individual" && <><Users size={11} className="text-gray-400" /> {selectedMembers.length} member{selectedMembers.length !== 1 ? "s" : ""}</>}
-                  {assignmentType === "channel" && <><Hash size={11} className="text-gray-400" /> Full Channel</>}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                  {assignmentType === "self" && <><User size={11} style={{ color: 'var(--text-muted)' }} /> Me</>}
+                  {assignmentType === "individual" && <><Users size={11} style={{ color: 'var(--text-muted)' }} /> {selectedMembers.length} member{selectedMembers.length !== 1 ? "s" : ""}</>}
+                  {assignmentType === "channel" && <><Hash size={11} style={{ color: 'var(--text-muted)' }} /> Full Channel</>}
                 </span>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -665,12 +679,12 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             {/* Assignees avatars (read mode) */}
             {isEditing && initialData?.assignees?.length > 0 && (
               <div>
-                <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">People</p>
-                <div className="flex flex-wrap gap-1.5">
+                <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>People</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                   {initialData.assignees.map((a) => (
-                    <div key={a._id} className="flex items-center gap-1.5 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-full pr-2.5 pl-0.5 py-0.5">
+                    <div key={a._id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', borderRadius: '999px', padding: '2px 10px 2px 2px' }}>
                       <Avatar name={a.username || a.email} size="sm" />
-                      <span className="text-[11px] font-medium text-gray-700 dark:text-gray-200 max-w-[80px] truncate">{a.username || a.email}</span>
+                      <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-primary)', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.username || a.email}</span>
                     </div>
                   ))}
                 </div>

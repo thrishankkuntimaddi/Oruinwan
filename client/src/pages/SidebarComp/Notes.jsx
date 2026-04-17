@@ -513,8 +513,8 @@ ${blockHtml}
                             onClick={() => setShowShareModal(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                             title="Share note"
-                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}
                         >
                             <Users size={13} /> Share
                         </button>
@@ -643,7 +643,7 @@ ${blockHtml}
                                 <button onClick={() => setShowTagInput(true)}
                                     style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
                                     onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
+                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                                 >
                                     <Tag size={11} /><Plus size={9} /> tag
                                 </button>
@@ -659,11 +659,11 @@ ${blockHtml}
                         <div
                             style={{ marginTop: '24px', padding: '12px 0', fontSize: '12px', color: 'var(--text-muted)', cursor: 'text', userSelect: 'none', transition: 'color 150ms ease' }}
                             onClick={() => addBlock('text', '')}
-                            onMouseEnter={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                         >
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                Type <kbd style={{ padding: '2px 6px', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--border-default)', fontSize: '11px', fontFamily: 'monospace' }}>/</kbd> to insert a block, or click to add text
+                                Type <kbd style={{ padding: '2px 6px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', fontSize: '11px', fontFamily: 'monospace' }}>/</kbd> to insert a block, or click to add text
                             </span>
                         </div>
 
@@ -685,7 +685,7 @@ ${blockHtml}
                                     onClick={() => addBlock(type, content ?? '', meta || {})}
                                     style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                                     onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.background = 'transparent'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                                 >
                                     <span style={{ fontSize: '11px' }}>{emoji}</span> {label}
                                 </button>

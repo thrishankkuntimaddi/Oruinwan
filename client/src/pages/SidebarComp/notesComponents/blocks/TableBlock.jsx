@@ -29,7 +29,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-4">
-            <div style={{ border: '1px solid var(--border-default)', background: '#111', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-default)', background: 'var(--bg-surface)', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         {/* Header */}
@@ -59,7 +59,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                     </th>
                                 ))}
                                 {/* Add column */}
-                                <th style={{ width: '36px', borderBottom: '1px solid var(--border-default)', background: 'rgba(255,255,255,0.02)' }}>
+                                <th style={{ width: '36px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-hover)' }}>
                                     <button
                                         onClick={addCol}
                                         style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 6px', transition: 'color 150ms ease' }}
@@ -76,13 +76,13 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         {/* Body */}
                         <tbody>
                             {data.rows.map((row, ri) => (
-                                <tr key={ri} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                                <tr key={ri} style={{ borderBottom: '1px solid var(--border-subtle)' }}
                                     className="group/row"
-                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                 >
                                     {row.map((cellVal, ci) => (
-                                        <td key={ci} style={{ ...cell, borderRight: ci < row.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                                        <td key={ci} style={{ ...cell, borderRight: ci < row.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
                                             <input
                                                 value={cellVal}
                                                 onChange={e => updateCell(ri, ci, e.target.value)}
@@ -113,7 +113,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 </div>
 
                 {/* Footer */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'var(--bg-hover)', borderTop: '1px solid var(--border-subtle)' }}>
                     <button
                         onClick={addRow}
                         style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}

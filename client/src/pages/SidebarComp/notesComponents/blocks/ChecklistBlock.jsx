@@ -41,14 +41,14 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-3">
-            <div style={{ border: '1px solid var(--border-default)', background: '#111', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-default)', background: 'var(--bg-surface)', overflow: 'hidden' }}>
 
                 {/* Progress header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px 8px' }}>
-                    <div style={{ flex: 1, height: '3px', background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, height: '3px', background: 'var(--bg-active)', overflow: 'hidden' }}>
                         <div style={{ height: '100%', background: pct === 100 ? '#34d399' : '#b8956a', width: `${pct}%`, transition: 'width 500ms ease' }} />
                     </div>
-                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: pct === 100 ? '#34d399' : 'rgba(228,228,228,0.35)', minWidth: '32px', textAlign: 'right' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: pct === 100 ? '#34d399' : 'var(--text-muted)', minWidth: '32px', textAlign: 'right' }}>
                         {done}/{total}
                     </span>
                     <button
@@ -67,19 +67,19 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     {items.map((item, idx) => (
                         <div key={item.id} className="group/item"
                             style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 4px', transition: 'background 100ms ease' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                             {/* Checkbox */}
                             <button
                                 onClick={() => toggleItem(item.id)}
                                 style={{
-                                    flexShrink: 0, width: '16px', height: '16px', border: item.done ? '2px solid #34d399' : '2px solid rgba(255,255,255,0.2)',
+                                    flexShrink: 0, width: '16px', height: '16px', border: item.done ? '2px solid #34d399' : '2px solid var(--border-accent)',
                                     background: item.done ? '#34d399' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     cursor: 'pointer', transition: 'all 150ms ease',
                                 }}
                                 onMouseEnter={e => { if (!item.done) e.currentTarget.style.borderColor = '#34d399'; }}
-                                onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                                onMouseLeave={e => { if (!item.done) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                             >
                                 {item.done && (
                                     <svg width="8" height="6" viewBox="0 0 10 8" fill="none">
@@ -96,7 +96,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                 placeholder="To-do item..."
                                 style={{
                                     flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px',
-                                    color: item.done ? 'rgba(228,228,228,0.3)' : '#e4e4e4',
+                                    color: item.done ? 'var(--text-muted)' : 'var(--text-primary)',
                                     textDecoration: item.done ? 'line-through' : 'none',
                                     transition: 'all 200ms ease', fontFamily: 'Inter, system-ui, sans-serif',
                                 }}
@@ -125,7 +125,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; e.currentTarget.style.background = 'rgba(184,149,106,0.04)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.3)'; e.currentTarget.style.background = 'transparent'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                 >
                     <Plus size={12} /> Add item
                 </button>

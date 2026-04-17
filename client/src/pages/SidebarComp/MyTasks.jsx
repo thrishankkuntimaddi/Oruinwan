@@ -251,7 +251,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
 
             {/* Due date */}
             {task.dueDate && (
-              <span className={`flex items-center gap-1 text-[10px] font-medium ${isOverdue(task) ? 'text-red-600' : 'text-gray-400'}`}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: isOverdue(task) ? 'var(--state-danger)' : 'var(--text-muted)' }}>
                 <Calendar size={9} />
                 {fmtDate(task.dueDate)}
                 {isOverdue(task) && ' · Overdue'}
@@ -260,13 +260,13 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
 
             {/* From/To */}
             {isIncoming && (
-              <span className="text-[10px] text-gray-400">
-                From: <span className="font-medium text-gray-600">{task.assigner}</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                From: <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{task.assigner}</span>
               </span>
             )}
             {isGiven && (
-              <span className="text-[10px] text-gray-400">
-                To: <span className="font-medium text-gray-600">{task.assignee}</span>
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                To: <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{task.assignee}</span>
               </span>
             )}
           </div>
@@ -282,12 +282,16 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
           {isDeleted ? (
             <>
               <button onClick={e => { e.stopPropagation(); onRestore(task.id); }}
-                className="p-1.5 rounded text-green-600 hover:bg-green-50 transition-colors"
+                style={{ padding: '6px', color: '#3a8f6a', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'background 150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(58,143,106,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 title="Restore">
                 <RotateCcw size={13} />
               </button>
               <button onClick={e => { e.stopPropagation(); onPermanentDelete(task.id); }}
-                className="p-1.5 rounded text-red-500 hover:bg-red-50 transition-colors"
+                style={{ padding: '6px', color: 'var(--state-danger)', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'background 150ms ease' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,64,64,0.1)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 title="Delete forever">
                 <Trash2 size={13} />
               </button>
@@ -297,14 +301,18 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
               {task.transferRequest?.status !== 'pending' && (
                 <button onClick={e => { e.stopPropagation(); onTransferRequest(task); }}
                   title="Request transfer"
-                  className="p-1.5 rounded text-purple-500 hover:bg-purple-50 transition-colors">
+                  style={{ padding: '6px', color: '#a78bfa', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'background 150ms ease' }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(167,139,250,0.1)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                   <RotateCcw size={13} />
                 </button>
               )}
             </>
           ) : (
             <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
-              className="p-1.5 rounded text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+              style={{ padding: '6px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', borderRadius: '3px', transition: 'all 150ms ease' }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; e.currentTarget.style.background = 'rgba(201,64,64,0.08)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
               title="Delete">
               <Trash2 size={13} />
             </button>
@@ -871,8 +879,9 @@ export default function MyTasks() {
 
                 {canCreate && (
                   <button onClick={() => { setEditingTask(null); setShowModal(true); }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white rounded-sm transition-opacity hover:opacity-90"
-                    style={{ background: JIRA_BLUE }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', background: JIRA_BLUE, border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+                    onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                    onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
                     <Plus size={13} strokeWidth={2.5} /> Create
                   </button>
                 )}
@@ -943,7 +952,7 @@ export default function MyTasks() {
               /* List view (default) */
               <div className="h-full overflow-y-auto" style={{ background: BOARD_BG, scrollbarWidth: 'thin' }}>
                 {/* Table header */}
-                <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: '#0a0a0a', borderBottom: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontFamily: 'monospace', zIndex: 10 }}>
+                <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--bg-active)', borderBottom: `1px solid ${BORDER_COLOR}`, borderTop: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontFamily: 'monospace', zIndex: 10 }}>
                   <span style={{ width: '16px', flexShrink: 0 }} />
                   <span style={{ flex: 1 }}>Summary</span>
                   <span style={{ width: '112px', textAlign: 'center' }}>Channel</span>

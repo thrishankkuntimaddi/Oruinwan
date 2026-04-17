@@ -19,19 +19,19 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
     return (
         <div className="group relative mb-2">
         <div style={{
-                border: open ? '1px solid rgba(255,255,255,0.08)' : '1px solid transparent',
+            border: open ? '1px solid var(--border-default)' : '1px solid transparent',
                 transition: 'border 200ms ease, box-shadow 200ms ease',
                 overflow: 'hidden',
-                boxShadow: open ? '0 4px 20px rgba(0,0,0,0.3)' : 'none',
+                boxShadow: open ? '0 4px 20px rgba(0,0,0,0.15)' : 'none',
             }}>
                 {/* Header */}
                 <div
-                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', cursor: 'pointer', transition: 'background 150ms ease', background: open ? 'rgba(255,255,255,0.04)' : 'transparent' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', cursor: 'pointer', transition: 'background 150ms ease', background: open ? 'var(--bg-hover)' : 'transparent' }}
                     onClick={toggle}
-                    onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                    onMouseEnter={e => { if (!open) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                     onMouseLeave={e => { if (!open) e.currentTarget.style.background = 'transparent'; }}
                 >
-                    <div style={{ flexShrink: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: open ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.06)', transition: 'background 150ms ease' }}>
+                    <div style={{ flexShrink: 0, width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: open ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)', transition: 'background 150ms ease' }}>
                         <ChevronRight
                             size={12}
                             style={{ transition: 'transform 200ms ease', transform: open ? 'rotate(90deg)' : 'rotate(0deg)', color: open ? '#b8956a' : 'rgba(228,228,228,0.35)' }}
@@ -59,7 +59,7 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
                 {/* Body — animated slide */}
                 {open && (
-                    <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.015)' }}>
+                    <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-base)' }}>
                         <textarea
                             value={body}
                             onChange={e => setBody(e.target.value)}

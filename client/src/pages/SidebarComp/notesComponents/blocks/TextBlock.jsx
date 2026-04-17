@@ -74,15 +74,15 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
     };
 
     const fmtBtn = { padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 100ms ease', display: 'flex', alignItems: 'center', justifyContent: 'center' };
-    const fmtBtnHover = (e) => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; };
-    const fmtBtnLeave = (e) => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.background = 'transparent'; };
-    const sep = { width: '1px', height: '14px', background: 'rgba(255,255,255,0.1)', margin: '0 3px', flexShrink: 0 };
+    const fmtBtnHover = (e) => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; };
+    const fmtBtnLeave = (e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; };
+    const sep = { width: '1px', height: '14px', background: 'var(--border-default)', margin: '0 3px', flexShrink: 0 };
 
     return (
         <div className="group relative mb-1">
             {/* Format Toolbar */}
             <div className="hidden group-focus-within:flex items-center gap-0.5 mb-2 w-fit"
-                style={{ background: '#1e1e1e', border: '1px solid rgba(255,255,255,0.1)', padding: '3px 6px', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', padding: '3px 6px', boxShadow: 'var(--card-shadow)' }}>
                 <button onMouseDown={e => { e.preventDefault(); execFormat('bold'); }} style={fmtBtn} onMouseEnter={fmtBtnHover} onMouseLeave={fmtBtnLeave} title="Bold"><Bold size={12} /></button>
                 <button onMouseDown={e => { e.preventDefault(); execFormat('italic'); }} style={fmtBtn} onMouseEnter={fmtBtnHover} onMouseLeave={fmtBtnLeave} title="Italic"><Italic size={12} /></button>
                 <button onMouseDown={e => { e.preventDefault(); execFormat('strikeThrough'); }} style={fmtBtn} onMouseEnter={fmtBtnHover} onMouseLeave={fmtBtnLeave} title="Strikethrough"><Strikethrough size={12} /></button>
@@ -136,7 +136,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
                 <div
                     style={{ position: 'absolute', top: 0, left: 0, color: 'var(--text-muted)', fontSize: '15px', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 400, lineHeight: 1.75, pointerEvents: 'none', userSelect: 'none', display: block.content && block.content !== '<br>' ? 'none' : undefined }}
                 >
-                    Type <span style={{ fontFamily: 'monospace', fontSize: '11px', padding: '1px 5px', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--border-default)' }}>/</span> for commands, or start typing…
+                    Type <span style={{ fontFamily: 'monospace', fontSize: '11px', padding: '1px 5px', background: 'var(--bg-active)', border: '1px solid var(--border-default)' }}>/</span> for commands, or start typing…
                 </div>
             </div>
         </div>

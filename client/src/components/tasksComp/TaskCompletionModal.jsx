@@ -10,75 +10,78 @@ export default function TaskCompletionModal({ task, onClose, onConfirm, mode = "
         onConfirm(note);
     };
 
+    // Theme-aware accent colours
+    const accentColor  = isDeletion ? 'var(--state-danger)'  : isPersonal ? 'var(--state-success)' : '#3b82f6';
+    const accentBg     = isDeletion ? 'rgba(201,64,64,0.07)' : isPersonal ? 'rgba(58,143,106,0.07)' : 'rgba(59,130,246,0.07)';
+    const accentBorder = isDeletion ? 'rgba(201,64,64,0.15)' : isPersonal ? 'rgba(58,143,106,0.15)' : 'rgba(59,130,246,0.15)';
+
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-md transition-opacity">
-            <div className="bg-white/95 backdrop-blur-2xl rounded-3xl w-full max-w-md shadow-2xl shadow-blue-900/10 transform transition-all scale-100 overflow-hidden border border-white/50">
+        <div
+            style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-overlay)', backdropFilter: 'blur(6px)' }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '420px', overflow: 'hidden', boxShadow: 'var(--card-shadow)' }}>
 
                 {/* Header */}
-                <div className={`px-6 py-4 border-b border-gray-100/50 flex justify-between items-center ${isDeletion ? "bg-gradient-to-r from-red-50/80 to-orange-50/80" : isPersonal ? "bg-gradient-to-r from-green-50/80 to-emerald-50/80" : "bg-gradient-to-r from-blue-50/80 to-indigo-50/80"}`}>
-                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                        {isDeletion ? (
-                            <>
-                                <span className="p-1.5 bg-red-100/50 rounded-lg text-red-600"><Trash2 size={18} /></span>
-                                Delete Task?
-                            </>
-                        ) : isPersonal ? (
-                            <>
-                                <span className="p-1.5 bg-green-100/50 rounded-lg text-green-600"><PartyPopper size={18} /></span>
-                                Task Completed!
-                            </>
-                        ) : (
-                            <>
-                                <span className="p-1.5 bg-blue-100/50 rounded-lg text-blue-600"><CheckCircle2 size={18} /></span>
-                                Submit Completion
-                            </>
-                        )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', background: accentBg }}>
+                    <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
+                        <span style={{ padding: '6px', background: accentBorder, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentColor }}>
+                            {isDeletion ? <Trash2 size={16} /> : isPersonal ? <PartyPopper size={16} /> : <CheckCircle2 size={16} />}
+                        </span>
+                        {isDeletion ? 'Delete Task?' : isPersonal ? 'Task Completed!' : 'Submit Completion'}
                     </h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 hover:bg-white/50 p-2 rounded-full transition-colors">
-                        <X size={20} />
+                    <button
+                        onClick={onClose}
+                        style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'color 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                    >
+                        <X size={18} />
                     </button>
                 </div>
 
                 {/* Body */}
-                <div className="p-6 space-y-4">
+                <div style={{ padding: '20px' }}>
                     {isDeletion ? (
-                        <div className="text-center space-y-3">
-                            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-2 border border-red-100 shadow-sm">
-                                <Trash2 size={32} />
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(201,64,64,0.08)', border: '1px solid rgba(201,64,64,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--state-danger)' }}>
+                                <Trash2 size={28} />
                             </div>
-                            <p className="text-gray-600">
-                                Are you sure you want to move <strong>{task.title}</strong> to trash?
+                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                                Are you sure you want to move <strong style={{ color: 'var(--text-primary)' }}>{task.title}</strong> to trash?
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
                                 You can restore it later from the <strong>Deleted</strong> tab.
                             </p>
                         </div>
                     ) : isPersonal ? (
-                        <div className="text-center space-y-3">
-                            <div className="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-2 border border-green-100 shadow-sm">
-                                <CheckCircle2 size={32} />
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
+                            <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(58,143,106,0.08)', border: '1px solid rgba(58,143,106,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--state-success)' }}>
+                                <CheckCircle2 size={28} />
                             </div>
-                            <p className="text-gray-600">
-                                Great job! You've completed <strong>{task.title}</strong>.
+                            <p style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                                Great job! You've completed <strong style={{ color: 'var(--text-primary)' }}>{task.title}</strong>.
                             </p>
-                            <p className="text-sm text-gray-500">
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
                                 This task will be moved to your <strong>Completed</strong> history.
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-3">
-                            <p className="text-gray-600 text-sm">
-                                You are marking <strong>{task.title}</strong> as complete. Please provide a brief summary of the work done for <strong>{task.assigner}</strong>.
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
+                                You are marking <strong style={{ color: 'var(--text-primary)' }}>{task.title}</strong> as complete. Please provide a brief summary of the work done for <strong style={{ color: 'var(--text-primary)' }}>{task.assigner}</strong>.
                             </p>
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide ml-1">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <label style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                                     Completion Note
                                 </label>
                                 <textarea
                                     placeholder="e.g. Fixed the login bug by updating the auth token logic..."
-                                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200/60 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all outline-none text-gray-800 placeholder-gray-400 min-h-[100px] resize-none text-sm shadow-sm"
+                                    style={{ width: '100%', padding: '10px 12px', fontSize: '13px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', resize: 'none', minHeight: '90px', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
+                                    onFocus={e => e.target.style.borderColor = 'rgba(59,130,246,0.5)'}
+                                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
                                     autoFocus
                                 />
                             </div>
@@ -87,31 +90,27 @@ export default function TaskCompletionModal({ task, onClose, onConfirm, mode = "
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50/50 border-t border-gray-100/50 flex justify-end gap-3 sticky bottom-0">
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '12px 20px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-base)' }}>
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 rounded-xl text-gray-600 font-bold text-sm hover:bg-gray-100 transition-colors"
+                        style={{ padding: '7px 16px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleConfirm}
-                        className={`px-6 py-2 rounded-xl text-white font-bold shadow-lg transition-all hover:scale-[1.02] active:scale-95 text-sm flex items-center gap-2
-                ${isDeletion ? "bg-red-600 hover:bg-red-700 shadow-red-500/30" : isPersonal ? "bg-green-600 hover:bg-green-700 shadow-green-500/30" : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/30"}
-            `}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 20px', background: accentColor, border: 'none', color: '#ffffff', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                     >
                         {isDeletion ? (
-                            <>
-                                <Trash2 size={16} /> Delete Task
-                            </>
+                            <><Trash2 size={14} /> Delete Task</>
                         ) : isPersonal ? (
-                            <>
-                                <CheckCircle2 size={16} /> Complete Task
-                            </>
+                            <><CheckCircle2 size={14} /> Complete Task</>
                         ) : (
-                            <>
-                                <Send size={16} /> Submit & Complete
-                            </>
+                            <><Send size={14} /> Submit &amp; Complete</>
                         )}
                     </button>
                 </div>

@@ -208,12 +208,12 @@ html.public-scroll [id] {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #2a2a2a;
+  background: var(--border-accent);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3a3a3a;
+  background: var(--border-hover);
 }
 
 /* Dark Mode Scrollbar */
@@ -549,3 +549,65 @@ html.light .bg-gray-300            { background-color: var(--bg-active) !importa
 
 /* Progress bar track */
 html.light .dark\:bg-gray-700 { background-color: var(--bg-active) !important; }
+
+/* ── Task UI — additional light mode overrides ───────────────────────────── */
+
+/* text-gray-800 (used in task search inputs, modal text) */
+html.light .text-gray-800 { color: var(--text-primary) !important; }
+
+/* Blue tint blocks used by TaskModal banners before migration */
+html.light .bg-blue-50,
+html.light .dark\:bg-blue-900\/20 { background-color: rgba(59,130,246,0.07) !important; }
+html.light .border-blue-100,
+html.light .dark\:border-blue-800\/30 { border-color: rgba(59,130,246,0.18) !important; }
+html.light .text-blue-700,
+html.light .dark\:text-blue-400 { color: #2563eb !important; }
+
+/* Amber/amber tint blocks */
+html.light .bg-amber-50,
+html.light .dark\:bg-amber-900\/20 { background-color: rgba(184,149,106,0.07) !important; }
+html.light .border-amber-100,
+html.light .dark\:border-amber-800\/30 { border-color: rgba(184,149,106,0.18) !important; }
+html.light .text-amber-700,
+html.light .dark\:text-amber-400 { color: #92400e !important; }
+
+/* Emerald/green tint blocks */
+html.light .bg-emerald-50,
+html.light .dark\:bg-emerald-900\/20 { background-color: rgba(52,211,153,0.07) !important; }
+html.light .border-emerald-100,
+html.light .dark\:border-emerald-800\/30 { border-color: rgba(52,211,153,0.18) !important; }
+html.light .text-emerald-800,
+html.light .dark\:text-emerald-300 { color: #065f46 !important; }
+html.light .text-emerald-700,
+html.light .dark\:text-emerald-400 { color: var(--state-success) !important; }
+html.light .text-emerald-500 { color: var(--state-success) !important; }
+
+/* Red tint blocks */
+html.light .bg-red-50 { background-color: rgba(201,64,64,0.06) !important; }
+html.light .text-red-700 { color: var(--state-danger) !important; }
+html.light .text-red-600 { color: var(--state-danger) !important; }
+html.light .border-red-100 { border-color: rgba(201,64,64,0.18) !important; }
+
+/* Hover: green / red / purple used in action buttons */
+html.light .hover\:bg-green-50:hover  { background-color: rgba(58,143,106,0.08) !important; }
+html.light .hover\:bg-red-50:hover    { background-color: rgba(201,64,64,0.08) !important; }
+html.light .hover\:bg-purple-50:hover { background-color: rgba(167,139,250,0.08) !important; }
+
+/* text-green-600 / text-red-500 / text-purple-500 used in icon action buttons */
+html.light .text-green-600 { color: var(--state-success) !important; }
+html.light .text-purple-500 { color: #8b5cf6 !important; }
+
+/* Placeholder colours */
+html.light .placeholder-gray-300::placeholder { color: var(--text-muted) !important; }
+html.light .placeholder-gray-400::placeholder { color: var(--text-muted) !important; }
+html.light .dark\:placeholder-gray-600::placeholder { color: var(--text-muted) !important; }
+
+/* Divide utilities inside member list */
+html.light .divide-gray-50 > * + * { border-color: var(--border-subtle) !important; }
+html.light .dark\:divide-gray-800\/60 > * + * { border-color: var(--border-subtle) !important; }
+
+/* bg-black/40 overlay (backdrop) in light mode */
+html.light .bg-black\/40 { background-color: rgba(0,0,0,0.3) !important; }
+
+/* Code block textarea — always dark bg, so placeholder must always be light */
+.note-code-textarea::placeholder { color: rgba(255,255,255,0.2) !important; }

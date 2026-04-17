@@ -81,8 +81,8 @@ function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
     return (
         <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
             <button onClick={onToggle}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', textAlign: 'left', background: isOpen ? 'rgba(255,255,255,0.04)' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
-                onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', textAlign: 'left', background: isOpen ? 'var(--bg-hover)' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                 onMouseLeave={e => { if (!isOpen) e.currentTarget.style.background = 'transparent'; }}
             >
                 {isOpen ? <ChevronDown size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} /> : <ChevronRight size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
@@ -295,7 +295,9 @@ const NotesPanel = () => {
     // ── Template handler ──────────────────────────────────────────────────────
     const handleTemplateSelect = async (template) => {
         setShowTemplateModal(false);
-        const noteType = template.id === "blank" ? "note" : (template.id || "note");
+        // Map template IDs to the server-accepted note type enum values
+        const TYPE_MAP = { blank: 'note', document: 'documentation' };
+        const noteType = TYPE_MAP[template.id] || template.id || 'note';
         const newNote = await addNote(template.title, noteType);
         if (!newNote) return;
         if (template.blocks?.length > 0) {
@@ -330,14 +332,14 @@ const NotesPanel = () => {
         return (
             <div key={note.id} onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
                 style={{ position: 'relative', cursor: 'pointer', background: isActive ? 'rgba(184,149,106,0.08)' : 'transparent', borderLeft: isActive ? '2px solid #b8956a' : '2px solid transparent', transition: 'all 150ms ease', userSelect: 'none' }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
             >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '8px 12px', paddingLeft: isActive ? '14px' : '12px' }}>
                     <typeConf.Icon size={13} style={{ marginTop: '2px', flexShrink: 0 }} className={typeConf.color} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '4px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: isActive ? 700 : 500, color: isActive ? '#b8956a' : '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                            <span style={{ fontSize: '12px', fontWeight: isActive ? 700 : 500, color: isActive ? '#b8956a' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.4, fontFamily: 'Inter, system-ui, sans-serif' }}>
                                 {note.title || 'Untitled'}
                             </span>
                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', flexShrink: 0, marginTop: '1px', fontFamily: 'monospace' }}>{formatDate(note.updatedAt)}</span>
@@ -407,9 +409,9 @@ const NotesPanel = () => {
                         { id: 'canvas', label: 'Channel Canvas', count: totalCanvas },
                     ].map(tab => (
                         <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px 4px', fontSize: '11px', fontWeight: activeTab === tab.id ? 700 : 400, color: activeTab === tab.id ? '#b8956a' : 'rgba(228,228,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}>
+                            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '8px 4px', fontSize: '11px', fontWeight: activeTab === tab.id ? 700 : 400, color: activeTab === tab.id ? '#b8956a' : 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}>
                             {tab.label}
-                            <span style={{ fontSize: '10px', padding: '1px 5px', fontWeight: 700, background: activeTab === tab.id ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.06)', color: activeTab === tab.id ? '#b8956a' : 'rgba(228,228,228,0.3)' }}>
+                            <span style={{ fontSize: '10px', padding: '1px 5px', fontWeight: 700, background: activeTab === tab.id ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)', color: activeTab === tab.id ? '#b8956a' : 'var(--text-muted)' }}>
                                 {tab.count}
                             </span>
                             {activeTab === tab.id && (
@@ -443,9 +445,9 @@ const NotesPanel = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: 0 }}>
                                 {/* All pill */}
                                 <button onClick={() => { setWsFilter('all'); setActiveGroup(null); }}
-                                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'rgba(255,255,255,0.08)'}`, color: wsFilter === 'all' && !activeGroup ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                                    onMouseEnter={e => { if (!(wsFilter === 'all' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                                    onMouseLeave={e => { if (!(wsFilter === 'all' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'var(--bg-hover)', border: `1px solid ${wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'var(--border-subtle)'}`, color: wsFilter === 'all' && !activeGroup ? '#b8956a' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    onMouseEnter={e => { if (!(wsFilter === 'all' && !activeGroup)) e.currentTarget.style.background = 'var(--bg-active)'; }}
+                                    onMouseLeave={e => { if (!(wsFilter === 'all' && !activeGroup)) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                 >
                                     All
                                     <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 5px', background: wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.2)' : 'rgba(255,255,255,0.07)', color: wsFilter === 'all' && !activeGroup ? '#b8956a' : 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>{activeNotes.length}</span>
@@ -453,9 +455,9 @@ const NotesPanel = () => {
 
                                 {/* Starred pill */}
                                 <button onClick={() => { setWsFilter('favorites'); setActiveGroup(null); }}
-                                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.05)', border: `1px solid ${wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'rgba(255,255,255,0.08)'}`, color: wsFilter === 'favorites' && !activeGroup ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                                    onMouseEnter={e => { if (!(wsFilter === 'favorites' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                                    onMouseLeave={e => { if (!(wsFilter === 'favorites' && !activeGroup)) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                    style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'var(--bg-hover)', border: `1px solid ${wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'var(--border-subtle)'}`, color: wsFilter === 'favorites' && !activeGroup ? '#b8956a' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    onMouseEnter={e => { if (!(wsFilter === 'favorites' && !activeGroup)) e.currentTarget.style.background = 'var(--bg-active)'; }}
+                                    onMouseLeave={e => { if (!(wsFilter === 'favorites' && !activeGroup)) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                 >
                                     <Star size={11} style={{ fill: wsFilter === 'favorites' && !activeGroup ? 'currentColor' : 'none' }} /> Starred
                                 </button>

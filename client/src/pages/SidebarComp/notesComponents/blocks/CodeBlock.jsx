@@ -47,21 +47,21 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             <button
                                 onClick={() => setShowLangPicker(v => !v)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
-                                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.5)'}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                             >
                                 <span style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: dotColor }} />
                                 {lang}
                                 <ChevronDown size={9} style={{ transition: 'transform 200ms ease', transform: showLangPicker ? 'rotate(180deg)' : 'rotate(0deg)' }} />
                             </button>
                             {showLangPicker && (
-                                <div style={{ position: 'absolute', left: 0, top: '100%', marginTop: '6px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', zIndex: 30, maxHeight: '200px', overflowY: 'auto', minWidth: '140px', padding: '4px 0' }}>
+                                <div style={{ position: 'absolute', left: 0, top: '100%', marginTop: '6px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)', zIndex: 30, maxHeight: '200px', overflowY: 'auto', minWidth: '140px', padding: '4px 0' }}>
                                     {LANGUAGES.map(l => (
                                         <button
                                             key={l}
                                             onClick={() => setLang(l)}
-                                            style={{ width: '100%', textAlign: 'left', padding: '6px 12px', fontSize: '11px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px', background: l === lang ? 'rgba(184,149,106,0.1)' : 'transparent', color: l === lang ? '#b8956a' : 'rgba(228,228,228,0.5)', border: 'none', cursor: 'pointer', transition: 'background 100ms ease' }}
-                                            onMouseEnter={e => { if (l !== lang) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                            style={{ width: '100%', textAlign: 'left', padding: '6px 12px', fontSize: '11px', fontFamily: 'monospace', display: 'flex', alignItems: 'center', gap: '8px', background: l === lang ? 'rgba(184,149,106,0.1)' : 'transparent', color: l === lang ? '#b8956a' : 'var(--text-secondary)', border: 'none', cursor: 'pointer', transition: 'background 100ms ease' }}
+                                            onMouseEnter={e => { if (l !== lang) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                             onMouseLeave={e => { if (l !== lang) e.currentTarget.style.background = 'transparent'; }}
                                         >
                                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0, background: LANG_COLORS[l] || '#888' }} />
@@ -100,7 +100,7 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </div>
                 </div>
 
-                {/* Code area */}
+                {/* Code area — always dark like a real code editor */}
                 <div style={{ position: 'relative', background: '#0e0e0e' }}>
                     {/* Line number gutter stripe */}
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '40px', background: 'rgba(255,255,255,0.015)', borderRight: '1px solid rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
@@ -109,11 +109,13 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                         spellCheck={false}
                         placeholder={`// ${lang} code...`}
+                        className="note-code-textarea"
                         style={{
                             width: '100%', fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: '12.5px',
-                            color: 'var(--text-primary)', background: 'transparent', padding: '14px 14px 14px 54px',
+                            color: '#d4d4d4', background: 'transparent', padding: '14px 14px 14px 54px',
                             outline: 'none', resize: 'none', minHeight: '110px', lineHeight: 1.75,
                             letterSpacing: '0.01em', boxSizing: 'border-box', tabSize: 2,
+                            caretColor: '#d4d4d4',
                         }}
                         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     />

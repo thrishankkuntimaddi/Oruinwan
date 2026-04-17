@@ -43,9 +43,9 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
             style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}
             onClick={e => e.target === e.currentTarget && setShowInfoModal(false)}
         >
-            <div style={{ background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', width: '384px', overflow: 'hidden', boxShadow: '0 24px 80px rgba(0,0,0,0.7)' }}>
+            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '384px', overflow: 'hidden', boxShadow: 'var(--card-shadow)' }}>
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <FileText size={15} style={{ color: '#b8956a' }} />
@@ -59,8 +59,8 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     </div>
                     <button onClick={() => setShowInfoModal(false)}
                         style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
-                        onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                     >
                         <X size={14} />
                     </button>
@@ -71,7 +71,7 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     {/* Stats grid */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '18px' }}>
                         {[{ val: wordCount, label: 'Words' }, { val: blocks.length, label: 'Blocks' }, { val: sizeKb, label: 'KB' }].map(({ val, label }) => (
-                            <div key={label} style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: '12px 10px', textAlign: 'center' }}>
+                            <div key={label} style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', padding: '12px 10px', textAlign: 'center' }}>
                                 <p style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'monospace', marginBottom: '3px' }}>{val}</p>
                                 <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
                             </div>
@@ -113,7 +113,7 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     )}
 
                     {/* Dates */}
-                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
+                    <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
                         {[{ label: 'Created', val: createdFull }, { label: 'Last edited', val: editedFull }].map(({ label, val }) => (
                             <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -126,9 +126,9 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
 
                     {/* Close */}
                     <button onClick={() => setShowInfoModal(false)}
-                        style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                        onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
+                        style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
                     >
                         Close
                     </button>

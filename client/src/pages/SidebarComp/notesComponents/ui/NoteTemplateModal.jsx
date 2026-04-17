@@ -139,10 +139,10 @@ export const TEMPLATES = [
 // Category sidebar config
 // ─────────────────────────────────────────────
 const CATEGORIES = [
-    { id: 'quick', label: 'Quick Start', Icon: Zap },
-    { id: 'project', label: 'Project Templates', Icon: Layers },
-    { id: 'meeting', label: 'Meeting & Ops', Icon: ClipboardList },
-    { id: 'docs', label: 'Documents', Icon: FileText },
+    { id: 'quick',   label: 'Quick Start',        Icon: Zap },
+    { id: 'project', label: 'Project Templates',  Icon: Layers },
+    { id: 'meeting', label: 'Meeting & Ops',       Icon: ClipboardList },
+    { id: 'docs',    label: 'Documents',           Icon: FileText },
 ];
 
 // ─────────────────────────────────────────────
@@ -156,14 +156,17 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
     const catInfo = CATEGORIES.find(c => c.id === activeCategory);
 
     return (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
-            <div style={{ background: 'var(--bg-surface)', width: '100%', maxWidth: '900px', height: '600px', display: 'flex', overflow: 'hidden', border: '1px solid var(--border-default)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+        <div
+            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'var(--bg-overlay)', backdropFilter: 'blur(4px)' }}
+            onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+        >
+            <div style={{ background: 'var(--bg-surface)', width: '100%', maxWidth: '900px', height: '600px', display: 'flex', overflow: 'hidden', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
 
                 {/* Left sidebar */}
-                <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-base)', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-base)', borderRight: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
                         <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>New Note</h2>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>Choose a template</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px', margin: '3px 0 0 0' }}>Choose a template</p>
                     </div>
                     <nav style={{ flex: 1, padding: '6px', overflowY: 'auto' }}>
                         {CATEGORIES.map(cat => {
@@ -172,18 +175,27 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                             const count = TEMPLATES.filter(t => t.category === cat.id).length;
                             return (
                                 <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', textAlign: 'left', fontSize: '12px', fontWeight: isActive ? 700 : 500, background: isActive ? 'rgba(184,149,106,0.15)' : 'transparent', color: isActive ? '#b8956a' : 'rgba(228,228,228,0.5)', border: isActive ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter,system-ui,sans-serif', marginBottom: '2px' }}
-                                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = '#e4e4e4'; } }}
-                                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; } }}
+                                    style={{
+                                        width: '100%', display: 'flex', alignItems: 'center', gap: '8px',
+                                        padding: '8px 10px', textAlign: 'left', fontSize: '12px',
+                                        fontWeight: isActive ? 700 : 500,
+                                        background: isActive ? 'rgba(184,149,106,0.12)' : 'transparent',
+                                        color: isActive ? '#b8956a' : 'var(--text-secondary)',
+                                        border: isActive ? '1px solid rgba(184,149,106,0.22)' : '1px solid transparent',
+                                        cursor: 'pointer', transition: 'all 150ms ease',
+                                        fontFamily: 'Inter,system-ui,sans-serif', marginBottom: '2px',
+                                    }}
+                                    onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
+                                    onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
                                 >
                                     <Ic size={13} style={{ flexShrink: 0 }} />
                                     <span style={{ flex: 1 }}>{cat.label}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? '#b8956a' : 'rgba(228,228,228,0.25)' }}>{count}</span>
+                                    <span style={{ fontSize: '10px', fontWeight: 700, color: isActive ? '#b8956a' : 'var(--text-muted)' }}>{count}</span>
                                 </button>
                             );
                         })}
                     </nav>
-                    <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border-subtle)' }}>
                         <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', margin: 0 }}>
                             {TEMPLATES.length} TEMPLATES · {CATEGORIES.length} CATEGORIES
                         </p>
@@ -192,7 +204,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
 
                 {/* Right panel */}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--bg-surface)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {catInfo?.Icon && <catInfo.Icon size={14} style={{ color: 'var(--text-muted)' }} />}
                             <div>
@@ -203,9 +215,9 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                             </div>
                         </div>
                         <button onClick={onClose}
-                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#e4e4e4')}
-                            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(228,228,228,0.35)')}>
+                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease', display: 'flex', alignItems: 'center' }}
+                            onMouseEnter={e => (e.currentTarget.style.color = 'var(--text-primary)')}
+                            onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-muted)')}>
                             <X size={15} />
                         </button>
                     </div>
@@ -218,35 +230,44 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                     <button key={tmpl.id} onClick={() => onSelect(tmpl)}
                                         onMouseEnter={() => setHovered(tmpl.id)}
                                         onMouseLeave={() => setHovered(null)}
-                                        style={{ textAlign: 'left', overflow: 'hidden', border: `1px solid ${isHov ? 'rgba(184,149,106,0.45)' : 'rgba(255,255,255,0.07)'}`, background: 'transparent', cursor: 'pointer', transition: 'all 150ms ease', transform: isHov ? 'translateY(-1px)' : 'none' }}>
+                                        style={{
+                                            textAlign: 'left', overflow: 'hidden',
+                                            border: `1px solid ${isHov ? 'rgba(184,149,106,0.45)' : 'var(--border-default)'}`,
+                                            background: 'transparent', cursor: 'pointer',
+                                            transition: 'all 150ms ease',
+                                            transform: isHov ? 'translateY(-1px)' : 'none',
+                                            boxShadow: isHov ? '0 4px 16px rgba(0,0,0,0.1)' : 'none',
+                                        }}>
+                                        {/* Coloured header — always dark per template brand colour */}
                                         <div style={{ padding: '14px 14px 12px', position: 'relative', overflow: 'hidden', backgroundColor: tmpl.color }}>
                                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', backgroundColor: tmpl.accent }} />
                                             <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
                                                 <div>
-                                                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: '6px', fontFamily: 'monospace' }}>{tmpl.tag}</span>
+                                                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.55)', display: 'block', marginBottom: '6px', fontFamily: 'monospace' }}>{tmpl.tag}</span>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                                                         <tmpl.TypeIcon size={17} style={{ color: tmpl.iconColor, flexShrink: 0 }} />
                                                         <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#fff', lineHeight: 1.2, margin: 0 }}>{tmpl.label}</h4>
                                                     </div>
                                                 </div>
-                                                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.25)' }}>{tmpl.blocks.length}B</span>
+                                                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.35)' }}>{tmpl.blocks.length}B</span>
                                             </div>
                                         </div>
+                                        {/* Body — theme-aware */}
                                         <div style={{ padding: '14px', background: 'var(--bg-base)' }}>
-                                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '10px' }}>{tmpl.desc}</p>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '10px', margin: '0 0 10px 0' }}>{tmpl.desc}</p>
                                             <div style={{ marginBottom: '14px' }}>
                                                 {tmpl.preview.map((line, i) => (
                                                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
                                                         <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>—</span>
-                                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{line}</span>
+                                                        <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{line}</span>
                                                     </div>
                                                 ))}
                                             </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)' }}>
                                                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                                     {tmpl.blocks.length} BLOCKS
                                                 </span>
-                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace', color: isHov ? '#b8956a' : 'rgba(228,228,228,0.2)', transition: 'color 150ms ease' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace', color: isHov ? '#b8956a' : 'var(--text-muted)', transition: 'color 150ms ease' }}>
                                                     USE TEMPLATE <ArrowRight size={11} style={{ transform: isHov ? 'translateX(2px)' : 'none', transition: 'transform 150ms ease' }} />
                                                 </span>
                                             </div>
