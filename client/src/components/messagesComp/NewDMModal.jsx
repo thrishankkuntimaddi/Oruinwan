@@ -7,15 +7,15 @@ import { getAvatarUrl } from "../../utils/avatarUtils";
 import { Search, X } from "lucide-react";
 
 const T = {
-  bg:       '#111111',
-  base:     '#0c0c0c',
-  surface:  'rgba(255,255,255,0.04)',
-  border:   'rgba(255,255,255,0.08)',
-  accent:   '#b8956a',
-  accentBg: 'rgba(184,149,106,0.1)',
-  text:     '#e4e4e4',
-  muted:    'rgba(228,228,228,0.4)',
-  font:     'Inter, system-ui, sans-serif',
+  bg:      'var(--bg-surface)',
+  base:    'var(--bg-base)',
+  surface: 'var(--bg-hover)',
+  border:  'var(--border-default)',
+  accent:  '#b8956a',
+  accentBg:'var(--accent-dim)',
+  text:    'var(--text-primary)',
+  muted:   'var(--text-muted)',
+  font:    'Inter, system-ui, sans-serif',
 };
 
 export default function NewDMModal({ onClose, onStart }) {
@@ -78,7 +78,7 @@ export default function NewDMModal({ onClose, onStart }) {
           <button
             onClick={onClose}
             style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: `1px solid ${T.border}`, color: T.muted, cursor: 'pointer', transition: 'all 150ms ease', flexShrink: 0 }}
-            onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+            onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
             onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
           >
             <X size={13} />
@@ -147,8 +147,8 @@ export default function NewDMModal({ onClose, onStart }) {
                     />
                     <span style={{
                       position: 'absolute', bottom: '0', right: '0', width: '9px', height: '9px', borderRadius: '50%',
-                      border: `2px solid ${T.bg}`,
-                      background: u.status === 'online' ? '#34d399' : 'rgba(255,255,255,0.2)',
+                      border: '2px solid var(--bg-surface)',
+                      background: u.status === 'online' ? '#34d399' : 'var(--border-default)',
                     }} />
                   </div>
 
@@ -173,7 +173,7 @@ export default function NewDMModal({ onClose, onStart }) {
                   {/* Action */}
                   <button
                     onClick={(e) => { e.stopPropagation(); onStart(u); }}
-                    style={{ flexShrink: 0, padding: '4px 10px', background: T.accent, border: 'none', color: '#0c0c0c', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: 0 }}
+                    style={{ flexShrink: 0, padding: '4px 10px', background: T.accent, border: 'none', color: '#000', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: 0 }}
                     className="dm-msg-btn"
                     onMouseEnter={e => e.currentTarget.style.opacity = '1'}
                     onMouseLeave={e => e.currentTarget.style.opacity = '0'}

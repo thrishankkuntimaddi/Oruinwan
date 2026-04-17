@@ -3,16 +3,16 @@ import { Search, X, Send, Users, Hash, MessageSquare } from "lucide-react";
 import api from '@services/api';
 
 const T = {
-  bg:       '#111111',
-  base:     '#0c0c0c',
-  surface:  'rgba(255,255,255,0.04)',
-  border:   'rgba(255,255,255,0.08)',
-  accent:   '#b8956a',
-  accentBg: 'rgba(184,149,106,0.1)',
-  accentBorder: 'rgba(184,149,106,0.3)',
-  text:     '#e4e4e4',
-  muted:    'rgba(228,228,228,0.4)',
-  font:     'Inter, system-ui, sans-serif',
+  bg:          'var(--bg-surface)',
+  base:        'var(--bg-base)',
+  surface:     'var(--bg-hover)',
+  border:      'var(--border-default)',
+  accent:      '#b8956a',
+  accentBg:    'var(--accent-dim)',
+  accentBorder:'rgba(184,149,106,0.3)',
+  text:        'var(--text-primary)',
+  muted:       'var(--text-muted)',
+  font:        'Inter, system-ui, sans-serif',
 };
 
 export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }) {
@@ -100,7 +100,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                     <button
                         onClick={onClose}
                         style={{ padding: '6px', background: 'transparent', border: `1px solid ${T.border}`, color: T.muted, cursor: 'pointer', transition: 'all 150ms ease' }}
-                        onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                        onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
                     >
                         <X size={15} />
@@ -179,7 +179,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                                         <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: T.accentBg, border: `1px solid ${T.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: T.accent, fontFamily: T.font }}>
                                                             {item.name.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '8px', height: '8px', borderRadius: '50%', border: `2px solid ${T.bg}`, background: item.status === 'active' ? '#34d399' : 'rgba(255,255,255,0.2)' }} />
+                                                        <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: '8px', height: '8px', borderRadius: '50%', border: '2px solid var(--bg-surface)', background: item.status === 'active' ? '#34d399' : 'var(--border-default)' }} />
                                                     </div>
                                                 )}
 
@@ -254,7 +254,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                 <button
                                     onClick={onClose}
                                     style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, color: T.muted, background: 'transparent', border: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.font, transition: 'all 150ms ease' }}
-                                    onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
                                 >
                                     Cancel
@@ -262,7 +262,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                 <button
                                     onClick={handleSend}
                                     disabled={!message.trim() || selectedItems.length === 0}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700, color: '#0c0c0c', background: T.accent, border: 'none', cursor: !message.trim() || selectedItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: !message.trim() || selectedItems.length === 0 ? 0.4 : 1 }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 16px', fontSize: '12px', fontWeight: 700, color: '#000', background: T.accent, border: 'none', cursor: !message.trim() || selectedItems.length === 0 ? 'not-allowed' : 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: !message.trim() || selectedItems.length === 0 ? 0.4 : 1 }}
                                 >
                                     <Send size={13} />
                                     Send Broadcast
