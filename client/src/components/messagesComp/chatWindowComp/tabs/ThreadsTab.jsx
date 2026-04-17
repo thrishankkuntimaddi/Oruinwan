@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, ArrowRight, Search, ListFilter, X } from 'lucide-react';
+import { MessageSquare, ArrowRight, Search, ListFilter } from 'lucide-react';
 import ThreadPanel from '../ThreadPanel';
 import api from '@services/api';
 import { formatTime } from '../helpers/helpers';
@@ -260,49 +260,21 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                 backgroundColor: 'var(--bg-base)', overflow: 'hidden',
             }}>
                 {selectedThread ? (
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                        {/* Thread Close Header */}
-                        <div style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            padding: '10px 16px',
-                            borderBottom: '1px solid var(--border-default)',
-                            backgroundColor: 'var(--bg-surface)',
-                            flexShrink: 0,
-                        }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <MessageSquare size={14} style={{ color: 'var(--text-muted)' }} />
-                                <span style={{
-                                    fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)',
-                                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                                }}>Thread</span>
-                            </div>
-                            <button
-                                onClick={() => setSelectedThread(null)}
-                                style={{
-                                    padding: '5px', borderRadius: '2px', background: 'none', border: 'none',
-                                    cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center',
-                                    transition: 'color 150ms ease',
-                                }}
-                                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                                title="Close Thread"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-
-                        <ThreadPanel
-                            parentMessage={selectedThread}
-                            channelId={channelId}
-                            conversationType="channel"
-                            onClose={() => setSelectedThread(null)}
-                            socket={socket}
-                            currentUserId={currentUserId}
-                            fullHeight={true}
-                            showHeader={false}
-                            className="w-full border-none shadow-none flex-1"
-                        />
-                    </div>
+                    <ThreadPanel
+                        parentMessage={selectedThread}
+                        channelId={channelId}
+                        conversationType="channel"
+                        onClose={() => setSelectedThread(null)}
+                        socket={socket}
+                        currentUserId={currentUserId}
+                        showHeader={true}
+                        style={{
+                            width: '100%',
+                            flex: 1,
+                            borderLeft: 'none',
+                            boxShadow: 'none',
+                        }}
+                    />
                 ) : (
                     <div style={{
                         flex: 1, display: 'flex', flexDirection: 'column',
