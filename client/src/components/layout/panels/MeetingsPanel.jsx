@@ -10,10 +10,10 @@ import { useToast } from "../../../contexts/ToastContext";
 import { useScheduledMeetings } from "../../../hooks/useScheduledMeetings";
 import ScheduleMeetingModal from "../../messagesComp/chatWindowComp/modals/ScheduleMeetingModal";
 
-// ── Section Header (same pattern as TasksPanel) ───────────────────────────
+// ── Section Header ─────────────────────────────────────────────────────────
 const SectionHeader = ({ label, isOpen, onClick, count }) => (
     <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', cursor: 'pointer', marginTop: '8px', transition: 'background 150ms ease' }}
-        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }}><ChevronRight size={11} /></span>
@@ -27,13 +27,13 @@ const SectionHeader = ({ label, isOpen, onClick, count }) => (
 
 // ── Meeting Card ───────────────────────────────────────────────────────────
 const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, isSelected }) => (
-    <div onClick={onJoin} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: `1px solid ${isSelected ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, background: isSelected ? 'rgba(184,149,106,0.08)' : 'rgba(255,255,255,0.03)', cursor: onJoin ? 'pointer' : 'default', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
-        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; }}
-        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}>
-        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: status === 'live' ? '#ef4444' : status === 'past' ? 'rgba(255,255,255,0.1)' : '#3b82f6' }} />
+    <div onClick={onJoin} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: `1px solid ${isSelected ? 'rgba(184,149,106,0.3)' : 'var(--border-subtle)'}`, background: isSelected ? 'var(--accent-dim)' : 'var(--bg-surface)', cursor: onJoin ? 'pointer' : 'default', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
+        onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+        onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-subtle)'; }}>
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: status === 'live' ? '#ef4444' : status === 'past' ? 'var(--border-default)' : '#3b82f6' }} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
             <div>
-                <h4 style={{ fontSize: '12px', fontWeight: 600, color: isSelected ? '#e4e4e4' : 'rgba(228,228,228,0.75)', fontFamily: 'Inter, system-ui, sans-serif' }}>{title}</h4>
+                <h4 style={{ fontSize: '12px', fontWeight: 600, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', fontFamily: 'Inter, system-ui, sans-serif' }}>{title}</h4>
                 {channel && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         <Hash size={9} /><span>{channel}</span>
@@ -56,7 +56,7 @@ const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', gap: '-4px' }}>
                 {participants.slice(0, 4).map((p, i) => (
-                    <div key={i} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid #0c0c0c', background: 'rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 700, color: '#b8956a', marginLeft: i > 0 ? '-4px' : 0 }} title={p.username || p.initials}>
+                    <div key={i} style={{ width: '18px', height: '18px', borderRadius: '50%', border: '2px solid var(--bg-surface)', background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '7px', fontWeight: 700, color: '#b8956a', marginLeft: i > 0 ? '-4px' : 0 }} title={p.username || p.initials}>
                         {(p.username || p.initials || '?').slice(0, 2).toUpperCase()}
                     </div>
                 ))}
@@ -86,7 +86,6 @@ const MeetingsPanel = () => {
         activeWorkspaceHuddles,
     } = useHuddleContext();
 
-    // Scheduled meetings (REST + real-time socket)
     const { meetings, createMeeting, cancelMeeting } = useScheduledMeetings(workspaceId);
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [expandedScheduled, setExpandedScheduled] = useState(true);
@@ -141,6 +140,7 @@ const MeetingsPanel = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' }}>
+
             {/* ── Header ── */}
             <div style={{ height: '56px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0 }}>
                 <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Video Huddles</h2>
@@ -148,13 +148,13 @@ const MeetingsPanel = () => {
                     <button onClick={handleStartInstant} disabled={starting || active} title="Start Instant Huddle"
                         style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: starting || active ? 'not-allowed' : 'pointer', opacity: starting || active ? 0.5 : 1, transition: 'all 150ms ease' }}
                         onMouseEnter={e => { if (!starting && !active) e.currentTarget.style.color = '#b8956a'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}>
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}>
                         {starting ? <span style={{ display: 'block', width: '16px', height: '16px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <Video size={17} />}
                     </button>
                     <button onClick={() => setShowScheduleModal(true)} title="Schedule a Meeting"
                         style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
                         <Calendar size={17} />
                     </button>
                 </div>
@@ -206,7 +206,7 @@ const MeetingsPanel = () => {
                         { id: 'history', label: 'History' },
                     ].map(tab => (
                         <button key={tab.id} onClick={() => handleTab(tab.id)}
-                            style={{ flex: 1, padding: '5px', fontSize: '11px', fontWeight: activeTab === tab.id ? 600 : 400, background: activeTab === tab.id ? '#1a1a1a' : 'transparent', border: 'none', color: activeTab === tab.id ? '#e4e4e4' : 'rgba(228,228,228,0.4)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}>
+                            style={{ flex: 1, padding: '5px', fontSize: '11px', fontWeight: activeTab === tab.id ? 600 : 400, background: activeTab === tab.id ? 'var(--bg-active)' : 'transparent', border: 'none', color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}>
                             {tab.label}
                         </button>
                     ))}
@@ -219,74 +219,39 @@ const MeetingsPanel = () => {
                 {/* UPCOMING TAB */}
                 {activeTab === "upcoming" && (
                     <>
-                        {/* My Active Huddle */}
                         {active && selectedHuddle && (
                             <>
-                                <SectionHeader
-                                    label="My Huddle"
-                                    count={participants.length}
-                                    isOpen={expanded.live}
-                                    onClick={() => toggle("live")}
-                                />
+                                <SectionHeader label="My Huddle" count={participants.length} isOpen={expanded.live} onClick={() => toggle("live")} />
                                 {expanded.live && (
-                                    <MeetingCard
-                                        title={selectedHuddle.title || "Instant Huddle"}
-                                        time="Now"
-                                        status="live"
-                                        channel={selectedHuddle.channel}
-                                        participants={participants}
-                                        isSelected={true}
-                                        onJoin={() => handleSelectHuddle(selectedHuddle)}
-                                    />
+                                    <MeetingCard title={selectedHuddle.title || "Instant Huddle"} time="Now" status="live" channel={selectedHuddle.channel} participants={participants} isSelected={true} onJoin={() => handleSelectHuddle(selectedHuddle)} />
                                 )}
                             </>
                         )}
 
-                        {/* Workspace Live Huddles */}
                         {activeWorkspaceHuddles.length > 0 && (
                             <>
-                                <SectionHeader
-                                    label="Live Now"
-                                    count={activeWorkspaceHuddles.length}
-                                    isOpen={expanded.workspace}
-                                    onClick={() => toggle("workspace")}
-                                />
+                                <SectionHeader label="Live Now" count={activeWorkspaceHuddles.length} isOpen={expanded.workspace} onClick={() => toggle("workspace")} />
                                 {expanded.workspace && activeWorkspaceHuddles.map(h => (
-                                    <MeetingCard
-                                        key={h.id}
-                                        title={h.title}
-                                        time="Now"
-                                        status="live"
-                                        channel={h.channel}
-                                        participants={[]}
-                                        isSelected={selectedHuddle?.id === h.id}
-                                        onJoin={() => handleSelectHuddle(h)}
-                                    />
+                                    <MeetingCard key={h.id} title={h.title} time="Now" status="live" channel={h.channel} participants={[]} isSelected={selectedHuddle?.id === h.id} onJoin={() => handleSelectHuddle(h)} />
                                 ))}
                             </>
                         )}
 
-                        {/* Upcoming Scheduled Meetings */}
                         {meetings.length > 0 && (
                             <>
-                                <SectionHeader
-                                    label="Scheduled"
-                                    count={meetings.length}
-                                    isOpen={expandedScheduled}
-                                    onClick={() => setExpandedScheduled(p => !p)}
-                                />
+                                <SectionHeader label="Scheduled" count={meetings.length} isOpen={expandedScheduled} onClick={() => setExpandedScheduled(p => !p)} />
                                 {expandedScheduled && meetings.map(m => {
                                     const start = new Date(m.startTime);
                                     const timeStr = start.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                                     const isLive = m.status === 'live';
                                     return (
                                         <div key={m._id} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
-                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
-                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}>
+                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}>
                                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isLive ? '#ef4444' : '#3b82f6' }} />
                                             <div style={{ paddingLeft: '6px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>{m.title}</p>
+                                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>{m.title}</p>
                                                     {isLive && (
                                                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '1px 5px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '9px', fontWeight: 700, color: '#f87171', flexShrink: 0 }}>
                                                             <span style={{ position: 'relative', display: 'flex', width: '5px', height: '5px' }}><span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#f87171', opacity: 0.5, animation: 'ping 1s ease infinite' }} /><span style={{ position: 'relative', width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444' }} /></span>
@@ -312,7 +277,7 @@ const MeetingsPanel = () => {
                                                     <button onClick={() => handleCancelMeeting(m._id)}
                                                         style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', fontFamily: 'Inter, system-ui, sans-serif' }}
                                                         onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-                                                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}>
+                                                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
                                                         Cancel
                                                     </button>
                                                 </div>
@@ -320,21 +285,20 @@ const MeetingsPanel = () => {
                                         </div>
                                     );
                                 })}
-
                             </>
                         )}
 
                         {/* Empty state */}
                         {!active && activeWorkspaceHuddles.length === 0 && meetings.length === 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
-                                <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                                <div style={{ width: '44px', height: '44px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
                                     <Video size={20} style={{ color: '#b8956a' }} />
                                 </div>
-                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No active huddles</p>
+                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No active huddles</p>
                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}>Start an instant huddle or schedule one</p>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={handleStartInstant} disabled={starting}
-                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', opacity: starting ? 0.6 : 1 }}>
+                                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#b8956a', border: 'none', color: '#000', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', opacity: starting ? 0.6 : 1 }}>
                                         <Plus size={12} />{starting ? 'Starting...' : 'Instant Huddle'}
                                     </button>
                                     <button onClick={() => setShowScheduleModal(true)}
@@ -360,23 +324,9 @@ const MeetingsPanel = () => {
                             </div>
                         ) : (
                             <>
-                                <SectionHeader
-                                    label="Recent"
-                                    count={huddleHistory.length}
-                                    isOpen={expanded.history}
-                                    onClick={() => toggle("history")}
-                                />
+                                <SectionHeader label="Recent" count={huddleHistory.length} isOpen={expanded.history} onClick={() => toggle("history")} />
                                 {expanded.history && huddleHistory.map((h, i) => (
-                                    <MeetingCard
-                                        key={i}
-                                        title={h.title || "Instant Huddle"}
-                                        time={h.endTime ? new Date(h.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
-                                        status="past"
-                                        channel={h.channel}
-                                        participants={[]}
-                                        isSelected={false}
-                                        onJoin={null}
-                                    />
+                                    <MeetingCard key={i} title={h.title || "Instant Huddle"} time={h.endTime ? new Date(h.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""} status="past" channel={h.channel} participants={[]} isSelected={false} onJoin={null} />
                                 ))}
                             </>
                         )}
@@ -386,8 +336,8 @@ const MeetingsPanel = () => {
 
             {/* ── Footer Stats ── */}
             <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-                <div style={{ padding: '10px 12px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.12)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ padding: '6px', background: 'rgba(184,149,106,0.1)', color: '#b8956a' }}>
+                <div style={{ padding: '10px 12px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ padding: '6px', background: 'rgba(184,149,106,0.15)', color: '#b8956a' }}>
                         <Users size={13} />
                     </div>
                     <div>
