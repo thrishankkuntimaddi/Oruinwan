@@ -110,7 +110,7 @@ const CentralContentView = ({
             ) : activeTab === 'chat' ? (
                 <>
                     {/* Main Stream - flex column */}
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, minWidth: 0 }}>
                         {/* Conversation Stream - scrollable */}
                         <ConversationStream
                             events={conversation.events}
@@ -238,6 +238,7 @@ const CentralContentView = ({
                     onClose={onThreadClose}
                     socket={rawSocket}
                     currentUserId={currentUserId}
+                    style={{ width: 'clamp(280px, 35vw, 400px)', flexShrink: 0 }}
                 />
             )}
 

@@ -9,7 +9,7 @@ import { encryptMessageForSending, batchDecryptMessages } from "../../../service
 import { useThreadFollow } from "../../../hooks/useThreadFollow";
 import { getAvatarUrl } from "../../../utils/avatarUtils";
 
-export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "" }) {
+export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "", style = {} }) {
     const { showToast } = useToast();
 
     // We use a local state for the parent message in case we fetch a fresher version,
@@ -411,11 +411,14 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             height: '100%',
             backgroundColor: 'var(--bg-surface)',
             borderLeft: '1px solid var(--border-accent)',
-            boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
+            boxShadow: '-8px 0 32px rgba(0,0,0,0.15)',
             display: 'flex', flexDirection: 'column',
             flexShrink: 0,
-            width: className || '380px',
+            width: 'clamp(280px, 35vw, 400px)',
+            minWidth: 0,
+            overflow: 'hidden',
             fontFamily: FONT,
+            ...style,
         }}>
             {/* Critical Error: Missing channelId */}
             {!channelId ? (
