@@ -19,8 +19,9 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative my-7">
-            <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {/* Left line */}
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
 
                 {/* Center element */}
                 {label ? (
@@ -28,24 +29,30 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         type="text"
                         value={label}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
-                        className="text-[11px] font-semibold tracking-widest uppercase text-gray-400 dark:text-gray-500 bg-transparent border-none focus:ring-0 outline-none text-center min-w-[60px] max-w-[180px] px-2"
+                        style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', background: 'transparent', border: 'none', outline: 'none', textAlign: 'center', minWidth: '60px', maxWidth: '180px', padding: '0 8px', fontFamily: 'monospace' }}
                         placeholder="SECTION"
                     />
                 ) : (
                     <button
                         onClick={cycleStyle}
-                        className="text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors text-sm px-1"
+                        style={{ color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '14px', padding: '0 4px', transition: 'color 150ms ease' }}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                         title="Click to change style"
                     >
                         {style === 'line' ? '⋯' : style === 'dots' ? '✦' : '◈'}
                     </button>
                 )}
 
-                <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-200 dark:via-gray-700 to-transparent" />
+                {/* Right line */}
+                <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
 
                 <button
                     onClick={() => onRemoveBlock(block.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-300 hover:text-red-500 transition-all rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 absolute right-0 -top-1"
+                    style={{ position: 'absolute', right: 0, top: '-4px', padding: '6px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                    className="group-hover:!opacity-100"
+                    onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                 >
                     <Trash2 size={12} />
                 </button>
@@ -53,13 +60,13 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
             {/* Add label prompt */}
             {!label && (
-                <div className="flex justify-center mt-1">
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
                     <input
                         type="text"
                         value={label}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                         placeholder="Add section label..."
-                        className="text-[10px] text-center text-gray-300 dark:text-gray-700 bg-transparent border-none focus:ring-0 outline-none placeholder-gray-200 dark:placeholder-gray-800 w-40 focus:placeholder-gray-300"
+                        style={{ fontSize: '10px', textAlign: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', outline: 'none', width: '160px', fontFamily: 'monospace' }}
                     />
                 </div>
             )}

@@ -2,16 +2,17 @@ import React from "react";
 import { CheckCircle2, ZapOff } from "lucide-react";
 
 const T = {
-  bg: 'rgba(255,255,255,0.03)',
-  bgHover: 'rgba(184,149,106,0.06)',
-  border: 'rgba(255,255,255,0.08)',
-  borderHover: 'rgba(184,149,106,0.25)',
+  bg: 'var(--bg-surface)',
+  bgHover: 'var(--bg-hover)',
+  border: 'var(--border-default)',
+  borderHover: 'var(--border-accent)',
   accent: '#b8956a',
   accentBg: 'rgba(184,149,106,0.1)',
-  text: '#e4e4e4',
-  muted: 'rgba(228,228,228,0.4)',
+  text: 'var(--text-primary)',
+  muted: 'var(--text-muted)',
   font: 'Inter, system-ui, sans-serif',
 };
+
 
 export default function IntegrationCard({ integration, connected, onCardClick }) {
   return (

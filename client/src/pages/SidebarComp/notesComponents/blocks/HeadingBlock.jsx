@@ -50,15 +50,15 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                         }}
                         className="group-hover:!opacity-100"
                         onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                     >
                         H{level}<ChevronDown size={9} />
                     </button>
                     {showLevelPicker && (
                         <div style={{
                             position: 'absolute', left: 0, top: '100%', marginTop: '4px',
-                            background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)',
-                            boxShadow: '0 12px 40px rgba(0,0,0,0.7)', zIndex: 30, overflow: 'hidden', minWidth: '64px',
+                            background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
+                            boxShadow: 'var(--card-shadow)', zIndex: 30, overflow: 'hidden', minWidth: '64px',
                         }}>
                             {[1, 2, 3, 4].map(l => (
                                 <button
@@ -67,10 +67,10 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                                     style={{
                                         width: '100%', textAlign: 'left', padding: '7px 12px',
                                         fontSize: '12px', fontWeight: 700, background: l === level ? 'rgba(184,149,106,0.12)' : 'transparent',
-                                        color: l === level ? '#b8956a' : 'rgba(228,228,228,0.7)',
+                                        color: l === level ? '#b8956a' : 'var(--text-secondary)',
                                         border: 'none', cursor: 'pointer', fontFamily: 'monospace', transition: 'background 100ms ease',
                                     }}
-                                    onMouseEnter={e => { if (l !== level) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                                    onMouseEnter={e => { if (l !== level) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                     onMouseLeave={e => { if (l !== level) e.currentTarget.style.background = 'transparent'; }}
                                 >
                                     H{l}
@@ -100,7 +100,7 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                     style={{ padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', flexShrink: 0 }}
                     className="group-hover:!opacity-100"
                     onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
                     <Trash2 size={14} />
                 </button>

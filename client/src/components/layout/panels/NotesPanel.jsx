@@ -79,7 +79,7 @@ function getPreview(content) {
 // ─── Bottom accordion (VS Code style) ────────────────────────────────────────
 function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
     return (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+        <div style={{ borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
             <button onClick={onToggle}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 12px', textAlign: 'left', background: isOpen ? 'var(--bg-hover)' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
                 onMouseEnter={e => { if (!isOpen) e.currentTarget.style.background = 'var(--bg-hover)'; }}
@@ -622,15 +622,15 @@ const NotesPanel = () => {
                                 return (
                                     <div key={t.id}>
                                         <button onClick={() => setActiveTypeId(isOpen ? null : t.id)}
-                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', textAlign: 'left', background: isOpen ? 'rgba(184,149,106,0.08)' : 'transparent', borderLeft: isOpen ? '2px solid #b8956a' : '2px solid transparent', border: 'none', cursor: 'pointer', color: isOpen ? '#b8956a' : 'rgba(228,228,228,0.5)', transition: 'all 150ms ease' }}
-                                            onMouseEnter={e => { if (!isOpen) e.currentTarget.style.color = '#e4e4e4'; }}
-                                            onMouseLeave={e => { if (!isOpen) e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; }}
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', textAlign: 'left', background: isOpen ? 'rgba(184,149,106,0.08)' : 'transparent', borderLeft: isOpen ? '2px solid #b8956a' : '2px solid transparent', border: 'none', cursor: 'pointer', color: isOpen ? '#b8956a' : 'var(--text-secondary)', transition: 'all 150ms ease' }}
+                                            onMouseEnter={e => { if (!isOpen) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                            onMouseLeave={e => { if (!isOpen) e.currentTarget.style.color = 'var(--text-secondary)'; }}
                                         >
                                             {isOpen ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
                                             <t.Icon size={13} className={`flex-shrink-0 ${t.color}`} />
                                             <span style={{ flex: 1, fontSize: '12px', fontWeight: isOpen ? 700 : 500, fontFamily: 'Inter, system-ui, sans-serif' }}>{t.label}</span>
                                             {cnt > 0 && (
-                                                <span style={{ fontSize: '10px', padding: '1px 6px', fontWeight: 700, background: isOpen ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.07)', color: isOpen ? '#b8956a' : 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>{cnt}</span>
+                                                <span style={{ fontSize: '10px', padding: '1px 6px', fontWeight: 700, background: isOpen ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)', color: isOpen ? '#b8956a' : 'var(--text-muted)', fontFamily: 'monospace' }}>{cnt}</span>
                                             )}
                                         </button>
 
@@ -664,16 +664,16 @@ const NotesPanel = () => {
                                         <div key={note.id}
                                             style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', cursor: 'pointer', transition: 'background 150ms ease' }}
                                             onClick={() => navigate(`/workspace/${workspaceId}/notes/${note.id}`)}
-                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             <typeConf.Icon size={12} className={`flex-shrink-0 ${typeConf.color}`} style={{ opacity: 0.5 }} />
-                                            <span style={{ flex: 1, fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{note.title || 'Untitled'}</span>
+                                            <span style={{ flex: 1, fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{note.title || 'Untitled'}</span>
                                             <button onClick={e => { e.stopPropagation(); toggleArchive(note.id); }}
                                                 style={{ padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', flexShrink: 0 }}
                                                 title="Restore"
                                                 onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}>
+                                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}>
                                                 <ArchiveRestore size={12} />
                                             </button>
                                         </div>
@@ -688,25 +688,25 @@ const NotesPanel = () => {
             {/* ── Three-dot context menu (horizontal ⋯) ── */}
             {noteMenu && ctxNote && (
                 <div ref={noteMenuRef}
-                    style={{ position: 'fixed', zIndex: 50, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', width: '192px', left: Math.min(noteMenu.x, window.innerWidth - 200), top: Math.min(noteMenu.y, window.innerHeight - 220) }}
+                    style={{ position: 'fixed', zIndex: 50, background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)', padding: '4px 0', width: '192px', left: Math.min(noteMenu.x, window.innerWidth - 200), top: Math.min(noteMenu.y, window.innerHeight - 220) }}
                 >
                     {[{ label: 'Open', Icon: FileText, action: () => { navigate(`/workspace/${workspaceId}/notes/${ctxNote.id}`); setNoteMenu(null); } },
                       { label: ctxNote.isPinned ? 'Unstar' : 'Star', Icon: Star, action: () => { togglePin(ctxNote.id); setNoteMenu(null); }, amber: ctxNote.isPinned }]
                       .map(({ label, Icon: Ic, action, amber }) => (
                         <button key={label} onClick={action}
-                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: amber ? '#b8956a' : 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: amber ? '#b8956a' : 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        ><Ic size={13} style={{ color: amber ? '#b8956a' : 'rgba(228,228,228,0.35)' }} /> {label}</button>
+                        ><Ic size={13} style={{ color: amber ? '#b8956a' : 'var(--text-muted)' }} /> {label}</button>
                     ))}
 
-                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
+                    <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '3px 0' }} />
 
                     {/* Move to ▶ */}
                     <div style={{ position: 'relative' }}>
                         <button onClick={() => setShowMovePicker(v => !v)}
                             style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
                             <Move size={13} style={{ color: 'var(--text-muted)' }} /> Move to…

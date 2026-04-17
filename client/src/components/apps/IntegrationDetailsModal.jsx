@@ -1,17 +1,6 @@
 import React, { useState } from "react";
 import { X, CheckCircle2, Loader2, Shield, Zap, ChevronRight } from "lucide-react";
 
-/**
- * IntegrationDetailsModal
- * Full-screen modal showing integration details with fake connect/disconnect flow.
- * All state is local — no API calls.
- *
- * Props:
- *   integration   – object from mockIntegrations (or null)
- *   connected     – boolean (initial connected state from parent)
- *   onClose       – () => void
- *   onStatusChange– (integrationId, newConnected: boolean) => void
- */
 export default function IntegrationDetailsModal({ integration, connected, onClose, onStatusChange }) {
   const [isConnected, setIsConnected] = useState(connected);
   const [loading, setLoading] = useState(false);
@@ -22,7 +11,6 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
   const handleConnect = () => {
     setLoading(true);
     setShowSuccess(false);
-    // Fake 2-second delay to simulate OAuth flow
     setTimeout(() => {
       setLoading(false);
       const next = !isConnected;
@@ -34,70 +22,74 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] backdrop-blur-sm animate-fade-in">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden shadow-2xl flex flex-col border border-gray-200 dark:border-gray-800">
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', zIndex: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-        {/* ── Header ── */}
-        <div className="flex items-center gap-4 p-6 border-b border-gray-100 dark:border-gray-800">
-          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${integration.color} flex items-center justify-center text-3xl shadow-md flex-shrink-0`}>
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
             {integration.emoji}
           </div>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{integration.name}</h2>
-            <span className="text-xs text-gray-500 dark:text-gray-400 font-medium uppercase tracking-wide">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{integration.name}</h2>
+            <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'monospace' }}>
               {integration.categoryLabel}
             </span>
           </div>
+
           {/* Status badge */}
           {isConnected ? (
-            <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-full px-3 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#3a8f6a', background: 'rgba(58,143,106,0.1)', border: '1px solid rgba(58,143,106,0.25)', padding: '3px 10px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3a8f6a', animation: 'pulse 2s infinite' }} />
               Connected
             </span>
           ) : (
-            <span className="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-full px-3 py-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-active)', border: '1px solid var(--border-default)', padding: '3px 10px' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--border-accent)' }} />
               Not Connected
             </span>
           )}
+
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            style={{ padding: '6px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'all 150ms ease', flexShrink: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* ── Body ── */}
-        <div className="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
+        {/* Body */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Description */}
-          <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>
             {integration.description}
           </p>
 
           {/* Success banner */}
           {showSuccess && (
-            <div className="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 rounded-xl p-3 animate-fade-in">
-              <CheckCircle2 size={18} className="text-emerald-500 flex-shrink-0" />
-              <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
-                {isConnected
-                  ? `${integration.name} connected successfully!`
-                  : `${integration.name} has been disconnected.`}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(58,143,106,0.08)', border: '1px solid rgba(58,143,106,0.2)', padding: '10px 14px' }}>
+              <CheckCircle2 size={16} style={{ color: '#3a8f6a', flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', fontWeight: 500, color: '#3a8f6a' }}>
+                {isConnected ? `${integration.name} connected successfully!` : `${integration.name} has been disconnected.`}
               </span>
             </div>
           )}
 
           {/* Use Cases */}
           <div>
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Zap size={13} />
-              What you can do
+            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace' }}>
+              <Zap size={11} /> What you can do
             </h3>
-            <ul className="space-y-2">
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {integration.useCases.map((useCase, i) => (
-                <li key={i} className="flex items-start gap-2.5 text-sm text-gray-700 dark:text-gray-300">
-                  <ChevronRight size={14} className="text-blue-500 flex-shrink-0 mt-0.5" />
+                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  <ChevronRight size={14} style={{ color: '#b8956a', flexShrink: 0, marginTop: '2px' }} />
                   {useCase}
                 </li>
               ))}
@@ -106,14 +98,13 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
 
           {/* Permissions */}
           <div>
-            <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-              <Shield size={13} />
-              Permissions required
+            <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace' }}>
+              <Shield size={11} /> Permissions required
             </h3>
-            <ul className="space-y-2">
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {integration.permissions.map((perm, i) => (
-                <li key={i} className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
-                  <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+                <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'var(--border-accent)', flexShrink: 0 }} />
                   {perm}
                 </li>
               ))}
@@ -121,31 +112,34 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
           </div>
         </div>
 
-        {/* ── Footer ── */}
-        <div className="p-6 border-t border-gray-100 dark:border-gray-800 flex items-center justify-end gap-3">
+        {/* Footer */}
+        <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexShrink: 0 }}>
           <button
             onClick={onClose}
-            className="px-4 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors"
+            style={{ padding: '8px 18px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
           >
             Cancel
           </button>
           <button
             onClick={handleConnect}
             disabled={loading}
-            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl transition-all shadow-sm ${
-              loading
-                ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                : isConnected
-                ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', fontSize: '13px', fontWeight: 700,
+              background: loading ? 'var(--bg-active)' : isConnected ? 'rgba(201,64,64,0.08)' : '#b8956a',
+              border: isConnected ? '1px solid rgba(201,64,64,0.3)' : 'none',
+              color: loading ? 'var(--text-muted)' : isConnected ? '#c94040' : '#000',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
+              transition: 'all 150ms ease',
+              fontFamily: 'Inter, system-ui, sans-serif',
+            }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.opacity = '0.85'; }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.opacity = '1'; }}
           >
-            {loading && <Loader2 size={15} className="animate-spin" />}
-            {loading
-              ? isConnected ? "Disconnecting…" : "Connecting…"
-              : isConnected
-              ? "Disconnect"
-              : `Connect ${integration.name}`}
+            {loading && <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />}
+            {loading ? (isConnected ? "Disconnecting…" : "Connecting…") : isConnected ? "Disconnect" : `Connect ${integration.name}`}
           </button>
         </div>
       </div>
