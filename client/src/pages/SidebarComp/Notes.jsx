@@ -513,7 +513,7 @@ ${blockHtml}
                             onClick={() => setShowShareModal(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                             title="Share note"
-                            onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
+                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
                         >
                             <Users size={13} /> Share
@@ -522,10 +522,10 @@ ${blockHtml}
                         {/* History */}
                         <button
                             onClick={() => { setShowHistory(v => !v); setShowAI(false); }}
-                            style={{ padding: '6px', background: showHistory ? 'rgba(184,149,106,0.15)' : 'transparent', border: 'none', color: showHistory ? '#b8956a' : 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                            style={{ padding: '6px', background: showHistory ? 'rgba(184,149,106,0.15)' : 'transparent', border: 'none', color: showHistory ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Version history"
-                            onMouseEnter={e => { if (!showHistory) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; } }}
-                            onMouseLeave={e => { if (!showHistory) { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; } }}
+                            onMouseEnter={e => { if (!showHistory) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; } }}
+                            onMouseLeave={e => { if (!showHistory) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; } }}
                         >
                             <History size={16} />
                         </button>
@@ -533,10 +533,10 @@ ${blockHtml}
                         {/* Pin / Favorite */}
                         <button
                             onClick={() => togglePin && togglePin(id)}
-                            style={{ padding: '6px', background: note.isPinned ? 'rgba(251,191,36,0.1)' : 'transparent', border: 'none', color: note.isPinned ? '#fbbf24' : 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                            style={{ padding: '6px', background: note.isPinned ? 'rgba(251,191,36,0.1)' : 'transparent', border: 'none', color: note.isPinned ? '#fbbf24' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title={note.isPinned ? 'Remove from Favorites' : 'Add to Favorites'}
                             onMouseEnter={e => { if (!note.isPinned) { e.currentTarget.style.color = '#fbbf24'; e.currentTarget.style.background = 'rgba(251,191,36,0.08)'; } }}
-                            onMouseLeave={e => { if (!note.isPinned) { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; } }}
+                            onMouseLeave={e => { if (!note.isPinned) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; } }}
                         >
                             <Star size={16} className={note.isPinned ? 'fill-current' : ''} />
                         </button>
@@ -547,7 +547,7 @@ ${blockHtml}
                             style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Archive note"
                             onMouseEnter={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.background = 'rgba(167,139,250,0.08)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                         >
                             <Archive size={16} />
                         </button>
@@ -557,7 +557,7 @@ ${blockHtml}
                             style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Delete note"
                             onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
+                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
                         >
                             <Trash2 size={16} />
                         </button>
@@ -565,30 +565,30 @@ ${blockHtml}
                         {/* More menu */}
                         <div className="relative" ref={menuRef}>
                             <button onClick={() => setShowMenu(v => !v)}
-                                style={{ padding: '6px', background: showMenu ? 'rgba(255,255,255,0.07)' : 'transparent', border: 'none', color: showMenu ? '#e4e4e4' : 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
-                                onMouseEnter={e => { if (!showMenu) { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; } }}
-                                onMouseLeave={e => { if (!showMenu) { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; } }}
+                                style={{ padding: '6px', background: showMenu ? 'rgba(255,255,255,0.07)' : 'transparent', border: 'none', color: showMenu ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                                onMouseEnter={e => { if (!showMenu) { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; } }}
+                                onMouseLeave={e => { if (!showMenu) { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; } }}
                             >
                                 <MoreHorizontal size={16} />
                             </button>
                             {showMenu && (
-                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '200px', background: '#1a1a1a', border: '1px solid var(--border-default)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', zIndex: 20 }}>
+                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '200px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', zIndex: 20 }}>
                                     {[{ label: 'Duplicate', Icon: Copy, action: handleDuplicate },
                                       { label: 'Download PDF', Icon: Download, action: handleDownloadPDF },
                                       { label: 'Copy link', Icon: showShareTooltip ? Check : Share2, action: () => { handleCopyLink(); setShowMenu(false); }, amber: showShareTooltip },
                                     ].map(({ label, Icon: Ic, action, amber }) => (
                                         <button key={label} onClick={action}
-                                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: amber ? '#34d399' : 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
-                                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                            style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: amber ? 'var(--state-success)' : 'var(--text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
                                             <Ic size={13} style={{ color: 'var(--text-muted)' }} /> {label}
                                         </button>
                                     ))}
-                                    <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
+                                    <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '3px 0' }} />
                                     <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }}
                                         style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
-                                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
+                                        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     >
                                         <Info size={13} style={{ color: 'var(--text-muted)' }} /> Note Info
@@ -684,7 +684,7 @@ ${blockHtml}
                                     key={`${type}-${label}`}
                                     onClick={() => addBlock(type, content ?? '', meta || {})}
                                     style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
-                                    onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+                                    onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.background = 'transparent'; }}
                                 >
                                     <span style={{ fontSize: '11px' }}>{emoji}</span> {label}
