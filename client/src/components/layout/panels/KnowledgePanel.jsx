@@ -18,7 +18,7 @@ function PageTreeItem({ page, depth = 0, workspaceId, allPages, onNavigate, acti
                 onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
                 {children.length > 0 ? (
                     <span onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-                        style={{ color: 'rgba(228,228,228,0.3)', cursor: 'pointer' }}>
+                        style={{ color: 'var(--text-muted)', cursor: 'pointer' }}>
                         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     </span>
                 ) : <span style={{ width: '11px', display: 'inline-block' }} />}
@@ -69,23 +69,23 @@ const KnowledgePanel = ({ title }) => {
         : rootPages;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
             {/* Header */}
-            <div style={{ padding: '12px 12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ padding: '12px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         <BookOpen size={12} /> Knowledge
                     </span>
                     <div style={{ display: 'flex', gap: '4px' }}>
                         <button onClick={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
-                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'color 150ms ease' }}
+                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease' }}
                             title="Knowledge Graph"
                             onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
                             <Network size={13} />
                         </button>
                         <button onClick={handleCreatePage} disabled={creating}
-                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'color 150ms ease' }}
+                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease' }}
                             title="New page"
                             onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
@@ -94,20 +94,20 @@ const KnowledgePanel = ({ title }) => {
                     </div>
                 </div>
                 <div style={{ position: 'relative' }}>
-                    <Search size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)' }} />
+                    <Search size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Find page..."
-                        style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
+                        style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
                 </div>
             </div>
 
             {/* Special sections */}
-            <div style={{ padding: '4px 8px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <button onClick={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 8px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <Book size={13} style={{ color: '#b8956a', flexShrink: 0 }} />
-                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'rgba(228,228,228,0.55)', fontFamily: 'Inter, system-ui, sans-serif' }}>Company Handbook</span>
+                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>Company Handbook</span>
                 </button>
             </div>
 
@@ -120,8 +120,8 @@ const KnowledgePanel = ({ title }) => {
                 )}
                 {!loading && filtered.length === 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', textAlign: 'center' }}>
-                        <BookOpen size={28} style={{ color: 'rgba(228,228,228,0.12)', marginBottom: '8px' }} />
-                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>No pages yet</p>
+                        <BookOpen size={28} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No pages yet</p>
                         <button onClick={handleCreatePage}
                             style={{ marginTop: '10px', fontSize: '12px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>Create first page</button>
                     </div>
@@ -133,7 +133,7 @@ const KnowledgePanel = ({ title }) => {
                             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                             <span style={{ fontSize: '13px' }}>{page.icon || '📄'}</span>
-                            <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.6)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.title}</span>
+                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.title}</span>
                         </button>
                     ))
                     : filtered.map(page => (
@@ -144,9 +144,9 @@ const KnowledgePanel = ({ title }) => {
             </div>
 
             {/* Footer */}
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '8px 12px' }}>
+            <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px 12px' }}>
                 <button onClick={handleCreatePage} disabled={creating}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px', background: 'transparent', border: 'none', fontSize: '12px', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px', background: 'transparent', border: 'none', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
                     <Plus size={12} />{creating ? 'Creating…' : 'New page'}

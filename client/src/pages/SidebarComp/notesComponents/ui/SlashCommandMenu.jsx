@@ -60,7 +60,7 @@ const SlashCommandMenu = ({ position, query, onSelect, onClose }) => {
         >
             {/* Header */}
             <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>
+                <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                     {query ? `Results for "/${query}"` : 'Add a block'}
                 </p>
             </div>
@@ -94,7 +94,7 @@ const SlashCommandMenu = ({ position, query, onSelect, onClose }) => {
                                 <p style={{ fontSize: '12px', fontWeight: 600, lineHeight: 1.3, color: isActive ? '#b8956a' : '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>
                                     {block.label}
                                 </p>
-                                <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {block.desc}
                                 </p>
                             </div>

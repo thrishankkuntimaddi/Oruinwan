@@ -67,7 +67,7 @@ function WorkloadRow({ item, maxCount }) {
             {item.count} {item.count === 1 ? 'task' : 'tasks'}
           </span>
         </div>
-        <div style={{ height: '5px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+        <div style={{ height: '5px', background: 'var(--bg-active)', overflow: 'hidden' }}>
           <div
             style={{ height: '100%', width: `${pct}%`, background: barColor, transition: 'width 300ms ease' }}
           />
@@ -117,9 +117,9 @@ export default function WorkloadPanel({ workspaceId }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: T.bg, fontFamily: T.font }}>
       {/* Header */}
-      <div style={{ flexShrink: 0, background: '#111111', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+      <div style={{ flexShrink: 0, background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Users size={14} style={{ color: T.accent }} />
-        <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.5)' }}>Team Workload</span>
+        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Team Workload</span>
         {!loading && workload.length > 0 && (
           <span style={{ fontSize: '11px', color: T.muted }}>
             — {workload.length} member(s) · {totalTasks} task(s) total
@@ -172,7 +172,7 @@ export default function WorkloadPanel({ workspaceId }) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '192px', gap: '8px' }}>
             <Users size={28} style={{ opacity: 0.2, color: T.muted }} />
             <p style={{ fontSize: '13px', color: T.muted, fontFamily: T.font }}>No assigned tasks in this workspace</p>
-            <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', fontFamily: T.font }}>Assign tasks to team members to see workload here</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: T.font }}>Assign tasks to team members to see workload here</p>
           </div>
         )}
         {!loading && !error && workload.map(item => (

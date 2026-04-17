@@ -3,12 +3,12 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { User, Inbox, Send, CheckCircle2, Trash2, Eye, Circle } from "lucide-react";
 
 const S = {
-  panel:     { display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' },
-  header:    { height: '56px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0, background: '#0c0c0c' },
-  label:     { fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.35)', fontFamily: 'Inter, system-ui, sans-serif' },
-  title:     { fontSize: '15px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' },
+  panel:     { display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' },
+  header:    { height: '56px', display: 'flex', alignItems: 'center', paddingLeft: '20px', paddingRight: '20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, background: 'var(--bg-base)' },
+  label:     { fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' },
+  title:     { fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' },
   nav:       { padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px', flex: 1 },
-  divider:   { height: '1px', background: 'rgba(255,255,255,0.06)', margin: '8px 12px' },
+  divider:   { height: '1px', background: 'var(--bg-active)', margin: '8px 12px' },
 };
 
 const navBtn = (active, danger) => ({

@@ -50,7 +50,7 @@ const TEXT_MUTED = 'rgba(228,228,228,0.45)';
 const CARD_SHADOW = '0 1px 2px rgba(0,0,0,0.5)';
 
 const STATUS_META = {
-  'To Do':      { bg: 'rgba(255,255,255,0.06)', color: 'rgba(228,228,228,0.5)', border: 'rgba(255,255,255,0.12)' },
+  'To Do':      { bg: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: 'rgba(255,255,255,0.12)' },
   'In Progress':{ bg: 'rgba(96,165,250,0.12)', color: '#60a5fa',               border: 'rgba(96,165,250,0.25)'  },
   'Completed':  { bg: 'rgba(52,211,153,0.1)',  color: '#34d399',               border: 'rgba(52,211,153,0.25)'  },
   'Cancelled':  { bg: 'rgba(248,113,113,0.08)',color: '#f87171',               border: 'rgba(248,113,113,0.2)'  },
@@ -166,8 +166,8 @@ function TransferBanner({ task, onApprove, onReject, onRequest }) {
         <Bell size={12} style={{ marginTop: '1px', flexShrink: 0, color: '#a78bfa' }} />
         <div style={{ flex: 1 }}>
           <span style={{ fontWeight: 700, color: '#a78bfa' }}>Transfer Pending</span>
-          <span style={{ color: 'rgba(228,228,228,0.4)', marginLeft: '6px' }}>→ {task.transferRequest.requestedTo?.username || '?'}</span>
-          {task.transferRequest.note && <p style={{ color: 'rgba(228,228,228,0.35)', fontStyle: 'italic', marginTop: '2px' }}>"{task.transferRequest.note}"</p>}
+          <span style={{ color: 'var(--text-muted)', marginLeft: '6px' }}>→ {task.transferRequest.requestedTo?.username || '?'}</span>
+          {task.transferRequest.note && <p style={{ color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>"{task.transferRequest.note}"</p>}
         </div>
         {onApprove && (
           <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
@@ -238,7 +238,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
           {/* Meta row */}
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {/* Channel / Project */}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'rgba(228,228,228,0.4)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 6px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 6px' }}>
               <Hash size={9} /> {task.project || 'General'}
             </span>
 
@@ -364,7 +364,7 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
         </div>
 
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'rgba(228,228,228,0.35)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 5px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 5px' }}>
             <Hash size={8} /> {task.project || 'General'}
           </span>
           <PriorityIcon priority={task.priority} size={12} />
@@ -436,7 +436,7 @@ function StatsStrip({ tasks, currentUserId }) {
   return (
     <div className="flex gap-3 px-5 pb-3 flex-shrink-0">
       {stats.map(s => (
-        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', border: `1px solid ${BORDER_COLOR}`, borderRadius: '2px', padding: '6px 10px' }}>
+        <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-hover)', border: `1px solid ${BORDER_COLOR}`, borderRadius: '2px', padding: '6px 10px' }}>
           <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
           <span style={{ fontSize: '11px', color: TEXT_MUTED, fontWeight: 500 }}>{s.label}</span>
           <span className="text-sm font-bold" style={{ color: s.color }}>{s.value}</span>
@@ -669,13 +669,13 @@ export default function MyTasks() {
         <style>{`@keyframes mf-sh{0%,100%{opacity:.35}50%{opacity:.7}}.mf-sh{animation:mf-sh 1.6s ease-in-out infinite}`}</style>
         <div className="mf-sh" style={{ width: '200px', flexShrink: 0, background: SIDEBAR_BG, borderRight: `1px solid ${BORDER_COLOR}`, padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {[100, 80, 90, 70, 85].map((w, i) => (
-            <div key={i} style={{ height: '32px', background: 'rgba(255,255,255,0.05)', width: `${w}%` }} />
+            <div key={i} style={{ height: '32px', background: 'var(--bg-hover)', width: `${w}%` }} />
           ))}
         </div>
         <div className="mf-sh" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', gap: '12px' }}>
-          <div style={{ height: '20px', width: '180px', background: 'rgba(255,255,255,0.08)' }} />
+          <div style={{ height: '20px', width: '180px', background: 'var(--bg-active)' }} />
           {[90, 75, 85, 65, 80].map((w, i) => (
-            <div key={i} style={{ height: '48px', background: 'rgba(255,255,255,0.05)', width: `${w}%` }} />
+            <div key={i} style={{ height: '48px', background: 'var(--bg-hover)', width: `${w}%` }} />
           ))}
         </div>
       </div>
@@ -790,7 +790,7 @@ export default function MyTasks() {
                 {/* Row 2: search + sort compact */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
-                    <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.35)' }} />
+                    <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                     <input
                       value={search}
                       onChange={e => setSearch(e.target.value)}
@@ -904,14 +904,14 @@ export default function MyTasks() {
           <div className="flex-1 min-h-0 overflow-hidden">
             {filtered.length === 0 && viewMode !== 'workload' ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', background: BOARD_BG }}>
-                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', border: `1px solid ${BORDER_COLOR}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'var(--bg-hover)', border: `1px solid ${BORDER_COLOR}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {isDeleted ? <Trash2 size={22} style={{ color: TEXT_MUTED }} /> : <CheckCircle2 size={22} style={{ color: TEXT_MUTED }} />}
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <p style={{ fontWeight: 600, fontSize: '13px', color: TEXT_MUTED }}>
                     {isDeleted ? 'Trash is empty' : search ? 'No matching issues' : 'No issues here'}
                   </p>
-                  <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '4px' }}>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
                     {isDeleted ? 'Deleted items will appear here.' : canCreate ? 'Click Create to add your first issue.' : ''}
                   </p>
                 </div>

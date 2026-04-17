@@ -224,7 +224,7 @@ export default function AIAssistantPanel({ channelId, workspaceId, onClose, toke
                             rows={5}
                             style={{
                                 width: '100%', boxSizing: 'border-box',
-                                background: 'rgba(255,255,255,0.05)',
+                                background: 'var(--bg-hover)',
                                 border: '1px solid rgba(139,92,246,0.25)', borderRadius: 8,
                                 color: '#e2e8f0', fontSize: 13, padding: '8px 10px',
                                 resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5,

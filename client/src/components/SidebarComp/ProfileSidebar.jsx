@@ -377,9 +377,9 @@ const ProfileMenu = ({ onClose }) => {
       {/* Email Verification Modal */}
       {showVerifyModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
-          <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.75)', padding: '24px', width: '100%', maxWidth: '384px', margin: '0 16px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '8px' }}>Verify Email</h3>
-            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.45)', marginBottom: '20px', lineHeight: 1.6 }}>
+          <div style={{ background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.75)', padding: '24px', width: '100%', maxWidth: '384px', margin: '0 16px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>Verify Email</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: 1.6 }}>
               Enter the 6-digit verification code sent to your email address.
             </p>
 
@@ -394,7 +394,7 @@ const ProfileMenu = ({ onClose }) => {
               style={{
                 width: '100%', border: '1px solid rgba(255,255,255,0.12)', padding: '12px 16px',
                 textAlign: 'center', fontSize: '22px', fontWeight: 700, letterSpacing: '0.25em',
-                background: 'rgba(255,255,255,0.04)', color: '#e4e4e4', outline: 'none',
+                background: 'var(--bg-hover)', color: 'var(--text-primary)', outline: 'none',
                 marginBottom: '16px', boxSizing: 'border-box', fontFamily: 'monospace',
                 caretColor: '#b8956a',
               }}
@@ -411,7 +411,7 @@ const ProfileMenu = ({ onClose }) => {
                   setVerificationCode("");
                   setVerifyingEmailId(null);
                 }}
-                style={{ flex: 1, padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}
+                style={{ flex: 1, padding: '8px 16px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}
                 onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
                 onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
               >

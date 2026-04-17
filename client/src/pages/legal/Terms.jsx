@@ -13,10 +13,10 @@ const SECTIONS = [
 ];
 
 const S = {
-    h2: { fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
-    p:  { fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.85', marginBottom: '16px' },
+    h2: { fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
+    p:  { fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.85', marginBottom: '16px' },
     ul: { paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '18px' },
-    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.7' },
+    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.7' },
     dot: { width: '5px', height: '5px', background: '#b8956a', flexShrink: 0, marginTop: '9px' },
 };
 
@@ -64,7 +64,7 @@ export default function Terms() {
                         })}
                     </nav>
                     <div style={{ marginTop: '32px', padding: '14px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.2)' }}>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', lineHeight: '1.7' }}>Last updated:<br /><strong style={{ color: '#b8956a' }}>January 1, 2026</strong></p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.7' }}>Last updated:<br /><strong style={{ color: '#b8956a' }}>January 1, 2026</strong></p>
                     </div>
                 </aside>
 
@@ -75,7 +75,7 @@ export default function Terms() {
                             <Scale size={11} style={{ color: '#b8956a' }} />
                             <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Terms of Service</span>
                         </div>
-                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Clear, fair terms.</h1>
+                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Clear, fair terms.</h1>
                         <p style={{ ...S.p, fontSize: '16px' }}>These Terms govern your use of Chttrix. We've written them to be readable, not a legal maze. If you have questions, email us at legal@chttrix.io.</p>
                     </div>
 
@@ -89,7 +89,7 @@ export default function Terms() {
 
                     <DocSection id="usage" title="Acceptable Use">
                         <p style={S.p}>Chttrix is a professional collaboration platform. You agree not to use it in any way that violates laws, harms others, or disrupts the platform's integrity.</p>
-                        <p style={{ ...S.p, fontWeight: 600, color: 'rgba(228,228,228,0.7)' }}>You may not use Chttrix to:</p>
+                        <p style={{ ...S.p, fontWeight: 600, color: 'var(--text-muted)' }}>You may not use Chttrix to:</p>
                         <ul style={S.ul}>
                             {['Transmit spam, malware, or phishing content', 'Harass, threaten, or impersonate other users', 'Scrape, reverse-engineer, or attempt to access non-public APIs', 'Use the platform for illegal activities or to facilitate fraud', 'Upload content that violates third-party intellectual property rights', 'Circumvent access controls, rate limits, or security measures'].map(t => <li key={t} style={S.li}><span style={S.dot} />{t}</li>)}
                         </ul>
@@ -118,10 +118,10 @@ export default function Terms() {
                     <DocSection id="contact" title="Contact">
                         <p style={S.p}>For legal inquiries, disputes, or Terms-related questions:</p>
                         <div style={{ padding: '20px 24px', background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.6)', lineHeight: '2' }}>
-                                <strong style={{ color: '#e4e4e4' }}>Email:</strong> legal@chttrix.io<br />
-                                <strong style={{ color: '#e4e4e4' }}>Response time:</strong> Within 5 business days<br />
-                                <strong style={{ color: '#e4e4e4' }}>Governing law:</strong> Laws of Delaware, USA
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '2' }}>
+                                <strong style={{ color: 'var(--text-primary)' }}>Email:</strong> legal@chttrix.io<br />
+                                <strong style={{ color: 'var(--text-primary)' }}>Response time:</strong> Within 5 business days<br />
+                                <strong style={{ color: 'var(--text-primary)' }}>Governing law:</strong> Laws of Delaware, USA
                             </p>
                         </div>
                     </DocSection>

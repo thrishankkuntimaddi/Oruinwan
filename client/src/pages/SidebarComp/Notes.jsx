@@ -470,7 +470,7 @@ ${blockHtml}
             >
                 {/* Drag handle */}
                 <div className="absolute -left-7 top-2 opacity-0 group-hover/block:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing transition-opacity z-10">
-                    <GripVertical size={14} style={{ color: 'rgba(228,228,228,0.25)' }} />
+                    <GripVertical size={14} style={{ color: 'var(--text-muted)' }} />
                 </div>
                 {el}
             </div>
@@ -478,18 +478,18 @@ ${blockHtml}
     };
 
     return (
-        <div style={{ display: 'flex', height: '100%', background: '#0c0c0c', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
             {/* Main editor column */}
             <div className="flex flex-col flex-1 min-w-0">
                 {/* ── Toolbar ── */}
-                <div style={{ height: '52px', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', background: '#0c0c0c', flexShrink: 0, zIndex: 10, position: 'relative' }}>
+                <div style={{ height: '52px', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-base)', flexShrink: 0, zIndex: 10, position: 'relative' }}>
                     <div className="flex items-center gap-3">
                         {/* Note type badge — Lucide icon */}
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${typeConf.color}`}>
                             <typeConf.Icon size={12} />
                             {typeConf.label}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'rgba(228,228,228,0.25)', fontFamily: 'monospace' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
                             <Clock size={11} />
                             <span className="hidden sm:block">{formattedDate}</span>
                         </div>
@@ -511,7 +511,7 @@ ${blockHtml}
                         {/* Share */}
                         <button
                             onClick={() => setShowShareModal(true)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                             title="Share note"
                             onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
@@ -544,7 +544,7 @@ ${blockHtml}
                         {/* Archive */}
                         <button
                             onClick={() => toggleArchive && toggleArchive(id)}
-                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Archive note"
                             onMouseEnter={e => { e.currentTarget.style.color = '#a78bfa'; e.currentTarget.style.background = 'rgba(167,139,250,0.08)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
@@ -554,7 +554,7 @@ ${blockHtml}
 
                         {/* Delete */}
                         <button onClick={() => setIsDeleteModalOpen(true)}
-                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Delete note"
                             onMouseEnter={e => { e.currentTarget.style.color = '#f87171'; e.currentTarget.style.background = 'rgba(248,113,113,0.08)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
@@ -582,16 +582,16 @@ ${blockHtml}
                                             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                         >
-                                            <Ic size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> {label}
+                                            <Ic size={13} style={{ color: 'var(--text-muted)' }} /> {label}
                                         </button>
                                     ))}
                                     <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
                                     <button onClick={() => { setShowInfoModal(true); setShowMenu(false); }}
-                                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
+                                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
                                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                     >
-                                        <Info size={13} style={{ color: 'rgba(228,228,228,0.35)' }} /> Note Info
+                                        <Info size={13} style={{ color: 'var(--text-muted)' }} /> Note Info
                                     </button>
                                 </div>
                             )}
@@ -608,7 +608,7 @@ ${blockHtml}
                             value={title}
                             onChange={handleTitleChange}
                             style={{
-                                fontSize: '2.5rem', fontWeight: 800, color: '#e4e4e4',
+                                fontSize: '2.5rem', fontWeight: 800, color: 'var(--text-primary)',
                                 border: 'none', outline: 'none', padding: 0, marginBottom: '10px',
                                 width: '100%', background: 'transparent', fontFamily: 'Inter, system-ui, sans-serif',
                                 lineHeight: 1.15,
@@ -641,7 +641,7 @@ ${blockHtml}
                                 />
                             ) : (
                                 <button onClick={() => setShowTagInput(true)}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'rgba(228,228,228,0.3)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
+                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', fontSize: '11px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'monospace' }}
                                     onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
                                 >
@@ -657,7 +657,7 @@ ${blockHtml}
 
                         {/* Add block prompt */}
                         <div
-                            style={{ marginTop: '24px', padding: '12px 0', fontSize: '12px', color: 'rgba(228,228,228,0.2)', cursor: 'text', userSelect: 'none', transition: 'color 150ms ease' }}
+                            style={{ marginTop: '24px', padding: '12px 0', fontSize: '12px', color: 'var(--text-muted)', cursor: 'text', userSelect: 'none', transition: 'color 150ms ease' }}
                             onClick={() => addBlock('text', '')}
                             onMouseEnter={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
                             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
@@ -683,7 +683,7 @@ ${blockHtml}
                                 <button
                                     key={`${type}-${label}`}
                                     onClick={() => addBlock(type, content ?? '', meta || {})}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 500, color: 'rgba(228,228,228,0.5)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                                     onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
                                     onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.background = 'transparent'; }}
                                 >

@@ -24,30 +24,30 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
         if (data.headers.length > 1) save({ headers: data.headers.filter((_, i) => i !== ci), rows: data.rows.map(r => r.filter((_, i) => i !== ci)) });
     };
 
-    const cell = { borderRight: '1px solid rgba(255,255,255,0.06)', padding: 0, position: 'relative' };
-    const inp = { width: '100%', background: 'transparent', border: 'none', outline: 'none', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px' };
+    const cell = { borderRight: '1px solid var(--border-subtle)', padding: 0, position: 'relative' };
+    const inp = { width: '100%', background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px' };
 
     return (
         <div className="group relative mb-4">
-            <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#111', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-default)', background: '#111', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         {/* Header */}
                         <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.04)' }}>
+                            <tr style={{ background: 'var(--bg-hover)' }}>
                                 {data.headers.map((h, ci) => (
-                                    <th key={ci} style={{ ...cell, borderBottom: '1px solid rgba(255,255,255,0.08)' }}
+                                    <th key={ci} style={{ ...cell, borderBottom: '1px solid var(--border-default)' }}
                                         className="relative group/hcol">
                                         <input
                                             value={h}
                                             onChange={e => updateHeader(ci, e.target.value)}
                                             placeholder={`Column ${ci + 1}`}
-                                            style={{ ...inp, fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.5)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 12px' }}
+                                            style={{ ...inp, fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '10px 12px' }}
                                         />
                                         {data.headers.length > 1 && (
                                             <button
                                                 onClick={() => removeCol(ci)}
-                                                style={{ position: 'absolute', top: '6px', right: '4px', padding: '2px', color: 'rgba(228,228,228,0.15)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 100ms ease' }}
+                                                style={{ position: 'absolute', top: '6px', right: '4px', padding: '2px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 100ms ease' }}
                                                 className="group-hover/hcol:!opacity-100"
                                                 title="Remove column"
                                                 onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
@@ -59,10 +59,10 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                     </th>
                                 ))}
                                 {/* Add column */}
-                                <th style={{ width: '36px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' }}>
+                                <th style={{ width: '36px', borderBottom: '1px solid var(--border-default)', background: 'rgba(255,255,255,0.02)' }}>
                                     <button
                                         onClick={addCol}
-                                        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 6px', transition: 'color 150ms ease' }}
+                                        style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '10px 6px', transition: 'color 150ms ease' }}
                                         title="Add column"
                                         onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
@@ -96,7 +96,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                         {data.rows.length > 1 && (
                                             <button
                                                 onClick={() => removeRow(ri)}
-                                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(228,228,228,0.15)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px 4px', opacity: 0, transition: 'all 150ms ease' }}
+                                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px 4px', opacity: 0, transition: 'all 150ms ease' }}
                                                 className="group-hover/row:!opacity-100"
                                                 title="Remove row"
                                                 onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
@@ -113,10 +113,10 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 </div>
 
                 {/* Footer */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--border-subtle)' }}>
                     <button
                         onClick={addRow}
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 500, color: 'rgba(228,228,228,0.3)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                         onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
                     >
@@ -124,7 +124,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </button>
                     <button
                         onClick={() => onRemoveBlock(block.id)}
-                        style={{ padding: '4px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                        style={{ padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                         className="group-hover:!opacity-100"
                         onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}

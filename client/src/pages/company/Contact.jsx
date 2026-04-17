@@ -19,7 +19,7 @@ const CONTACTS = [
     { icon: Building2,    color: '#a78bfa', title: 'Sales',    email: 'sales@chttrix.io',    desc: 'Enterprise plans and custom pricing.' },
 ];
 
-const inp = { width: '100%', padding: '10px 12px', background: '#141414', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 150ms ease' };
+const inp = { width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 150ms ease' };
 
 export default function Contact() {
     const [form, setForm] = useState({ name: '', email: '', topic: 'general', message: '' });
@@ -35,14 +35,14 @@ export default function Contact() {
     return (
         <PublicPageShell title="Contact">
             {/* Hero */}
-            <div style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '80px 0 64px' }}>
+            <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 64px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
                         <Mail size={11} style={{ color: '#b8956a' }} />
                         <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Contact Us</span>
                     </div>
-                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Let's talk.</h1>
-                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', maxWidth: '500px' }}>
+                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Let's talk.</h1>
+                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75', maxWidth: '500px' }}>
                         Whether it's a sales question, a bug report, or just a hello — we read every message and respond to everything.
                     </p>
                 </div>
@@ -53,7 +53,7 @@ export default function Contact() {
                 {/* Left — contact cards */}
                 <div style={{ flex: '1 1 300px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Direct Contacts</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '32px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)', marginBottom: '32px' }}>
                         {CONTACTS.map(c => {
                             const Icon = c.icon;
                             return (
@@ -62,15 +62,15 @@ export default function Contact() {
                                         <Icon size={15} style={{ color: c.color }} />
                                     </div>
                                     <div>
-                                        <p style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', marginBottom: '2px' }}>{c.title}</p>
+                                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{c.title}</p>
                                         <a href={`mailto:${c.email}`} style={{ fontSize: '12px', color: '#b8956a', textDecoration: 'none', fontFamily: 'monospace' }}>{c.email}</a>
-                                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', marginTop: '3px' }}>{c.desc}</p>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>{c.desc}</p>
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
-                    <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', lineHeight: '1.7' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.7' }}>
                         We typically respond within 1 business day. For urgent security issues, response within 24 hours is guaranteed.
                     </p>
                 </div>
@@ -82,8 +82,8 @@ export default function Contact() {
                     {sent ? (
                         <div style={{ padding: '32px', background: 'rgba(90,186,138,0.06)', border: '1px solid rgba(90,186,138,0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
                             <CheckCircle2 size={32} style={{ color: '#5aba8a' }} />
-                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4' }}>Message sent!</h3>
-                            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.5)' }}>We'll get back to you at <strong style={{ color: '#e4e4e4' }}>{form.email}</strong> within 1 business day.</p>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Message sent!</h3>
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>We'll get back to you at <strong style={{ color: 'var(--text-primary)' }}>{form.email}</strong> within 1 business day.</p>
                             <button onClick={() => { setSent(false); setForm({ name: '', email: '', topic: 'general', message: '' }); }}
                                 style={{ marginTop: '8px', fontSize: '12px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
                                 Send another message →
@@ -93,14 +93,14 @@ export default function Contact() {
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                 <div>
-                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Name</label>
+                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Name</label>
                                     <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="Your name"
                                         style={inp}
                                         onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
                                         onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Email</label>
+                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Email</label>
                                     <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="you@company.com"
                                         style={inp}
                                         onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
@@ -108,14 +108,14 @@ export default function Contact() {
                                 </div>
                             </div>
                             <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Topic</label>
+                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Topic</label>
                                 <select value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
                                     style={{ ...inp, cursor: 'pointer' }}>
                                     {TOPICS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
                                 </select>
                             </div>
                             <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.35)', display: 'block', marginBottom: '6px' }}>Message</label>
+                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Message</label>
                                 <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} required rows={6} placeholder="Tell us what's on your mind..."
                                     style={{ ...inp, resize: 'vertical', minHeight: '140px' }}
                                     onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}

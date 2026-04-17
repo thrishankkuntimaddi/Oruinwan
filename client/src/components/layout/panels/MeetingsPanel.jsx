@@ -16,10 +16,10 @@ const SectionHeader = ({ label, isOpen, onClick, count }) => (
         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span style={{ color: 'rgba(228,228,228,0.3)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }}><ChevronRight size={11} /></span>
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>{label}</span>
+            <span style={{ color: 'var(--text-muted)', transform: isOpen ? 'rotate(90deg)' : 'none', transition: 'transform 200ms ease' }}><ChevronRight size={11} /></span>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>{label}</span>
             {count !== undefined && (
-                <span style={{ padding: '1px 6px', background: 'rgba(255,255,255,0.06)', fontSize: '10px', color: 'rgba(228,228,228,0.35)', fontFamily: 'Inter, system-ui, sans-serif' }}>{count}</span>
+                <span style={{ padding: '1px 6px', background: 'var(--bg-active)', fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>{count}</span>
             )}
         </div>
     </div>
@@ -35,7 +35,7 @@ const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, 
             <div>
                 <h4 style={{ fontSize: '12px', fontWeight: 600, color: isSelected ? '#e4e4e4' : 'rgba(228,228,228,0.75)', fontFamily: 'Inter, system-ui, sans-serif' }}>{title}</h4>
                 {channel && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginTop: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
                         <Hash size={9} /><span>{channel}</span>
                     </div>
                 )}
@@ -48,7 +48,7 @@ const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, 
                     </span> LIVE
                 </span>
             ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'rgba(228,228,228,0.3)', padding: '2px 6px', background: 'rgba(255,255,255,0.05)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', padding: '2px 6px', background: 'var(--bg-hover)', flexShrink: 0 }}>
                     {status === 'past' ? <History size={9} /> : <Clock size={9} />}<span>{time}</span>
                 </div>
             )}
@@ -60,7 +60,7 @@ const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, 
                         {(p.username || p.initials || '?').slice(0, 2).toUpperCase()}
                     </div>
                 ))}
-                {participants.length === 0 && <span style={{ fontSize: '10px', color: 'rgba(228,228,228,0.25)', fontFamily: 'Inter, system-ui, sans-serif' }}>No participants</span>}
+                {participants.length === 0 && <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No participants</span>}
             </div>
         </div>
     </div>
@@ -140,19 +140,19 @@ const MeetingsPanel = () => {
     const totalLive = (active ? 1 : 0) + activeWorkspaceHuddles.length;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' }}>
             {/* ── Header ── */}
-            <div style={{ height: '56px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: '#0c0c0c', flexShrink: 0 }}>
-                <h2 style={{ fontWeight: 700, fontSize: '15px', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>Video Huddles</h2>
+            <div style={{ height: '56px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0 }}>
+                <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Video Huddles</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <button onClick={handleStartInstant} disabled={starting || active} title="Start Instant Huddle"
-                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'rgba(228,228,228,0.4)', cursor: starting || active ? 'not-allowed' : 'pointer', opacity: starting || active ? 0.5 : 1, transition: 'all 150ms ease' }}
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: starting || active ? 'not-allowed' : 'pointer', opacity: starting || active ? 0.5 : 1, transition: 'all 150ms ease' }}
                         onMouseEnter={e => { if (!starting && !active) e.currentTarget.style.color = '#b8956a'; }}
                         onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}>
                         {starting ? <span style={{ display: 'block', width: '16px', height: '16px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : <Video size={17} />}
                     </button>
                     <button onClick={() => setShowScheduleModal(true)} title="Schedule a Meeting"
-                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
                         <Calendar size={17} />
@@ -200,7 +200,7 @@ const MeetingsPanel = () => {
 
             {/* ── Tabs ── */}
             <div style={{ padding: '10px 12px 6px', flexShrink: 0 }}>
-                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', gap: '2px', padding: '3px' }}>
+                <div style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', gap: '2px', padding: '3px' }}>
                     {[
                         { id: 'upcoming', label: 'Upcoming' },
                         { id: 'history', label: 'History' },
@@ -280,13 +280,13 @@ const MeetingsPanel = () => {
                                     const timeStr = start.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                                     const isLive = m.status === 'live';
                                     return (
-                                        <div key={m._id} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
+                                        <div key={m._id} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: '1px solid var(--border-default)', background: 'var(--bg-surface)', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
                                             onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
                                             onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}>
                                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isLive ? '#ef4444' : '#3b82f6' }} />
                                             <div style={{ paddingLeft: '6px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>{m.title}</p>
+                                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: '8px', fontFamily: 'Inter, system-ui, sans-serif' }}>{m.title}</p>
                                                     {isLive && (
                                                         <span style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '1px 5px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', fontSize: '9px', fontWeight: 700, color: '#f87171', flexShrink: 0 }}>
                                                             <span style={{ position: 'relative', display: 'flex', width: '5px', height: '5px' }}><span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#f87171', opacity: 0.5, animation: 'ping 1s ease infinite' }} /><span style={{ position: 'relative', width: '5px', height: '5px', borderRadius: '50%', background: '#ef4444' }} /></span>
@@ -294,9 +294,9 @@ const MeetingsPanel = () => {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginBottom: '6px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px' }}>
                                                     <Clock size={9} /><span>{timeStr}</span><span>·</span><span>{m.duration} min</span>
-                                                    {m.createdBy && (<><span>·</span><span style={{ color: 'rgba(228,228,228,0.4)' }}>{m.createdBy.username || m.createdBy.firstName}</span></>)}
+                                                    {m.createdBy && (<><span>·</span><span style={{ color: 'var(--text-muted)' }}>{m.createdBy.username || m.createdBy.firstName}</span></>)}
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '10px' }}>
                                                     {m.meetingLink && (
@@ -310,7 +310,7 @@ const MeetingsPanel = () => {
                                                         View Details →
                                                     </button>
                                                     <button onClick={() => handleCancelMeeting(m._id)}
-                                                        style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', fontFamily: 'Inter, system-ui, sans-serif' }}
+                                                        style={{ fontSize: '10px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto', fontFamily: 'Inter, system-ui, sans-serif' }}
                                                         onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                                                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}>
                                                         Cancel
@@ -330,8 +330,8 @@ const MeetingsPanel = () => {
                                 <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
                                     <Video size={20} style={{ color: '#b8956a' }} />
                                 </div>
-                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No active huddles</p>
-                                <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', marginBottom: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}>Start an instant huddle or schedule one</p>
+                                <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No active huddles</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', fontFamily: 'Inter, system-ui, sans-serif' }}>Start an instant huddle or schedule one</p>
                                 <div style={{ display: 'flex', gap: '8px' }}>
                                     <button onClick={handleStartInstant} disabled={starting}
                                         style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', opacity: starting ? 0.6 : 1 }}>
@@ -352,11 +352,11 @@ const MeetingsPanel = () => {
                     <>
                         {huddleHistory.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 16px', textAlign: 'center' }}>
-                                <div style={{ width: '44px', height: '44px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
-                                    <History size={18} style={{ color: 'rgba(228,228,228,0.25)' }} />
+                                <div style={{ width: '44px', height: '44px', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
+                                    <History size={18} style={{ color: 'var(--text-muted)' }} />
                                 </div>
-                                <p style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter, system-ui, sans-serif' }}>No huddle history yet</p>
-                                <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Ended huddles will appear here</p>
+                                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No huddle history yet</p>
+                                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Ended huddles will appear here</p>
                             </div>
                         ) : (
                             <>
@@ -385,14 +385,14 @@ const MeetingsPanel = () => {
             </div>
 
             {/* ── Footer Stats ── */}
-            <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
+            <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div style={{ padding: '10px 12px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.12)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ padding: '6px', background: 'rgba(184,149,106,0.1)', color: '#b8956a' }}>
                         <Users size={13} />
                     </div>
                     <div>
-                        <p style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Inter, system-ui, sans-serif' }}>Live Huddles</p>
-                        <p style={{ fontSize: '18px', fontWeight: 700, color: '#e4e4e4', lineHeight: 1, fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <p style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontFamily: 'Inter, system-ui, sans-serif' }}>Live Huddles</p>
+                        <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1, fontFamily: 'Inter, system-ui, sans-serif' }}>
                             {totalLive}<span style={{ fontSize: '11px', fontWeight: 400, color: '#b8956a', marginLeft: '4px' }}>active</span>
                         </p>
                     </div>

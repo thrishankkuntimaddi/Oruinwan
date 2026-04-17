@@ -179,7 +179,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                 <div style={{ height: '1px', background: T.border, margin: '12px 8px' }} />
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', marginBottom: '6px' }}>
                                     <span style={{ fontSize: '9px', fontWeight: 700, color: T.dim, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Pending</span>
-                                    <span style={{ fontSize: '9px', fontWeight: 700, color: T.muted, background: 'rgba(255,255,255,0.06)', padding: '1px 5px' }}>{pendingInvites.length}</span>
+                                    <span style={{ fontSize: '9px', fontWeight: 700, color: T.muted, background: 'var(--bg-active)', padding: '1px 5px' }}>{pendingInvites.length}</span>
                                 </div>
                                 <div style={{ maxHeight: '120px', overflowY: 'auto' }}>
                                     {pendingInvites.map(invite => {

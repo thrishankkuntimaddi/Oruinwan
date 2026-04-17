@@ -101,10 +101,10 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
     if (state === "preview") {
         return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
-                <video src={videoUrl} style={{ height: '36px', width: '64px', objectFit: 'cover', border: '1px solid rgba(255,255,255,0.08)' }} muted />
+                <video src={videoUrl} style={{ height: '36px', width: '64px', objectFit: 'cover', border: '1px solid var(--border-default)' }} muted />
                 <span style={{ fontSize: '11px', color: '#b8956a', fontFamily: 'monospace' }}>{fmt(duration)}</span>
                 <button onClick={discard} title="Discard"
-                    style={{ padding: '4px', background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
+                    style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
                 >

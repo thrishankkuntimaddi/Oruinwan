@@ -241,12 +241,12 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
       style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
     >
       <div
-        style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.1)', maxWidth: 860, maxHeight: "90vh", width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        style={{ background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)', maxWidth: 860, maxHeight: "90vh", width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
         {/* ── Top bar ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.08)', background: '#111111', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0 }}>
           {initialData?.issueKey && (
-            <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.35)', letterSpacing: '0.12em', textTransform: 'uppercase', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--bg-hover)', padding: '2px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
               {initialData.issueKey}
             </span>
           )}
@@ -255,14 +255,14 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <Briefcase size={15} style={{ color: '#b8956a' }} />
             </div>
-            <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
               {isEditing ? (isReadOnly ? "Task Details" : "Update Task") : "Create New Task"}
             </h2>
           </div>
 
           <button
             onClick={onClose}
-            style={{ flexShrink: 0, width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(228,228,228,0.4)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
+            style={{ flexShrink: 0, width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
             onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
           >
@@ -312,7 +312,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 placeholder="Task title…"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                style={{ width: '100%', fontSize: '18px', fontWeight: 700, color: '#e4e4e4', background: 'transparent', outline: 'none', border: 'none', borderBottom: `2px solid ${isReadOnly ? 'transparent' : 'rgba(255,255,255,0.08)'}`, paddingBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif', cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box' }}
+                style={{ width: '100%', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', background: 'transparent', outline: 'none', border: 'none', borderBottom: `2px solid ${isReadOnly ? 'transparent' : 'rgba(255,255,255,0.08)'}`, paddingBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif', cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box' }}
                 onFocus={e => { if (!isReadOnly) e.target.style.borderBottomColor = '#b8956a'; }}
                 onBlur={e => { if (!isReadOnly) e.target.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
               />
@@ -320,7 +320,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
             {/* Description */}
             <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.3)', marginBottom: '8px', fontFamily: 'monospace' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                 <AlignLeft size={11} /> Description
               </label>
               <textarea
@@ -329,7 +329,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: '#e4e4e4', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', outline: 'none', resize: 'none', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif', opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box', colorScheme: 'dark' }}
+                style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', outline: 'none', resize: 'none', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif', opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box', colorScheme: 'dark' }}
                 onFocus={e => { if (!isReadOnly) e.target.style.borderColor = 'rgba(184,149,106,0.4)'; }}
                 onBlur={e => { if (!isReadOnly) e.target.style.borderColor = 'rgba(255,255,255,0.08)'; }}
               />
@@ -503,7 +503,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </div>
 
           {/* RIGHT – metadata sidebar */}
-          <div style={{ width: '220px', flexShrink: 0, borderLeft: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)', padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px', scrollbarWidth: 'thin' }}>
+          <div style={{ width: '220px', flexShrink: 0, borderLeft: '1px solid var(--border-default)', background: 'rgba(255,255,255,0.02)', padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px', scrollbarWidth: 'thin' }}>
 
             {/* Status */}
             {isEditing && (
@@ -544,16 +544,16 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
 
             {/* Priority */}
             <div>
-              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.3)', marginBottom: '8px', fontFamily: 'monospace' }}>Priority</p>
+              <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Priority</p>
               {isReadOnly ? (
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, padding: '4px 10px', background: 'rgba(255,255,255,0.05)', color: '#e4e4e4' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, padding: '4px 10px', background: 'var(--bg-hover)', color: 'var(--text-primary)' }}>
                   <PrioIcon size={11} className={prioConf.iconColor} />
                   {priority}
                 </span>
               ) : (
                 <Dropdown
                   trigger={
-                    <button style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 600, color: '#e4e4e4', cursor: 'pointer' }}>
+                    <button style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 10px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', cursor: 'pointer' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <PrioIcon size={11} className={prioConf.iconColor} />
                         {priority}
@@ -567,7 +567,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     const PI = c.Icon;
                     return (
                       <button key={p} onClick={() => { setPriority(p); close(); }}
-                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, background: priority === p ? 'rgba(184,149,106,0.1)' : 'transparent', color: '#e4e4e4', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
+                        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, background: priority === p ? 'rgba(184,149,106,0.1)' : 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
                         onMouseEnter={e => { if (priority !== p) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
                         onMouseLeave={e => { if (priority !== p) e.currentTarget.style.background = 'transparent'; }}>
                         <PI size={13} className={c.iconColor} />
@@ -591,7 +591,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 <select
                   value={project}
                   onChange={(e) => setProject(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', cursor: 'pointer', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', cursor: 'pointer', boxSizing: 'border-box' }}
                 >
                   <option value="">Select channel</option>
                   {channels.length > 0 ? channels.map((c) => <option key={c.id} value={c.label}>{c.label}</option>) : (
@@ -623,7 +623,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     onChange={(e) => setDueDate(e.target.value)}
                     min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]}
                     max="2100-12-31"
-                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: '#161616', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', boxSizing: 'border-box' }}
                   />
                   {dueDateLabel && <p className={`text-[10.5px] font-semibold ${dueDateLabel.color}`}>{dueDateLabel.text}</p>}
                 </div>
@@ -680,8 +680,8 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
         </div>
 
         {/* ── Footer ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.08)', background: '#111111', flexShrink: 0 }}>
-          <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '12px 20px', borderTop: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0 }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             {isEditing && initialData?.updatedAt && (
               <>Last updated&nbsp;{new Date(initialData.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</>
             )}
@@ -689,7 +689,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <button
               onClick={onClose}
-              style={{ padding: '7px 16px', fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.4)', background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}
+              style={{ padding: '7px 16px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}
               onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
               onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
             >

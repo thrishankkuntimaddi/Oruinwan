@@ -24,13 +24,13 @@ const SECTIONS = [
 ];
 
 const S = {
-    h2: { fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
-    h3: { fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '8px', marginTop: '20px' },
-    p:  { fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.85', marginBottom: '16px' },
+    h2: { fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
+    h3: { fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', marginTop: '20px' },
+    p:  { fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.85', marginBottom: '16px' },
     ul: { paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '18px' },
-    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.7' },
+    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.7' },
     dot: { width: '5px', height: '5px', background: '#b8956a', flexShrink: 0, marginTop: '9px' },
-    code: { fontFamily: '"JetBrains Mono", "Fira Code", monospace', fontSize: '12px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.08)', padding: '2px 6px', color: '#b8956a', borderRadius: '2px' },
+    code: { fontFamily: '"JetBrains Mono", "Fira Code", monospace', fontSize: '12px', background: '#1a1a1a', border: '1px solid var(--border-default)', padding: '2px 6px', color: '#b8956a', borderRadius: '2px' },
 };
 
 const TipBox = ({ children, type = 'note' }) => {
@@ -40,7 +40,7 @@ const TipBox = ({ children, type = 'note' }) => {
     return (
         <div style={{ padding: '14px 16px', background: `${c}0d`, border: `1px solid ${c}25`, borderLeft: `3px solid ${c}`, marginBottom: '18px', display: 'flex', gap: '10px' }}>
             <span style={{ color: c, fontSize: '12px', flexShrink: 0, marginTop: '1px' }}>{icons[type]}</span>
-            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.6)', lineHeight: '1.7', margin: 0 }}>{children}</p>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7', margin: 0 }}>{children}</p>
         </div>
     );
 };
@@ -85,7 +85,7 @@ const ChttrixDocs = () => {
     const scrollTo = (id) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
     return (
-        <div style={{ minHeight: '100vh', background: '#0c0c0c', color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <style>{`* { box-sizing: border-box; margin: 0; padding: 0; } ::selection { background: rgba(184,149,106,0.3); }`}</style>
 
             {/* Inline header for docs (already has public-scroll applied) */}
@@ -94,7 +94,7 @@ const ChttrixDocs = () => {
                 {/* Sidebar */}
                 <aside style={{ width: '220px', flexShrink: 0, position: 'sticky', top: '24px' }}>
                     {/* Back to home */}
-                    <button onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px', background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease', padding: 0 }}
+                    <button onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease', padding: 0 }}
                         onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
                         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M7 10L3 6l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
@@ -104,14 +104,14 @@ const ChttrixDocs = () => {
                     {/* Logo */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
                         <img src="/chttrix-logo.jpg" alt="" style={{ width: '24px', height: '24px', objectFit: 'cover' }} />
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Docs</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Docs</span>
                     </div>
 
                     {/* Search */}
                     <div style={{ position: 'relative', marginBottom: '20px' }}>
-                        <Search size={11} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)', pointerEvents: 'none' }} />
+                        <Search size={11} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search docs..."
-                            style={{ width: '100%', padding: '7px 10px 7px 28px', background: '#141414', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', fontSize: '12px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+                            style={{ width: '100%', padding: '7px 10px 7px 28px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
 
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '10px' }}>Sections</p>
@@ -128,7 +128,7 @@ const ChttrixDocs = () => {
                     </nav>
 
                     <div style={{ marginTop: '28px', padding: '12px 14px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', lineHeight: '1.7' }}>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.7' }}>
                             Platform v1.0<br />
                             <span style={{ color: '#b8956a' }}>Workspace OS</span>
                         </p>
@@ -143,8 +143,8 @@ const ChttrixDocs = () => {
                             <BookOpen size={11} style={{ color: '#b8956a' }} />
                             <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Documentation</span>
                         </div>
-                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Chttrix Docs</h1>
-                        <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', maxWidth: '600px' }}>
+                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Chttrix Docs</h1>
+                        <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75', maxWidth: '600px' }}>
                             Everything you need to get the most out of Chttrix — from setting up your first workspace to mastering Chttrix AI and enterprise security.
                         </p>
                     </div>
@@ -298,7 +298,7 @@ const ChttrixDocs = () => {
 
             {/* Simple footer */}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '24px', textAlign: 'center' }}>
-                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.2)' }}>© 2026 Chttrix Inc. · <button onClick={() => window.location.href = '/privacy'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Privacy</button> · <button onClick={() => window.location.href = '/terms'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Terms</button></p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>© 2026 Chttrix Inc. · <button onClick={() => window.location.href = '/privacy'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Privacy</button> · <button onClick={() => window.location.href = '/terms'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Terms</button></p>
             </div>
         </div>
     );

@@ -4,7 +4,7 @@ import { Building, User, ShieldCheck, FileText, Edit3 } from 'lucide-react';
 
 const ReviewCard = ({ icon: Icon, title, step, onEdit, children }) => (
     <div onClick={() => onEdit(step)}
-        style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.07)', padding: '20px', cursor: 'pointer', transition: 'border-color 200ms ease', position: 'relative' }}
+        style={{ background: 'var(--bg-input)', border: '1px solid rgba(255,255,255,0.07)', padding: '20px', cursor: 'pointer', transition: 'border-color 200ms ease', position: 'relative' }}
         onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'; }}
         onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -12,7 +12,7 @@ const ReviewCard = ({ icon: Icon, title, step, onEdit, children }) => (
                 <div style={{ width: '28px', height: '28px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Icon size={13} style={{ color: '#b8956a' }} />
                 </div>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>{title}</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{title}</span>
             </div>
             <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#b8956a', fontWeight: 600 }}>
                 <Edit3 size={11} />Edit
@@ -26,15 +26,15 @@ const ReviewCard = ({ icon: Icon, title, step, onEdit, children }) => (
 
 const Field = ({ label, value }) => (
     <div>
-        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(228,228,228,0.3)', display: 'block', marginBottom: '2px' }}>{label}</span>
-        <span style={{ fontSize: '13px', color: 'rgba(228,228,228,0.75)' }}>{value || '—'}</span>
+        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>{label}</span>
+        <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>{value || '—'}</span>
     </div>
 );
 
 // Ignore legacy theme prop
 const Step5ReviewForm = ({ formData, onEdit, theme }) => (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', textAlign: 'center', marginBottom: '28px' }}>
+        <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>
             Verify your information before submitting.
         </p>
 
@@ -64,7 +64,7 @@ const Step5ReviewForm = ({ formData, onEdit, theme }) => (
         </div>
 
         <div style={{ marginTop: '20px', padding: '14px 16px', background: 'rgba(184,149,106,0.05)', border: '1px solid rgba(184,149,106,0.15)' }}>
-            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.7' }}>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.7' }}>
                 By submitting, you confirm all information is accurate and you agree to Chttrix's{' '}
                 <span style={{ color: '#b8956a', fontWeight: 600 }}>Terms of Service</span> and{' '}
                 <span style={{ color: '#b8956a', fontWeight: 600 }}>Privacy Policy</span>.

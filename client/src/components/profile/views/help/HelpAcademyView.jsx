@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronLeft } from 'lucide-react';
 
 const panelStyle = {
-    width: '256px', background: '#111111', border: '1px solid rgba(255,255,255,0.1)',
+    width: '256px', background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)',
     boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden',
     fontFamily: 'Inter, system-ui, sans-serif',
 };
@@ -13,7 +13,7 @@ const headerStyle = {
 };
 const BackBtn = ({ onBack }) => (
     <button onClick={onBack}
-        style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
         onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
     >
@@ -25,7 +25,7 @@ const HelpAcademyView = ({ onBack }) => (
     <div style={{ ...panelStyle, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div style={headerStyle}>
             <BackBtn onBack={onBack} />
-            <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Academy</span>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Academy</span>
             <div style={{ width: '40px' }} />
         </div>
         <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', overflowY: 'auto' }} className="custom-scrollbar">
@@ -35,7 +35,7 @@ const HelpAcademyView = ({ onBack }) => (
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; }}
                 >
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#e4e4e4', marginBottom: '2px' }}>{guide}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{guide}</div>
                     <div style={{ fontSize: '11px', color: '#b8956a' }}>Read guide →</div>
                 </button>
             ))}

@@ -12,7 +12,7 @@ const ITEMS = [
 const HelpMenuView = ({ onBack, onNavigate }) => {
     return (
         <div style={{
-            width: '256px', background: '#111111',
+            width: '256px', background: 'var(--bg-surface)',
             border: '1px solid rgba(255,255,255,0.1)',
             boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
             overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif',
@@ -25,13 +25,13 @@ const HelpMenuView = ({ onBack, onNavigate }) => {
             }}>
                 <button
                     onClick={onBack}
-                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.45)'}
                 >
                     <ChevronLeft size={13} /> Back
                 </button>
-                <span style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4' }}>Help &amp; Support</span>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Help &amp; Support</span>
                 <div style={{ width: '40px' }} />
             </div>
 
@@ -44,7 +44,7 @@ const HelpMenuView = ({ onBack, onNavigate }) => {
                         style={{
                             width: '100%', display: 'flex', alignItems: 'center', gap: '12px',
                             padding: '10px 12px', fontSize: '13px', fontWeight: 500,
-                            color: 'rgba(228,228,228,0.7)', background: 'transparent',
+                            color: 'var(--text-muted)', background: 'transparent',
                             border: 'none', cursor: 'pointer', textAlign: 'left',
                             fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease',
                         }}
@@ -59,7 +59,7 @@ const HelpMenuView = ({ onBack, onNavigate }) => {
                             e.currentTarget.querySelector('svg').style.color = 'rgba(228,228,228,0.3)';
                         }}
                     >
-                        <Icon size={16} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0, transition: '150ms ease' }} />
+                        <Icon size={16} style={{ color: 'var(--text-muted)', flexShrink: 0, transition: '150ms ease' }} />
                         {label}
                     </button>
                 ))}

@@ -328,7 +328,7 @@ const GeneralTab = ({
                                 <div style={{ textAlign: 'center', padding: '24px 0' }}>
                                     <Shield size={28} style={{ color: border, margin: '0 auto 8px', display: 'block' }} />
                                     <p style={{ fontSize: '12px', color: muted, margin: '0 0 4px' }}>No rules set for this workspace</p>
-                                    {isAdmin && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', margin: 0 }}>Click "Edit Rules" to add guidelines for your team</p>}
+                                    {isAdmin && <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Click "Edit Rules" to add guidelines for your team</p>}
                                 </div>
                             )
                         )}

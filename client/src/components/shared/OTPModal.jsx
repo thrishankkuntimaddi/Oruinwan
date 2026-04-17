@@ -127,7 +127,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
             {/* Modal card */}
             <div style={{
                 position: 'relative', width: '100%', maxWidth: '400px',
-                background: '#111', border: '1px solid rgba(255,255,255,0.08)',
+                background: '#111', border: '1px solid var(--border-default)',
                 boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
                 animation: 'otpSlideUp 0.28s cubic-bezier(.22,1,.36,1)',
                 overflow: 'hidden',
@@ -138,7 +138,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                         {/* Header bar */}
                         <div style={{
                             padding: '20px 24px 18px',
-                            borderBottom: '1px solid rgba(255,255,255,0.06)',
+                            borderBottom: '1px solid var(--border-subtle)',
                             background: 'rgba(255,255,255,0.02)',
                             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
                         }}>
@@ -156,10 +156,10 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                                 </div>
 
                                 <div>
-                                    <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', margin: 0, letterSpacing: '-0.01em' }}>
+                                    <h2 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>
                                         Verify {targetType === 'email' ? 'Email Address' : 'Phone Number'}
                                     </h2>
-                                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', margin: '3px 0 0', lineHeight: 1.4 }}>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0', lineHeight: 1.4 }}>
                                         6-digit code sent to{' '}
                                         <span style={{ color: '#b8956a', fontWeight: 600 }}>{target}</span>
                                     </p>
@@ -171,7 +171,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                                 style={{
                                     width: '28px', height: '28px', display: 'flex', alignItems: 'center',
                                     justifyContent: 'center', background: 'none', border: 'none',
-                                    color: 'rgba(228,228,228,0.3)', cursor: 'pointer', flexShrink: 0,
+                                    color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0,
                                     transition: 'color 150ms ease',
                                 }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
@@ -202,7 +202,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                                             border: `1px solid ${error
                                                 ? 'rgba(239,68,68,0.5)'
                                                 : digit ? 'rgba(184,149,106,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                                            color: '#e4e4e4',
+                                            color: 'var(--text-primary)',
                                             outline: 'none',
                                             fontFamily: 'Inter, system-ui, sans-serif',
                                             transition: 'border-color 150ms ease, background 150ms ease',
@@ -286,7 +286,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                             {/* Resend */}
                             <div style={{ textAlign: 'center' }}>
                                 {timeLeft > 0 ? (
-                                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', margin: 0 }}>
+                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
                                         Didn't receive it? Resend available in{' '}
                                         <span style={{ color: '#b8956a', fontWeight: 600 }}>{formatTime(timeLeft)}</span>
                                     </p>
@@ -323,10 +323,10 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                         }}>
                             <CheckCircle size={26} style={{ color: '#4ade80' }} />
                         </div>
-                        <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+                        <h2 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
                             Verified Successfully
                         </h2>
-                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', margin: 0 }}>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
                             Your {targetType === 'email' ? 'email address' : 'phone number'} has been confirmed.
                         </p>
                     </div>

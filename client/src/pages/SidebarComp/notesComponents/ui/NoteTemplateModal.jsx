@@ -157,13 +157,13 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
 
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}>
-            <div style={{ background: '#111111', width: '100%', maxWidth: '900px', height: '600px', display: 'flex', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
+            <div style={{ background: 'var(--bg-surface)', width: '100%', maxWidth: '900px', height: '600px', display: 'flex', overflow: 'hidden', border: '1px solid var(--border-default)', boxShadow: '0 24px 64px rgba(0,0,0,0.6)' }}>
 
                 {/* Left sidebar */}
-                <div style={{ width: '200px', flexShrink: 0, background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-base)', borderRight: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                        <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>New Note</h2>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', marginTop: '3px' }}>Choose a template</p>
+                        <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>New Note</h2>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>Choose a template</p>
                     </div>
                     <nav style={{ flex: 1, padding: '6px', overflowY: 'auto' }}>
                         {CATEGORIES.map(cat => {
@@ -184,26 +184,26 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                         })}
                     </nav>
                     <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.2)', fontFamily: 'monospace', margin: 0 }}>
+                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', margin: 0 }}>
                             {TEMPLATES.length} TEMPLATES · {CATEGORIES.length} CATEGORIES
                         </p>
                     </div>
                 </div>
 
                 {/* Right panel */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: '#111111' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--bg-surface)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            {catInfo?.Icon && <catInfo.Icon size={14} style={{ color: 'rgba(228,228,228,0.35)' }} />}
+                            {catInfo?.Icon && <catInfo.Icon size={14} style={{ color: 'var(--text-muted)' }} />}
                             <div>
-                                <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>{catInfo?.label}</h3>
-                                <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', fontFamily: 'monospace', margin: 0 }}>
+                                <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>{catInfo?.label}</h3>
+                                <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace', margin: 0 }}>
                                     {visible.length} TEMPLATE{visible.length !== 1 ? 'S' : ''} AVAILABLE
                                 </p>
                             </div>
                         </div>
                         <button onClick={onClose}
-                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'color 150ms ease' }}
+                            style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease' }}
                             onMouseEnter={e => (e.currentTarget.style.color = '#e4e4e4')}
                             onMouseLeave={e => (e.currentTarget.style.color = 'rgba(228,228,228,0.35)')}>
                             <X size={15} />
@@ -232,18 +232,18 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                                 <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.25)' }}>{tmpl.blocks.length}B</span>
                                             </div>
                                         </div>
-                                        <div style={{ padding: '14px', background: '#0c0c0c' }}>
-                                            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.45)', lineHeight: 1.5, marginBottom: '10px' }}>{tmpl.desc}</p>
+                                        <div style={{ padding: '14px', background: 'var(--bg-base)' }}>
+                                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: '10px' }}>{tmpl.desc}</p>
                                             <div style={{ marginBottom: '14px' }}>
                                                 {tmpl.preview.map((line, i) => (
                                                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '3px' }}>
-                                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.2)', fontFamily: 'monospace' }}>—</span>
-                                                        <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)' }}>{line}</span>
+                                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>—</span>
+                                                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{line}</span>
                                                     </div>
                                                 ))}
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.2)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                                     {tmpl.blocks.length} BLOCKS
                                                 </span>
                                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', fontFamily: 'monospace', color: isHov ? '#b8956a' : 'rgba(228,228,228,0.2)', transition: 'color 150ms ease' }}>

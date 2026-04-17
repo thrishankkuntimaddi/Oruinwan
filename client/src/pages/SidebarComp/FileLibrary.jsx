@@ -51,10 +51,10 @@ function DropZone({ onFiles }) {
             style={{ border: `2px dashed ${dragging ? '#b8956a' : 'rgba(255,255,255,0.1)'}`, padding: '28px', textAlign: 'center', cursor: 'pointer', background: dragging ? 'rgba(184,149,106,0.06)' : 'rgba(255,255,255,0.02)', transition: 'all 150ms ease' }}
         >
             <Upload size={26} style={{ margin: '0 auto 8px', color: dragging ? '#b8956a' : 'rgba(228,228,228,0.2)' }} />
-            <p style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(228,228,228,0.5)', fontFamily: 'Inter, system-ui, sans-serif' }}>
+            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                 Drop files here or <span style={{ color: '#b8956a', fontWeight: 700 }}>browse</span>
             </p>
-            <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Images, PDFs, docs, videos — up to 50 MB</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Images, PDFs, docs, videos — up to 50 MB</p>
             <input ref={inputRef} type="file" multiple style={{ display: 'none' }} onChange={e => onFiles([...e.target.files])} />
         </div>
     );
@@ -71,28 +71,28 @@ function FileCard({ file, onClick, onDelete }) {
             onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
         >
-            <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.03)', overflow: 'hidden' }}>
+            <div style={{ height: '100px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-surface)', overflow: 'hidden' }}>
                 {isImage
                     ? <img src={file.url} alt={file.name} style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
                     : <span style={{ fontSize: '32px' }}>{emoji}</span>
                 }
             </div>
             <div style={{ padding: '10px 12px' }}>
-                <p style={{ fontSize: '12px', fontWeight: 600, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>{file.name}</p>
-                <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginTop: '2px', fontFamily: 'Inter, system-ui, sans-serif' }}>{formatSize(file.size)} · {timeAgo(file.createdAt)}</p>
+                <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>{file.name}</p>
+                <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px', fontFamily: 'Inter, system-ui, sans-serif' }}>{formatSize(file.size)} · {timeAgo(file.createdAt)}</p>
             </div>
             <div style={{ position: 'absolute', top: '6px', right: '6px', opacity: 0, transition: 'opacity 150ms ease' }}
                 onMouseEnter={e => e.currentTarget.style.opacity = 1}
             >
                 <button onClick={e => { e.stopPropagation(); setShowMenu(v => !v); }}
-                    style={{ padding: '4px', background: 'rgba(12,12,12,0.85)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(228,228,228,0.6)', cursor: 'pointer' }}>
+                    style={{ padding: '4px', background: 'rgba(12,12,12,0.85)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     <MoreVertical size={12} />
                 </button>
             </div>
             {showMenu && (
                 <div style={{ position: 'absolute', top: '30px', right: '6px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', zIndex: 20, width: '130px' }}>
                     <button onClick={e => { e.stopPropagation(); window.open(file.url, '_blank'); setShowMenu(false); }}
-                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'rgba(228,228,228,0.7)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '7px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         <Download size={11} /> Download
                     </button>
                     <button onClick={e => { e.stopPropagation(); onDelete(file._id); setShowMenu(false); }}
@@ -116,14 +116,14 @@ function FileRow({ file, onClick, onDelete }) {
         >
             <span style={{ fontSize: '18px', flexShrink: 0 }}>{emoji}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: '13px', fontWeight: 500, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>{file.name}</p>
-                {file.tags?.length > 0 && <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', margin: 0 }}>{file.tags.map(t => `#${t}`).join(' ')}</p>}
+                <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>{file.name}</p>
+                {file.tags?.length > 0 && <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>{file.tags.map(t => `#${t}`).join(' ')}</p>}
             </div>
-            <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.3)', flexShrink: 0 }}>{formatSize(file.size)}</span>
-            <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.3)', flexShrink: 0 }}>{timeAgo(file.createdAt)}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>{formatSize(file.size)}</span>
+            <span style={{ fontSize: '12px', color: 'var(--text-muted)', flexShrink: 0 }}>{timeAgo(file.createdAt)}</span>
             <div style={{ display: 'flex', gap: '4px' }}>
-                <button onClick={e => { e.stopPropagation(); window.open(file.url, '_blank'); }} style={{ padding: '4px', background: 'none', border: 'none', color: 'rgba(228,228,228,0.3)', cursor: 'pointer' }}><Download size={13} /></button>
-                <button onClick={e => { e.stopPropagation(); onDelete(file._id); }} style={{ padding: '4px', background: 'none', border: 'none', color: 'rgba(228,228,228,0.3)', cursor: 'pointer' }}><Trash2 size={13} /></button>
+                <button onClick={e => { e.stopPropagation(); window.open(file.url, '_blank'); }} style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Download size={13} /></button>
+                <button onClick={e => { e.stopPropagation(); onDelete(file._id); }} style={{ padding: '4px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Trash2 size={13} /></button>
             </div>
         </div>
     );
@@ -192,21 +192,21 @@ const FileLibrary = () => {
     });
 
     return (
-        <div style={{ display: 'flex', height: '100%', background: '#0c0c0c' }}>
+        <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)' }}>
             {/* Main content */}
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
                 {/* Top bar */}
-                <div style={{ height: '52px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 }}>
-                    <h1 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
+                <div style={{ height: '52px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
+                    <h1 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
                         <span>📁</span> File Library
                     </h1>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ position: 'relative' }}>
-                            <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(228,228,228,0.3)' }} />
+                            <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
                             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search files..."
-                                style={{ paddingLeft: '28px', paddingRight: '10px', paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', width: '160px', fontFamily: 'Inter, system-ui, sans-serif' }} />
+                                style={{ paddingLeft: '28px', paddingRight: '10px', paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', width: '160px', fontFamily: 'Inter, system-ui, sans-serif' }} />
                         </div>
-                        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', padding: '2px' }}>
+                        <div style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', padding: '2px' }}>
                             <button onClick={() => setView('grid')} style={{ padding: '4px 6px', background: view === 'grid' ? 'rgba(184,149,106,0.2)' : 'transparent', border: 'none', color: view === 'grid' ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}><Grid3X3 size={13} /></button>
                             <button onClick={() => setView('list')} style={{ padding: '4px 6px', background: view === 'list' ? 'rgba(184,149,106,0.2)' : 'transparent', border: 'none', color: view === 'list' ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}><List size={13} /></button>
                         </div>
@@ -216,7 +216,7 @@ const FileLibrary = () => {
                 {/* Tag filter bar */}
                 {allTags.length > 0 && (
                     <div style={{ padding: '6px 24px', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap', flexShrink: 0 }}>
-                        <Tag size={11} style={{ color: 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                        <Tag size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         {[null, ...allTags].map((tag, i) => (
                             <button key={i} onClick={() => setTagFilter(tag === tagFilter ? '' : (tag || ''))}
                                 style={{ fontSize: '11px', padding: '2px 10px', background: (!tag && !tagFilter) || tagFilter === tag ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.04)', border: `1px solid ${(!tag && !tagFilter) || tagFilter === tag ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.07)'}`, color: (!tag && !tagFilter) || tagFilter === tag ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -247,7 +247,7 @@ const FileLibrary = () => {
                     ) : filtered.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '40px 0' }}>
                             <span style={{ fontSize: '48px' }}>📂</span>
-                            <p style={{ color: 'rgba(228,228,228,0.3)', marginTop: '10px', fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif' }}>No files found</p>
+                            <p style={{ color: 'var(--text-muted)', marginTop: '10px', fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif' }}>No files found</p>
                         </div>
                     ) : view === 'grid' ? (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px' }}>
@@ -255,8 +255,8 @@ const FileLibrary = () => {
                         </div>
                     ) : (
                         <div style={{ border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <div style={{ padding: '6px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '10px' }}>
-                                {['Name', 'Size', 'Uploaded', ''].map((h, i) => <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(228,228,228,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Inter, system-ui, sans-serif' }}>{h}</span>)}
+                            <div style={{ padding: '6px 16px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '10px' }}>
+                                {['Name', 'Size', 'Uploaded', ''].map((h, i) => <span key={i} style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'Inter, system-ui, sans-serif' }}>{h}</span>)}
                             </div>
                             {filtered.map(file => <FileRow key={file._id} file={file} onClick={handleFileClick} onDelete={handleDelete} />)}
                         </div>
@@ -307,7 +307,7 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
     };
 
     return (
-        <div style={{ width: '380px', borderLeft: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', background: '#111', flexShrink: 0 }}>
+        <div style={{ width: '380px', borderLeft: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', background: '#111', flexShrink: 0 }}>
             {/* Header */}
             <div className="h-14 px-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
                 <div className="flex items-center gap-2 min-w-0">

@@ -39,7 +39,7 @@ export default function IntegrationCard({ integration, connected, onCardClick })
         </span>
       )}
       {!connected && (
-        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'rgba(228,228,228,0.3)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', padding: '2px 7px' }}>
+        <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', padding: '2px 7px' }}>
           <ZapOff size={10} /> Not Connected
         </span>
       )}
@@ -60,12 +60,12 @@ export default function IntegrationCard({ integration, connected, onCardClick })
       </span>
 
       {/* Description */}
-      <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.5)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+      <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {integration.description}
       </p>
 
       {/* Footer CTA */}
-      <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? '#34d399' : T.accent }}>
           {connected ? 'Manage →' : 'Connect →'}
         </span>

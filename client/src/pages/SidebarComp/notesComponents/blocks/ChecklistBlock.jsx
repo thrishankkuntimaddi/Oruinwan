@@ -41,7 +41,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
     return (
         <div className="group relative mb-3">
-            <div style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#111', overflow: 'hidden' }}>
+            <div style={{ border: '1px solid var(--border-default)', background: '#111', overflow: 'hidden' }}>
 
                 {/* Progress header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px 8px' }}>
@@ -53,7 +53,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </span>
                     <button
                         onClick={() => onRemoveBlock(block.id)}
-                        style={{ padding: '3px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                        style={{ padding: '3px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                         className="group-hover:!opacity-100"
                         onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
@@ -104,7 +104,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
 
                             <button
                                 onClick={() => removeItem(item.id)}
-                                style={{ padding: '3px', color: 'rgba(228,228,228,0.15)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                                style={{ padding: '3px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                                 className="group-hover/item:!opacity-100"
                                 onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.15)'}
@@ -120,8 +120,8 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     onClick={addItem}
                     style={{
                         display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', width: '100%',
-                        textAlign: 'left', fontSize: '11px', fontWeight: 500, color: 'rgba(228,228,228,0.3)',
-                        background: 'transparent', border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)',
+                        textAlign: 'left', fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)',
+                        background: 'transparent', border: 'none', borderTop: '1px solid var(--border-subtle)',
                         cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif',
                     }}
                     onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; e.currentTarget.style.background = 'rgba(184,149,106,0.04)'; }}

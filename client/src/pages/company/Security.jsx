@@ -14,17 +14,17 @@ const SECTIONS = [
 ];
 
 const S = {
-    h2: { fontSize: '22px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
-    p:  { fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.85', marginBottom: '16px' },
+    h2: { fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '14px', paddingTop: '8px' },
+    p:  { fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.85', marginBottom: '16px' },
     ul: { paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '9px', marginBottom: '18px' },
-    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.7' },
+    li: { display: 'flex', alignItems: 'flex-start', gap: '10px', fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.7' },
     dot: { width: '5px', height: '5px', background: '#b8956a', flexShrink: 0, marginTop: '9px' },
 };
 
 const StatBox = ({ value, label }) => (
     <div style={{ padding: '20px 24px', background: '#111', border: '1px solid rgba(255,255,255,0.07)', textAlign: 'center' }}>
         <div style={{ fontSize: '28px', fontWeight: 700, color: '#b8956a', letterSpacing: '-0.03em', marginBottom: '4px' }}>{value}</div>
-        <div style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
+        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
     </div>
 );
 
@@ -76,7 +76,7 @@ export default function Security() {
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#5aba8a' }} />
                             <span style={{ fontSize: '11px', fontWeight: 700, color: '#5aba8a' }}>All Systems Operational</span>
                         </div>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)' }}>Updated in real time</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Updated in real time</p>
                     </div>
                 </aside>
 
@@ -87,10 +87,10 @@ export default function Security() {
                             <Shield size={11} style={{ color: '#b8956a' }} />
                             <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Security</span>
                         </div>
-                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Security by design.</h1>
+                        <h1 style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Security by design.</h1>
                         <p style={{ ...S.p, fontSize: '16px' }}>Chttrix was architected from the ground up with zero-trust principles. Every layer of the stack — from client to database — is built to protect your data.</p>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1px', background: 'rgba(255,255,255,0.05)', marginTop: '32px', marginBottom: '8px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1px', background: 'var(--bg-hover)', marginTop: '32px', marginBottom: '8px' }}>
                             <StatBox value="AES-256" label="Encryption Standard" />
                             <StatBox value="99.9%" label="Uptime SLA" />
                             <StatBox value="< 24h" label="Security Response" />
@@ -136,7 +136,7 @@ export default function Security() {
                         <p style={S.p}>We are committed to meeting and exceeding regulatory requirements across all jurisdictions we operate in.</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
                             {['GDPR (EU)', 'CCPA (California)', 'SOC 2 Type II', 'ISO 27001 (In Progress)', 'DPDP Act (India)', 'HIPAA Ready'].map(badge => (
-                                <div key={badge} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#111', border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: 'rgba(228,228,228,0.6)', fontWeight: 600 }}>
+                                <div key={badge} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#111', border: '1px solid rgba(255,255,255,0.07)', fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>
                                     <CheckCircle2 size={13} style={{ color: '#5aba8a', flexShrink: 0 }} />
                                     {badge}
                                 </div>
@@ -148,11 +148,11 @@ export default function Security() {
                     <DocSection id="contact" title="Report a Vulnerability">
                         <p style={S.p}>We take every security report seriously. If you discover a vulnerability in Chttrix, please disclose it responsibly.</p>
                         <div style={{ padding: '20px 24px', background: '#111', border: '1px solid rgba(255,255,255,0.07)' }}>
-                            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.6)', lineHeight: '2' }}>
-                                <strong style={{ color: '#e4e4e4' }}>Security email:</strong> security@chttrix.io<br />
-                                <strong style={{ color: '#e4e4e4' }}>PGP key:</strong> Available on request<br />
-                                <strong style={{ color: '#e4e4e4' }}>Response SLA:</strong> Critical issues acknowledged within 24 hours<br />
-                                <strong style={{ color: '#e4e4e4' }}>Rewards:</strong> We offer recognition and rewards for qualifying reports
+                            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '2' }}>
+                                <strong style={{ color: 'var(--text-primary)' }}>Security email:</strong> security@chttrix.io<br />
+                                <strong style={{ color: 'var(--text-primary)' }}>PGP key:</strong> Available on request<br />
+                                <strong style={{ color: 'var(--text-primary)' }}>Response SLA:</strong> Critical issues acknowledged within 24 hours<br />
+                                <strong style={{ color: 'var(--text-primary)' }}>Rewards:</strong> We offer recognition and rewards for qualifying reports
                             </p>
                         </div>
                     </DocSection>

@@ -26,7 +26,7 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%',
-      background: '#111111', borderLeft: '1px solid rgba(255,255,255,0.07)',
+      background: 'var(--bg-surface)', borderLeft: '1px solid rgba(255,255,255,0.07)',
       width: '288px', flexShrink: 0,
     }}>
       {/* Header */}
@@ -36,12 +36,12 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
             <Clock size={13} style={{ color: '#b8956a' }} />
           </div>
           <div>
-            <h3 style={{ fontSize: '13px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>Version History</h3>
-            <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.35)', fontFamily: 'monospace' }}>{versions.length} saved versions</p>
+            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', marginBottom: '1px' }}>Version History</h3>
+            <p style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{versions.length} saved versions</p>
           </div>
         </div>
         <button onClick={onClose}
-          style={{ padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.35)', cursor: 'pointer', transition: 'all 150ms ease' }}
+          style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
           onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
           onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; e.currentTarget.style.background = 'transparent'; }}
         >
@@ -64,9 +64,9 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin' }}>
         {versions.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
-            <Clock size={32} style={{ color: 'rgba(228,228,228,0.1)', marginBottom: '12px' }} />
-            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.35)', fontWeight: 500 }}>No saved versions yet</p>
-            <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)', marginTop: '4px' }}>Versions are saved automatically as you edit</p>
+            <Clock size={32} style={{ color: 'var(--text-muted)', marginBottom: '12px' }} />
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>No saved versions yet</p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Versions are saved automatically as you edit</p>
           </div>
         ) : (
           [...versions].reverse().map((v, idx) => (
@@ -79,15 +79,15 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
                     <div style={{ width: '5px', height: '5px', background: 'rgba(228,228,228,0.2)', borderRadius: '50%', flexShrink: 0 }} />
-                    <p style={{ fontSize: '11px', fontWeight: 600, color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{v.title || 'Untitled'}</p>
+                    <p style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>{v.title || 'Untitled'}</p>
                   </div>
-                  <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.3)', marginBottom: '4px', marginLeft: '11px', fontFamily: 'monospace' }}>{formatTime(v.savedAt || v.timestamp)}</p>
-                  <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', marginLeft: '11px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
+                  <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px', marginLeft: '11px', fontFamily: 'monospace' }}>{formatTime(v.savedAt || v.timestamp)}</p>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: '11px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', lineHeight: 1.5 }}>
                     {getPreview(v.content)}
                   </p>
                 </div>
                 <button onClick={() => onRestore(v)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: '#161616', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(228,228,228,0.45)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', flexShrink: 0, transition: 'all 150ms ease', opacity: 0, fontFamily: 'Inter, system-ui, sans-serif' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 8px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', flexShrink: 0, transition: 'all 150ms ease', opacity: 0, fontFamily: 'Inter, system-ui, sans-serif' }}
                   className="version-restore-btn"
                   title="Restore this version"
                   onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = '#b8956a'; e.currentTarget.style.borderColor = 'rgba(184,149,106,0.35)'; }}
@@ -103,7 +103,7 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
 
       {/* Footer */}
       <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-        <p style={{ fontSize: '10px', color: 'rgba(228,228,228,0.2)', textAlign: 'center', fontFamily: 'monospace' }}>
+        <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'monospace' }}>
           Last 50 auto-saves · Stored in database
         </p>
       </div>

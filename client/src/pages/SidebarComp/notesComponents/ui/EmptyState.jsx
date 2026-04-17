@@ -11,7 +11,7 @@ const EmptyState = ({ loading }) => {
     if (loading) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: T.bg }}>
-                <div style={{ width: '72px', height: '72px', background: T.surface, border: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
+                <div style={{ width: '72px', height: '72px', background: T.surface, border: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
                     <Clock size={28} style={{ color: T.muted, animation: 'pulse 1.5s ease-in-out infinite' }} />
                 </div>
                 <h2 style={{ fontSize: '16px', fontWeight: 600, color: T.text, fontFamily: T.font, marginBottom: '6px' }}>Loading Notes…</h2>

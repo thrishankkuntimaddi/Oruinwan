@@ -90,7 +90,7 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onClick }) {
         <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: col.topColor, fontFamily: T.font }}>
           {col.label}
         </span>
-        <span style={{ fontSize: '10px', fontWeight: 700, width: '20px', height: '20px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', color: T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font }}>
+        <span style={{ fontSize: '10px', fontWeight: 700, width: '20px', height: '20px', borderRadius: '50%', background: 'var(--bg-active)', color: T.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: T.font }}>
           {tasks.length}
         </span>
       </div>
@@ -148,7 +148,7 @@ export default function KanbanBoard({ tasks = [], onTaskClick }) {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: T.bg }}>
       {/* Updating indicator */}
       {updating && (
-        <div style={{ flexShrink: 0, height: '2px', background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+        <div style={{ flexShrink: 0, height: '2px', background: 'var(--bg-active)', overflow: 'hidden' }}>
           <div style={{ height: '100%', background: T.accent, width: '60%', animation: 'pulse 1s ease-in-out infinite' }} />
         </div>
       )}

@@ -59,7 +59,7 @@ const NavBtn = ({ label, href, onClick }) => {
             onClick={handleClick}
             style={{
                 fontSize: '13px', fontWeight: 600,
-                color: 'rgba(228,228,228,0.55)',
+                color: 'var(--text-muted)',
                 textDecoration: 'none', transition: 'color 150ms ease',
                 padding: '8px 0', display: 'block', whiteSpace: 'nowrap',
             }}
@@ -109,7 +109,7 @@ export default function PublicPageShell({ children, title }) {
     const S = { container: { maxWidth: '1160px', margin: '0 auto', padding: '0 20px' } };
 
     return (
-        <div style={{ minHeight: '100vh', background: '#0c0c0c', color: '#e4e4e4', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
+        <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
             <style>{`
                 * { box-sizing: border-box; margin: 0; padding: 0; }
                 ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }
@@ -137,11 +137,11 @@ export default function PublicPageShell({ children, title }) {
                         style={{ display: 'flex', alignItems: 'center', gap: '9px', cursor: 'pointer', flexShrink: 0 }}
                     >
                         <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '26px', height: '26px', objectFit: 'cover', borderRadius: '2px', flexShrink: 0 }} />
-                        <span style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Chttrix</span>
+                        <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Chttrix</span>
                         {title && (
                             <>
                                 <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '14px', margin: '0 2px' }}>/</span>
-                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(228,228,228,0.45)', whiteSpace: 'nowrap' }}>{title}</span>
+                                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{title}</span>
                             </>
                         )}
                     </div>
@@ -155,7 +155,7 @@ export default function PublicPageShell({ children, title }) {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                                 <button
                                     onClick={() => navigate('/login')}
-                                    style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.5)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease', whiteSpace: 'nowrap' }}
+                                    style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease', whiteSpace: 'nowrap' }}
                                     onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.5)'}
                                 >
@@ -177,7 +177,7 @@ export default function PublicPageShell({ children, title }) {
                     {isMobile && (
                         <button
                             onClick={() => setMobileMenuOpen(o => !o)}
-                            style={{ padding: '8px', background: 'none', border: 'none', cursor: 'pointer', color: '#e4e4e4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                            style={{ padding: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                             aria-label="Toggle menu"
                         >
                             {mobileMenuOpen ? <XIcon size={22} /> : <Menu size={22} />}
@@ -198,7 +198,7 @@ export default function PublicPageShell({ children, title }) {
                         <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             <button
                                 onClick={() => { navigate('/login'); setMobileMenuOpen(false); }}
-                                style={{ width: '100%', padding: '11px', fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.7)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}
+                                style={{ width: '100%', padding: '11px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center' }}
                             >
                                 Log in
                             </button>
@@ -219,22 +219,22 @@ export default function PublicPageShell({ children, title }) {
             </div>
 
             {/* ── Footer ── */}
-            <footer style={{ background: '#080808', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '48px', paddingBottom: '32px' }}>
+            <footer style={{ background: 'var(--bg-base)', borderTop: '1px solid var(--border-subtle)', paddingTop: '48px', paddingBottom: '32px' }}>
                 <div style={S.container}>
 
                     {/* Brand row — always shown */}
                     <div style={{ marginBottom: '32px' }}>
                         <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '12px', cursor: 'pointer', width: 'fit-content' }}>
                             <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '24px', height: '24px', objectFit: 'cover', borderRadius: '2px' }} />
-                            <span style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
+                            <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
                         </div>
-                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.3)', lineHeight: '1.7', maxWidth: '280px' }}>
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.7', maxWidth: '280px' }}>
                             The operating system for forward-thinking teams. Channels, AI, tasks — one place.
                         </p>
                         <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
                             {[{ l: '𝕏', h: 'https://x.com/chttrix' }, { l: 'in', h: 'https://linkedin.com/company/chttrix' }, { l: '▶', h: 'https://youtube.com/@chttrix' }].map(s => (
                                 <a key={s.l} href={s.h} target="_blank" rel="noopener noreferrer"
-                                    style={{ width: '30px', height: '30px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(228,228,228,0.35)', fontSize: '11px', fontWeight: 700, textDecoration: 'none', transition: 'all 150ms ease' }}
+                                    style={{ width: '30px', height: '30px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '11px', fontWeight: 700, textDecoration: 'none', transition: 'all 150ms ease' }}
                                     onMouseEnter={e => { e.currentTarget.style.borderColor = '#b8956a'; e.currentTarget.style.color = '#b8956a'; }}
                                     onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(228,228,228,0.35)'; }}>
                                     {s.l}
@@ -254,13 +254,13 @@ export default function PublicPageShell({ children, title }) {
                     }}>
                         {FOOTER_COLS.map(col => (
                             <div key={col.title}>
-                                <h4 style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.35)', marginBottom: '12px' }}>{col.title}</h4>
+                                <h4 style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '12px' }}>{col.title}</h4>
                                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     {col.links.map(link => (
                                         <li key={link.l}>
                                             <button
                                                 onClick={() => navigate(link.path)}
-                                                style={{ background: 'none', border: 'none', color: 'rgba(228,228,228,0.38)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textAlign: 'left', transition: 'color 150ms ease' }}
+                                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textAlign: 'left', transition: 'color 150ms ease' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                                                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.38)'}
                                             >
@@ -275,8 +275,8 @@ export default function PublicPageShell({ children, title }) {
 
                     {/* Bottom bar */}
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                        <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.2)' }}>© 2026 Chttrix Inc. All rights reserved.</span>
-                        <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.15)', fontFamily: 'monospace' }}>v1.0 · workspace-os</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>© 2026 Chttrix Inc. All rights reserved.</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>v1.0 · workspace-os</span>
                     </div>
                 </div>
             </footer>

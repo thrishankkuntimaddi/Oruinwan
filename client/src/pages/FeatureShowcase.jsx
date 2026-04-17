@@ -68,8 +68,8 @@ const FeatureCard = ({ icon: Icon, title, desc, color }) => {
             <div style={{ width: '40px', height: '40px', background: `${color}14`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
                 <Icon size={19} style={{ color }} />
             </div>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '8px', letterSpacing: '-0.01em' }}>{title}</h3>
-            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.7' }}>{desc}</p>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', letterSpacing: '-0.01em' }}>{title}</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7' }}>{desc}</p>
         </div>
     );
 };
@@ -81,8 +81,8 @@ const TrustPillar = ({ icon: Icon, title, desc }) => {
             <div style={{ width: '48px', height: '48px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                 <Icon size={22} style={{ color: '#b8956a' }} />
             </div>
-            <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#e4e4e4', marginBottom: '8px' }}>{title}</h3>
-            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.7', maxWidth: '240px', margin: '0 auto' }}>{desc}</p>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>{title}</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7', maxWidth: '240px', margin: '0 auto' }}>{desc}</p>
         </div>
     );
 };
@@ -96,11 +96,11 @@ const SolutionCard = ({ icon: Icon, label, title, desc, features, cta, accent, o
                 <Icon size={13} style={{ color: accent }} />
                 <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: accent }}>{label}</span>
             </div>
-            <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#e4e4e4', marginBottom: '10px', letterSpacing: '-0.02em' }}>{title}</h3>
-            <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.7', marginBottom: '24px' }}>{desc}</p>
+            <h3 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '10px', letterSpacing: '-0.02em' }}>{title}</h3>
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.7', marginBottom: '24px' }}>{desc}</p>
             <ul style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '32px', flex: 1 }}>
                 {features.map((f, i) => (
-                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'rgba(228,228,228,0.7)' }}>
+                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
                         <CheckCircle2 size={13} style={{ color: accent, flexShrink: 0 }} />
                         {f}
                     </li>
@@ -121,8 +121,8 @@ const DownloadCard = ({ icon: Icon, title, desc, color, actions }) => {
             <div style={{ width: '42px', height: '42px', background: `${color}14`, border: `1px solid ${color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '18px' }}>
                 <Icon size={20} style={{ color }} />
             </div>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', marginBottom: '6px' }}>{title}</h3>
-            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', marginBottom: '20px', lineHeight: '1.6' }}>{desc}</p>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>{title}</h3>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '20px', lineHeight: '1.6' }}>{desc}</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {actions}
             </div>
@@ -208,12 +208,12 @@ const FeatureShowcase = () => {
     if (user) return null;
 
     const S = {
-        page: { minHeight: '100vh', background: '#0c0c0c', color: '#e4e4e4', fontFamily: 'Inter, system-ui, -apple-system, sans-serif', overflowX: 'hidden' },
+        page: { minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif', overflowX: 'hidden' },
         container: { maxWidth: '1160px', margin: '0 auto', padding: '0 24px' },
         sectionLabel: { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.8)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' },
-        sectionH2: { fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: '14px' },
-        sectionSub: { fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.7', maxWidth: '560px' },
-        divider: { borderTop: '1px solid rgba(255,255,255,0.06)' },
+        sectionH2: { fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em', lineHeight: 1.15, marginBottom: '14px' },
+        sectionSub: { fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.7', maxWidth: '560px' },
+        divider: { borderTop: '1px solid var(--border-subtle)' },
     };
 
     return (
@@ -255,7 +255,7 @@ const FeatureShowcase = () => {
                     {/* Logo */}
                     <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                         <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '30px', height: '30px', objectFit: 'cover' }} />
-                        <span style={{ fontSize: '17px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
+                        <span style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
                     </div>
 
                     {/* Center Nav */}
@@ -269,7 +269,7 @@ const FeatureShowcase = () => {
                     {/* Right actions */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button onClick={() => navigate('/login')}
-                            style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(228,228,228,0.6)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
+                            style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
                             onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.6)'}>
                             Log in
@@ -300,12 +300,12 @@ const FeatureShowcase = () => {
                             </span>
                         </div>
 
-                        <h1 style={{ fontSize: 'clamp(36px,5.5vw,68px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: '22px' }}>
+                        <h1 style={{ fontSize: 'clamp(36px,5.5vw,68px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1.08, marginBottom: '22px' }}>
                             One workspace.<br />
                             <span style={{ color: '#b8956a' }}>Every conversation.</span>
                         </h1>
 
-                        <p style={{ fontSize: '16px', color: 'rgba(228,228,228,0.55)', lineHeight: '1.75', marginBottom: '36px', maxWidth: '500px' }}>
+                        <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '36px', maxWidth: '500px' }}>
                             Chttrix is the operating system for modern teams — channels, DMs, video huddles, tasks, notes, and <span style={{ color: 'rgba(184,149,106,0.9)', fontWeight: 600 }}>Chttrix AI</span>, all in one place. No tab-switching. No context loss. Just work.
                         </p>
 
@@ -321,7 +321,7 @@ const FeatureShowcase = () => {
                         {/* Trust badges */}
                         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                             {['SOC 2 Ready', 'End-to-end encrypted', '99.9% uptime SLA'].map(b => (
-                                <div key={b} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(228,228,228,0.35)', fontWeight: 600, letterSpacing: '0.02em' }}>
+                                <div key={b} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.02em' }}>
                                     <CheckCircle2 size={11} style={{ color: '#34d399' }} />
                                     {b}
                                 </div>
@@ -335,7 +335,7 @@ const FeatureShowcase = () => {
                             <video ref={heroVideoRef} src={VIDEO_HERO} autoPlay muted={heroMuted} playsInline loop
                                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
                             <button onClick={() => { heroVideoRef.current.muted = !heroMuted; setHeroMuted(!heroMuted); }}
-                                style={{ position: 'absolute', bottom: '16px', right: '16px', width: '36px', height: '36px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)', color: '#e4e4e4', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease' }}>
+                                style={{ position: 'absolute', bottom: '16px', right: '16px', width: '36px', height: '36px', background: 'rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.12)', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 150ms ease' }}>
                                 {heroMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
                             </button>
                         </div>
@@ -349,11 +349,11 @@ const FeatureShowcase = () => {
             <section style={{ ...S.divider, background: 'rgba(255,255,255,0.02)', padding: '28px 0', overflow: 'hidden' }}>
                 <div style={S.container}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '48px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', whiteSpace: 'nowrap' }}>
                             Trusted by teams at
                         </p>
                         {['Startups', 'Creative Studios', 'Growth Agencies', 'Remote-first Companies', 'SaaS Teams'].map(name => (
-                            <span key={name} style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(228,228,228,0.2)', letterSpacing: '0.02em' }}>{name}</span>
+                            <span key={name} style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.02em' }}>{name}</span>
                         ))}
                     </div>
                 </div>
@@ -373,7 +373,7 @@ const FeatureShowcase = () => {
                         <p style={S.sectionSub}>Eight deeply integrated tools built to replace five separate apps. Fewer context switches. More deep work.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
                         {FEATURES.map((f, i) => (
                             <FeatureCard key={i} {...f} />
                         ))}
@@ -416,7 +416,7 @@ const FeatureShowcase = () => {
                                     'Answer questions with workspace context',
                                     'Mention @ChttrixAI in any message',
                                 ].map((item, i) => (
-                                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'rgba(228,228,228,0.65)' }}>
+                                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: 'var(--text-muted)' }}>
                                         <span style={{ width: '6px', height: '6px', background: '#b8956a', flexShrink: 0 }} />
                                         {item}
                                     </li>
@@ -473,7 +473,7 @@ const FeatureShowcase = () => {
                         <p style={S.sectionSub}>Tailored for individuals and ambitious teams. Start free, upgrade when you grow.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
                         <SolutionCard
                             icon={Briefcase} label="Personal" accent="#6ea8fe"
                             title="Personal Workspace"
@@ -508,7 +508,7 @@ const FeatureShowcase = () => {
                         <p style={S.sectionSub}>Web, desktop, and mobile — synced in real time across all your devices.</p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1px', background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
                         <DownloadCard icon={Globe} color="#6ea8fe" title="Web App" desc="Access your workspace from any browser — no installation required."
                             actions={<button onClick={() => navigate('/login')} style={{ padding: '10px 14px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Launch Chttrix Web →</button>} />
                         <DownloadCard icon={Monitor} color="#a78bfa" title="Desktop App" desc="Native performance, offline support, and system notifications."
@@ -524,10 +524,10 @@ const FeatureShowcase = () => {
             ══════════════════════════════ */}
             <section style={{ padding: '80px 0', background: 'rgba(184,149,106,0.05)', borderTop: '1px solid rgba(184,149,106,0.15)', borderBottom: '1px solid rgba(184,149,106,0.15)' }}>
                 <div style={{ ...S.container, textAlign: 'center' }}>
-                    <h2 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.025em', marginBottom: '14px' }}>
+                    <h2 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em', marginBottom: '14px' }}>
                         Ready to build your HQ?
                     </h2>
-                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.45)', marginBottom: '36px' }}>
+                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', marginBottom: '36px' }}>
                         Join the waitlist. Free accounts open now.
                     </p>
                     <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -544,7 +544,7 @@ const FeatureShowcase = () => {
             {/* ══════════════════════════════
                 FOOTER
             ══════════════════════════════ */}
-            <footer style={{ background: '#080808', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '64px', paddingBottom: '40px' }}>
+            <footer style={{ background: 'var(--bg-base)', borderTop: '1px solid var(--border-subtle)', paddingTop: '64px', paddingBottom: '40px' }}>
                 <div style={S.container}>
                     {/* Top row — brand + columns */}
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '48px', marginBottom: '56px', flexWrap: 'wrap' }}>
@@ -552,9 +552,9 @@ const FeatureShowcase = () => {
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                                 <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
-                                <span style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
+                                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
                             </div>
-                            <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.35)', lineHeight: '1.8', maxWidth: '220px' }}>
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.8', maxWidth: '220px' }}>
                                 The operating system for forward-thinking teams. Channels, AI, tasks — all in one place.
                             </p>
                             {/* Social icons */}
@@ -565,7 +565,7 @@ const FeatureShowcase = () => {
                                     { label: '▶', href: 'https://youtube.com/@chttrix' },
                                 ].map(s => (
                                     <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
-                                        style={{ width: '30px', height: '30px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(228,228,228,0.4)', fontSize: '12px', fontWeight: 700, textDecoration: 'none', transition: 'all 150ms ease' }}
+                                        style={{ width: '30px', height: '30px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 700, textDecoration: 'none', transition: 'all 150ms ease' }}
                                         onMouseEnter={e => { e.currentTarget.style.borderColor = '#b8956a'; e.currentTarget.style.color = '#b8956a'; }}
                                         onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}>
                                         {s.label}
@@ -582,11 +582,11 @@ const FeatureShowcase = () => {
                             { title: 'Legal', links: [{ l: 'Privacy Policy', f: () => navigate('/privacy') }, { l: 'Terms of Service', f: () => navigate('/terms') }, { l: 'Cookie Settings', f: () => navigate('/cookies') }] },
                         ].map(col => (
                             <div key={col.title}>
-                                <h4 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(228,228,228,0.4)', marginBottom: '18px' }}>{col.title}</h4>
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '18px' }}>{col.title}</h4>
                                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {col.links.map(link => (
                                         <li key={link.l}>
-                                            <button onClick={link.f} style={{ background: 'none', border: 'none', color: 'rgba(228,228,228,0.4)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textAlign: 'left', transition: 'color 150ms ease' }}
+                                            <button onClick={link.f} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit', padding: 0, textAlign: 'left', transition: 'color 150ms ease' }}
                                                 onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                                                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
                                                 {link.l}
@@ -600,10 +600,10 @@ const FeatureShowcase = () => {
 
                     {/* Bottom bar */}
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                        <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             © 2026 Chttrix Inc. All rights reserved.
                         </span>
-                        <span style={{ fontSize: '12px', color: 'rgba(228,228,228,0.2)', fontFamily: '"JetBrains Mono", monospace' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: '"JetBrains Mono", monospace' }}>
                             v1.0 · workspace-os
                         </span>
                     </div>

@@ -96,7 +96,7 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         value={block.content}
                         onChange={e => onBlockChange(block.id, e.target.value, block.meta)}
                         placeholder={`Add a ${style.label.toLowerCase()} note...`}
-                        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', lineHeight: 1.6, fontWeight: 450, color: '#e4e4e4', minHeight: '1.6em', fontFamily: 'Inter, system-ui, sans-serif' }}
+                        style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', resize: 'none', fontSize: '13px', lineHeight: 1.6, fontWeight: 450, color: 'var(--text-primary)', minHeight: '1.6em', fontFamily: 'Inter, system-ui, sans-serif' }}
                         onInput={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }}
                     />
                 </div>
@@ -104,7 +104,7 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 {/* Delete */}
                 <button
                     onClick={() => onRemoveBlock(block.id)}
-                    style={{ alignSelf: 'flex-start', padding: '5px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                    style={{ alignSelf: 'flex-start', padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                     className="group-hover:!opacity-100"
                     onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}

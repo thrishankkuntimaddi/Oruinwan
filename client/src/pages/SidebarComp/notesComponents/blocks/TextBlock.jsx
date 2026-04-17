@@ -73,7 +73,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
         }
     };
 
-    const fmtBtn = { padding: '5px', background: 'transparent', border: 'none', color: 'rgba(228,228,228,0.5)', cursor: 'pointer', transition: 'all 100ms ease', display: 'flex', alignItems: 'center', justifyContent: 'center' };
+    const fmtBtn = { padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 100ms ease', display: 'flex', alignItems: 'center', justifyContent: 'center' };
     const fmtBtnHover = (e) => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; };
     const fmtBtnLeave = (e) => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.background = 'transparent'; };
     const sep = { width: '1px', height: '14px', background: 'rgba(255,255,255,0.1)', margin: '0 3px', flexShrink: 0 };
@@ -97,7 +97,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
             <div className="relative">
                 <button
                     onClick={() => onRemoveBlock(block.id)}
-                    style={{ position: 'absolute', top: '2px', right: 0, padding: '4px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
+                    style={{ position: 'absolute', top: '2px', right: 0, padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}
                     className="group-hover:!opacity-100"
                     title="Delete block"
                     onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
@@ -123,7 +123,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
                         [&>ul]:list-disc [&>ul]:pl-5 [&>ul]:space-y-1
                         [&>p]:mb-1 whitespace-pre-wrap"
                     style={{
-                        color: '#e4e4e4',
+                        color: 'var(--text-primary)',
                         fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
                         fontSize: '15px',
                         fontWeight: 400,
@@ -134,9 +134,9 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
                 />
                 {/* Placeholder */}
                 <div
-                    style={{ position: 'absolute', top: 0, left: 0, color: 'rgba(228,228,228,0.18)', fontSize: '15px', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 400, lineHeight: 1.75, pointerEvents: 'none', userSelect: 'none', display: block.content && block.content !== '<br>' ? 'none' : undefined }}
+                    style={{ position: 'absolute', top: 0, left: 0, color: 'var(--text-muted)', fontSize: '15px', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 400, lineHeight: 1.75, pointerEvents: 'none', userSelect: 'none', display: block.content && block.content !== '<br>' ? 'none' : undefined }}
                 >
-                    Type <span style={{ fontFamily: 'monospace', fontSize: '11px', padding: '1px 5px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>/</span> for commands, or start typing…
+                    Type <span style={{ fontFamily: 'monospace', fontSize: '11px', padding: '1px 5px', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--border-default)' }}>/</span> for commands, or start typing…
                 </div>
             </div>
         </div>

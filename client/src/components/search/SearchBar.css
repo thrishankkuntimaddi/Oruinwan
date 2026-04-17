@@ -75,7 +75,7 @@
     color: #9ca3af; font-size: 14px; padding: 2px 6px; border-radius: 4px;
 }
 .gsb-clear-btn:hover { background: rgba(0,0,0,0.06); color: #374151; }
-.dark .gsb-clear-btn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+.dark .gsb-clear-btn:hover { background: var(--border-default); color: rgba(255,255,255,0.8); }
 
 /* Spinner */
 .gsb-spinner {
@@ -114,7 +114,7 @@
 @media (prefers-color-scheme: dark) { .gsb-section-label { color: rgba(255,255,255,0.35); } }
 .gsb-section-count {
     margin-left: auto;
-    background: rgba(255,255,255,0.08);
+    background: var(--border-default);
     border-radius: 10px;
     padding: 1px 7px;
     font-size: 10px;
@@ -358,7 +358,7 @@ mark.search-highlight {
     transition: all 0.15s;
     display: flex; align-items: center; gap: 6px;
 }
-.srp-tab:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.05); }
+.srp-tab:hover { color: rgba(255,255,255,0.8); background: var(--bg-hover); }
 .srp-tab.active { background: #7c3aed; color: #fff; }
 .srp-tab-count {
     font-size: 11px; background: rgba(255,255,255,0.15);
@@ -439,7 +439,7 @@ mark.search-highlight {
 
 .srp-load-more {
     text-align: center; padding: 12px;
-    border-top: 1px solid rgba(255,255,255,0.05);
+    border-top: 1px solid var(--bg-hover);
 }
 .srp-load-more-btn {
     background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);

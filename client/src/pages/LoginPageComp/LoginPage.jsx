@@ -48,7 +48,7 @@ const LoginPage = () => {
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0c0c0c' }}>
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                     <img src="/chttrix-logo.jpg" alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', opacity: 0.4 }} />
                     <div style={{ height: '2px', width: '80px', background: 'rgba(184,149,106,0.2)', position: 'relative', overflow: 'hidden' }}>
@@ -63,7 +63,7 @@ const LoginPage = () => {
     if (user) return null;
 
     return (
-        <div className="login-root" style={{ minHeight: '100vh', display: 'flex', background: '#0c0c0c', fontFamily: 'Inter, system-ui, sans-serif' }}>
+        <div className="login-root" style={{ minHeight: '100vh', display: 'flex', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <style>{`
                 * { box-sizing: border-box; }
                 ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }
@@ -76,7 +76,7 @@ const LoginPage = () => {
             `}</style>
 
             {/* ── LEFT PANEL — Brand (hidden on mobile) ── */}
-            <div className="login-brand-panel" style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', background: '#080808', borderRight: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
+            <div className="login-brand-panel" style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', background: 'var(--bg-base)', borderRight: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
                 {/* Ambient glow */}
                 <div style={{ position: 'absolute', top: '20%', left: '30%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
                 <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(110,168,254,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
@@ -84,16 +84,16 @@ const LoginPage = () => {
                 {/* Logo */}
                 <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', position: 'relative', zIndex: 1 }}>
                     <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.02em' }}>Chttrix</span>
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
                 </div>
 
                 {/* Center content */}
                 <div style={{ position: 'relative', zIndex: 1 }}>
-                    <h1 style={{ fontSize: 'clamp(32px,3.5vw,52px)', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '18px' }}>
+                    <h1 style={{ fontSize: 'clamp(32px,3.5vw,52px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '18px' }}>
                         Work where<br />
                         <span style={{ color: '#b8956a' }}>the future happens.</span>
                     </h1>
-                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.45)', lineHeight: '1.8', marginBottom: '40px', maxWidth: '400px' }}>
+                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.8', marginBottom: '40px', maxWidth: '400px' }}>
                         The operating system for high-performance teams. Channels, AI, tasks — all in one place.
                     </p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -104,7 +104,7 @@ const LoginPage = () => {
                                     <div style={{ width: '30px', height: '30px', background: `${f.color}14`, border: `1px solid ${f.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                         <Icon size={13} style={{ color: f.color }} />
                                     </div>
-                                    <span style={{ fontSize: '13px', color: 'rgba(228,228,228,0.55)', fontWeight: 500 }}>{f.text}</span>
+                                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>{f.text}</span>
                                 </div>
                             );
                         })}
@@ -114,12 +114,12 @@ const LoginPage = () => {
                 {/* Footer quote */}
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <div style={{ borderLeft: '2px solid rgba(184,149,106,0.3)', paddingLeft: '14px', marginBottom: '16px' }}>
-                        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.4)', fontStyle: 'italic', lineHeight: '1.7' }}>
+                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.7' }}>
                             "Chttrix replaced Slack, Notion, and Jira for our team. We haven't looked back."
                         </p>
-                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.25)', marginTop: '6px' }}>Maya H. — CTO at Fluxio</p>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Maya H. — CTO at Fluxio</p>
                     </div>
-                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.15)' }}>© 2026 Chttrix Inc.</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>© 2026 Chttrix Inc.</p>
                 </div>
             </div>
 
@@ -132,8 +132,8 @@ const LoginPage = () => {
                             <CheckCircle2 size={16} style={{ color: '#5aba8a', flexShrink: 0, marginTop: '1px' }} />
                             <div>
                                 <p style={{ fontSize: '13px', fontWeight: 700, color: '#5aba8a', marginBottom: '2px' }}>Account Created</p>
-                                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.5)' }}>{registrationMessage}</p>
-                                {prefilledEmail && <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.35)', fontFamily: 'monospace', marginTop: '4px' }}>{prefilledEmail}</p>}
+                                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{registrationMessage}</p>
+                                {prefilledEmail && <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '4px' }}>{prefilledEmail}</p>}
                             </div>
                         </div>
                     )}
@@ -163,7 +163,7 @@ const LoginPage = () => {
                             { label: 'Register Company', path: '/register-company' },
                         ].map(l => (
                             <button key={l.label} onClick={() => navigate(l.path)}
-                                style={{ background: 'none', border: 'none', color: 'rgba(228,228,228,0.25)', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
+                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
                                 onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
                                 onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}>
                                 {l.label}

@@ -1,0 +1,1263 @@
+ChttrixCollab — Project Structure (Essentials Only)
+Generated: Fri Apr 17 08:03:17 IST 2026
+Depth: 8 levels | Excludes: .git, node_modules, dist, build, .next, .vite, lock files, maps, logs, .DS_Store
+=========================================================
+
+├── .gitignore
+├── .vscode
+│   └── settings.json
+├── README.md
+├── ai
+│   ├── agents
+│   │   └── .gitkeep
+│   ├── api
+│   │   ├── .gitkeep
+│   │   └── ai.gateway.js
+│   ├── events
+│   │   └── activityEvent.js
+│   ├── memory
+│   │   └── .gitkeep
+│   └── orchestrator
+│       └── .gitkeep
+├── client
+│   ├── .env
+│   ├── .env.example
+│   ├── .env.local
+│   ├── .env.production.template
+│   ├── .gitignore
+│   ├── index.html
+│   ├── jsconfig.json
+│   ├── package.json
+│   ├── public
+│   │   ├── ChttrixAI-animation.mp4
+│   │   ├── Screenshot 2026-01-11 at 3.53.36 PM.png
+│   │   ├── assets
+│   │   │   ├── Background.jpg
+│   │   │   ├── ChttrixAI-logo.png
+│   │   │   ├── ChttrixFavico.png
+│   │   │   ├── ChttrixLogo-dark.svg
+│   │   │   ├── ChttrixLogo-light.svg
+│   │   │   └── ChttrixLogo.svg
+│   │   ├── chttrix-logo.jpg
+│   │   ├── default-avatar.svg
+│   │   ├── favicon.ico
+│   │   ├── favicon.png
+│   │   ├── hover-animation.mp4
+│   │   ├── icons
+│   │   │   ├── icon-192.png
+│   │   │   └── icon-512.png
+│   │   ├── index.html
+│   │   ├── manifest.json
+│   │   ├── sw.js
+│   │   └── venkatech_team.xlsx
+│   ├── src
+│   │   ├── App.js
+│   │   ├── __tests__
+│   │   │   └── crypto.test.js
+│   │   ├── components
+│   │   │   ├── InvitePeopleModal.jsx
+│   │   │   ├── RequireAdmin.jsx
+│   │   │   ├── RequireAuth.jsx
+│   │   │   ├── RequireChttrixAdmin.jsx
+│   │   │   ├── RequireCompanyAdmin.jsx
+│   │   │   ├── RequireDepartmentManager.jsx
+│   │   │   ├── RequireOwner.jsx
+│   │   │   ├── RequireWorkspace.jsx
+│   │   │   ├── ScrollToTop.jsx
+│   │   │   ├── SidebarComp
+│   │   │   │   └── ProfileSidebar.jsx
+│   │   │   ├── ThemeAwareLogo.jsx
+│   │   │   ├── VerifiedOnlyRoute.jsx
+│   │   │   ├── admin
+│   │   │   │   ├── AdminSidebar.jsx
+│   │   │   │   └── onboarding
+│   │   │   │       └── OnboardingWizard.jsx
+│   │   │   ├── ai
+│   │   │   │   ├── AIAssistantPanel.jsx
+│   │   │   │   ├── AICommandBox.jsx
+│   │   │   │   ├── AIHub.jsx
+│   │   │   │   ├── AISearchBar.jsx
+│   │   │   │   ├── AskAIPanel.jsx
+│   │   │   │   └── ChttrixAIChat
+│   │   │   │       └── ChttrixAIChat.jsx
+│   │   │   ├── apps
+│   │   │   │   ├── InstallIntegrationModal.jsx
+│   │   │   │   ├── IntegrationCard.jsx
+│   │   │   │   ├── IntegrationDetailsModal.jsx
+│   │   │   │   ├── mock
+│   │   │   │   │   └── mockIntegrations.js
+│   │   │   │   └── modals
+│   │   │   │       ├── CreateGitHubIssueModal.jsx
+│   │   │   │       ├── CreateJiraTicketModal.jsx
+│   │   │   │       └── IntegrationActionModal.jsx
+│   │   │   ├── auth
+│   │   │   │   └── FirstLoginPasswordModal.jsx
+│   │   │   ├── chat
+│   │   │   │   └── slash
+│   │   │   │       ├── SlashCommandItem.jsx
+│   │   │   │       ├── SlashCommandMenu.jsx
+│   │   │   │       ├── SlashCommandPreview.jsx
+│   │   │   │       └── mockSlashCommands.js
+│   │   │   ├── common
+│   │   │   │   └── UniversalSearch.jsx
+│   │   │   ├── company
+│   │   │   │   ├── ActivityFeed.jsx
+│   │   │   │   ├── ChartComponents.jsx
+│   │   │   │   ├── DashboardCard.jsx
+│   │   │   │   ├── DepartmentCard.jsx
+│   │   │   │   ├── DepartmentDetailsModal.jsx
+│   │   │   │   ├── DepartmentModal.jsx
+│   │   │   │   ├── DomainSettings.jsx
+│   │   │   │   ├── EmployeeActionsMenu.jsx
+│   │   │   │   ├── EmployeeOnboardingModal.jsx
+│   │   │   │   ├── InviteUserModal.jsx
+│   │   │   │   ├── PulseWidget.jsx
+│   │   │   │   ├── RoleBadge.jsx
+│   │   │   │   ├── StatsWidget.jsx
+│   │   │   │   ├── UserCard.jsx
+│   │   │   │   └── index.js
+│   │   │   ├── files
+│   │   │   │   ├── FilePreviewModal.jsx
+│   │   │   │   └── FileVersionHistory.jsx
+│   │   │   ├── home
+│   │   │   │   └── panels
+│   │   │   │       └── HomePanel
+│   │   │   │           ├── ChannelDMModals.jsx
+│   │   │   │           ├── DeleteWorkspaceModal.jsx
+│   │   │   │           ├── ListItem.jsx
+│   │   │   │           ├── SectionHeader.jsx
+│   │   │   │           ├── WorkspaceHeader.jsx
+│   │   │   │           ├── WorkspaceModals.jsx
+│   │   │   │           ├── WorkspaceSettingsModal.jsx
+│   │   │   │           └── index.jsx
+│   │   │   ├── layout
+│   │   │   │   ├── CompanyAdminLayout.jsx
+│   │   │   │   ├── IconSidebar.jsx
+│   │   │   │   ├── MainLayout.jsx
+│   │   │   │   ├── ManagerLayout.jsx
+│   │   │   │   ├── MobileBottomNav.jsx
+│   │   │   │   ├── MobileHomePage.jsx
+│   │   │   │   ├── PublicPageShell.jsx
+│   │   │   │   ├── SidePanel.jsx
+│   │   │   │   ├── hooks
+│   │   │   │   │   └── useResizablePanel.js
+│   │   │   │   └── panels
+│   │   │   │       ├── ActiveMeetingOverlay.jsx
+│   │   │   │       ├── ChannelsPanel.jsx
+│   │   │   │       ├── FilesPanel.jsx
+│   │   │   │       ├── KnowledgePanel.jsx
+│   │   │   │       ├── MeetingsPanel.jsx
+│   │   │   │       ├── MessagesPanel.jsx
+│   │   │   │       ├── NotesPanel.jsx
+│   │   │   │       ├── TasksPanel.jsx
+│   │   │   │       └── UpdatesPanel.jsx
+│   │   │   ├── loginpage
+│   │   │   │   ├── LoginForm.jsx
+│   │   │   │   └── SignupForm.jsx
+│   │   │   ├── manager
+│   │   │   │   ├── ManagerContactAdmin.jsx
+│   │   │   │   ├── ManagerLocation.jsx
+│   │   │   │   ├── ManagerOverview.jsx
+│   │   │   │   ├── ManagerProjects.jsx
+│   │   │   │   ├── ManagerReports.jsx
+│   │   │   │   ├── ManagerSettings.jsx
+│   │   │   │   ├── ManagerSidebar.jsx
+│   │   │   │   ├── ManagerTasks.jsx
+│   │   │   │   ├── ManagerWorkspacePage.jsx
+│   │   │   │   ├── ScopeSelector.jsx
+│   │   │   │   ├── TeamAllocation.jsx
+│   │   │   │   └── UnassignedMembers.jsx
+│   │   │   ├── meetingsComp
+│   │   │   │   ├── BrainstormBoard.jsx
+│   │   │   │   └── Whiteboard.jsx
+│   │   │   ├── messages
+│   │   │   ├── messagesComp
+│   │   │   │   ├── BroadcastChatWindow.jsx
+│   │   │   │   ├── BroadcastModal.jsx
+│   │   │   │   ├── BroadcastView.jsx
+│   │   │   │   ├── ChannelManagementModal.jsx
+│   │   │   │   ├── ChecklistMessage.jsx
+│   │   │   │   ├── CreateChannelModal.jsx
+│   │   │   │   ├── EncryptedMessage.jsx
+│   │   │   │   ├── JoinChannelCTA.jsx
+│   │   │   │   ├── JoinChannelModal.jsx
+│   │   │   │   ├── MessageDiffViewer.jsx
+│   │   │   │   ├── MessageList.jsx
+│   │   │   │   ├── NewDMModal.jsx
+│   │   │   │   ├── PinnedMessagesPanel.jsx
+│   │   │   │   ├── SmartReplyBar.jsx
+│   │   │   │   ├── SystemEventItem.jsx
+│   │   │   │   ├── TranslateToggle.jsx
+│   │   │   │   ├── channelManagementComponents
+│   │   │   │   │   ├── DemoteAdminModal.jsx
+│   │   │   │   │   ├── IntegrationsTab.jsx
+│   │   │   │   │   ├── InviteTab.jsx
+│   │   │   │   │   ├── MembersTab.jsx
+│   │   │   │   │   ├── ModalHeader.jsx
+│   │   │   │   │   ├── PromoteAdminModal.jsx
+│   │   │   │   │   ├── RemoveMemberModal.jsx
+│   │   │   │   │   ├── SettingsTab.jsx
+│   │   │   │   │   └── TabNavigation.jsx
+│   │   │   │   ├── chatWindowComp
+│   │   │   │   │   ├── CanvasCard.jsx
+│   │   │   │   │   ├── ChatWindowV2.jsx
+│   │   │   │   │   ├── MentionAutocomplete.jsx
+│   │   │   │   │   ├── ScreenRecorder.jsx
+│   │   │   │   │   ├── ThreadPanel.jsx
+│   │   │   │   │   ├── VoiceRecorder.jsx
+│   │   │   │   │   ├── chatWindow.css
+│   │   │   │   │   ├── footer
+│   │   │   │   │   │   ├── Footer.jsx
+│   │   │   │   │   │   ├── MentionAutocomplete.jsx
+│   │   │   │   │   │   ├── ScreenRecorder.jsx
+│   │   │   │   │   │   ├── SmartReplySuggestions.jsx
+│   │   │   │   │   │   ├── VoiceRecorder.jsx
+│   │   │   │   │   │   ├── attachMenu.jsx
+│   │   │   │   │   │   ├── emojiPicker.jsx
+│   │   │   │   │   │   └── footerInput.jsx
+│   │   │   │   │   ├── header
+│   │   │   │   │   │   ├── ContactOptionsDropdown.jsx
+│   │   │   │   │   │   ├── header.jsx
+│   │   │   │   │   │   └── useContactOptions.js
+│   │   │   │   │   ├── helpers
+│   │   │   │   │   │   └── helpers.js
+│   │   │   │   │   ├── hooks
+│   │   │   │   │   │   ├── useCanvasActions.js
+│   │   │   │   │   │   ├── useHeaderActions.js
+│   │   │   │   │   │   ├── useHuddle.js
+│   │   │   │   │   │   ├── useLinkPreview.js
+│   │   │   │   │   │   └── useMessageInput.js
+│   │   │   │   │   ├── huddle
+│   │   │   │   │   │   ├── HuddleOverlay.jsx
+│   │   │   │   │   │   └── HuddleParticipants.jsx
+│   │   │   │   │   ├── messages
+│   │   │   │   │   │   ├── AttachmentPreview.jsx
+│   │   │   │   │   │   ├── ChannelMessageItem.jsx
+│   │   │   │   │   │   ├── DMMessageItem.jsx
+│   │   │   │   │   │   ├── JoinMarker.jsx
+│   │   │   │   │   │   ├── MessageErrorBoundary.jsx
+│   │   │   │   │   │   ├── PollBubble.jsx
+│   │   │   │   │   │   ├── PollCard.jsx
+│   │   │   │   │   │   ├── PollMessage.jsx
+│   │   │   │   │   │   ├── TranslatePopover.jsx
+│   │   │   │   │   │   ├── messageGroup.jsx
+│   │   │   │   │   │   ├── messageItem.jsx
+│   │   │   │   │   │   ├── messageMenu.jsx
+│   │   │   │   │   │   ├── messagesContainer.jsx
+│   │   │   │   │   │   ├── reactionBadges.jsx
+│   │   │   │   │   │   ├── reactionPicker.jsx
+│   │   │   │   │   │   ├── replyPreview.jsx
+│   │   │   │   │   │   └── types
+│   │   │   │   │   │       ├── ContactMessage.jsx
+│   │   │   │   │   │       ├── FileMessage.jsx
+│   │   │   │   │   │       ├── ImageMessage.jsx
+│   │   │   │   │   │       ├── LinkPreviewMessage.jsx
+│   │   │   │   │   │       ├── MeetingMessage.jsx
+│   │   │   │   │   │       ├── PollMessage.jsx
+│   │   │   │   │   │       ├── VideoMessage.jsx
+│   │   │   │   │   │       └── VoiceMessage.jsx
+│   │   │   │   │   ├── modals
+│   │   │   │   │   │   ├── BlockUserDialog.jsx
+│   │   │   │   │   │   ├── ContactPickerModal.jsx
+│   │   │   │   │   │   ├── CreatePollModal.jsx
+│   │   │   │   │   │   ├── DeleteChatDialog.jsx
+│   │   │   │   │   │   ├── EditHistoryModal.jsx
+│   │   │   │   │   │   ├── ForwardMessageModal.jsx
+│   │   │   │   │   │   ├── MemberListModal.jsx
+│   │   │   │   │   │   ├── MessageInfoModal.jsx
+│   │   │   │   │   │   ├── PollCreationModal.jsx
+│   │   │   │   │   │   ├── ReminderPicker.jsx
+│   │   │   │   │   │   ├── ScheduleMeetingModal.jsx
+│   │   │   │   │   │   ├── ThreadsViewModal.jsx
+│   │   │   │   │   │   ├── contactInfoModal.jsx
+│   │   │   │   │   │   └── contactShareModal.jsx
+│   │   │   │   │   ├── panels
+│   │   │   │   │   │   └── BookmarksPanel.jsx
+│   │   │   │   │   ├── pinned
+│   │   │   │   │   │   └── pinnedMessage.jsx
+│   │   │   │   │   ├── states
+│   │   │   │   │   │   └── ChannelJoinPrompt.jsx
+│   │   │   │   │   ├── tabs
+│   │   │   │   │   │   ├── CanvasTab.jsx
+│   │   │   │   │   │   ├── ChannelTabs.jsx
+│   │   │   │   │   │   ├── TasksTab.jsx
+│   │   │   │   │   │   └── ThreadsTab.jsx
+│   │   │   │   │   ├── toolbar
+│   │   │   │   │   │   └── selectionToolbar.jsx
+│   │   │   │   │   └── views
+│   │   │   │   │       ├── CanvasDashboardView.jsx
+│   │   │   │   │       ├── CentralContentView.jsx
+│   │   │   │   │       ├── ErrorDisplay.jsx
+│   │   │   │   │       └── ModalRenderer.jsx
+│   │   │   │   └── events
+│   │   │   │       ├── ConversationStream.jsx
+│   │   │   │       ├── MeetingEvent.jsx
+│   │   │   │       ├── MessageEvent.jsx
+│   │   │   │       ├── PollEvent.jsx
+│   │   │   │       ├── SystemEvent.jsx
+│   │   │   │       └── index.js
+│   │   │   ├── profile
+│   │   │   │   ├── modals
+│   │   │   │   │   └── DeleteAccountModal.jsx
+│   │   │   │   ├── shared
+│   │   │   │   │   └── PasswordInput.jsx
+│   │   │   │   └── views
+│   │   │   │       ├── HelpMenuView.jsx
+│   │   │   │       ├── MainMenuView.jsx
+│   │   │   │       ├── PreferencesView.jsx
+│   │   │   │       ├── ProfileView.jsx
+│   │   │   │       ├── SecurityView.jsx
+│   │   │   │       └── help
+│   │   │   │           ├── HelpAcademyView.jsx
+│   │   │   │           ├── HelpBugView.jsx
+│   │   │   │           ├── HelpContactView.jsx
+│   │   │   │           ├── HelpShortcutsView.jsx
+│   │   │   │           └── HelpWhatsNewView.jsx
+│   │   │   ├── search
+│   │   │   │   ├── GlobalSearchBar.jsx
+│   │   │   │   ├── SearchBar.css
+│   │   │   │   ├── SearchInlineBar.css
+│   │   │   │   ├── SearchInlineBar.jsx
+│   │   │   │   ├── SearchResultItem.jsx
+│   │   │   │   └── SearchResultsPage.jsx
+│   │   │   ├── security
+│   │   │   │   └── PasswordUnlockModal.jsx
+│   │   │   ├── shared
+│   │   │   │   ├── CustomDropdown.jsx
+│   │   │   │   ├── NotificationPreferences.jsx
+│   │   │   │   └── OTPModal.jsx
+│   │   │   ├── tasksComp
+│   │   │   │   ├── KanbanBoard.jsx
+│   │   │   │   ├── SprintBoard.jsx
+│   │   │   │   ├── TaskCompletionModal.jsx
+│   │   │   │   ├── TaskHeader.jsx
+│   │   │   │   ├── TaskModal.jsx
+│   │   │   │   ├── TaskRow.jsx
+│   │   │   │   ├── TaskTable.jsx
+│   │   │   │   ├── TaskTabs.jsx
+│   │   │   │   ├── TimelineView.jsx
+│   │   │   │   ├── TransferRequestModal.jsx
+│   │   │   │   ├── WorkloadPanel.jsx
+│   │   │   │   └── WorkspaceTaskDetailPanel.jsx
+│   │   │   ├── workspace
+│   │   │   │   ├── ProfileQuickSettings.jsx
+│   │   │   │   └── settings
+│   │   │   │       ├── AdvancedTab.jsx
+│   │   │   │       ├── BillingTab.jsx
+│   │   │   │       ├── GeneralTab.jsx
+│   │   │   │       ├── InvitationsTab.jsx
+│   │   │   │       ├── MembersTab.jsx
+│   │   │   │       └── PermissionsTab.jsx
+│   │   │   └── workspace-os
+│   │   │       └── WorkspaceExportImport.jsx
+│   │   ├── contexts
+│   │   │   ├── AuthContext.jsx
+│   │   │   ├── BlogsContext.jsx
+│   │   │   ├── CompanyContext.jsx
+│   │   │   ├── ContactsContext.jsx
+│   │   │   ├── DepartmentContext.jsx
+│   │   │   ├── HuddleContext.jsx
+│   │   │   ├── NotesContext.jsx
+│   │   │   ├── NotificationsContext.jsx
+│   │   │   ├── SearchContext.jsx
+│   │   │   ├── SocketContext.jsx
+│   │   │   ├── TasksContext.jsx
+│   │   │   ├── ThemeContext.js
+│   │   │   ├── ToastContext.jsx
+│   │   │   ├── UpdatesContext.jsx
+│   │   │   └── WorkspaceContext.jsx
+│   │   ├── hooks
+│   │   │   ├── index.js
+│   │   │   ├── useAsync.js
+│   │   │   ├── useChannels.js
+│   │   │   ├── useChatSocket.js
+│   │   │   ├── useConversation.js
+│   │   │   ├── useDesktopNotification.js
+│   │   │   ├── useFiles.js
+│   │   │   ├── useForm.js
+│   │   │   ├── useIsMobile.js
+│   │   │   ├── useKnowledge.js
+│   │   │   ├── useMeeting.js
+│   │   │   ├── useMentionAutocomplete.js
+│   │   │   ├── useMessageActions.js
+│   │   │   ├── useOfflineRecovery.js
+│   │   │   ├── usePermissions.js
+│   │   │   ├── useScheduledMeetings.js
+│   │   │   ├── useThreadFollow.js
+│   │   │   ├── useTranslation.js
+│   │   │   ├── useUniversalSearch.js
+│   │   │   ├── useUsers.js
+│   │   │   └── useWorkspaceAnalytics.js
+│   │   ├── index.css
+│   │   ├── main.jsx
+│   │   ├── modules
+│   │   ├── pages
+│   │   │   ├── AcceptInvite.jsx
+│   │   │   ├── AdminDashboard
+│   │   │   │   ├── AuditSecurity.jsx
+│   │   │   │   ├── DepartmentsView.jsx
+│   │   │   │   ├── UsersAccess.jsx
+│   │   │   │   ├── WorkspacesAccess.jsx
+│   │   │   │   └── index.jsx
+│   │   │   ├── ApplicationReview.jsx
+│   │   │   ├── Careers.jsx
+│   │   │   ├── ChttrixDocs.jsx
+│   │   │   ├── CompanyConfirmation.jsx
+│   │   │   ├── CompanySetup.jsx
+│   │   │   ├── DepartmentManagement.jsx
+│   │   │   ├── FeatureShowcase.jsx
+│   │   │   ├── JoinChannel.jsx
+│   │   │   ├── JoinWorkspace.jsx
+│   │   │   ├── LoginPageComp
+│   │   │   │   ├── ForgotPassword.jsx
+│   │   │   │   ├── LoginPage.jsx
+│   │   │   │   ├── OAuthPasswordSetup.jsx
+│   │   │   │   ├── OAuthSuccess.jsx
+│   │   │   │   └── ResetPassword.jsx
+│   │   │   ├── ManagerDashboard
+│   │   │   │   ├── MyWorkspaces.jsx
+│   │   │   │   ├── TeamLoad.jsx
+│   │   │   │   ├── UnassignedEmployees.jsx
+│   │   │   │   └── index.jsx
+│   │   │   ├── NotificationsPage.jsx
+│   │   │   ├── OwnerDashboard
+│   │   │   │   ├── ActivityHealth.jsx
+│   │   │   │   ├── AdminsManagement.jsx
+│   │   │   │   ├── BillingSummary.jsx
+│   │   │   │   ├── OrganizationOverview.jsx
+│   │   │   │   ├── OwnerAnalytics.jsx
+│   │   │   │   ├── OwnerBilling.jsx
+│   │   │   │   ├── OwnerSecurity.jsx
+│   │   │   │   ├── OwnerSidebar.jsx
+│   │   │   │   ├── SecurityRisk.jsx
+│   │   │   │   └── index.jsx
+│   │   │   ├── PendingVerification.jsx
+│   │   │   ├── ReactivationFlow.jsx
+│   │   │   ├── RegisterCompany.jsx
+│   │   │   ├── SetPassword.jsx
+│   │   │   ├── Settings.jsx
+│   │   │   ├── SetupPassword.jsx
+│   │   │   ├── SidebarComp
+│   │   │   │   ├── FileLibrary.jsx
+│   │   │   │   ├── Home.jsx
+│   │   │   │   ├── KnowledgeGraph.jsx
+│   │   │   │   ├── KnowledgePage.jsx
+│   │   │   │   ├── MeetingDetailPage.jsx
+│   │   │   │   ├── Meetings.jsx
+│   │   │   │   ├── Messages.jsx
+│   │   │   │   ├── MyTasks.jsx
+│   │   │   │   ├── Notes.jsx
+│   │   │   │   ├── Updates.jsx
+│   │   │   │   ├── notesComponents
+│   │   │   │   │   ├── blocks
+│   │   │   │   │   │   ├── AudioBlock.jsx
+│   │   │   │   │   │   ├── CalloutBlock.jsx
+│   │   │   │   │   │   ├── ChecklistBlock.jsx
+│   │   │   │   │   │   ├── CodeBlock.jsx
+│   │   │   │   │   │   ├── DividerBlock.jsx
+│   │   │   │   │   │   ├── HeadingBlock.jsx
+│   │   │   │   │   │   ├── ImageBlock.jsx
+│   │   │   │   │   │   ├── TableBlock.jsx
+│   │   │   │   │   │   ├── TextBlock.jsx
+│   │   │   │   │   │   ├── ToggleBlock.jsx
+│   │   │   │   │   │   └── VideoBlock.jsx
+│   │   │   │   │   └── ui
+│   │   │   │   │       ├── AIPanel.jsx
+│   │   │   │   │       ├── EmptyState.jsx
+│   │   │   │   │       ├── NoteInfoModal.jsx
+│   │   │   │   │       ├── NoteTemplateModal.jsx
+│   │   │   │   │       ├── NotesToolbar.jsx
+│   │   │   │   │       ├── ShareNoteModal.jsx
+│   │   │   │   │       ├── SlashCommandMenu.jsx
+│   │   │   │   │       └── VersionHistoryPanel.jsx
+│   │   │   │   └── states
+│   │   │   │       └── EmptyState.jsx
+│   │   │   ├── VerifyEmail.jsx
+│   │   │   ├── WorkspaceSelect.jsx
+│   │   │   ├── admin
+│   │   │   │   ├── AdminProfile.jsx
+│   │   │   │   ├── AdminSettings.jsx
+│   │   │   │   ├── AdminSettingsLimited.jsx
+│   │   │   │   ├── Analytics.jsx
+│   │   │   │   ├── AuditSecurityPage.jsx
+│   │   │   │   ├── ContactAdmin.jsx
+│   │   │   │   ├── DepartmentManagement.jsx
+│   │   │   │   ├── OnboardingPage.jsx
+│   │   │   │   ├── OrgChartPage.jsx
+│   │   │   │   ├── TeamsManagement.jsx
+│   │   │   │   ├── UserManagement.jsx
+│   │   │   │   ├── WorkspaceMembersModal.jsx
+│   │   │   │   ├── WorkspacePermissions.jsx
+│   │   │   │   ├── WorkspaceTemplates.jsx
+│   │   │   │   ├── WorkspacesManagement.jsx
+│   │   │   │   ├── platform
+│   │   │   │   │   └── views
+│   │   │   │   │       ├── ActiveCompanies.jsx
+│   │   │   │   │       ├── AdminSettings.jsx
+│   │   │   │   │       ├── AuditLogs.jsx
+│   │   │   │   │       ├── Billing.jsx
+│   │   │   │   │       ├── Broadcast.jsx
+│   │   │   │   │       ├── CompanyDetail.jsx
+│   │   │   │   │       ├── Overview.jsx
+│   │   │   │   │       ├── PendingRequests.jsx
+│   │   │   │   │       ├── PlatformChat.jsx
+│   │   │   │   │       ├── SupportTickets.jsx
+│   │   │   │   │       └── SystemHealth.jsx
+│   │   │   │   └── settings
+│   │   │   │       ├── CompanySettings.jsx
+│   │   │   │       └── sections
+│   │   │   │           ├── BillingPlan.jsx
+│   │   │   │           ├── Branding.jsx
+│   │   │   │           ├── CompanyProfile.jsx
+│   │   │   │           ├── DataPrivacy.jsx
+│   │   │   │           ├── DomainSSO.jsx
+│   │   │   │           ├── Notifications.jsx
+│   │   │   │           ├── Security.jsx
+│   │   │   │           └── UserDefaults.jsx
+│   │   │   ├── apps
+│   │   │   │   └── AppsPage.jsx
+│   │   │   ├── auth
+│   │   │   │   └── utils
+│   │   │   │       └── formValidation.js
+│   │   │   ├── company
+│   │   │   │   ├── About.jsx
+│   │   │   │   ├── Blog.jsx
+│   │   │   │   ├── Brand.jsx
+│   │   │   │   ├── Contact.jsx
+│   │   │   │   └── Security.jsx
+│   │   │   ├── dashboards
+│   │   │   │   ├── AIInsightsDashboard.jsx
+│   │   │   │   ├── AdminAnalyticsDashboard.jsx
+│   │   │   │   ├── AnalyticsDashboard.jsx
+│   │   │   │   ├── ChttrixAdminDashboard.jsx
+│   │   │   │   ├── EmployeeDashboard.jsx
+│   │   │   │   └── InsightsDashboard.jsx
+│   │   │   ├── developer
+│   │   │   │   ├── DeveloperPortalPage.css
+│   │   │   │   └── DeveloperPortalPage.jsx
+│   │   │   ├── legal
+│   │   │   │   ├── CookieSettings.jsx
+│   │   │   │   ├── Privacy.jsx
+│   │   │   │   └── Terms.jsx
+│   │   │   ├── register
+│   │   │   │   ├── layout
+│   │   │   │   │   ├── ProgressHeader.jsx
+│   │   │   │   │   └── RegisterLayout.jsx
+│   │   │   │   ├── steps
+│   │   │   │   │   ├── Step1OrganizationForm.jsx
+│   │   │   │   │   ├── Step2AdministratorForm.jsx
+│   │   │   │   │   ├── Step3AccountForm.jsx
+│   │   │   │   │   ├── Step4DocumentsForm.jsx
+│   │   │   │   │   └── Step5ReviewForm.jsx
+│   │   │   │   └── views
+│   │   │   │       └── SuccessView.jsx
+│   │   │   ├── resources
+│   │   │   │   ├── Community.jsx
+│   │   │   │   ├── HelpCenter.jsx
+│   │   │   │   ├── Partners.jsx
+│   │   │   │   └── Status.jsx
+│   │   │   ├── settingsTabs
+│   │   │   │   ├── AdvancedTab.jsx
+│   │   │   │   ├── AppearanceTab.jsx
+│   │   │   │   ├── Card.jsx
+│   │   │   │   ├── ComplianceTab.jsx
+│   │   │   │   ├── ImageCropEditor.jsx
+│   │   │   │   ├── IntegrationsTab.jsx
+│   │   │   │   ├── NotificationsTab.jsx
+│   │   │   │   ├── PrivacyTab.jsx
+│   │   │   │   ├── ProfileTab.jsx
+│   │   │   │   ├── RegionTab.jsx
+│   │   │   │   ├── SecurityTab.jsx
+│   │   │   │   └── SessionsTab.jsx
+│   │   │   ├── workspace
+│   │   │   │   ├── AutomationBuilderPage.jsx
+│   │   │   │   ├── AutomationsPage.jsx
+│   │   │   │   ├── TemplateMarketplacePage.jsx
+│   │   │   │   └── WorkspaceSelect
+│   │   │   │       └── WorkspaceCard.jsx
+│   │   │   ├── workspace-os
+│   │   │   │   ├── AuditLogViewer.jsx
+│   │   │   │   ├── ComplianceLogViewer.jsx
+│   │   │   │   ├── EmployeeDirectoryPage.jsx
+│   │   │   │   ├── OrgChartPage.jsx
+│   │   │   │   ├── PermissionMatrixPage.jsx
+│   │   │   │   └── WorkspaceAnalyticsDashboard.jsx
+│   │   │   └── workspaceSelectComponents
+│   │   │       ├── CreateWorkspaceModal.jsx
+│   │   │       ├── ErrorState.jsx
+│   │   │       ├── Header.jsx
+│   │   │       ├── HelpModalsContainer.jsx
+│   │   │       ├── LoadingState.jsx
+│   │   │       └── WorkspaceGrid.jsx
+│   │   ├── services
+│   │   │   ├── adminDashboardService.js
+│   │   │   ├── aiService.js
+│   │   │   ├── analyticsService.js
+│   │   │   ├── api.js
+│   │   │   ├── auditService.js
+│   │   │   ├── automationsService.js
+│   │   │   ├── channelService.js
+│   │   │   ├── clientKeyDistribution.js
+│   │   │   ├── companyService.js
+│   │   │   ├── contactService.js
+│   │   │   ├── conversationKeyService.js
+│   │   │   ├── dashboardService.js
+│   │   │   ├── departmentService.js
+│   │   │   ├── identityKeyService.js
+│   │   │   ├── identityRecovery.service.js
+│   │   │   ├── integrations.service.js
+│   │   │   ├── keyManagement.js
+│   │   │   ├── managerDashboardService.js
+│   │   │   ├── messageEncryptionService.js
+│   │   │   ├── messageService.js
+│   │   │   ├── ownerDashboardService.js
+│   │   │   ├── searchService.js
+│   │   │   ├── userService.js
+│   │   │   ├── workspaceKeyInit.js
+│   │   │   └── workspaceService.js
+│   │   ├── shared
+│   │   │   └── components
+│   │   │       ├── design-system
+│   │   │       ├── layout
+│   │   │       └── ui
+│   │   │           ├── AppErrorBoundary.jsx
+│   │   │           ├── Avatar.jsx
+│   │   │           ├── Badge.jsx
+│   │   │           ├── Button.jsx
+│   │   │           ├── Card.jsx
+│   │   │           ├── ConfirmationModal.jsx
+│   │   │           ├── Input.jsx
+│   │   │           ├── LoadingScreen.jsx
+│   │   │           ├── Modal.jsx
+│   │   │           ├── Toast.jsx
+│   │   │           ├── UIStates.jsx
+│   │   │           └── index.js
+│   │   └── utils
+│   │       ├── apiClient.js
+│   │       ├── apiHelpers.js
+│   │       ├── avatarUtils.js
+│   │       ├── crypto.js
+│   │       ├── cryptoIdentity.js
+│   │       ├── deviceId.js
+│   │       ├── e2ee-test.js
+│   │       ├── encryptionUtils.js
+│   │       ├── gcsProxy.js
+│   │       ├── logger.js
+│   │       ├── renderWithMentions.js
+│   │       ├── tokenUtils.js
+│   │       └── uploadHelpers.js
+│   ├── tailwind.config.js
+│   └── vite.config.js
+├── desktop
+│   ├── README.md
+│   ├── electron
+│   │   ├── .gitkeep
+│   │   ├── main.js
+│   │   ├── notifications.js
+│   │   ├── preload.js
+│   │   └── tray.js
+│   ├── package-lock.json
+│   ├── package.json
+│   └── renderer
+│       ├── .gitkeep
+│       └── index.html
+├── mobile
+│   ├── app.json
+│   ├── babel.config.js
+│   ├── index.js
+│   ├── package.json
+│   └── src
+│       ├── .gitkeep
+│       ├── App.js
+│       ├── hooks
+│       │   └── useOfflineQueue.js
+│       ├── screens
+│       │   ├── HomeScreen.js
+│       │   ├── LoginScreen.js
+│       │   ├── MessagesScreen.js
+│       │   ├── NotificationsScreen.js
+│       │   └── TasksScreen.js
+│       └── services
+│           ├── api.js
+│           ├── socket.js
+│           └── storage.js
+├── nixpacks.toml
+├── package-lock.json
+├── package.json
+├── platform
+│   ├── constants
+│   │   ├── apiVersions.js
+│   │   ├── encryptionConstants.js
+│   │   └── socketEvents.js
+│   ├── package.json
+│   ├── sdk
+│   │   ├── api
+│   │   │   └── apiClient.js
+│   │   ├── auth
+│   │   │   └── tokenManager.js
+│   │   ├── crypto
+│   │   │   ├── e2ee.js
+│   │   │   ├── identityKey.js
+│   │   │   └── keyStorage.js
+│   │   ├── events
+│   │   │   └── activityEvents.js
+│   │   └── socket
+│   │       └── socketClient.js
+│   └── types
+│       └── .gitkeep
+├── postcss.config.js
+├── railway.json
+├── sdk
+│   └── js
+│       └── chttrix-sdk.js
+├── server
+│   ├── .env
+│   ├── .env.example
+│   ├── .env.production.template
+│   ├── .gitignore
+│   ├── Dockerfile
+│   ├── ai
+│   │   └── api
+│   │       └── ai.gateway.js
+│   ├── config
+│   │   ├── multer.config.js
+│   │   └── passport.js
+│   ├── constants
+│   │   └── index.js
+│   ├── eslint.config.js
+│   ├── migrations
+│   │   └── add-e2ee-support.js
+│   ├── models
+│   │   ├── Analytics.js
+│   │   ├── AuditLog.js
+│   │   ├── Billing.js
+│   │   ├── Broadcast.js
+│   │   ├── Company.js
+│   │   ├── ComplianceLog.js
+│   │   ├── ConversationKey.js
+│   │   ├── DMSession.js
+│   │   ├── Department.js
+│   │   ├── Favorite.js
+│   │   ├── HistoryLog.js
+│   │   ├── InternalMessage.js
+│   │   ├── Invite.js
+│   │   ├── Invoice.js
+│   │   ├── Milestone.js
+│   │   ├── Note.js
+│   │   ├── Permission.js
+│   │   ├── PlatformSession.js
+│   │   ├── Project.js
+│   │   ├── ScimToken.js
+│   │   ├── SecurityEvent.js
+│   │   ├── Sprint.js
+│   │   ├── SupportMessage.js
+│   │   ├── SupportTicket.js
+│   │   ├── Task.js
+│   │   ├── TaskActivity.js
+│   │   ├── TaskTemplate.js
+│   │   ├── Ticket.js
+│   │   ├── Update.js
+│   │   ├── User.js
+│   │   ├── UserIdentityKey.js
+│   │   ├── UserSession.js
+│   │   ├── Workspace.js
+│   │   └── encryption.js
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── routes
+│   │   ├── push.routes.js
+│   │   └── v1-to-v2-proxy.js
+│   ├── scripts
+│   │   ├── auditChannelKeys.js
+│   │   ├── backfill-avatars.js
+│   │   ├── check-thread-channels.js
+│   │   ├── checkChannelData.js
+│   │   ├── checkUnhealthyChannels.js
+│   │   ├── cleanupBrokenDMSessions.js
+│   │   ├── cleanupKtCompany.js
+│   │   ├── clearBillingData.js
+│   │   ├── createChttrixAdmin.js
+│   │   ├── deleteNonDefaultChannels.js
+│   │   ├── fix-thread-counts.js
+│   │   ├── fixSystemEventUserNames.js
+│   │   ├── initWorkspaceKeys.js
+│   │   ├── listUsers.js
+│   │   ├── migrateAllChannelSystemEvents.js
+│   │   ├── migrateChannelSystemEvents.js
+│   │   ├── nukeDbPreserveAdmin.js
+│   │   ├── populateSystemEventUserNames.js
+│   │   ├── repair-conversation-keys.js
+│   │   ├── repairKeyDistribution.js
+│   │   ├── seed.js
+│   │   ├── set-lastReplyAt.js
+│   │   ├── tests
+│   │   │   ├── list-models.js
+│   │   │   ├── test-api-direct.js
+│   │   │   ├── test-chat-endpoint.js
+│   │   │   └── test-gemini.js
+│   │   ├── verify-auth-migration.js
+│   │   ├── verify-channel-migration.js
+│   │   ├── verify-message-migration.js
+│   │   └── verify-poll-migration.js
+│   ├── server.js
+│   ├── src
+│   │   ├── config
+│   │   │   └── passport.js
+│   │   ├── features
+│   │   │   ├── activity
+│   │   │   │   ├── activity.controller.js
+│   │   │   │   ├── activity.routes.js
+│   │   │   │   └── activity.service.js
+│   │   │   ├── admin
+│   │   │   │   ├── admin-dashboard.routes.js
+│   │   │   │   ├── admin.controller.js
+│   │   │   │   ├── admin.routes.js
+│   │   │   │   ├── admin.service.js
+│   │   │   │   ├── manager-dashboard.routes.js
+│   │   │   │   └── owner-dashboard.routes.js
+│   │   │   ├── ai
+│   │   │   │   ├── ai-core.service.js
+│   │   │   │   ├── ai.controller.js
+│   │   │   │   ├── ai.routes.js
+│   │   │   │   ├── ai.summarizer.service.js
+│   │   │   │   ├── assistant
+│   │   │   │   │   ├── ai-assistant.routes.js
+│   │   │   │   │   └── ai-assistant.service.js
+│   │   │   │   ├── automation
+│   │   │   │   │   ├── ai-automation.routes.js
+│   │   │   │   │   └── ai-automation.service.js
+│   │   │   │   ├── insights
+│   │   │   │   │   ├── ai-insights.routes.js
+│   │   │   │   │   └── ai-insights.service.js
+│   │   │   │   ├── knowledge
+│   │   │   │   │   ├── ai-knowledge.routes.js
+│   │   │   │   │   └── ai-knowledge.service.js
+│   │   │   │   └── smartReply.routes.js
+│   │   │   ├── analytics
+│   │   │   │   ├── analytics.controller.js
+│   │   │   │   ├── analytics.routes.js
+│   │   │   │   └── analytics.service.js
+│   │   │   ├── audit
+│   │   │   │   ├── audit.controller.js
+│   │   │   │   ├── audit.routes.js
+│   │   │   │   └── audit.service.js
+│   │   │   ├── auth
+│   │   │   │   ├── auth.controller.js
+│   │   │   │   └── auth.routes.js
+│   │   │   ├── automations
+│   │   │   │   ├── automation.cron.js
+│   │   │   │   ├── automation.model.js
+│   │   │   │   ├── automation.routes.js
+│   │   │   │   ├── automation.service.js
+│   │   │   │   ├── automation.templates.js
+│   │   │   │   └── automationRun.model.js
+│   │   │   ├── channels
+│   │   │   │   ├── channel.controller.js
+│   │   │   │   ├── channel.model.js
+│   │   │   │   └── channel.routes.js
+│   │   │   ├── chat
+│   │   │   │   ├── chat.controller.js
+│   │   │   │   └── chat.routes.js
+│   │   │   ├── chatlist
+│   │   │   │   ├── chatlist.controller.js
+│   │   │   │   └── chatlist.routes.js
+│   │   │   ├── collaboration
+│   │   │   │   ├── brainstorm.model.js
+│   │   │   │   ├── collaboration.routes.js
+│   │   │   │   └── whiteboard.model.js
+│   │   │   ├── community
+│   │   │   │   ├── AppReview.model.js
+│   │   │   │   └── marketplace.routes.js
+│   │   │   ├── company
+│   │   │   │   ├── company.controller.js
+│   │   │   │   ├── company.routes.js
+│   │   │   │   ├── company.service.js
+│   │   │   │   ├── company.validation.js
+│   │   │   │   ├── metrics.controller.js
+│   │   │   │   ├── metrics.routes.js
+│   │   │   │   ├── metrics.service.js
+│   │   │   │   ├── settings.controller.js
+│   │   │   │   ├── settings.routes.js
+│   │   │   │   └── settings.service.js
+│   │   │   ├── company-analytics
+│   │   │   │   ├── analytics.routes.js
+│   │   │   │   └── analytics.service.js
+│   │   │   ├── company-org
+│   │   │   │   ├── org-chart.controller.js
+│   │   │   │   └── org-chart.routes.js
+│   │   │   ├── company-registration
+│   │   │   │   ├── registration.controller.js
+│   │   │   │   ├── registration.routes.js
+│   │   │   │   └── registration.service.js
+│   │   │   ├── company-updates
+│   │   │   │   ├── updates.controller.js
+│   │   │   │   ├── updates.routes.js
+│   │   │   │   ├── updates.service.js
+│   │   │   │   └── updates.validation.js
+│   │   │   ├── compliance
+│   │   │   │   ├── compliance.controller.js
+│   │   │   │   └── compliance.routes.js
+│   │   │   ├── crypto
+│   │   │   │   ├── identity.controller.js
+│   │   │   │   └── identity.routes.js
+│   │   │   ├── dashboard
+│   │   │   │   ├── dashboard.controller.js
+│   │   │   │   └── dashboard.routes.js
+│   │   │   ├── departments
+│   │   │   │   ├── department.controller.js
+│   │   │   │   ├── department.service.js
+│   │   │   │   ├── department.validation.js
+│   │   │   │   └── departments.routes.js
+│   │   │   ├── developer
+│   │   │   │   ├── apiKey.middleware.js
+│   │   │   │   ├── apiKey.model.js
+│   │   │   │   ├── apiKeys.routes.js
+│   │   │   │   ├── app.model.js
+│   │   │   │   ├── apps.routes.js
+│   │   │   │   ├── bot.model.js
+│   │   │   │   ├── bots.routes.js
+│   │   │   │   ├── publicApi.routes.js
+│   │   │   │   └── seedApps.js
+│   │   │   ├── devices
+│   │   │   │   ├── devices.controller.js
+│   │   │   │   └── devices.routes.js
+│   │   │   ├── domain-verification
+│   │   │   │   ├── domain.controller.js
+│   │   │   │   ├── domain.routes.js
+│   │   │   │   └── domain.service.js
+│   │   │   ├── employees
+│   │   │   │   ├── employee.controller.js
+│   │   │   │   ├── employee.routes.js
+│   │   │   │   └── employee.service.js
+│   │   │   ├── favorites
+│   │   │   │   ├── favorites.controller.js
+│   │   │   │   ├── favorites.routes.js
+│   │   │   │   ├── favorites.service.js
+│   │   │   │   └── favorites.validator.js
+│   │   │   ├── files
+│   │   │   │   ├── FileComment.js
+│   │   │   │   ├── FileVersion.js
+│   │   │   │   ├── WorkspaceFile.js
+│   │   │   │   ├── files.controller.js
+│   │   │   │   ├── files.routes.js
+│   │   │   │   └── files.service.js
+│   │   │   ├── integration
+│   │   │   │   ├── hr-sync.service.js
+│   │   │   │   ├── integration.routes.js
+│   │   │   │   └── scim.controller.js
+│   │   │   ├── integrations
+│   │   │   │   ├── ai-provider.model.js
+│   │   │   │   ├── ai-provider.service.js
+│   │   │   │   ├── integration.model.js
+│   │   │   │   ├── integration.service.js
+│   │   │   │   ├── integrations.routes.js
+│   │   │   │   ├── providers
+│   │   │   │   │   ├── bitbucket.handler.js
+│   │   │   │   │   ├── cicd.handler.js
+│   │   │   │   │   ├── confluence.handler.js
+│   │   │   │   │   ├── dropbox.handler.js
+│   │   │   │   │   ├── github.handler.js
+│   │   │   │   │   ├── gitlab.handler.js
+│   │   │   │   │   ├── google-drive.handler.js
+│   │   │   │   │   ├── google-meet.handler.js
+│   │   │   │   │   ├── jira.handler.js
+│   │   │   │   │   ├── linear.handler.js
+│   │   │   │   │   ├── notion.handler.js
+│   │   │   │   │   ├── onedrive.handler.js
+│   │   │   │   │   ├── slack.handler.js
+│   │   │   │   │   ├── teams.handler.js
+│   │   │   │   │   ├── zapier.handler.js
+│   │   │   │   │   └── zoom.handler.js
+│   │   │   │   ├── webhook.model.js
+│   │   │   │   └── webhook.trigger.js
+│   │   │   ├── internal-messaging
+│   │   │   │   ├── messaging.controller.js
+│   │   │   │   └── messaging.routes.js
+│   │   │   ├── knowledge
+│   │   │   │   ├── KnowledgeCategory.js
+│   │   │   │   ├── KnowledgePage.js
+│   │   │   │   ├── PageLink.js
+│   │   │   │   ├── knowledge.controller.js
+│   │   │   │   ├── knowledge.routes.js
+│   │   │   │   └── knowledge.service.js
+│   │   │   ├── managers
+│   │   │   │   ├── managers.controller.js
+│   │   │   │   └── managers.routes.js
+│   │   │   ├── meetings
+│   │   │   │   ├── meetings.controller.js
+│   │   │   │   ├── meetings.routes.js
+│   │   │   │   ├── meetings.service.js
+│   │   │   │   ├── scheduled-meetings.controller.js
+│   │   │   │   └── scheduled-meetings.routes.js
+│   │   │   ├── messages
+│   │   │   │   ├── MessageReminder.js
+│   │   │   │   ├── bookmark.routes.js
+│   │   │   │   ├── message.model.js
+│   │   │   │   └── reminder.service.js
+│   │   │   ├── milestones
+│   │   │   │   ├── milestones.routes.js
+│   │   │   │   └── milestones.service.js
+│   │   │   ├── notes
+│   │   │   │   ├── notes.activity.js
+│   │   │   │   ├── notes.controller.js
+│   │   │   │   ├── notes.notifications.js
+│   │   │   │   ├── notes.policy.js
+│   │   │   │   ├── notes.routes.js
+│   │   │   │   ├── notes.service.js
+│   │   │   │   └── notes.validator.js
+│   │   │   ├── notifications
+│   │   │   │   ├── emailNotificationService.js
+│   │   │   │   ├── notificationEventEmitter.js
+│   │   │   │   ├── notificationPreferenceService.js
+│   │   │   │   ├── notificationService.js
+│   │   │   │   ├── notifications.cron.js
+│   │   │   │   └── notifications.routes.js
+│   │   │   ├── onboarding
+│   │   │   │   ├── BulkOnboardingJob.js
+│   │   │   │   ├── bulkImport.service.js
+│   │   │   │   ├── invite.service.js
+│   │   │   │   ├── onboarding.controller.js
+│   │   │   │   ├── onboarding.routes.js
+│   │   │   │   └── onboarding.service.js
+│   │   │   ├── people
+│   │   │   │   ├── people.controller.js
+│   │   │   │   ├── people.routes.js
+│   │   │   │   ├── people.service.js
+│   │   │   │   └── people.validation.js
+│   │   │   ├── permissions
+│   │   │   │   ├── permissions.controller.js
+│   │   │   │   ├── permissions.routes.js
+│   │   │   │   └── permissions.service.js
+│   │   │   ├── polls
+│   │   │   │   ├── poll.controller.js
+│   │   │   │   ├── poll.model.js
+│   │   │   │   └── poll.routes.js
+│   │   │   ├── presence
+│   │   │   │   └── presence.service.js
+│   │   │   ├── push
+│   │   │   │   └── push.service.js
+│   │   │   ├── reminders
+│   │   │   │   ├── reminders.cron.js
+│   │   │   │   └── reminders.routes.js
+│   │   │   ├── search
+│   │   │   │   ├── search.controller.js
+│   │   │   │   ├── search.routes.js
+│   │   │   │   └── search.service.js
+│   │   │   ├── security
+│   │   │   │   ├── backup.routes.js
+│   │   │   │   ├── backup.service.js
+│   │   │   │   ├── gdpr.controller.js
+│   │   │   │   ├── gdpr.routes.js
+│   │   │   │   ├── retention.cron.js
+│   │   │   │   ├── security.controller.js
+│   │   │   │   ├── security.routes.js
+│   │   │   │   ├── security.service.js
+│   │   │   │   ├── sso.routes.js
+│   │   │   │   └── twoFactor.routes.js
+│   │   │   ├── sprints
+│   │   │   │   ├── sprints.routes.js
+│   │   │   │   └── sprints.service.js
+│   │   │   ├── status
+│   │   │   │   ├── status.controller.js
+│   │   │   │   ├── status.routes.js
+│   │   │   │   └── status.service.js
+│   │   │   ├── support
+│   │   │   │   ├── platform-support.controller.js
+│   │   │   │   ├── platform-support.routes.js
+│   │   │   │   ├── platform.controller.js
+│   │   │   │   └── support.routes.js
+│   │   │   ├── task-templates
+│   │   │   │   ├── task-templates.routes.js
+│   │   │   │   └── task-templates.service.js
+│   │   │   ├── tasks
+│   │   │   │   ├── issue-key-counter.model.js
+│   │   │   │   ├── tasks.activity.js
+│   │   │   │   ├── tasks.automation.js
+│   │   │   │   ├── tasks.controller.js
+│   │   │   │   ├── tasks.cron.js
+│   │   │   │   ├── tasks.notifications.js
+│   │   │   │   ├── tasks.policy.js
+│   │   │   │   ├── tasks.routes.js
+│   │   │   │   ├── tasks.service.js
+│   │   │   │   └── tasks.validator.js
+│   │   │   ├── teams
+│   │   │   │   ├── team.controller.js
+│   │   │   │   ├── team.service.js
+│   │   │   │   └── teams.routes.js
+│   │   │   ├── updates
+│   │   │   │   ├── updates.controller.js
+│   │   │   │   └── updates.routes.js
+│   │   │   ├── users
+│   │   │   │   ├── user.controller.js
+│   │   │   │   └── user.routes.js
+│   │   │   ├── workspace-os
+│   │   │   │   ├── workspace-os.controller.js
+│   │   │   │   ├── workspace-os.routes.js
+│   │   │   │   └── workspace-os.service.js
+│   │   │   ├── workspace-permissions
+│   │   │   │   ├── workspace-permissions.controller.js
+│   │   │   │   └── workspace-permissions.routes.js
+│   │   │   ├── workspace-templates
+│   │   │   │   ├── workspace-templates.controller.js
+│   │   │   │   └── workspace-templates.routes.js
+│   │   │   └── workspaces
+│   │   │       ├── workspace-admin.controller.js
+│   │   │       ├── workspace.controller.js
+│   │   │       └── workspaces.routes.js
+│   │   ├── models
+│   │   │   ├── ActivityEvent.js
+│   │   │   ├── Notification.js
+│   │   │   ├── NotificationPreference.js
+│   │   │   ├── ScheduledMeeting.js
+│   │   │   ├── SecurityAuditEvent.js
+│   │   │   ├── Team.js
+│   │   │   ├── UserCryptoState.js
+│   │   │   ├── UserDeviceSession.js
+│   │   │   ├── WorkspacePermission.js
+│   │   │   └── WorkspaceTemplate.js
+│   │   ├── modules
+│   │   │   ├── ai
+│   │   │   │   └── ai-messaging.service.js
+│   │   │   ├── conversations
+│   │   │   │   ├── conversationKeys.controller.js
+│   │   │   │   ├── conversationKeys.crypto.js
+│   │   │   │   ├── conversationKeys.repair.controller.js
+│   │   │   │   ├── conversationKeys.routes.js
+│   │   │   │   ├── conversationKeys.service.js
+│   │   │   │   ├── cryptoUtils.js
+│   │   │   │   ├── internal.routes.js
+│   │   │   │   └── serverKEK.crypto.js
+│   │   │   ├── encryption
+│   │   │   │   ├── README.md
+│   │   │   │   ├── __tests__
+│   │   │   │   │   └── encryption.service.test.js
+│   │   │   │   ├── encryption.controller.js
+│   │   │   │   ├── encryption.routes.js
+│   │   │   │   ├── encryption.service.js
+│   │   │   │   └── index.js
+│   │   │   ├── identity
+│   │   │   │   ├── identity.controller.js
+│   │   │   │   ├── identity.routes.js
+│   │   │   │   └── identity.service.js
+│   │   │   ├── linkPreview
+│   │   │   │   ├── linkPreview.controller.js
+│   │   │   │   ├── linkPreview.routes.js
+│   │   │   │   └── linkPreview.service.js
+│   │   │   ├── messages
+│   │   │   │   ├── README.md
+│   │   │   │   ├── __tests__
+│   │   │   │   │   └── messages.service.test.js
+│   │   │   │   ├── dmActions.controller.js
+│   │   │   │   ├── dmActions.routes.js
+│   │   │   │   ├── index.js
+│   │   │   │   ├── messages.controller.js
+│   │   │   │   ├── messages.routes.js
+│   │   │   │   └── messages.service.js
+│   │   │   ├── threads
+│   │   │   │   ├── threads.controller.js
+│   │   │   │   ├── threads.routes.js
+│   │   │   │   ├── threads.service.js
+│   │   │   │   └── threadsV2.routes.js
+│   │   │   └── uploads
+│   │   │       ├── upload.controller.js
+│   │   │       ├── upload.routes.js
+│   │   │       └── upload.service.js
+│   │   ├── scripts
+│   │   │   └── rotateServerKEK.js
+│   │   ├── services
+│   │   │   ├── auditDigestService.js
+│   │   │   ├── deviceSession.service.js
+│   │   │   ├── kekManager.service.js
+│   │   │   ├── securityAudit.service.js
+│   │   │   └── securityNotification.service.js
+│   │   ├── shared
+│   │   │   ├── controllers
+│   │   │   │   └── otp.controller.js
+│   │   │   ├── middleware
+│   │   │   │   ├── auth.js
+│   │   │   │   ├── enforceRoleCeiling.js
+│   │   │   │   ├── errorHandlers.js
+│   │   │   │   ├── permissionMiddleware.js
+│   │   │   │   ├── permissions.js
+│   │   │   │   ├── requireCompanyMember.js
+│   │   │   │   ├── requireWorkspaceMember.js
+│   │   │   │   └── validate.js
+│   │   │   ├── routes
+│   │   │   │   ├── health.routes.js
+│   │   │   │   └── otp.routes.js
+│   │   │   ├── services
+│   │   │   │   ├── otp.service.js
+│   │   │   │   └── otpStore.js
+│   │   │   ├── upload
+│   │   │   │   ├── upload.controller.js
+│   │   │   │   └── upload.routes.js
+│   │   │   └── utils
+│   │   │       ├── companyQueryFilter.js
+│   │   │       ├── companyRole.js
+│   │   │       ├── errorHandler.js
+│   │   │       ├── logger.js
+│   │   │       ├── responseHelper.js
+│   │   │       └── rooms.js
+│   │   ├── socket
+│   │   │   ├── chatHandlers.js
+│   │   │   ├── getIO.js
+│   │   │   ├── handlers
+│   │   │   │   ├── admin.socket.js
+│   │   │   │   ├── huddles.socket.js
+│   │   │   │   ├── polls.socket.js
+│   │   │   │   └── presence.socket.js
+│   │   │   ├── roomConventions.js
+│   │   │   ├── services
+│   │   │   │   └── socketEmitter.js
+│   │   │   ├── socketAuth.js
+│   │   │   └── socketConnection.js
+│   │   ├── uploads
+│   │   │   └── verification_docs
+│   │   │       ├── 1770023102367_WhatsApp_Image_2026-01-27_at_07.55.03_(2).jpeg
+│   │   │       ├── 1770023275271_WhatsApp_Image_2026-01-27_at_07.55.03.jpeg
+│   │   │       ├── 1770040095495_WhatsApp_Image_2026-01-19_at_11.53.40.jpeg
+│   │   │       ├── 1773031798932_Screenshot_2026-03-04_at_3.42.02_PM.png
+│   │   │       ├── 1773034823820_Screenshot_2026-03-04_at_3.42.02_PM.png
+│   │   │       ├── 1773035532646_thrishank_kuntimaddi_resume_(2).pdf
+│   │   │       ├── 1773126192606_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
+│   │   │       ├── 1773152453726_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
+│   │   │       ├── 1773152494393_client_secret_900848971315-md8jtu2f2lrdlun4djogf6i119p3343r.apps.googleusercontent.com.json
+│   │   │       ├── 1773152567523_thrishank_kuntimaddi_resume_(1).pdf
+│   │   │       ├── 1773222728117_chttrix_team_template_(5).xlsx
+│   │   │       └── 1774504608322_5513461923.pdf
+│   │   └── utils
+│   │       └── mentionParser.js
+│   ├── uploads
+│   │   ├── files
+│   │   │   └── 4f73b6a1-0b38-4873-95a9-7749fa1471ca.pdf
+│   │   └── verification_docs
+│   │       └── 1769495278735_WhatsApp_Image_2026-01-19_at_11.53.40_(1).jpeg
+│   └── utils
+│       ├── aiActions.js
+│       ├── auditLogger.js
+│       ├── cookieHelper.js
+│       ├── deviceParser.js
+│       ├── domainVerification.js
+│       ├── emailTemplates
+│       │   ├── auth.js
+│       │   ├── company.js
+│       │   ├── index.js
+│       │   ├── security.js
+│       │   └── workspace.js
+│       ├── emailTemplates.js
+│       ├── fileUpload.js
+│       ├── generateTokens.js
+│       ├── hashUtils.js
+│       ├── historyLogger.js
+│       ├── invite.js
+│       ├── logger.js
+│       ├── memberHelpers.js
+│       ├── mongooseRetry.js
+│       ├── responseHelpers.js
+│       ├── sendEmail.js
+│       ├── sendOTP.js
+│       ├── socketHelpers.js
+│       ├── taskPermissions.js
+│       └── workflowValidator.js
+├── structure.txt
+└── vercel.json

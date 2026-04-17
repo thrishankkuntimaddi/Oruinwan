@@ -244,8 +244,8 @@ const Home = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', flexShrink: 0 }} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ height: '10px', width: '120px', background: 'rgba(255,255,255,0.08)' }} />
-              <div style={{ height: '8px', width: '70px', background: 'rgba(255,255,255,0.04)' }} />
+              <div style={{ height: '10px', width: '120px', background: 'var(--bg-active)' }} />
+              <div style={{ height: '8px', width: '70px', background: 'var(--bg-hover)' }} />
             </div>
           </div>
 
@@ -259,21 +259,21 @@ const Home = () => {
               { aw: 82,  l1: '70%', l2: null },
             ].map((b, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(255,255,255,0.06)', flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--bg-active)', flexShrink: 0, marginTop: '2px' }} />
                 <div style={{ flex: 1, maxWidth: '68%', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline' }}>
                     <div style={{ height: '9px', width: `${b.aw}px`, background: 'rgba(255,255,255,0.1)' }} />
-                    <div style={{ height: '7px', width: '40px', background: 'rgba(255,255,255,0.04)' }} />
+                    <div style={{ height: '7px', width: '40px', background: 'var(--bg-hover)' }} />
                   </div>
-                  <div style={{ height: '14px', background: 'rgba(255,255,255,0.06)', width: b.l1 }} />
-                  {b.l2 && <div style={{ height: '14px', background: 'rgba(255,255,255,0.04)', width: b.l2 }} />}
+                  <div style={{ height: '14px', background: 'var(--bg-active)', width: b.l1 }} />
+                  {b.l2 && <div style={{ height: '14px', background: 'var(--bg-hover)', width: b.l2 }} />}
                 </div>
               </div>
             ))}
           </div>
 
           {/* Input skeleton */}
-          <div style={{ height: '42px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }} />
+          <div style={{ height: '42px', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)' }} />
         </div>
       ) : activeChat ? (
         <ChatWindowV2

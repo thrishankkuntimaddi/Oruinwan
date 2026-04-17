@@ -3,11 +3,11 @@ import { Layout, User, Bell, Hash, Zap } from "lucide-react";
 import { useUpdates } from "../../../contexts/UpdatesContext";
 
 const S = {
-  panel:   { display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', borderRight: '1px solid rgba(255,255,255,0.06)' },
-  header:  { height: '56px', display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '20px', borderBottom: '1px solid rgba(255,255,255,0.06)', flexShrink: 0 },
-  title:   { fontSize: '15px', fontWeight: 700, color: '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' },
-  label:   { fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(228,228,228,0.3)', fontFamily: 'Inter, system-ui, sans-serif' },
-  divider: { height: '1px', background: 'rgba(255,255,255,0.06)', margin: '8px 12px' },
+  panel:   { display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' },
+  header:  { height: '56px', display: 'flex', alignItems: 'center', gap: '10px', paddingLeft: '20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 },
+  title:   { fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' },
+  label:   { fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' },
+  divider: { height: '1px', background: 'var(--bg-active)', margin: '8px 12px' },
 };
 
 const navBtn = (active) => ({
@@ -65,7 +65,7 @@ const UpdatesPanel = () => {
           {TAGS.map(tag => (
             <span
               key={tag}
-              style={{ padding: '3px 10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '11px', color: 'rgba(228,228,228,0.45)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'border-color 150ms ease' }}
+              style={{ padding: '3px 10px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', fontSize: '11px', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'border-color 150ms ease' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.3)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
             >

@@ -16,13 +16,13 @@ function StarRating({ rating, size = 12 }) {
   const half = rating - full >= 0.5;
   const empty = 5 - full - (half ? 1 : 0);
   return (
-    <span className="flex items-center gap-0.5">
+    <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
       {Array.from({ length: full }).map((_, i) => (
-        <Star key={`f${i}`} size={size} className="text-amber-400 fill-amber-400" />
+        <Star key={`f${i}`} size={size} style={{ color: '#b8956a', fill: '#b8956a' }} />
       ))}
-      {half && <StarHalf size={size} className="text-amber-400 fill-amber-400" />}
+      {half && <StarHalf size={size} style={{ color: '#b8956a', fill: '#b8956a' }} />}
       {Array.from({ length: empty }).map((_, i) => (
-        <Star key={`e${i}`} size={size} className="text-gray-300 dark:text-gray-600" />
+        <Star key={`e${i}`} size={size} style={{ color: 'var(--border-accent)' }} />
       ))}
     </span>
   );
@@ -41,11 +41,7 @@ function ReviewModal({ app, onClose, onSubmitted }) {
     setSubmitting(true);
     setError("");
     try {
-      const token = localStorage.getItem("accessToken");
-      await api.post(
-        "/api/marketplace/review",
-        { appId: app._id, rating, comment }
-      );
+      await api.post("/api/marketplace/review", { appId: app._id, rating, comment });
       onSubmitted?.();
       onClose();
     } catch (err) {
@@ -56,69 +52,44 @@ function ReviewModal({ app, onClose, onSubmitted }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-md border border-gray-200 dark:border-gray-700">
-        <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+      <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '440px', fontFamily: 'var(--font)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div>
-            <h3 className="font-bold text-gray-900 dark:text-white">Review {app.name}</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Share your experience with the team</p>
+            <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontSize: '14px' }}>Review {app.name}</h3>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0' }}>Share your experience with the team</p>
           </div>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
-            <X size={16} className="text-gray-500" />
+          <button onClick={onClose} style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+            <X size={16} />
           </button>
         </div>
-        <div className="p-5 space-y-4">
-          {/* Star picker */}
+        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div>
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">Rating</label>
-            <div className="flex gap-1">
+            <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>Rating</label>
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
               {[1, 2, 3, 4, 5].map(n => (
-                <button
-                  key={n}
-                  onMouseEnter={() => setHover(n)}
-                  onMouseLeave={() => setHover(0)}
-                  onClick={() => setRating(n)}
-                  className="p-0.5 transition-transform hover:scale-110"
-                >
-                  <Star
-                    size={24}
-                    className={(hover || rating) >= n ? "text-amber-400 fill-amber-400" : "text-gray-300 dark:text-gray-600"}
-                  />
+                <button key={n} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)} onClick={() => setRating(n)} style={{ padding: '2px', background: 'none', border: 'none', cursor: 'pointer', transition: 'transform 100ms ease' }} onMouseDown={e => (e.currentTarget.style.transform = 'scale(1.2)')} onMouseUp={e => (e.currentTarget.style.transform = 'scale(1)')}>
+                  <Star size={22} style={{ color: (hover || rating) >= n ? '#b8956a' : 'var(--border-accent)', fill: (hover || rating) >= n ? '#b8956a' : 'none' }} />
                 </button>
               ))}
-              {rating > 0 && (
-                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 self-center">
-                  {["", "Poor", "Fair", "Good", "Great", "Excellent"][rating]}
-                </span>
-              )}
+              {rating > 0 && <span style={{ marginLeft: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>{["", "Poor", "Fair", "Good", "Great", "Excellent"][rating]}</span>}
             </div>
           </div>
-          {/* Comment */}
           <div>
-            <label className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wide mb-2 block">
-              Comment <span className="font-normal normal-case text-gray-400">(optional)</span>
-            </label>
-            <textarea
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              rows={3}
-              maxLength={1000}
-              placeholder="What did you like or dislike?"
-              className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-xl p-3 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none transition-all"
+            <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>Comment <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
+            <textarea value={comment} onChange={e => setComment(e.target.value)} rows={3} maxLength={1000} placeholder="What did you like or dislike?"
+              style={{ width: '100%', padding: '8px 10px', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', boxSizing: 'border-box', fontFamily: 'var(--font)' }}
+              onFocus={e => (e.target.style.borderColor = 'var(--border-accent)')}
+              onBlur={e => (e.target.style.borderColor = 'var(--border-default)')}
             />
           </div>
-          {error && <p className="text-xs text-red-500">{error}</p>}
+          {error && <p style={{ fontSize: '12px', color: 'var(--state-danger)', margin: 0 }}>{error}</p>}
         </div>
-        <div className="flex gap-2 p-5 pt-0">
-          <button onClick={onClose} className="flex-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all">
-            Cancel
-          </button>
-          <button
-            onClick={submit}
-            disabled={submitting || !rating}
-            className="flex-1 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-          >
-            {submitting ? <><RefreshCw size={13} className="animate-spin" /> Submitting…</> : "Submit Review"}
+        <div style={{ display: 'flex', gap: '8px', padding: '0 20px 16px' }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', cursor: 'pointer', fontFamily: 'var(--font)' }}>Cancel</button>
+          <button onClick={submit} disabled={submitting || !rating}
+            style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 700, color: '#000', backgroundColor: 'var(--accent)', border: 'none', cursor: submitting || !rating ? 'not-allowed' : 'pointer', opacity: submitting || !rating ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: 'var(--font)' }}>
+            {submitting ? <><RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />Submitting…</> : "Submit Review"}
           </button>
         </div>
       </div>
@@ -127,30 +98,17 @@ function ReviewModal({ app, onClose, onSubmitted }) {
 }
 
 // ── Marketplace App Card ─────────────────────────────────────────────────────
-const CATEGORY_COLORS = {
-  productivity:  "from-blue-500 to-blue-600",
-  communication: "from-emerald-500 to-teal-600",
-  developer:     "from-violet-500 to-purple-600",
-  automation:    "from-amber-500 to-orange-600",
-  analytics:     "from-pink-500 to-rose-600" };
-
 function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
   const [installing, setInstalling] = useState(false);
   const [installed, setInstalled] = useState(false);
-  const gradient = CATEGORY_COLORS[app.category] || "from-gray-500 to-gray-600";
 
   const install = async () => {
     setInstalling(true);
     try {
-      const token = localStorage.getItem("accessToken");
-      await api.post(
-        "/api/marketplace/install",
-        { appId: app._id, workspaceId }
-      );
+      await api.post("/api/marketplace/install", { appId: app._id, workspaceId });
       setInstalled(true);
       onInstalled?.();
     } catch (err) {
-      // 409 = already installed — treat as success
       if (err.response?.status === 409) setInstalled(true);
     } finally {
       setInstalling(false);
@@ -158,66 +116,42 @@ function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
   };
 
   return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden', transition: 'border-color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.2)'} onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}>
-      <div style={{ height: '3px', background: '#b8956a', opacity: 0.6 }} />
-      <div className="p-4">
-        <div className="flex items-start gap-3 mb-3">
+    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', overflow: 'hidden', transition: 'border-color 150ms ease' }}
+      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-default)')}>
+      <div style={{ height: '2px', background: 'var(--accent)', opacity: 0.6 }} />
+      <div style={{ padding: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
           {app.iconUrl ? (
-            <img src={app.iconUrl} alt={app.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
+            <img src={app.iconUrl} alt={app.name} style={{ width: '40px', height: '40px', objectFit: 'cover', flexShrink: 0 }} />
           ) : (
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-              <Puzzle size={18} className="text-white" />
+            <div style={{ width: '40px', height: '40px', backgroundColor: 'var(--accent-dim)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Puzzle size={18} style={{ color: 'var(--accent)' }} />
             </div>
           )}
-          <div className="min-w-0 flex-1">
-            <h3 style={{ fontWeight: 700, fontSize: '13px', color: '#e4e4e4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {app.name}
-            </h3>
-            <p className="text-xs text-gray-400 dark:text-gray-500">{app.developer} · v{app.version}</p>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <h3 style={{ fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>{app.name}</h3>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0' }}>{app.developer} · v{app.version}</p>
           </div>
         </div>
-
-        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2 mb-3 min-h-[2.2rem]">
-          {app.description}
-        </p>
-
-        {/* Ratings row */}
-        <div className="flex items-center gap-2 mb-3">
+        <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.55, marginBottom: '12px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{app.description}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
           <StarRating rating={app.avgRating || 0} />
-          <span className="text-xs text-gray-400 dark:text-gray-500">
-            {app.avgRating > 0 ? (
-              <>{app.avgRating.toFixed(1)} ({app.reviewCount})</>
-            ) : (
-              "No reviews yet"
-            )}
+          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            {app.avgRating > 0 ? <>{app.avgRating.toFixed(1)} ({app.reviewCount})</> : "No reviews yet"}
           </span>
-          {app.installCount > 0 && (
-            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
-              <Download size={10} />{app.installCount}
-            </span>
-          )}
+          {app.installCount > 0 && <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}><Download size={10} />{app.installCount}</span>}
         </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          <button
-            onClick={install}
-            disabled={installing || installed}
-            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '6px 10px', fontSize: '11px', fontWeight: 700, background: installed ? 'rgba(52,211,153,0.1)' : '#b8956a', border: `1px solid ${installed ? 'rgba(52,211,153,0.25)' : 'transparent'}`, color: installed ? '#34d399' : '#0c0c0c', cursor: installing || installed ? 'not-allowed' : 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'opacity 150ms ease', opacity: installing ? 0.6 : 1 }}
-          >
-            {installing ? (
-              <><RefreshCw size={11} className="animate-spin" />Installing…</>
-            ) : installed ? (
-              <><CheckCircle2 size={11} />Installed</>
-            ) : (
-              <><Download size={11} />Install</>
-            )}
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button onClick={install} disabled={installing || installed}
+            style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 10px', fontSize: '11px', fontWeight: 700, background: installed ? 'var(--accent-dim)' : 'var(--accent)', border: `1px solid ${installed ? 'var(--state-success)' : 'transparent'}`, color: installed ? 'var(--state-success)' : '#000', cursor: installing || installed ? 'not-allowed' : 'pointer', fontFamily: 'var(--font)', opacity: installing ? 0.6 : 1, transition: 'opacity 150ms ease' }}>
+            {installing ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />Installing…</> : installed ? <><CheckCircle2 size={11} />Installed</> : <><Download size={11} />Install</>}
           </button>
-          <button
-            onClick={() => onReview(app)}
-            className="px-2.5 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700 rounded-lg transition-all"
-            title="Write a review"
-          >
+          <button onClick={() => onReview(app)}
+            style={{ padding: '7px 10px', fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'border-color 150ms ease, color 150ms ease' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+            title="Write a review">
             <MessageSquare size={12} />
           </button>
         </div>
@@ -242,7 +176,6 @@ export default function AppsPage() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
 
-  // Tabs: "integrations" (legacy mock) | "marketplace" (real backend)
   const [activeTab, setActiveTab] = useState("integrations");
 
   // ── Legacy integrations state ──────────────────────────────────────────────
@@ -257,9 +190,7 @@ export default function AppsPage() {
   const handleStatusChange = (id, newConnected) => setConnectedMap(prev => ({ ...prev, [id]: newConnected }));
 
   const filtered = useMemo(() => MOCK_INTEGRATIONS.filter(i => {
-    const matchSearch = search.trim() === "" ||
-      i.name.toLowerCase().includes(search.toLowerCase()) ||
-      i.description.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = search.trim() === "" || i.name.toLowerCase().includes(search.toLowerCase()) || i.description.toLowerCase().includes(search.toLowerCase());
     const matchCat = activeCategory === "all" || i.category === activeCategory;
     return matchSearch && matchCat;
   }), [search, activeCategory]);
@@ -305,104 +236,107 @@ export default function AppsPage() {
     return () => clearTimeout(t);
   }, [fetchMarketplace, activeTab, mktSearch]);
 
+  // ── Shared style helpers ───────────────────────────────────────────────────
+  const tabBtn = (active) => ({
+    padding: '6px 14px', fontSize: '12px', fontWeight: 600,
+    background: active ? 'var(--accent-dim)' : 'transparent',
+    border: `1px solid ${active ? 'var(--accent)' : 'transparent'}`,
+    color: active ? 'var(--accent)' : 'var(--text-muted)',
+    cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)',
+    display: 'flex', alignItems: 'center', gap: '5px',
+  });
+
+  const filterBtn = (active) => ({
+    padding: '4px 12px', fontSize: '11px', fontWeight: 600,
+    background: active ? 'var(--accent-dim)' : 'var(--bg-hover)',
+    border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
+    color: active ? 'var(--accent)' : 'var(--text-muted)',
+    cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'var(--font)',
+  });
+
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', background: '#0c0c0c', minHeight: 0, fontFamily: 'Inter, system-ui, sans-serif' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', minHeight: 0, fontFamily: 'var(--font)' }}>
+
       {/* Toast */}
       {mktToast && (
-        <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white ${
-          mktToast.type === "error" ? "bg-red-500" : "bg-emerald-500"
-        }`}>
+        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 50, padding: '10px 16px', fontSize: '13px', fontWeight: 600, color: '#fff', backgroundColor: mktToast.type === "error" ? 'var(--state-danger)' : 'var(--state-success)' }}>
           {mktToast.msg}
         </div>
       )}
 
       {/* Review modal */}
       {reviewApp && (
-        <ReviewModal
-          app={reviewApp}
-          onClose={() => setReviewApp(null)}
-          onSubmitted={() => { showToast("Review submitted!"); fetchMarketplace(); }}
-        />
+        <ReviewModal app={reviewApp} onClose={() => setReviewApp(null)}
+          onSubmitted={() => { showToast("Review submitted!"); fetchMarketplace(); }} />
       )}
 
       {/* Header */}
-      <div style={{ background: '#111111', borderBottom: '1px solid rgba(255,255,255,0.08)', padding: '20px 32px', flexShrink: 0 }}>
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div style={{ width: '36px', height: '36px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Puzzle size={18} style={{ color: '#b8956a' }} />
+      <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '20px 32px', flexShrink: 0 }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '36px', height: '36px', background: 'var(--accent-dim)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Puzzle size={18} style={{ color: 'var(--accent)' }} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Apps & Integrations</h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Connect your favourite tools to Chttrix</p>
+                <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Apps &amp; Integrations</h1>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '3px 0 0' }}>Connect your favourite tools to Chttrix</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {totalInstalled > 0 && activeTab === "integrations" && (
-                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-full px-3 py-1.5 font-medium">
-                  <CheckCircle2 size={14} />{totalInstalled} connected
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--state-success)', background: 'rgba(90,186,138,0.1)', border: '1px solid rgba(90,186,138,0.2)', padding: '5px 12px', fontWeight: 600 }}>
+                  <CheckCircle2 size={13} />{totalInstalled} connected
                 </div>
               )}
               <button
                 onClick={() => navigate(`/workspace/${workspaceId}/developer`)}
-                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '12px', fontWeight: 700, color: '#0c0c0c', background: '#b8956a', border: 'none', cursor: 'pointer', transition: 'opacity 150ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
-              >
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12px', fontWeight: 700, color: '#000', background: 'var(--accent)', border: 'none', cursor: 'pointer', transition: 'opacity 150ms ease', fontFamily: 'var(--font)' }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}>
                 <Terminal size={14} />Developer Platform
               </button>
             </div>
           </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: '2px', background: 'rgba(255,255,255,0.05)', padding: '3px', width: 'fit-content', marginBottom: '20px' }}>
-            <button
-              onClick={() => setActiveTab("integrations")}
-              style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: activeTab === 'integrations' ? 'rgba(184,149,106,0.12)' : 'transparent', border: `1px solid ${activeTab === 'integrations' ? 'rgba(184,149,106,0.25)' : 'transparent'}`, color: activeTab === 'integrations' ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease' }}
-            >
+          <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-active)', padding: '3px', width: 'fit-content', marginBottom: '20px' }}>
+            <button onClick={() => setActiveTab("integrations")} style={tabBtn(activeTab === 'integrations')}>
               Integrations
             </button>
-            <button
-              onClick={() => setActiveTab("marketplace")}
-              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 14px', fontSize: '12px', fontWeight: 600, background: activeTab === 'marketplace' ? 'rgba(184,149,106,0.12)' : 'transparent', border: `1px solid ${activeTab === 'marketplace' ? 'rgba(184,149,106,0.25)' : 'transparent'}`, color: activeTab === 'marketplace' ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease' }}
-            >
+            <button onClick={() => setActiveTab("marketplace")} style={tabBtn(activeTab === 'marketplace')}>
               <ShoppingBag size={12} />Marketplace
             </button>
           </div>
 
-          {/* Search + filters for each tab */}
+          {/* Search + filters */}
           {activeTab === "integrations" ? (
             <>
-              <div className="relative mb-4">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="Search integrations…"
-                  style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px', fontSize: '13px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter,system-ui,sans-serif', boxSizing: 'border-box' }} />
+              <div style={{ position: 'relative', marginBottom: '14px' }}>
+                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search integrations…"
+                  style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px', fontSize: '13px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+                  onFocus={e => (e.target.style.borderColor = 'var(--border-accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border-default)')} />
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {INTEGRATION_CATEGORIES.map(cat => (
-                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)}
-                    style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, background: activeCategory === cat.id ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${activeCategory === cat.id ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, color: activeCategory === cat.id ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter,system-ui,sans-serif' }}>
-                    {cat.label}
-                  </button>
+                  <button key={cat.id} onClick={() => setActiveCategory(cat.id)} style={filterBtn(activeCategory === cat.id)}>{cat.label}</button>
                 ))}
               </div>
             </>
           ) : (
             <>
-              <div className="relative mb-4">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                <input type="text" value={mktSearch} onChange={e => { setMktSearch(e.target.value); setMktPage(1); }}
-                  placeholder="Search marketplace…"
-                  style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px', fontSize: '13px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: '#e4e4e4', outline: 'none', fontFamily: 'Inter,system-ui,sans-serif', boxSizing: 'border-box' }} />
+              <div style={{ position: 'relative', marginBottom: '14px' }}>
+                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+                <input type="text" value={mktSearch} onChange={e => { setMktSearch(e.target.value); setMktPage(1); }} placeholder="Search marketplace…"
+                  style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px', fontSize: '13px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
+                  onFocus={e => (e.target.style.borderColor = 'var(--border-accent)')}
+                  onBlur={e => (e.target.style.borderColor = 'var(--border-default)')} />
               </div>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                 {MARKETPLACE_CATEGORIES.map(cat => (
-                  <button key={cat.id} onClick={() => { setMktCategory(cat.id); setMktPage(1); }}
-                    style={{ padding: '4px 12px', fontSize: '11px', fontWeight: 600, background: mktCategory === cat.id ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${mktCategory === cat.id ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, color: mktCategory === cat.id ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter,system-ui,sans-serif' }}>
-                    {cat.label}
-                  </button>
+                  <button key={cat.id} onClick={() => { setMktCategory(cat.id); setMktPage(1); }} style={filterBtn(mktCategory === cat.id)}>{cat.label}</button>
                 ))}
               </div>
             </>
@@ -411,29 +345,29 @@ export default function AppsPage() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-8 py-6 custom-scrollbar">
-        <div className="max-w-5xl mx-auto">
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
 
           {/* ── INTEGRATIONS TAB ─── */}
           {activeTab === "integrations" && (
-            <div className="space-y-10">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
               {filtered.length === 0 && (
-                <div className="text-center py-20">
-                  <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
-                    <Grid3X3 size={28} className="text-gray-400" />
+                <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                  <div style={{ width: '56px', height: '56px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                    <Grid3X3 size={24} style={{ color: 'var(--text-muted)' }} />
                   </div>
-                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">No integrations found</p>
-                  <p className="text-sm text-gray-400">Try a different search or category filter</p>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>No integrations found</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Try a different search or category filter</p>
                 </div>
               )}
               {installed.length > 0 && (
                 <section>
-                  <div className="flex items-center gap-2 mb-4">
-                    <CheckCircle2 size={16} className="text-emerald-500" />
-                    <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Installed</h2>
-                    <span className="text-xs text-gray-400 font-medium ml-1">({installed.length})</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <CheckCircle2 size={15} style={{ color: 'var(--state-success)' }} />
+                    <h2 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>Installed</h2>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>({installed.length})</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
                     {installed.map(i => (
                       <IntegrationCard key={i.id} integration={i} connected={connectedMap[i.id]} onCardClick={() => setSelectedIntegration(i)} />
                     ))}
@@ -442,12 +376,12 @@ export default function AppsPage() {
               )}
               {available.length > 0 && (
                 <section>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Grid3X3 size={16} className="text-gray-400" />
-                    <h2 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Available</h2>
-                    <span className="text-xs text-gray-400 font-medium ml-1">({available.length})</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <Grid3X3 size={15} style={{ color: 'var(--text-muted)' }} />
+                    <h2 style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0 }}>Available</h2>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>({available.length})</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
                     {available.map(i => (
                       <IntegrationCard key={i.id} integration={i} connected={connectedMap[i.id]} onCardClick={() => setSelectedIntegration(i)} />
                     ))}
@@ -461,50 +395,36 @@ export default function AppsPage() {
           {activeTab === "marketplace" && (
             <div>
               {mktLoading ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
                   {Array.from({ length: 9 }).map((_, i) => (
-                    <div key={i} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 h-48 animate-pulse" />
+                    <div key={i} className="sk" style={{ height: '180px' }} />
                   ))}
                 </div>
               ) : mktApps.length === 0 ? (
-                <div className="text-center py-20">
-                  <div className="w-16 h-16 rounded-2xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center mx-auto mb-4">
-                    <ShoppingBag size={28} className="text-gray-400" />
+                <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                  <div style={{ width: '56px', height: '56px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                    <ShoppingBag size={24} style={{ color: 'var(--text-muted)' }} />
                   </div>
-                  <p className="text-base font-semibold text-gray-700 dark:text-gray-300 mb-1">No apps found</p>
-                  <p className="text-sm text-gray-400">Try a different search or category</p>
+                  <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>No apps found</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>Try a different search or category</p>
                 </div>
               ) : (
                 <>
-                  <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
-                    {mktApps.length} app{mktApps.length !== 1 ? "s" : ""}
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>{mktApps.length} app{mktApps.length !== 1 ? "s" : ""}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                     {mktApps.map(app => (
-                      <MarketplaceAppCard
-                        key={app._id}
-                        app={app}
-                        workspaceId={workspaceId}
-                        onReview={setReviewApp}
-                        onInstalled={() => showToast(`${app.name} installed!`)}
-                      />
+                      <MarketplaceAppCard key={app._id} app={app} workspaceId={workspaceId} onReview={setReviewApp} onInstalled={() => showToast(`${app.name} installed!`)} />
                     ))}
                   </div>
                   {mktTotalPages > 1 && (
-                    <div className="flex items-center justify-center gap-2">
-                      <button
-                        onClick={() => setMktPage(p => Math.max(1, p - 1))}
-                        disabled={mktPage === 1}
-                        className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:border-gray-300 transition-all"
-                      >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <button onClick={() => setMktPage(p => Math.max(1, p - 1))} disabled={mktPage === 1}
+                        style={{ padding: '7px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', cursor: mktPage === 1 ? 'not-allowed' : 'pointer', opacity: mktPage === 1 ? 0.4 : 1, fontFamily: 'var(--font)' }}>
                         Previous
                       </button>
-                      <span className="text-sm text-gray-500">Page {mktPage} of {mktTotalPages}</span>
-                      <button
-                        onClick={() => setMktPage(p => Math.min(mktTotalPages, p + 1))}
-                        disabled={mktPage === mktTotalPages}
-                        className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg disabled:opacity-40 hover:border-gray-300 transition-all"
-                      >
+                      <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Page {mktPage} of {mktTotalPages}</span>
+                      <button onClick={() => setMktPage(p => Math.min(mktTotalPages, p + 1))} disabled={mktPage === mktTotalPages}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', cursor: mktPage === mktTotalPages ? 'not-allowed' : 'pointer', opacity: mktPage === mktTotalPages ? 0.4 : 1, fontFamily: 'var(--font)' }}>
                         Next <ChevronRight size={14} />
                       </button>
                     </div>
@@ -516,14 +436,10 @@ export default function AppsPage() {
         </div>
       </div>
 
-      {/* Integration details modal (legacy tab) */}
+      {/* Integration details modal */}
       {selectedIntegration && (
-        <IntegrationDetailsModal
-          integration={selectedIntegration}
-          connected={connectedMap[selectedIntegration.id]}
-          onClose={() => setSelectedIntegration(null)}
-          onStatusChange={handleStatusChange}
-        />
+        <IntegrationDetailsModal integration={selectedIntegration} connected={connectedMap[selectedIntegration.id]}
+          onClose={() => setSelectedIntegration(null)} onStatusChange={handleStatusChange} />
       )}
     </div>
   );

@@ -3,10 +3,10 @@ import { Trash2, ChevronDown } from 'lucide-react';
 
 // Heading styles → all dark tokens, no light-mode classes
 const LEVEL_STYLES = {
-    1: { fontSize: '2.25rem', fontWeight: 800, color: '#e4e4e4', lineHeight: 1.15 },
-    2: { fontSize: '1.75rem', fontWeight: 700, color: '#e4e4e4', lineHeight: 1.2 },
-    3: { fontSize: '1.375rem', fontWeight: 600, color: '#e4e4e4', lineHeight: 1.25 },
-    4: { fontSize: '1.125rem', fontWeight: 600, color: 'rgba(228,228,228,0.85)', lineHeight: 1.3 },
+    1: { fontSize: '2.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.15 },
+    2: { fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 },
+    3: { fontSize: '1.375rem', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.25 },
+    4: { fontSize: '1.125rem', fontWeight: 600, color: 'var(--text-muted)', lineHeight: 1.3 },
 };
 
 const LEVEL_PLACEHOLDERS = {
@@ -44,7 +44,7 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
                         onClick={() => setShowLevelPicker(v => !v)}
                         style={{
                             display: 'flex', alignItems: 'center', gap: '2px', fontSize: '10px',
-                            fontWeight: 700, color: 'rgba(228,228,228,0.25)', background: 'transparent',
+                            fontWeight: 700, color: 'var(--text-muted)', background: 'transparent',
                             border: 'none', cursor: 'pointer', opacity: 0, width: '32px',
                             transition: 'all 150ms ease', fontFamily: 'monospace',
                         }}
@@ -97,7 +97,7 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
 
                 <button
                     onClick={() => onRemoveBlock(block.id)}
-                    style={{ padding: '4px', color: 'rgba(228,228,228,0.2)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', flexShrink: 0 }}
+                    style={{ padding: '4px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease', flexShrink: 0 }}
                     className="group-hover:!opacity-100"
                     onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
                     onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}

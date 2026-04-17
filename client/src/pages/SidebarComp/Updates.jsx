@@ -109,7 +109,7 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
     }, []);
 
     return (
-        <article style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden', transition: 'border-color 150ms ease' }} onMouseEnter={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'} onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'}>
+        <article style={{ background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden', transition: 'border-color 150ms ease' }} onMouseEnter={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'} onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'}>
 
             {/* Card Header */}
             <div className="p-5 pb-0">
@@ -130,11 +130,11 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
                                 )}
                             </div>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', textTransform: 'capitalize', fontFamily: 'Inter,system-ui,sans-serif' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize', fontFamily: 'Inter,system-ui,sans-serif' }}>
                                     {post.author.role}
                                 </span>
                                 <span style={{ color: 'rgba(255,255,255,0.12)' }}>·</span>
-                                <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'monospace' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', fontFamily: 'monospace' }}>
                                     <Clock size={10} />
                                     {formatTime(post.timestamp)}
                                 </span>
@@ -209,7 +209,7 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
                             <span className="w-5 h-5 rounded-full flex items-center justify-center text-[10px]" style={{ background: '#f87171', border: '1px solid rgba(0,0,0,0.3)' }}>❤️</span>
                         )}
                     </div>
-                    <span style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'Inter,system-ui,sans-serif' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter,system-ui,sans-serif' }}>
                         {post.likes} {post.likes === 1 ? "appreciation" : "appreciations"}
                     </span>
                 </div>
@@ -540,10 +540,10 @@ const Updates = () => {
     });
 
     return (
-        <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: '#0c0c0c' }}>
+        <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)' }}>
 
             {/* ── Left Filter Sidebar ─────────────────────────────────────── */}
-            <div style={{ width: '256px', flexShrink: 0, overflowY: 'auto', padding: '16px', borderRight: '1px solid rgba(255,255,255,0.06)', background: '#0c0c0c' }}>
+            <div style={{ width: '256px', flexShrink: 0, overflowY: 'auto', padding: '16px', borderRight: '1px solid var(--border-subtle)', background: 'var(--bg-base)' }}>
                 <FilterSidebar
                     activeFilter={activeFilter}
                     setActiveFilter={setActiveFilter}

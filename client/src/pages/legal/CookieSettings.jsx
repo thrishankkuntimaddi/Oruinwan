@@ -58,14 +58,14 @@ export default function CookieSettings() {
                         <Cookie size={11} style={{ color: '#b8956a' }} />
                         <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Cookie Settings</span>
                     </div>
-                    <h1 style={{ fontSize: '36px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.03em', marginBottom: '12px' }}>Manage your cookie preferences.</h1>
-                    <p style={{ fontSize: '15px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75' }}>
+                    <h1 style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Manage your cookie preferences.</h1>
+                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75' }}>
                         We use cookies to keep you signed in and to understand how you use Chttrix. You're in control of everything except essential, security-required cookies.
                     </p>
                 </div>
 
                 {/* Cookie Cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'rgba(255,255,255,0.05)', marginBottom: '32px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)', marginBottom: '32px' }}>
                     {COOKIE_TYPES.map(c => {
                         const Icon = c.icon;
                         const isOn = c.required || prefs[c.id];
@@ -78,14 +78,14 @@ export default function CookieSettings() {
                                                 <Icon size={16} style={{ color: c.color }} />
                                             </div>
                                             <div>
-                                                <h3 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', letterSpacing: '-0.01em' }}>{c.title}</h3>
+                                                <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{c.title}</h3>
                                                 {c.required && <span style={{ fontSize: '10px', fontWeight: 700, color: '#5aba8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Always Active</span>}
                                             </div>
                                         </div>
-                                        <p style={{ fontSize: '13px', color: 'rgba(228,228,228,0.5)', lineHeight: '1.75', marginBottom: '14px' }}>{c.desc}</p>
+                                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '14px' }}>{c.desc}</p>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                             {c.examples.map(e => (
-                                                <span key={e} style={{ padding: '3px 8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', fontSize: '11px', color: 'rgba(228,228,228,0.4)', fontFamily: 'monospace' }}>{e}</span>
+                                                <span key={e} style={{ padding: '3px 8px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{e}</span>
                                             ))}
                                         </div>
                                     </div>
@@ -117,7 +117,7 @@ export default function CookieSettings() {
                     )}
                 </div>
 
-                <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.25)', marginTop: '28px', lineHeight: '1.7' }}>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '28px', lineHeight: '1.7' }}>
                     For more details on how we use cookies and process your data, see our <button onClick={() => (window.location.href = '/privacy')} style={{ background: 'none', border: 'none', color: '#b8956a', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', padding: 0 }}>Privacy Policy</button>. Cookie preferences are stored locally and will be remembered across sessions on this device.
                 </p>
             </div>
