@@ -1,18 +1,56 @@
 // client/src/pages/VerifyEmail.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, Mail, Sun, Moon, ArrowRight, RefreshCw } from 'lucide-react';
-import { useTheme } from "../contexts/ThemeContext";
+import { CheckCircle, XCircle, Loader2, Mail, ArrowRight, RefreshCw } from 'lucide-react';
+
+/* ─── Inline design tokens (no Tailwind dependency) ──────────────────────── */
+const T = {
+  bgOuter:     'var(--bg-base, #0c0c0c)',
+  bgCard:      'var(--bg-surface, #111111)',
+  bgSection:   'var(--bg-active, #1c1c1c)',
+  accent:      'var(--accent, #b8956a)',
+  accentDim:   'var(--accent-dim, rgba(184,149,106,0.12))',
+  accentHover: 'var(--accent-hover, #c9a87c)',
+  textPrimary: 'var(--text-primary, #e4e4e4)',
+  textSub:     'var(--text-secondary, #7a7a7a)',
+  textMuted:   'var(--text-muted, #404040)',
+  border:      'var(--border-default, #222222)',
+  borderHover: 'var(--border-accent, #383838)',
+  success:     'var(--state-success, #5aba8a)',
+  successDim:  'rgba(90,186,138,0.10)',
+  danger:      'var(--state-danger, #e05252)',
+  dangerDim:   'rgba(224,82,82,0.10)',
+};
+
+/* ─── Keyframe injection ─────────────────────────────────────────────────── */
+const STYLE = `
+  @keyframes ve-progress {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+  }
+  @keyframes ve-fadein {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes ve-spin {
+    to { transform: rotate(360deg); }
+  }
+  .ve-fadeIn  { animation: ve-fadein 0.35s ease forwards; }
+  .ve-spin    { animation: ve-spin 1s linear infinite; }
+  .ve-progress-bar {
+    transform-origin: left;
+    animation: ve-progress 3s ease-in-out forwards;
+  }
+`;
 
 export default function VerifyEmail() {
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') || '';
-  const email = searchParams.get('email') || '';
-  const [status, setStatus] = useState('idle');
+  const [searchParams]  = useSearchParams();
+  const token           = searchParams.get('token') || '';
+  const email           = searchParams.get('email') || '';
+  const [status, setStatus]   = useState('idle');
   const [message, setMessage] = useState('');
-  const navigate = useNavigate();
-  const hasRun = useRef(false);
-  const { theme, toggleTheme } = useTheme();
+  const navigate        = useNavigate();
+  const hasRun          = useRef(false);
 
   useEffect(() => {
     if (hasRun.current) return;
@@ -31,120 +69,250 @@ export default function VerifyEmail() {
           `${import.meta.env.VITE_BACKEND_URL}/api/auth/verify-email?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`,
           { credentials: 'include' }
         );
-
         const data = await res.json();
         if (!res.ok) {
           setStatus('error');
           setMessage(data.message || 'Verification failed');
           return;
         }
-
         setStatus('success');
-        setMessage(data.message || 'Email verified successfully');
+        setMessage(data.message || 'Your email has been verified.');
         setTimeout(() => navigate('/login'), 3000);
-
       } catch (err) {
         setStatus('error');
-        setMessage(err.message || 'Network error');
+        setMessage(err.message || 'Network error. Please try again.');
       }
     }
-
     verify();
   }, [token, email, navigate]);
 
+  /* ── Icon + colours per state ──────────────────────────────────────── */
+  const stateMap = {
+    idle:    { Icon: Mail,        iconBg: T.accentDim,  iconColor: T.accent,   label: 'Preparing...' },
+    sending: { Icon: Loader2,     iconBg: T.accentDim,  iconColor: T.accent,   label: 'Verifying…' },
+    success: { Icon: CheckCircle, iconBg: T.successDim, iconColor: T.success,  label: 'Verified!' },
+    error:   { Icon: XCircle,     iconBg: T.dangerDim,  iconColor: T.danger,   label: 'Verification Failed' },
+  };
+  const { Icon, iconBg, iconColor, label } = stateMap[status] || stateMap.idle;
+
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className={`absolute inset-0 transition-opacity duration-500 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
-      </div>
+    <>
+      <style>{STYLE}</style>
 
-      <div className={`absolute inset-0 transition-opacity duration-500 ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`}>
-        <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-100/60 via-purple-100/30 to-transparent blur-[80px]"></div>
-        <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-indigo-100/60 via-pink-100/30 to-transparent blur-[80px]"></div>
-      </div>
+      {/* Full-page dark shell */}
+      <div style={{
+        minHeight: '100vh',
+        width: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: T.bgOuter,
+        backgroundImage: `radial-gradient(ellipse 60% 40% at 50% 0%, rgba(184,149,106,0.06) 0%, transparent 70%)`,
+        padding: '24px 16px',
+        boxSizing: 'border-box',
+        fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      }}>
 
-      {/* Toggle Theme (Top Right) */}
-      <div className="absolute top-6 right-6 z-50">
-        <button
-          onClick={toggleTheme}
-          className="p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
-      </div>
+        {/* Wordmark */}
+        <div style={{ marginBottom: 36, textAlign: 'center' }}>
+          <span style={{ fontSize: 20, fontWeight: 800, color: T.textPrimary, letterSpacing: '-0.03em' }}>
+            Chttrix
+          </span>
+          <span style={{ fontSize: 10, fontWeight: 600, color: T.accent, letterSpacing: '0.18em', textTransform: 'uppercase', marginLeft: 10 }}>
+            AI Collaboration
+          </span>
+        </div>
 
-      <div className="w-full max-w-md relative z-10 px-6">
-        {/* Glass Card */}
-        <div className="backdrop-blur-xl bg-white/70 dark:bg-[#0B0F19]/60 border border-white/50 dark:border-white/10 shadow-2xl rounded-3xl p-10 text-center transition-all duration-300">
+        {/* Card */}
+        <div style={{
+          width: '100%',
+          maxWidth: 420,
+          backgroundColor: T.bgCard,
+          border: `1px solid ${T.border}`,
+          overflow: 'hidden',
+        }}>
 
-          {/* Header Icon */}
-          <div className="flex justify-center mb-8">
-            <div className={`p-5 rounded-2xl shadow-lg transition-all duration-500 ${status === 'success' ? 'bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 rotate-0' :
-              status === 'error' ? 'bg-red-100 dark:bg-red-500/20 text-red-600 dark:text-red-400 rotate-12' :
-                'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 animate-pulse'
-              }`}>
-              {status === 'success' ? <CheckCircle size={48} strokeWidth={2.5} /> :
-                status === 'error' ? <XCircle size={48} strokeWidth={2.5} /> :
-                  status === 'sending' ? <Loader2 size={48} className="animate-spin" strokeWidth={2.5} /> :
-                    <Mail size={48} strokeWidth={2.5} />
-              }
+          {/* Amber top stripe */}
+          <div style={{ height: 2, backgroundColor: T.accent }} />
+
+          {/* Card body */}
+          <div style={{ padding: '40px 36px 36px', textAlign: 'center' }}>
+
+            {/* Icon */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 72,
+              height: 72,
+              backgroundColor: iconBg,
+              marginBottom: 24,
+              border: `1px solid ${T.border}`,
+            }}>
+              <Icon
+                size={34}
+                strokeWidth={2}
+                style={{
+                  color: iconColor,
+                  ...(status === 'sending' ? { animation: 've-spin 1s linear infinite' } : {}),
+                }}
+              />
             </div>
+
+            {/* Headline */}
+            <h1 style={{
+              margin: '0 0 8px',
+              fontSize: 24,
+              fontWeight: 700,
+              color: T.textPrimary,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.2,
+            }}>
+              {label}
+            </h1>
+
+            {/* Sub-message */}
+            <p style={{
+              margin: '0 0 32px',
+              fontSize: 14,
+              color: T.textSub,
+              lineHeight: 1.6,
+            }}>
+              {status === 'idle'    && 'Preparing to verify your email address…'}
+              {status === 'sending' && 'Please wait while we verify your account…'}
+              {status === 'success' && message}
+              {status === 'error'   && message}
+            </p>
+
+            {/* ── Success state ── */}
+            {status === 'success' && (
+              <div className="ve-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Progress bar */}
+                <div style={{
+                  width: '100%',
+                  height: 2,
+                  backgroundColor: T.border,
+                  overflow: 'hidden',
+                }}>
+                  <div className="ve-progress-bar" style={{
+                    height: '100%',
+                    backgroundColor: T.accent,
+                  }} />
+                </div>
+
+                <p style={{ fontSize: 12, color: T.textMuted, margin: 0 }}>
+                  Redirecting to login automatically…
+                </p>
+
+                {/* CTA button */}
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    width: '100%',
+                    padding: '14px 24px',
+                    backgroundColor: T.accent,
+                    color: '#000',
+                    border: 'none',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    letterSpacing: '0.02em',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontFamily: 'inherit',
+                    transition: 'background-color 150ms ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.backgroundColor = T.accentHover)}
+                  onMouseLeave={e => (e.currentTarget.style.backgroundColor = T.accent)}
+                >
+                  Go to Login Now <ArrowRight size={16} />
+                </button>
+              </div>
+            )}
+
+            {/* ── Error state ── */}
+            {status === 'error' && (
+              <div className="ve-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <button
+                  onClick={() => window.location.reload()}
+                  style={{
+                    width: '100%',
+                    padding: '13px 24px',
+                    backgroundColor: T.danger,
+                    color: '#fff',
+                    border: 'none',
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    fontFamily: 'inherit',
+                    transition: 'opacity 150ms ease',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                  onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                >
+                  <RefreshCw size={15} /> Try Again
+                </button>
+
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    width: '100%',
+                    padding: '13px 24px',
+                    backgroundColor: 'transparent',
+                    color: T.textSub,
+                    border: `1px solid ${T.border}`,
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
+                    transition: 'border-color 150ms ease, color 150ms ease',
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.borderColor = T.borderHover;
+                    e.currentTarget.style.color = T.textPrimary;
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.borderColor = T.border;
+                    e.currentTarget.style.color = T.textSub;
+                  }}
+                >
+                  Back to Login
+                </button>
+              </div>
+            )}
+
+            {/* Sending spinner text */}
+            {status === 'sending' && (
+              <p style={{ fontSize: 12, color: T.textMuted, margin: 0 }}>
+                This usually takes just a moment…
+              </p>
+            )}
           </div>
 
-          <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-4 tracking-tight">
-            {status === 'success' ? 'Verified!' :
-              status === 'error' ? 'Verification Failed' :
-                'Verifying...'}
-          </h2>
-
-          <p className="text-slate-500 dark:text-slate-400 mb-8 text-lg leading-relaxed">
-            {status === 'idle' && 'Preparing to verify your email address...'}
-            {status === 'sending' && 'Please wait while we secure your account...'}
-            {status === 'success' && message}
-            {status === 'error' && message}
-          </p>
-
-          {status === 'success' && (
-            <div className="space-y-6 animate-fade-in-up">
-              <div className="relative w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                <div className="absolute top-0 left-0 h-full bg-green-500 rounded-full animate-[progress_3s_ease-in-out_forwards] w-full origin-left"></div>
-              </div>
-
-              <p className="text-sm font-medium text-slate-400 dark:text-slate-500">Redirecting to login automatically...</p>
-
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full py-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg"
-              >
-                Go to Login Now <ArrowRight size={18} />
-              </button>
-            </div>
-          )}
-
-          {status === 'error' && (
-            <div className="space-y-4 animate-fade-in-up">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full py-4 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25"
-              >
-                <RefreshCw size={18} /> Try Again
-              </button>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full py-4 rounded-xl border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
-              >
-                Back to Login
-              </button>
-            </div>
-          )}
+          {/* Card footer */}
+          <div style={{
+            padding: '14px 36px',
+            borderTop: `1px solid ${T.border}`,
+            backgroundColor: 'var(--bg-hover, #161616)',
+          }}>
+            <p style={{ margin: 0, fontSize: 11, color: T.textMuted, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Secure Verification System
+            </p>
+          </div>
         </div>
-        <div className={`mt-8 text-center text-xs font-medium transition-colors duration-500 ${theme === 'dark' ? 'text-white/20' : 'text-slate-300'}`}>
-          Secure Verification System
-        </div>
+
+        {/* Bottom wordmark / copyright */}
+        <p style={{ marginTop: 28, fontSize: 11, color: T.textMuted }}>
+          © {new Date().getFullYear()} Chttrix Inc.
+        </p>
       </div>
-    </div>
+    </>
   );
 }
-
