@@ -511,7 +511,7 @@ ${blockHtml}
                         {/* Share */}
                         <button
                             onClick={() => setShowShareModal(true)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                             title="Share note"
                             onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
                             onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}
@@ -572,7 +572,7 @@ ${blockHtml}
                                 <MoreHorizontal size={16} />
                             </button>
                             {showMenu && (
-                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '200px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', zIndex: 20 }}>
+                                <div style={{ position: 'absolute', right: 0, top: '100%', marginTop: '6px', width: '200px', background: '#1a1a1a', border: '1px solid var(--border-default)', boxShadow: '0 16px 50px rgba(0,0,0,0.7)', padding: '4px 0', zIndex: 20 }}>
                                     {[{ label: 'Duplicate', Icon: Copy, action: handleDuplicate },
                                       { label: 'Download PDF', Icon: Download, action: handleDownloadPDF },
                                       { label: 'Copy link', Icon: showShareTooltip ? Check : Share2, action: () => { handleCopyLink(); setShowMenu(false); }, amber: showShareTooltip },
@@ -663,7 +663,7 @@ ${blockHtml}
                             onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.2)'}
                         >
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                Type <kbd style={{ padding: '2px 6px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '11px', fontFamily: 'monospace' }}>/</kbd> to insert a block, or click to add text
+                                Type <kbd style={{ padding: '2px 6px', background: 'rgba(255,255,255,0.07)', border: '1px solid var(--border-default)', fontSize: '11px', fontFamily: 'monospace' }}>/</kbd> to insert a block, or click to add text
                             </span>
                         </div>
 

@@ -38,16 +38,16 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useContacts } from '../../contexts/ContactsContext';
 import api from '@services/api';
 
-// ─── Design tokens (Jira Atlas palette) ─────────────────────────────────────-
+// ─── Design tokens (theme-aware via CSS variables) ────────────────────────────
 
-const JIRA_BLUE = '#b8956a'; // amber accent
-const BOARD_BG = '#0f0f0f';  // Monolith Flow board bg
-const SIDEBAR_BG = '#111111';
-const TOOLBAR_BG = '#0c0c0c';
-const BORDER_COLOR = 'rgba(255,255,255,0.06)';
-const TEXT_PRIMARY = '#e4e4e4';
-const TEXT_MUTED = 'rgba(228,228,228,0.45)';
-const CARD_SHADOW = '0 1px 2px rgba(0,0,0,0.5)';
+const JIRA_BLUE = '#b8956a'; // amber accent stays constant
+const BOARD_BG = 'var(--bg-base)';
+const SIDEBAR_BG = 'var(--bg-surface)';
+const TOOLBAR_BG = 'var(--bg-base)';
+const BORDER_COLOR = 'var(--border-subtle)';
+const TEXT_PRIMARY = 'var(--text-primary)';
+const TEXT_MUTED = 'var(--text-muted)';
+const CARD_SHADOW = '0 1px 2px rgba(0,0,0,0.15)';
 
 const STATUS_META = {
   'To Do':      { bg: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: 'rgba(255,255,255,0.12)' },
@@ -196,9 +196,9 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
   return (
     <div
       className="group relative"
-      style={{ background: '#111', borderBottom: `1px solid ${BORDER_COLOR}`, cursor: 'pointer', transition: 'background 150ms ease' }}
-      onMouseEnter={e => e.currentTarget.style.background = '#161616'}
-      onMouseLeave={e => e.currentTarget.style.background = '#111'}
+      style={{ background: 'var(--bg-surface)', borderBottom: `1px solid ${BORDER_COLOR}`, cursor: 'pointer', transition: 'background 150ms ease' }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
       onClick={() => onEdit(task)}
     >
       {/* Priority strip */}
@@ -345,9 +345,9 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
     <div
       onClick={() => onEdit(task)}
       className="group rounded-sm cursor-pointer mb-2 relative"
-      style={{ background: '#1a1a1a', boxShadow: CARD_SHADOW, borderLeft: `3px solid ${pMeta.color}` }}
-      onMouseEnter={e => e.currentTarget.style.background = '#222'}
-      onMouseLeave={e => e.currentTarget.style.background = '#1a1a1a'}>
+      style={{ background: 'var(--bg-surface)', boxShadow: CARD_SHADOW, borderLeft: `3px solid ${pMeta.color}` }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)')}>
       <div className="px-3 pt-2 pb-2.5">
         <div className="flex items-start gap-2">
           <div className="w-3.5 h-3.5 rounded-sm flex items-center justify-center mt-0.5 flex-shrink-0"
@@ -795,7 +795,7 @@ export default function MyTasks() {
                       value={search}
                       onChange={e => setSearch(e.target.value)}
                       placeholder="Search issues…"
-                      style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '6px', paddingBottom: '6px', background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
+                      style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '6px', paddingBottom: '6px', background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
                       onFocus={e => e.target.style.borderColor = JIRA_BLUE}
                       onBlur={e => e.target.style.borderColor = BORDER_COLOR}
                     />
