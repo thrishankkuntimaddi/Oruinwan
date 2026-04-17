@@ -111,7 +111,7 @@ function Dropdown({ children, trigger, align = 'left' }) {
     <div style={{ position: 'relative' }} ref={ref}>
       <div onClick={() => setOpen((v) => !v)}>{trigger}</div>
       {open && (
-        <div style={{ position: 'absolute', zIndex: 50, marginTop: '6px', ...(align === 'right' ? { right: 0 } : { left: 0 }), minWidth: '160px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', padding: '4px 0', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', zIndex: 50, marginTop: '6px', ...(align === 'right' ? { right: 0 } : { left: 0 }), minWidth: '160px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', boxShadow: '0 12px 40px rgba(0,0,0,0.2)', padding: '4px 0', overflow: 'hidden' }}>
           {typeof children === 'function' ? children(() => setOpen(false)) : children}
         </div>
       )}
@@ -241,7 +241,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
       style={{ backgroundColor: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
     >
       <div
-        style={{ background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)', maxWidth: 860, maxHeight: "90vh", width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', maxWidth: 860, maxHeight: "90vh", width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
         {/* ── Top bar ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0 }}>
@@ -263,8 +263,8 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           <button
             onClick={onClose}
             style={{ flexShrink: 0, width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease' }}
-            onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
-            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
+            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
           >
             <X size={16} />
           </button>
@@ -312,9 +312,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 placeholder="Task title…"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                style={{ width: '100%', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', background: 'transparent', outline: 'none', border: 'none', borderBottom: `2px solid ${isReadOnly ? 'transparent' : 'rgba(255,255,255,0.08)'}`, paddingBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif', cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box' }}
+                style={{ width: '100%', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', background: 'transparent', outline: 'none', border: 'none', borderBottom: `2px solid ${isReadOnly ? 'transparent' : 'var(--border-default)'}`, paddingBottom: '6px', fontFamily: 'Inter, system-ui, sans-serif', cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box' }}
                 onFocus={e => { if (!isReadOnly) e.target.style.borderBottomColor = '#b8956a'; }}
-                onBlur={e => { if (!isReadOnly) e.target.style.borderBottomColor = 'rgba(255,255,255,0.08)'; }}
+                onBlur={e => { if (!isReadOnly) e.target.style.borderBottomColor = 'var(--border-default)'; }}
               />
             </div>
 
@@ -329,9 +329,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={4}
-                style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', outline: 'none', resize: 'none', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif', opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box', colorScheme: 'dark' }}
+                style={{ width: '100%', padding: '10px 12px', fontSize: '13px', color: 'var(--text-primary)', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', outline: 'none', resize: 'none', lineHeight: 1.6, fontFamily: 'Inter, system-ui, sans-serif', opacity: isReadOnly ? 0.7 : 1, cursor: isReadOnly ? 'default' : 'text', boxSizing: 'border-box', colorScheme: 'light' }}
                 onFocus={e => { if (!isReadOnly) e.target.style.borderColor = 'rgba(184,149,106,0.4)'; }}
-                onBlur={e => { if (!isReadOnly) e.target.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+                onBlur={e => { if (!isReadOnly) e.target.style.borderColor = 'var(--border-default)'; }}
               />
             </div>
 
@@ -503,7 +503,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </div>
 
           {/* RIGHT – metadata sidebar */}
-          <div style={{ width: '220px', flexShrink: 0, borderLeft: '1px solid var(--border-default)', background: 'rgba(255,255,255,0.02)', padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px', scrollbarWidth: 'thin' }}>
+          <div style={{ width: '220px', flexShrink: 0, borderLeft: '1px solid var(--border-default)', background: 'var(--bg-surface)', padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px', scrollbarWidth: 'thin' }}>
 
             {/* Status */}
             {isEditing && (
@@ -568,7 +568,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     return (
                       <button key={p} onClick={() => { setPriority(p); close(); }}
                         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', fontSize: '12px', fontWeight: 500, background: priority === p ? 'rgba(184,149,106,0.1)' : 'transparent', color: 'var(--text-primary)', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
-                        onMouseEnter={e => { if (priority !== p) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                        onMouseEnter={e => { if (priority !== p) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                         onMouseLeave={e => { if (priority !== p) e.currentTarget.style.background = 'transparent'; }}>
                         <PI size={13} className={c.iconColor} />
                         {p}
@@ -591,7 +591,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                 <select
                   value={project}
                   onChange={(e) => setProject(e.target.value)}
-                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', cursor: 'pointer', boxSizing: 'border-box' }}
+                  style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'light', cursor: 'pointer', boxSizing: 'border-box' }}
                 >
                   <option value="">Select channel</option>
                   {channels.length > 0 ? channels.map((c) => <option key={c.id} value={c.label}>{c.label}</option>) : (
@@ -623,7 +623,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                     onChange={(e) => setDueDate(e.target.value)}
                     min={new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0]}
                     max="2100-12-31"
-                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'dark', boxSizing: 'border-box' }}
+                    style={{ width: '100%', padding: '8px 10px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', colorScheme: 'light', boxSizing: 'border-box' }}
                   />
                   {dueDateLabel && <p className={`text-[10.5px] font-semibold ${dueDateLabel.color}`}>{dueDateLabel.text}</p>}
                 </div>
@@ -651,9 +651,9 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                         if (id === 'self' || id === 'channel') setSelectedMembers([]);
                         setAssignmentType(id);
                       }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, background: assignmentType === id ? 'rgba(184,149,106,0.12)' : '#161616', border: `1px solid ${assignmentType === id ? 'rgba(184,149,106,0.35)' : 'rgba(255,255,255,0.08)'}`, color: assignmentType === id ? '#b8956a' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif', textAlign: 'left' }}
-                      onMouseEnter={e => { if (assignmentType !== id) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
-                      onMouseLeave={e => { if (assignmentType !== id) e.currentTarget.style.background = '#161616'; }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', fontSize: '12px', fontWeight: 600, background: assignmentType === id ? 'rgba(184,149,106,0.12)' : 'var(--bg-hover)', border: `1px solid ${assignmentType === id ? 'rgba(184,149,106,0.35)' : 'var(--border-default)'}`, color: assignmentType === id ? '#b8956a' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif', textAlign: 'left' }}
+                      onMouseEnter={e => { if (assignmentType !== id) e.currentTarget.style.background = 'var(--bg-active)'; }}
+                      onMouseLeave={e => { if (assignmentType !== id) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                     >
                       <BtnIcon size={13} /> {label}
                     </button>
@@ -690,8 +690,8 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             <button
               onClick={onClose}
               style={{ padding: '7px 16px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#e4e4e4'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-default)'; }}
             >
               Cancel
             </button>

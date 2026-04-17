@@ -7,17 +7,17 @@ import { Calendar, AlertTriangle } from 'lucide-react';
 
 const T = {
     base: 'var(--bg-base)',
-    surface: '#111111',
-    border: 'rgba(255,255,255,0.07)',
-    text: '#e4e4e4',
-    textMuted: 'rgba(228,228,228,0.4)',
-    textDim: 'rgba(228,228,228,0.22)',
+    surface: 'var(--bg-surface)',
+    border: 'var(--border-default)',
+    text: 'var(--text-primary)',
+    textMuted: 'var(--text-muted)',
+    textDim: 'var(--text-muted)',
     amber: '#b8956a',
 };
 
 const PRIORITY_COLORS = {
     highest: '#f87171', high: '#fb923c', medium: '#b8956a',
-    low: '#60a5fa', lowest: 'rgba(228,228,228,0.35)',
+    low: '#60a5fa', lowest: 'var(--text-muted)',
     emergency: '#f87171', urgent: '#f87171',
 };
 
@@ -92,7 +92,7 @@ function TimelineRow({ task, min, max, onClick }) {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', borderBottom: `1px solid ${T.border}`, minHeight: '36px', cursor: 'pointer', transition: 'background 150ms ease' }}
             onClick={() => onClick(task)}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
             {/* Task name fixed panel */}
             <div style={{ width: '192px', flexShrink: 0, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, borderRight: `1px solid ${T.border}` }}>

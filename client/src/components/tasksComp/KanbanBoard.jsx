@@ -6,17 +6,17 @@ import { useToast } from '../../contexts/ToastContext';
 
 const T = {
   bg: 'var(--bg-base)',
-  cardBg: 'rgba(255,255,255,0.04)',
-  cardBorder: 'rgba(255,255,255,0.08)',
-  colBg: 'rgba(255,255,255,0.02)',
-  text: '#e4e4e4',
-  muted: 'rgba(228,228,228,0.35)',
+  cardBg: 'var(--bg-surface)',
+  cardBorder: 'var(--border-default)',
+  colBg: 'var(--bg-surface)',
+  text: 'var(--text-primary)',
+  muted: 'var(--text-muted)',
   accent: '#b8956a',
   font: 'Inter, system-ui, sans-serif',
 };
 
 const COLUMNS = [
-  { key: 'To Do',       backendKey: 'todo',        label: 'TO DO',       topColor: 'rgba(228,228,228,0.2)' },
+  { key: 'To Do',       backendKey: 'todo',        label: 'TO DO',       topColor: 'var(--text-muted)' },
   { key: 'In Progress', backendKey: 'in_progress', label: 'IN PROGRESS', topColor: '#3b82f6' },
   { key: 'In Review',   backendKey: 'review',      label: 'IN REVIEW',   topColor: '#8b5cf6' },
   { key: 'Completed',   backendKey: 'done',        label: 'DONE',        topColor: '#22c55e' },
@@ -24,7 +24,7 @@ const COLUMNS = [
 
 const PRIORITY_COLORS = {
   Highest: '#ef4444', High: '#f97316', Medium: '#b8956a',
-  Low: '#3b82f6', Lowest: 'rgba(228,228,228,0.3)', Emergency: '#ef4444'
+  Low: '#3b82f6', Lowest: 'var(--text-muted)', Emergency: '#ef4444'
 };
 
 function KanbanCard({ task, onDragStart, onClick }) {
@@ -44,14 +44,14 @@ function KanbanCard({ task, onDragStart, onClick }) {
         transition: 'all 150ms ease', opacity: dragging ? 0.45 : 1,
         fontFamily: T.font,
       }}
-      onMouseEnter={e => { if (!dragging) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.borderLeftColor = pColor; }}
+      onMouseEnter={e => { if (!dragging) e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.borderLeftColor = pColor; }}
       onMouseLeave={e => { e.currentTarget.style.borderColor = T.cardBorder; e.currentTarget.style.borderLeftColor = pColor; }}
     >
       <div style={{ padding: '8px 12px 10px' }}>
         {task.issueKey && (
           <span style={{ fontSize: '9px', fontFamily: 'monospace', fontWeight: 700, color: T.muted, display: 'block', marginBottom: '2px' }}>{task.issueKey}</span>
         )}
-        <p style={{ fontSize: '13px', lineHeight: 1.45, color: task.status === 'Completed' ? 'rgba(228,228,228,0.3)' : T.text, textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}>
+        <p style={{ fontSize: '13px', lineHeight: 1.45, color: task.status === 'Completed' ? 'var(--text-muted)' : T.text, textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}>
           {task.title}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px' }}>

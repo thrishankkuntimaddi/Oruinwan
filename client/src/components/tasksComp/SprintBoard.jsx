@@ -11,13 +11,13 @@ import { useToast } from '../../contexts/ToastContext';
 
 const T = {
   bg: 'var(--bg-base)', bar: 'var(--bg-hover)', cardBg: 'var(--bg-surface)',
-  border: 'rgba(255,255,255,0.07)', accent: '#b8956a',
-  text: '#e4e4e4', muted: 'rgba(228,228,228,0.35)',
+  border: 'var(--border-default)', accent: '#b8956a',
+  text: 'var(--text-primary)', muted: 'var(--text-muted)',
   font: 'Inter, system-ui, sans-serif',
 };
 
 const STATUS_META = {
-  'To Do':       { bg: 'rgba(255,255,255,0.06)',   color: 'var(--text-muted)' },
+  'To Do':       { bg: 'var(--bg-active)',          color: 'var(--text-muted)' },
   'In Progress': { bg: 'rgba(59,130,246,0.12)',    color: '#60a5fa' },
   'In Review':   { bg: 'rgba(139,92,246,0.12)',   color: '#a78bfa' },
   'Completed':   { bg: 'rgba(34,197,94,0.1)',     color: '#4ade80' },
@@ -27,7 +27,7 @@ const STATUS_META = {
 
 const PRIORITY_COLORS = {
   Highest: '#ef4444', High: '#f97316', Medium: '#b8956a',
-  Low: '#3b82f6', Lowest: 'rgba(228,228,228,0.3)', Emergency: '#ef4444'
+  Low: '#3b82f6', Lowest: 'var(--text-muted)', Emergency: '#ef4444'
 };
 
 function SprintTaskRow({ task, onClick }) {
@@ -38,7 +38,7 @@ function SprintTaskRow({ task, onClick }) {
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 16px', background: T.cardBg, borderBottom: `1px solid ${T.border}`, cursor: 'pointer', transition: 'background 150ms ease', fontFamily: T.font }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
       onMouseLeave={e => e.currentTarget.style.background = T.cardBg}
       onClick={() => onClick(task)}
     >
@@ -147,7 +147,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           <button
             onClick={() => setOpen(v => !v)}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', border: `1px solid ${T.border}`, padding: '5px 10px', background: 'var(--bg-hover)', color: T.text, cursor: 'pointer', minWidth: '160px', fontFamily: T.font, transition: 'border-color 150ms ease' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-hover)'}
             onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
           >
             <span style={{ flex: 1, textAlign: 'left', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{loading ? 'Loading…' : selectedLabel}</span>
@@ -159,7 +159,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
               <button
                 onClick={() => { setSelectedSprint('all'); setOpen(false); }}
                 style={{ width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: '12px', color: selectedSprint === 'all' ? T.accent : T.text, background: 'transparent', border: 'none', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.font }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -175,7 +175,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
                     key={s._id}
                     onClick={() => { setSelectedSprint(s._id); setOpen(false); }}
                     style={{ width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: '12px', color: selectedSprint === s._id ? T.accent : T.text, background: 'transparent', border: 'none', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.font }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '5px' }}>

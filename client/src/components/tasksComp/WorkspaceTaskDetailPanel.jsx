@@ -10,22 +10,22 @@ import { useToast } from '../../contexts/ToastContext';
 
 // ─── Design tokens (Monolith Flow) ───────────────────────────────────────────
 const T = {
-    base: '#0c0c0c',
-    surface: '#111111',
-    surface2: '#161616',
-    border: 'rgba(255,255,255,0.07)',
-    borderHover: 'rgba(255,255,255,0.12)',
-    text: '#e4e4e4',
-    textMuted: 'rgba(228,228,228,0.45)',
-    textDim: 'rgba(228,228,228,0.25)',
+    base: 'var(--bg-base)',
+    surface: 'var(--bg-surface)',
+    surface2: 'var(--bg-active)',
+    border: 'var(--border-default)',
+    borderHover: 'var(--border-hover)',
+    text: 'var(--text-primary)',
+    textMuted: 'var(--text-muted)',
+    textDim: 'var(--text-muted)',
     amber: '#b8956a',
-    amberBg: 'rgba(184,149,106,0.12)',
+    amberBg: 'rgba(184,149,106,0.10)',
     amberBorder: 'rgba(184,149,106,0.25)',
 };
 
 // ─── Statuses ─────────────────────────────────────────────────────────────────
 const WS_STATUSES = [
-    { key: 'To Do',      label: 'TO DO',       color: 'var(--text-muted)',  bg: 'rgba(255,255,255,0.06)' },
+    { key: 'To Do',      label: 'TO DO',       color: 'var(--text-muted)',  bg: 'var(--bg-active)' },
     { key: 'In Progress',label: 'IN PROGRESS',  color: '#60a5fa',               bg: 'rgba(96,165,250,0.1)'   },
     { key: 'In Review',  label: 'IN REVIEW',    color: '#a78bfa',               bg: 'rgba(167,139,250,0.1)'  },
     { key: 'Completed',  label: 'COMPLETED',    color: '#34d399',               bg: 'rgba(52,211,153,0.1)'   },
@@ -449,7 +449,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             <SectionLabel icon={<Calendar size={10} />}>Due Date</SectionLabel>
                             <input type="date" value={localDueDate}
                                 onChange={e => { setLocalDueDate(e.target.value); save({ dueDate: e.target.value || null }); }}
-                                style={{ width: '100%', fontSize: '12px', background: T.surface2, border: `1px solid ${T.border}`, color: T.text, padding: '6px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', colorScheme: 'dark' }}
+                                style={{ width: '100%', fontSize: '12px', background: 'var(--bg-active)', border: `1px solid var(--border-default)`, color: 'var(--text-primary)', padding: '6px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box', colorScheme: 'light' }}
                             />
                             {task.dueDate && (
                                 <p style={{ fontSize: '11px', color: T.textMuted, marginTop: '4px' }}>{fmtDate(task.dueDate)}</p>
