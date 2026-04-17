@@ -50,7 +50,7 @@ const TEXT_MUTED = 'var(--text-muted)';
 const CARD_SHADOW = '0 1px 2px rgba(0,0,0,0.15)';
 
 const STATUS_META = {
-  'To Do':      { bg: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)', border: 'rgba(255,255,255,0.12)' },
+  'To Do':      { bg: 'var(--bg-hover)', color: 'var(--text-muted)', border: 'var(--border-default)' },
   'In Progress':{ bg: 'rgba(96,165,250,0.12)', color: '#60a5fa',               border: 'rgba(96,165,250,0.25)'  },
   'Completed':  { bg: 'rgba(52,211,153,0.1)',  color: '#34d399',               border: 'rgba(52,211,153,0.25)'  },
   'Cancelled':  { bg: 'rgba(248,113,113,0.08)',color: '#f87171',               border: 'rgba(248,113,113,0.2)'  },
@@ -172,7 +172,7 @@ function TransferBanner({ task, onApprove, onReject, onRequest }) {
         {onApprove && (
           <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
             <button onClick={e => { e.stopPropagation(); onApprove(); }}
-              style={{ padding: '3px 10px', fontSize: '10px', fontWeight: 700, color: '#0c0c0c', background: '#a78bfa', border: 'none', cursor: 'pointer' }}>Approve</button>
+              style={{ padding: '3px 10px', fontSize: '10px', fontWeight: 700, color: '#000', background: '#a78bfa', border: 'none', cursor: 'pointer' }}>Approve</button>
             <button onClick={e => { e.stopPropagation(); onReject(); }}
               style={{ padding: '3px 8px', fontSize: '10px', color: '#a78bfa', background: 'transparent', border: '1px solid rgba(167,139,250,0.3)', cursor: 'pointer' }}>Reject</button>
           </div>
@@ -221,7 +221,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
               </span>
             )}
             <p className={`text-sm font-medium leading-snug flex-1 truncate ${isCompleted || isDeleted ? 'line-through' : ''}`}
-              style={{ color: isCompleted || isDeleted ? 'rgba(228,228,228,0.3)' : TEXT_PRIMARY }}>
+              style={{ color: isCompleted || isDeleted ? 'var(--text-muted)' : TEXT_PRIMARY }}>
               {task.title}
             </p>
           </div>
@@ -238,7 +238,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
           {/* Meta row */}
           <div className="flex items-center gap-3 mt-1 flex-wrap">
             {/* Channel / Project */}
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 6px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', padding: '1px 6px' }}>
               <Hash size={9} /> {task.project || 'General'}
             </span>
 
@@ -347,14 +347,14 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
       className="group rounded-sm cursor-pointer mb-2 relative"
       style={{ background: 'var(--bg-surface)', boxShadow: CARD_SHADOW, borderLeft: `3px solid ${pMeta.color}` }}
       onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)')}>
+      onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}>
       <div className="px-3 pt-2 pb-2.5">
         <div className="flex items-start gap-2">
           <div className="w-3.5 h-3.5 rounded-sm flex items-center justify-center mt-0.5 flex-shrink-0"
             style={{ background: STATUS_META[task.status]?.color || '#42526E' }}>
             <div className="w-1.5 h-1.5 rounded-full bg-white opacity-90" />
           </div>
-          <p className={`text-sm leading-snug flex-1`} style={{ color: task.status === 'Completed' ? 'rgba(228,228,228,0.3)' : TEXT_PRIMARY, textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}>
+          <p className={`text-sm leading-snug flex-1`} style={{ color: task.status === 'Completed' ? 'var(--text-muted)' : TEXT_PRIMARY, textDecoration: task.status === 'Completed' ? 'line-through' : 'none' }}>
             {task.title}
           </p>
           <button onClick={e => { e.stopPropagation(); onDelete(task.id); }}
@@ -364,7 +364,7 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
         </div>
 
         <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', padding: '1px 5px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', padding: '1px 5px' }}>
             <Hash size={8} /> {task.project || 'General'}
           </span>
           <PriorityIcon priority={task.priority} size={12} />
@@ -698,18 +698,18 @@ export default function MyTasks() {
           <nav className="space-y-0.5">
             {SIDEBAR_VIEWS.map((v, i) =>
               v === null
-                ? <div key={i} style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '6px 8px' }} />
+                ? <div key={i} style={{ height: '1px', background: 'var(--bg-hover)', margin: '6px 8px' }} />
                 : (
                   <button key={v.key} onClick={() => setView(v.key)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', background: activeView === v.key ? 'rgba(184,149,106,0.12)' : 'transparent', border: activeView === v.key ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: activeView === v.key ? JIRA_BLUE : 'rgba(228,228,228,0.5)', fontWeight: activeView === v.key ? 700 : 400, fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
-                    onMouseEnter={e => { if (activeView !== v.key) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', background: activeView === v.key ? 'rgba(184,149,106,0.12)' : 'transparent', border: activeView === v.key ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: activeView === v.key ? JIRA_BLUE : 'var(--text-secondary)', fontWeight: activeView === v.key ? 700 : 400, fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
+                    onMouseEnter={e => { if (activeView !== v.key) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                     onMouseLeave={e => { if (activeView !== v.key) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <span style={{ color: activeView === v.key ? JIRA_BLUE : 'rgba(228,228,228,0.35)', flexShrink: 0 }}>
+                    <span style={{ color: activeView === v.key ? JIRA_BLUE : 'var(--text-muted)', flexShrink: 0 }}>
                       {v.icon}
                     </span>
                     <span style={{ flex: 1 }}>{v.label}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'monospace', color: activeView === v.key ? JIRA_BLUE : 'rgba(228,228,228,0.3)' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, fontFamily: 'monospace', color: activeView === v.key ? JIRA_BLUE : 'var(--text-muted)' }}>
                       {v.key === 'my-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) === String(currentUserId) && t.status !== 'Completed').length}
                       {v.key === 'shared-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) !== String(currentUserId) && t.assignees?.some(a => String(a._id) === String(currentUserId)) && t.status !== 'Completed').length}
                       {v.key === 'assigned-tasks' && tasks.filter(t => !t.deleted && String(t.assignerId) === String(currentUserId) && String(t.assigneeId) !== String(currentUserId) && t.status !== 'Completed').length}
@@ -729,23 +729,23 @@ export default function MyTasks() {
               <div className="space-y-0.5">
                 {/* All Channels reset button */}
                 <button onClick={() => setChannelFilter('all')}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === 'all' ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === 'all' ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === 'all' ? JIRA_BLUE : 'rgba(228,228,228,0.5)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
-                  onMouseEnter={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === 'all' ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === 'all' ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === 'all' ? JIRA_BLUE : 'var(--text-secondary)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
+                  onMouseEnter={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'var(--bg-hover)'; }}
                   onMouseLeave={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <Hash size={10} style={{ color: channelFilter === 'all' ? JIRA_BLUE : 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                  <Hash size={10} style={{ color: channelFilter === 'all' ? JIRA_BLUE : 'var(--text-muted)', flexShrink: 0 }} />
                   <span style={{ flex: 1 }}>All Channels</span>
-                  <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === 'all' ? JIRA_BLUE : 'rgba(228,228,228,0.3)' }}>{viewFiltered.length}</span>
+                  <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === 'all' ? JIRA_BLUE : 'var(--text-muted)' }}>{viewFiltered.length}</span>
                 </button>
                 {channelNames.map(ch => (
                   <button key={ch} onClick={() => setChannelFilter(ch)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === ch ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === ch ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === ch ? JIRA_BLUE : 'rgba(228,228,228,0.5)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
-                    onMouseEnter={e => { if (channelFilter !== ch) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === ch ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === ch ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === ch ? JIRA_BLUE : 'var(--text-secondary)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
+                    onMouseEnter={e => { if (channelFilter !== ch) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                     onMouseLeave={e => { if (channelFilter !== ch) e.currentTarget.style.background = 'transparent'; }}
                   >
-                    <Hash size={10} style={{ color: channelFilter === ch ? JIRA_BLUE : 'rgba(228,228,228,0.3)', flexShrink: 0 }} />
+                    <Hash size={10} style={{ color: channelFilter === ch ? JIRA_BLUE : 'var(--text-muted)', flexShrink: 0 }} />
                     <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch}</span>
-                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === ch ? JIRA_BLUE : 'rgba(228,228,228,0.3)' }}>{channelCounts[ch] || 0}</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, fontFamily: 'monospace', color: channelFilter === ch ? JIRA_BLUE : 'var(--text-muted)' }}>{channelCounts[ch] || 0}</span>
                   </button>
                 ))}
               </div>
@@ -781,7 +781,7 @@ export default function MyTasks() {
                   {canCreate && (
                     <button
                       onClick={() => { setEditingTask(null); setShowModal(true); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: JIRA_BLUE, border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '6px 10px', background: JIRA_BLUE, border: 'none', color: '#000', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, WebkitTapHighlightColor: 'transparent' }}
                     >
                       <Plus size={12} strokeWidth={2.5} /> New
                     </button>
@@ -801,11 +801,11 @@ export default function MyTasks() {
                     />
                   </div>
                   <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
-                    style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '80px' }}>
+                    style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '80px' }}>
                     {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
                   </select>
                   <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-                    style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '90px' }}>
+                    style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '11px', padding: '6px 4px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0, maxWidth: '90px' }}>
                     <option value="all">All Priority</option>
                     {['Highest', 'High', 'Medium', 'Low', 'Lowest'].map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
@@ -828,7 +828,7 @@ export default function MyTasks() {
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                     placeholder="Search issues…"
-                    style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', padding: '5px 8px 5px 28px', outline: 'none', width: '160px', fontFamily: 'Inter, system-ui, sans-serif' }}
+                    style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_PRIMARY, fontSize: '12px', padding: '5px 8px 5px 28px', outline: 'none', width: '160px', fontFamily: 'Inter, system-ui, sans-serif' }}
                     onFocus={e => e.target.style.borderColor = JIRA_BLUE}
                     onBlur={e => e.target.style.borderColor = BORDER_COLOR}
                   />
@@ -836,13 +836,13 @@ export default function MyTasks() {
 
                 {/* Sort */}
                 <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
-                  style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
                   {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
 
                 {/* Priority filter */}
                 <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
-                  style={{ background: '#1a1a1a', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                  style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
                   <option value="all">All Priorities</option>
                   {['Highest', 'High', 'Medium', 'Low', 'Lowest', 'Emergency'].map(p =>
                     <option key={p} value={p}>{p}</option>

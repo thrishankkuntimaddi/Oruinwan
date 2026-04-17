@@ -6,7 +6,7 @@ import React, { useMemo } from 'react';
 import { Calendar, AlertTriangle } from 'lucide-react';
 
 const T = {
-    base: '#0c0c0c',
+    base: 'var(--bg-base)',
     surface: '#111111',
     border: 'rgba(255,255,255,0.07)',
     text: '#e4e4e4',
@@ -119,7 +119,7 @@ function TimelineRow({ task, min, max, onClick }) {
                 }}
                     title={`${task.title}\n${new Date(startTs).toDateString()} → ${new Date(endTs).toDateString()}`}>
                     {widthPct > 8 && (
-                        <span style={{ fontSize: '9px', color: '#0c0c0c', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '9px', color: '#000', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {task.title.substring(0, 20)}
                         </span>
                     )}

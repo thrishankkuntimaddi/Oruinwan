@@ -10,7 +10,7 @@ import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
 const T = {
-  bg: '#0c0c0c', bar: 'rgba(255,255,255,0.05)', cardBg: 'rgba(255,255,255,0.03)',
+  bg: 'var(--bg-base)', bar: 'var(--bg-hover)', cardBg: 'var(--bg-surface)',
   border: 'rgba(255,255,255,0.07)', accent: '#b8956a',
   text: '#e4e4e4', muted: 'rgba(228,228,228,0.35)',
   font: 'Inter, system-ui, sans-serif',
@@ -155,7 +155,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           </button>
 
           {open && (
-            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', zIndex: 50, background: '#1a1a1a', border: `1px solid ${T.border}`, minWidth: '220px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', fontFamily: T.font }}>
+            <div style={{ position: 'absolute', top: '100%', left: 0, marginTop: '4px', zIndex: 50, background: 'var(--bg-input)', border: `1px solid ${T.border}`, minWidth: '220px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)', fontFamily: T.font }}>
               <button
                 onClick={() => { setSelectedSprint('all'); setOpen(false); }}
                 style={{ width: '100%', textAlign: 'left', padding: '9px 12px', fontSize: '12px', color: selectedSprint === 'all' ? T.accent : T.text, background: 'transparent', border: 'none', borderBottom: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.font }}

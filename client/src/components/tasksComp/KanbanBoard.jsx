@@ -5,7 +5,7 @@ import { useTasks } from '../../contexts/TasksContext';
 import { useToast } from '../../contexts/ToastContext';
 
 const T = {
-  bg: '#0c0c0c',
+  bg: 'var(--bg-base)',
   cardBg: 'rgba(255,255,255,0.04)',
   cardBorder: 'rgba(255,255,255,0.08)',
   colBg: 'rgba(255,255,255,0.02)',
