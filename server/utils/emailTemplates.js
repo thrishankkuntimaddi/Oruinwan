@@ -26,20 +26,20 @@ const APP_URL = process.env.FRONTEND_URL || 'https://chttrix.com';
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 const T = {
-  bgOuter:       '#060606',
-  bgCard:        '#111111',
-  bgHeader:      '#0c0c0c',
-  bgSection:     '#0a0a0a',
-  bgCodeBlock:   '#0c0c0c',
+  bgOuter:       '#f0ece6',
+  bgCard:        '#ffffff',
+  bgHeader:      '#faf8f5',
+  bgSection:     '#f5f2ee',
+  bgCodeBlock:   '#f5f2ee',
   accent:        '#b8956a',
   accentLight:   '#d4a97a',
   accentDark:    '#8a6a4a',
-  textPrimary:   '#e4e4e4',
+  textPrimary:   '#1a1a1a',
   textSecondary: '#9a9a9a',
-  textMuted:     '#5a5a5a',
-  textDanger:    '#e05252',
+  textMuted:     '#888888',
+  textDanger:    '#c0392b',
   textSuccess:   '#4db88e',
-  border:        '#1e1e1e',
+  border:        '#e8e2da',
   borderAccent:  'rgba(184,149,106,0.3)',
 };
 
@@ -60,8 +60,8 @@ function _shell({ icon, title, subtitle, body, preheader = '' }) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="color-scheme" content="dark">
-  <meta name="supported-color-schemes" content="dark">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>${title}</title>
   <style>
     @media only screen and (max-width:600px) {

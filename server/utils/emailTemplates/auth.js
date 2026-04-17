@@ -6,18 +6,18 @@ const APP = 'Chttrix';
 
 // ─── Design Tokens (inline-only for email client compat) ─────────────────────
 const T = {
-  bgOuter:     '#060606',
-  bgCard:      '#111111',
-  bgHeader:    '#0c0c0c',
-  bgSection:   '#0a0a0a',
+  bgOuter:     '#f0ece6',
+  bgCard:      '#ffffff',
+  bgHeader:    '#faf8f5',
+  bgSection:   '#f5f2ee',
   accent:      '#b8956a',
   accentDark:  '#8a6a4a',
-  textPrimary: '#e4e4e4',
-  textSub:     '#9a9a9a',
-  textMuted:   '#5a5a5a',
-  textDanger:  '#e05252',
-  textSuccess: '#4db88e',
-  border:      '#1e1e1e',
+  textPrimary: '#1a1a1a',
+  textSub:     '#555555',
+  textMuted:   '#888888',
+  textDanger:  '#c0392b',
+  textSuccess: '#1e8a5e',
+  border:      '#e8e2da',
   borderAccent:'rgba(184,149,106,0.35)',
 };
 
@@ -29,8 +29,8 @@ function shell({ icon, title, subtitle, body, preheader = '' }) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="color-scheme" content="dark">
-  <meta name="supported-color-schemes" content="dark">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
   <title>${title}</title>
   <style>
     @media only screen and (max-width:600px){
@@ -94,7 +94,7 @@ function shell({ icon, title, subtitle, body, preheader = '' }) {
           <tr>
             <td bgcolor="${T.bgHeader}" style="padding:18px 32px;border-top:1px solid ${T.border}">
               <p style="margin:0 0 4px;font-size:12px;color:${T.textMuted};line-height:1.5">This is an automated message from ${APP}. Please do not reply.</p>
-              <p style="margin:0;font-size:12px;color:#333">&copy; ${YEAR} ${APP} Inc. All rights reserved.</p>
+              <p style="margin:0;font-size:12px;color:#888888">&copy; ${YEAR} ${APP} Inc. All rights reserved.</p>
             </td>
           </tr>
 
@@ -150,7 +150,7 @@ function row(label, value, highlight = false) {
 function alert(text, kind = 'info') {
   const map = {
     info:    { bg: 'rgba(184,149,106,0.07)', border: T.accentDark, clr: T.accent },
-    warning: { bg: 'rgba(255,190,50,0.07)',  border: '#b8860b',    clr: '#f0c040' },
+    warning: { bg: 'rgba(255,190,50,0.07)',  border: '#b8860b',    clr: '#7a5c00' },
     danger:  { bg: 'rgba(224,82,82,0.07)',   border: '#993333',    clr: T.textDanger },
     success: { bg: 'rgba(77,184,142,0.07)',  border: '#2d7d5c',    clr: T.textSuccess },
   };
