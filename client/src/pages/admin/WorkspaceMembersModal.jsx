@@ -28,7 +28,7 @@ const Avatar = ({ user }) => {
     const initials = (user.username || '?').charAt(0).toUpperCase();
     const bg = ACCENT_COLORS[initials.charCodeAt(0) % ACCENT_COLORS.length];
     return (
-        <div style={{ width: '32px', height: '32px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#0c0c0c', flexShrink: 0 }}>{initials}</div>
+        <div style={{ width: '32px', height: '32px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: '#000', flexShrink: 0 }}>{initials}</div>
     );
 };
 
@@ -137,7 +137,7 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '32px', height: '32px', background: workspace.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Users size={15} style={{ color: '#0c0c0c' }} />
+                            <Users size={15} style={{ color: '#000' }} />
                         </div>
                         <div>
                             <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>{workspace.name}</h2>

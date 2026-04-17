@@ -512,3 +512,40 @@ html.light .bg-emerald-500 { background-color: var(--state-success) !important; 
 
 /* Public page shell — no-op (stays dark by design) */
 html.light .public-dark-shell { background-color: #0c0c0c; color: #e4e4e4; }
+
+/* ── Dashboard-specific light mode extras ────────────────────────────────────── */
+
+/* bg-slate-50 / bg-gray-50 used as full-page backgrounds in analytics dashboards */
+html.light .bg-slate-50 { background-color: var(--bg-base) !important; }
+html.light .bg-gray-50  { background-color: var(--bg-base) !important; }
+
+/* slate text variants used in Owner / Billing / Security pages */
+html.light .text-slate-100,
+html.light .dark\:text-slate-100 { color: var(--text-primary) !important; }
+html.light .text-slate-200,
+html.light .dark\:text-slate-200 { color: var(--text-primary) !important; }
+html.light .text-slate-600,
+html.light .dark\:text-slate-600 { color: var(--text-secondary) !important; }
+html.light .text-slate-700,
+html.light .dark\:text-slate-700 { color: var(--text-secondary) !important; }
+
+/* bg-white stays white/surface in light */
+html.light .bg-white { background-color: var(--bg-surface) !important; }
+
+/* Border slate extras */
+html.light .border-slate-200 { border-color: var(--border-default) !important; }
+html.light .border-slate-100 { border-color: var(--border-subtle) !important; }
+
+/* Blue/indigo icon box tints */
+html.light .dark\:bg-blue-900\/30 { background-color: rgba(59,130,246,0.1) !important; }
+html.light .dark\:text-blue-400   { color: #3b82f6 !important; }
+html.light .dark\:text-indigo-400 { color: #6366f1 !important; }
+
+/* Skeleton / loading shimmer */
+html.light .dark\:bg-gray-600      { background-color: var(--bg-active) !important; }
+html.light .dark\:bg-gray-700\/50  { background-color: var(--bg-hover) !important; }
+html.light .bg-gray-200            { background-color: var(--bg-active) !important; }
+html.light .bg-gray-300            { background-color: var(--bg-active) !important; }
+
+/* Progress bar track */
+html.light .dark\:bg-gray-700 { background-color: var(--bg-active) !important; }

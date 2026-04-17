@@ -21,7 +21,7 @@ const BarChart = ({ data = [], label, color = '#8b5cf6' }) => {
                     <span style={{ width:90, fontSize:11, color:'#94a3b8', textOverflow:'ellipsis', overflow:'hidden', whiteSpace:'nowrap', flexShrink:0 }}>
                         {d.label}
                     </span>
-                    <div style={{ flex:1, background:'rgba(255,255,255,0.06)', borderRadius:4, height:16, overflow:'hidden' }}>
+                    <div style={{ flex:1, background:'var(--bg-hover)', borderRadius:4, height:16, overflow:'hidden' }}>
                         <div style={{
                             width:`${(d.value/max)*100}%`, height:'100%',
                             background:`linear-gradient(90deg, ${color}, ${color}99)`,
@@ -38,7 +38,7 @@ const BarChart = ({ data = [], label, color = '#8b5cf6' }) => {
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon, label, value, sub, color='#8b5cf6' }) => (
     <div style={{
-        background:'rgba(255,255,255,0.04)', border:`1px solid ${color}33`,
+        background:'var(--bg-surface)', border:`1px solid ${color}33`,
         borderRadius:12, padding:'16px 18px', flex:1, minWidth:120,
     }}>
         <div style={{ fontSize:22, marginBottom:6 }}>{icon}</div>
@@ -73,7 +73,7 @@ const AnomalyBanner = ({ anomalies=[], summary }) => {
 
 // ─── Section Wrapper ──────────────────────────────────────────────────────────
 const Section = ({ title, children, action }) => (
-    <div style={{ background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:12, padding:'18px 20px' }}>
+    <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:12, padding:'18px 20px' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
             <h3 style={{ margin:0, fontSize:14, fontWeight:700, color:'#e2e8f0' }}>{title}</h3>
             {action}
