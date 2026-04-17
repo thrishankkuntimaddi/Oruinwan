@@ -99,6 +99,67 @@
   --lh-prose:  1.8;    /* Long-form paragraphs */
 }
 
+/* ── Light Mode Token Overrides ───────────────────────────────── */
+html.light {
+  /* Backgrounds — warm white shell */
+  --bg-base:    #f5f4f2;
+  --bg-surface: #ffffff;
+  --bg-hover:   #eeece9;
+  --bg-active:  #e8e5e0;
+  --bg-input:   #faf9f7;
+
+  /* Semantic aliases */
+  --bg-primary:   #f5f4f2;
+  --bg-secondary: #ffffff;
+  --bg-tertiary:  #e8e5e0;
+
+  /* Borders */
+  --border-subtle:  #e8e5e0;
+  --border-default: #dedad4;
+  --border-accent:  #c9c4bc;
+  --border-color:   #dedad4;
+  --border-hover:   #c9c4bc;
+
+  /* Text */
+  --text-primary:   #1a1916;
+  --text-secondary: #5c5852;
+  --text-muted:     #9c9790;
+
+  /* Accent — amber unchanged (brand constant) */
+  --accent:       #b8956a;
+  --accent-dim:   rgba(184,149,106,0.14);
+  --accent-hover: #a07a52;
+
+  /* States */
+  --state-danger:  #c94040;
+  --state-success: #3a8f6a;
+
+  /* Brand (legacy) */
+  --color-primary:       #b8956a;
+  --color-primary-hover: #a07a52;
+  --color-primary-light: rgba(184,149,106,0.12);
+  --color-success: #3a8f6a;
+  --color-warning: #a07a52;
+  --color-danger:  #c94040;
+
+  /* Component specifics */
+  --input-bg:          #faf9f7;
+  --input-border:      #dedad4;
+  --input-text:        #1a1916;
+  --input-placeholder: #9c9790;
+  --input-ring:        rgba(184,149,106,0.3);
+  --card-bg:    #ffffff;
+  --card-border: #dedad4;
+  --card-shadow: 0 2px 12px rgba(0,0,0,0.08);
+
+  /* Highlights */
+  --highlight-bg-strong: rgba(184,149,106,0.12);
+  --highlight-bg-weak:   rgba(184,149,106,0.06);
+
+  /* Overlay */
+  --bg-overlay: rgba(0,0,0,0.4);
+}
+
 html {
   height: 100%;
   width: 100%;
@@ -164,6 +225,15 @@ html.public-scroll [id] {
   background: #444444;
 }
 
+/* Light Mode Scrollbar */
+html.light ::-webkit-scrollbar-thumb {
+  background: #c9c4bc;
+}
+
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #b0aa9f;
+}
+
 /* Animation Subtlety */
 @keyframes fadeInSubtle {
   from {
@@ -187,7 +257,7 @@ html.public-scroll [id] {
 
 /* ── Monolith Flow Skeleton Shimmer ─────────────────────────────
    Usage: className="sk" on any block div.
-   The shimmer travels left→right across the dark surface.
+   The shimmer travels left→right across the surface.
    Never use border-radius; keep flat to match design system.
 ───────────────────────────────────────────────────────────────── */
 @keyframes shimmer {
@@ -203,6 +273,20 @@ html.public-scroll [id] {
     #2a2a2a 50%,
     #242424 60%,
     #1c1c1c 100%
+  );
+  background-size: 1600px 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* Light mode skeleton override */
+html.light .sk {
+  background: linear-gradient(
+    90deg,
+    #e8e5e0 0%,
+    #f0ece8 40%,
+    #f5f2ee 50%,
+    #f0ece8 60%,
+    #e8e5e0 100%
   );
   background-size: 1600px 100%;
   animation: shimmer 1.6s ease-in-out infinite;

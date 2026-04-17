@@ -14,22 +14,19 @@ export const ThemeProvider = ({ children }) => {
     const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme');
-            return savedTheme || 'light';
+            return savedTheme || 'dark';
         }
-        return 'light';
+        return 'dark';
     });
 
-    // 1. Sync FROM backend (user preference) when user loads/changes
+    // 1. Sync FROM backend (user preference) on first load only
     useEffect(() => {
-        // Only sync if the user has a preference and it's different from current
         if (user?.preferences?.theme) {
             const backendTheme = user.preferences.theme;
-            if (backendTheme !== theme) {
-
-                setTheme(backendTheme);
-            }
+            setTheme(backendTheme);
         }
-    }, [user, theme]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.preferences?.theme]);
 
     // 2. Sync TO backend when theme changes (if user is logged in)
     const handleSetTheme = async (newTheme) => {
@@ -96,9 +93,14 @@ export const ThemeProvider = ({ children }) => {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, [theme]);
 
-    const toggleTheme = () => {
-        const newTheme = theme === 'dark' ? 'light' : 'dark';
-        handleSetTheme(newTheme);
+    // Can be called with a specific value: toggleTheme('light')
+    // or without args to flip dark ↔ light: toggleTheme()
+    const toggleTheme = (newTheme) => {
+        if (newTheme && ['light', 'dark', 'auto', 'system'].includes(newTheme)) {
+            handleSetTheme(newTheme);
+        } else {
+            handleSetTheme(theme === 'dark' ? 'light' : 'dark');
+        }
     };
 
     const value = {
