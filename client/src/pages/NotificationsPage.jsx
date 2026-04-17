@@ -11,16 +11,16 @@ import NotificationPreferences from '../components/shared/NotificationPreference
 
 // ── Design tokens ──────────────────────────────────────────────────────────
 const T = {
-    bg: '#0c0c0c',
-    surface: '#111111',
-    border: 'rgba(255,255,255,0.06)',
-    borderHover: 'rgba(255,255,255,0.12)',
-    accent: '#b8956a',
-    accentBg: 'rgba(184,149,106,0.1)',
-    text: '#e4e4e4',
-    muted: 'rgba(228,228,228,0.4)',
-    dim: 'rgba(228,228,228,0.2)',
-    font: 'Inter, system-ui, sans-serif',
+    bg:          'var(--bg-base)',
+    surface:     'var(--bg-surface)',
+    border:      'var(--border-subtle)',
+    borderHover: 'var(--border-default)',
+    accent:      '#b8956a',
+    accentBg:    'var(--accent-dim)',
+    text:        'var(--text-primary)',
+    muted:       'var(--text-muted)',
+    dim:         'var(--text-muted)',
+    font:        'Inter, system-ui, sans-serif',
 };
 
 // ── Type metadata (icon colors preserved for semantic meaning) ─────────────
@@ -127,8 +127,8 @@ export default function NotificationsPage() {
                                     display: 'flex', alignItems: 'flex-start', gap: '12px',
                                     padding: '10px 14px',
                                     background: n.read
-                                        ? (isHovered ? 'rgba(255,255,255,0.03)' : 'transparent')
-                                        : (isHovered ? 'rgba(184,149,106,0.08)' : 'rgba(184,149,106,0.04)'),
+                                        ? (isHovered ? 'var(--bg-hover)' : 'transparent')
+                                        : (isHovered ? 'var(--accent-dim)' : 'rgba(184,149,106,0.04)'),
                                     border: `1px solid ${n.read ? (isHovered ? T.borderHover : T.border) : 'rgba(184,149,106,0.15)'}`,
                                     cursor: n.link ? 'pointer' : 'default',
                                     transition: 'all 150ms ease',
@@ -286,7 +286,7 @@ export default function NotificationsPage() {
                                 {tab.Icon && <tab.Icon size={12} />}
                                 {tab.label}
                                 {tab.key === 'unread' && unreadCount > 0 && (
-                                    <span style={{ padding: '1px 5px', fontSize: '9px', fontWeight: 700, background: T.accent, color: '#0c0c0c' }}>
+                                    <span style={{ padding: '1px 5px', fontSize: '9px', fontWeight: 700, background: T.accent, color: '#000' }}>
                                         {unreadCount}
                                     </span>
                                 )}

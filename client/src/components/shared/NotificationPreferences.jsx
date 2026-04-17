@@ -7,16 +7,16 @@ import api from '@services/api';
 
 // ── Design tokens ─────────────────────────────────────────────
 const T = {
-    bg: 'rgba(255,255,255,0.03)',
-    border: 'rgba(255,255,255,0.07)',
-    borderHover: 'rgba(255,255,255,0.13)',
-    accent: '#b8956a',
-    accentBg: 'rgba(184,149,106,0.1)',
-    accentBorder: 'rgba(184,149,106,0.3)',
-    text: '#e4e4e4',
-    muted: 'rgba(228,228,228,0.4)',
-    dim: 'rgba(228,228,228,0.2)',
-    font: 'Inter, system-ui, sans-serif',
+    bg:          'var(--bg-surface)',
+    border:      'var(--border-subtle)',
+    borderHover: 'var(--border-default)',
+    accent:      '#b8956a',
+    accentBg:    'var(--accent-dim)',
+    accentBorder:'rgba(184,149,106,0.3)',
+    text:        'var(--text-primary)',
+    muted:       'var(--text-muted)',
+    dim:         'var(--text-muted)',
+    font:        'Inter, system-ui, sans-serif',
 };
 
 const PREF_ITEMS = [
@@ -115,7 +115,7 @@ export default function NotificationPreferences({ workspaceId }) {
                             style={{
                                 flexShrink: 0, position: 'relative', width: '36px', height: '20px',
                                 borderRadius: '10px', border: 'none', cursor: 'pointer',
-                                background: prefs[key] ? T.accent : 'rgba(255,255,255,0.1)',
+                                background: prefs[key] ? T.accent : 'var(--border-default)',
                                 transition: 'background 200ms ease',
                                 padding: 0,
                             }}
@@ -124,7 +124,7 @@ export default function NotificationPreferences({ workspaceId }) {
                                 position: 'absolute', top: '3px',
                                 left: prefs[key] ? '19px' : '3px',
                                 width: '14px', height: '14px', borderRadius: '50%',
-                                background: prefs[key] ? '#0c0c0c' : 'rgba(255,255,255,0.5)',
+                                background: prefs[key] ? '#000' : 'var(--bg-surface)',
                                 transition: 'left 200ms ease',
                                 display: 'block',
                             }} />
