@@ -301,15 +301,15 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 ? 'rgba(184,149,106,0.15)'
                 : item.isPrivate
                     ? 'rgba(139,92,246,0.1)'
-                    : 'rgba(255,255,255,0.05)',
-            color: isActive ? '#b8956a' : item.isPrivate ? '#a78bfa' : 'rgba(228,228,228,0.4)',
+                    : 'var(--bg-active)',
+            color: isActive ? '#b8956a' : item.isPrivate ? '#a78bfa' : 'var(--text-muted)',
         };
 
         return (
             <div
                 onClick={handleClick}
                 style={rowStyle}
-                onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
                 onMouseLeave={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'transparent'; }}
             >
                 <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden', gap: '10px' }}>
@@ -329,7 +329,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         )}
                     </div>
 
-                    <span style={{ fontSize: '13px', fontWeight: isActive ? 600 : 400, color: isActive ? '#e4e4e4' : 'rgba(228,228,228,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    <span style={{ fontSize: '13px', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {(item.label || 'Unnamed Channel').replace(/^#/, '')}
                     </span>
 
@@ -359,8 +359,8 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         onClick={() => setIsSelectionMode(!isSelectionMode)}
                         style={{ padding: '6px', background: isSelectionMode ? 'rgba(184,149,106,0.1)' : 'transparent', border: isSelectionMode ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: isSelectionMode ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         title="Manage Channels"
-                        onMouseEnter={e => { if (!isSelectionMode) e.currentTarget.style.color = '#e4e4e4'; }}
-                        onMouseLeave={e => { if (!isSelectionMode) e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
+                        onMouseEnter={e => { if (!isSelectionMode) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                        onMouseLeave={e => { if (!isSelectionMode) e.currentTarget.style.color = 'var(--text-muted)'; }}
                     >
                         <Settings2 size={18} />
                     </button>
@@ -376,7 +376,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                         title="Create Channel"
                         onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
                     >
                         <Plus size={18} />
                     </button>
