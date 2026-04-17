@@ -1,362 +1,274 @@
 // server/utils/emailTemplates/auth.js
-// Authentication-related email templates
+// Authentication email templates — Chttrix dark theme
 
-/**
- * Generate a 6-digit verification code
- */
-const generateVerificationCode = () => {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+const YEAR = new Date().getFullYear();
+const APP = 'Chttrix';
+
+// ─── Design Tokens (inline-only for email client compat) ─────────────────────
+const T = {
+  bgOuter:     '#060606',
+  bgCard:      '#111111',
+  bgHeader:    '#0c0c0c',
+  bgSection:   '#0a0a0a',
+  accent:      '#b8956a',
+  accentDark:  '#8a6a4a',
+  textPrimary: '#e4e4e4',
+  textSub:     '#9a9a9a',
+  textMuted:   '#5a5a5a',
+  textDanger:  '#e05252',
+  textSuccess: '#4db88e',
+  border:      '#1e1e1e',
+  borderAccent:'rgba(184,149,106,0.35)',
 };
 
-/**
- * Email verification template
- */
+// ─── Shell ────────────────────────────────────────────────────────────────────
+function shell({ icon, title, subtitle, body, preheader = '' }) {
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>${title}</title>
+  <style>
+    @media only screen and (max-width:600px){
+      .ec{width:100%!important;}
+      .ep{padding:24px 18px!important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:${T.bgOuter};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Helvetica,Arial,sans-serif">
+
+  <!-- Preheader -->
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${T.bgOuter};line-height:1px">
+    ${preheader || title}&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+  </div>
+
+  <!-- Outer -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${T.bgOuter}">
+    <tr>
+      <td align="center" style="padding:40px 16px 60px">
+
+        <!-- Card -->
+        <table class="ec" role="presentation" width="580" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:580px;width:100%;background-color:${T.bgCard};border:1px solid ${T.border}">
+
+          <!-- Logo header -->
+          <tr>
+            <td bgcolor="${T.bgHeader}" style="padding:18px 32px;border-bottom:1px solid ${T.border}">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <span style="font-size:17px;font-weight:800;color:${T.textPrimary};letter-spacing:-0.03em">${APP}</span>
+                    <span style="font-size:10px;font-weight:600;color:${T.accent};letter-spacing:0.2em;text-transform:uppercase;margin-left:10px">AI Collaboration</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Gold stripe -->
+          <tr>
+            <td height="2" bgcolor="${T.accent}" style="font-size:0;line-height:0">&nbsp;</td>
+          </tr>
+
+          <!-- Hero -->
+          <tr>
+            <td class="ep" style="padding:40px 32px 24px;border-bottom:1px solid ${T.border}">
+              <p style="margin:0 0 12px;font-size:38px;line-height:1">${icon}</p>
+              <h1 style="margin:0 0 10px;font-size:22px;font-weight:700;color:${T.textPrimary};letter-spacing:-0.02em;line-height:1.3">${title}</h1>
+              <p style="margin:0;font-size:14px;color:${T.textSub};line-height:1.6">${subtitle}</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td class="ep" style="padding:32px">
+              ${body}
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td bgcolor="${T.bgHeader}" style="padding:18px 32px;border-top:1px solid ${T.border}">
+              <p style="margin:0 0 4px;font-size:12px;color:${T.textMuted};line-height:1.5">This is an automated message from ${APP}. Please do not reply.</p>
+              <p style="margin:0;font-size:12px;color:#333">&copy; ${YEAR} ${APP} Inc. All rights reserved.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>`;
+}
+
+// ─── Partials ─────────────────────────────────────────────────────────────────
+function btn(text, url) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0">
+  <tr>
+    <td style="background-color:${T.accent};padding:14px 32px">
+      <a href="${url}" style="font-size:14px;font-weight:700;color:#000;text-decoration:none;letter-spacing:0.03em;white-space:nowrap">${text} &rarr;</a>
+    </td>
+  </tr>
+</table>`;
+}
+
+function otp(code) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:28px auto">
+  <tr>
+    <td align="center" bgcolor="${T.bgSection}"
+      style="padding:22px 48px;border:1px solid ${T.borderAccent}">
+      <span style="font-size:40px;font-weight:800;letter-spacing:0.28em;color:${T.accent};font-family:'Courier New',Courier,monospace">${code}</span>
+    </td>
+  </tr>
+</table>`;
+}
+
+function infoCard(rows) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background-color:${T.bgSection};border:1px solid ${T.border};margin:20px 0">
+  <tr><td style="padding:16px 20px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+      ${rows}
+    </table>
+  </td></tr>
+</table>`;
+}
+
+function row(label, value, highlight = false) {
+  return `<tr>
+  <td style="padding:10px 0;border-bottom:1px solid ${T.border};font-size:13px;color:${T.textSub};width:140px;vertical-align:top">${label}</td>
+  <td style="padding:10px 0;border-bottom:1px solid ${T.border};font-size:13px;color:${highlight ? T.accent : T.textPrimary};font-weight:${highlight ? '700' : '500'};font-family:${highlight ? "'Courier New',Courier,monospace" : 'inherit'};letter-spacing:${highlight ? '0.06em' : '0'}">${value}</td>
+</tr>`;
+}
+
+function alert(text, kind = 'info') {
+  const map = {
+    info:    { bg: 'rgba(184,149,106,0.07)', border: T.accentDark, clr: T.accent },
+    warning: { bg: 'rgba(255,190,50,0.07)',  border: '#b8860b',    clr: '#f0c040' },
+    danger:  { bg: 'rgba(224,82,82,0.07)',   border: '#993333',    clr: T.textDanger },
+    success: { bg: 'rgba(77,184,142,0.07)',  border: '#2d7d5c',    clr: T.textSuccess },
+  };
+  const c = map[kind] || map.info;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background-color:${c.bg};border-left:3px solid ${c.border};margin:24px 0">
+  <tr>
+    <td style="padding:14px 18px;font-size:13px;color:${c.clr};line-height:1.6">${text}</td>
+  </tr>
+</table>`;
+}
+
+function p(text, { size = '14px', color = T.textSub, mt = '0', mb = '16px' } = {}) {
+  return `<p style="margin:${mt} 0 ${mb};font-size:${size};color:${color};line-height:1.7">${text}</p>`;
+}
+
+function link(text, url) {
+  return `<p style="margin:0;font-size:13px;color:${T.textMuted};line-height:1.6;word-break:break-all">
+  Or copy this link: <a href="${url}" style="color:${T.accent};text-decoration:none">${url}</a>
+</p>`;
+}
+
+// ─── Generate Verification Code ───────────────────────────────────────────────
+const generateVerificationCode = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
+
+// ─── 1. Email Verification OTP ────────────────────────────────────────────────
 const emailVerificationTemplate = (username, code) => {
-    return {
-        subject: 'Verify your email address - Chttrix',
-        html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-          .code-box { background: white; border: 2px dashed #667eea; padding: 20px; text-align: center; margin: 25px 0; border-radius: 8px; }
-          .code { font-size: 32px; font-weight: bold; color: #667eea; letter-spacing: 8px; }
-          .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
-          .button { display: inline-block; padding: 12px 24px; background: #667eea; color: white; text-decoration: none; border-radius: 6px; margin-top: 15px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔐 Email Verification</h1>
-          </div>
-          <div class="content">
-            <p>Hi <strong>${username}</strong>,</p>
-            <p>Thank you for adding a new email address to your Chttrix account! Please verify your email address by entering this code:</p>
-            
-            <div class="code-box">
-              <div class="code">${code}</div>
-            </div>
-            
-            <p><strong>This code will expire in 15 minutes.</strong></p>
-            
-            <p>If you didn't request this verification, please ignore this email. Your account remains secure.</p>
-            
-            <div class="footer">
-              <p>This is an automated message from Chttrix. Please do not reply to this email.</p>
-              <p>&copy; ${new Date().getFullYear()} Chttrix. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-        text: `
-Hi ${username},
-
-Thank you for adding a new email address to your Chttrix account!
-
-Your verification code is: ${code}
-
-This code will expire in 15 minutes.
-
-If you didn't request this verification, please ignore this email.
-
-Best regards,
-The Chttrix Team
-    `
-    };
+  const body = `
+    ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
+    ${p('Use the verification code below to confirm your email address on Chttrix:', { mb: '4px' })}
+    ${otp(code)}
+    ${p(`This code expires in <strong style="color:${T.textPrimary}">15 minutes</strong>. If you didn't request this, you can safely ignore this email.`, { size: '13px', color: T.textMuted, mb: '0' })}
+  `;
+  return {
+    subject: `Your Chttrix Verification Code: ${code}`,
+    html: shell({
+      icon: '✉️',
+      title: 'Email Verification Code',
+      subtitle: 'Enter this code in Chttrix to verify your email address.',
+      preheader: `Your Chttrix verification code is ${code}. Expires in 15 minutes.`,
+      body,
+    }),
+    text: `Hi ${username},\n\nYour Chttrix email verification code is: ${code}\n\nThis code expires in 15 minutes.\n\nIf you didn't request this, please ignore this email.\n\n— The Chttrix Team`,
+  };
 };
 
-/**
- * Password Reset Template
- */
+// ─── 2. Password Reset ────────────────────────────────────────────────────────
 const passwordResetTemplate = (username, resetUrl) => {
-    return {
-        subject: '🔐 Reset Your Chttrix Password',
-        html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f5; }
-          .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px; text-align: center; }
-          .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
-          .icon { font-size: 48px; margin-bottom: 10px; }
-          .content { padding: 40px; }
-          .button { display: inline-block; padding: 16px 32px; background: #667eea; color: white; text-decoration: none; border-radius: 12px; font-weight: bold; margin: 20px 0; transition: background 0.3s; }
-          .button:hover { background: #5568d3; }
-          .warning-box { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 15px; margin: 25px 0; border-radius: 8px; color: #92400e; }
-          .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0; border-radius: 8px; color: #1e40af; }
-          .footer { background: #fafafa; padding: 30px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-          h1 { margin: 0; font-size: 28px; font-weight: 800; }
-          h2 { color: #1f2937; margin-top: 0; font-size: 20px; }
-          p { color: #4b5563; margin-bottom: 15px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">Chttrix</div>
-            <div class="icon">🔐</div>
-            <h1>Password Reset Request</h1>
-          </div>
-          <div class="content">
-            <h2>Hello ${username},</h2>
-            <p>We received a request to reset your Chttrix password. Click the button below to create a new password:</p>
-            
-            <center>
-              <a href="${resetUrl}" class="button">Reset Password →</a>
-            </center>
-            
-            <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280;">
-              Or copy and paste this link: <br/>
-              <a href="${resetUrl}" style="color: #667eea; word-break: break-all;">${resetUrl}</a>
-            </p>
-
-            <div class="warning-box">
-              <strong>⏰ This link expires in 1 hour</strong> for your security.
-            </div>
-
-            <div class="info-box">
-              <strong>Didn't request this?</strong><br/>
-              If you didn't request a password reset, you can safely ignore this email. Your password won't be changed.
-            </div>
-
-            <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
-              <strong>Security Tips:</strong><br/>
-              • Never share your password with anyone<br/>
-              • Use a unique password for Chttrix<br/>
-              • Enable two-factor authentication when available
-            </p>
-          </div>
-          <div class="footer">
-            <p><strong>Need help?</strong> Contact our support team</p>
-            <p style="margin-top: 10px;">This is an automated message. Please do not reply to this email.</p>
-            © ${new Date().getFullYear()} Chttrix Inc. All rights reserved.
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-        text: `
-Hello ${username},
-
-We received a request to reset your Chttrix password.
-
-Reset your password here: ${resetUrl}
-
-This link expires in 1 hour for your security.
-
-If you didn't request this, you can safely ignore this email.
-
-Best regards,
-The Chttrix Team
-    `
-    };
+  const body = `
+    ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
+    ${p('We received a request to reset your Chttrix account password. Click the button below to choose a new password.')}
+    ${btn('Reset Password', resetUrl)}
+    ${link('Reset your password', resetUrl)}
+    ${alert('<strong>Security note:</strong> This link expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email — your account remains secure.', 'warning')}
+  `;
+  return {
+    subject: `Reset your Chttrix password`,
+    html: shell({
+      icon: '🔑',
+      title: 'Reset Your Password',
+      subtitle: 'A password reset was requested for your account.',
+      preheader: `Hi ${username}, click inside to reset your Chttrix password (expires in 1 hour).`,
+      body,
+    }),
+    text: `Hi ${username},\n\nReset your Chttrix password here: ${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, ignore this email.\n\n— The Chttrix Team`,
+  };
 };
 
-/**
- * Password Set Template (for OAuth users setting password)
- */
+// ─── 3. Password Set (OAuth users) ───────────────────────────────────────────
 const passwordSetTemplate = (username, authProvider) => {
-    const providerName = authProvider.charAt(0).toUpperCase() + authProvider.slice(1);
-
-    return {
-        subject: '🔐 Password Set Successfully - Chttrix',
-        html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f5; }
-          .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 40px; text-align: center; }
-          .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
-          .icon { font-size: 48px; margin-bottom: 10px; }
-          .content { padding: 40px; }
-          .success-box { background: #d1fae5; border-left: 4px solid #10b981; padding: 20px; margin: 25px 0; border-radius: 8px; color: #065f46; }
-          .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0; border-radius: 8px; color: #1e40af; }
-          .footer { background: #fafafa; padding: 30px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-          h1 { margin: 0; font-size: 28px; font-weight: 800; }
-          h2 { color: #1f2937; margin-top: 0; font-size: 20px; }
-          p { color: #4b5563; margin-bottom: 15px; }
-          ul { color: #4b5563; margin: 15px 0; padding-left: 25px; }
-          li { margin-bottom: 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">Chttrix</div>
-            <div class="icon">✅</div>
-            <h1>Password Set Successfully!</h1>
-          </div>
-          <div class="content">
-            <h2>Hello ${username},</h2>
-            <p>Great news! You've successfully set a password for your Chttrix account.</p>
-            
-            <div class="success-box">
-              <strong>✨ You now have two login options:</strong><br/>
-              <ul style="margin: 10px 0;">
-                <li><strong>${providerName} OAuth</strong> - Your original login method</li>
-                <li><strong>Email + Password</strong> - Your new backup option</li>
-              </ul>
-            </div>
-
-            <div class="info-box">
-              <strong>🔒 Security Reminder:</strong><br/>
-              Your ${providerName} account login remains active and unchanged. The password you just set provides an additional way to access your account if needed.
-            </div>
-
-            <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
-              <strong>Security Best Practices:</strong><br/>
-              • Keep your password secure and don't share it with anyone<br/>
-              • Use a unique password that's different from other services<br/>
-              • Consider enabling two-factor authentication when available<br/>
-              • You can always use ${providerName} to sign in quickly
-            </p>
-
-            <p style="margin-top: 25px;">If you didn't set this password, please contact our support team immediately.</p>
-          </div>
-          <div class="footer">
-            <p><strong>Need help?</strong> Contact our support team</p>
-            <p style="margin-top: 10px;">This is an automated message. Please do not reply to this email.</p>
-            © ${new Date().getFullYear()} Chttrix Inc. All rights reserved.
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-        text: `
-Hello ${username},
-
-Great news! You've successfully set a password for your Chttrix account.
-
-YOU NOW HAVE TWO LOGIN OPTIONS:
-✓ ${providerName} OAuth - Your original login method
-✓ Email + Password - Your new backup option
-
-SECURITY REMINDER:
-Your ${providerName} account login remains active and unchanged. The password you just set provides an additional way to access your account if needed.
-
-Security Best Practices:
-• Keep your password secure and don't share it with anyone
-• Use a unique password that's different from other services
-• Consider enabling two-factor authentication when available
-• You can always use ${providerName} to sign in quickly
-
-If you didn't set this password, please contact our support team immediately.
-
-Best regards,
-The Chttrix Team
-    `
-    };
+  const provider = authProvider
+    ? authProvider.charAt(0).toUpperCase() + authProvider.slice(1)
+    : 'OAuth';
+  const body = `
+    ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
+    ${p(`You've successfully added password login to your Chttrix account. You can now sign in with either your <strong style="color:${T.textPrimary}">${provider}</strong> account or your email and password.`)}
+    ${alert('If you did not set a password on your account, your account may have been accessed without authorisation. Please change your password immediately and contact support.', 'danger')}
+  `;
+  return {
+    subject: `Password login enabled on your Chttrix account`,
+    html: shell({
+      icon: '🔐',
+      title: 'Password Login Enabled',
+      subtitle: `Password login was added to your ${provider} account.`,
+      preheader: `Password login is now enabled on your Chttrix account, ${username}.`,
+      body,
+    }),
+    text: `Hi ${username},\n\nPassword login has been enabled on your Chttrix account (via ${provider}).\n\nIf this wasn't you, please contact support immediately.\n\n— The Chttrix Team`,
+  };
 };
 
-/**
- * Resend Verification Email Template
- */
+// ─── 4. Resend / Account Activation ──────────────────────────────────────────
 const resendVerificationTemplate = (username, verificationUrl) => {
-    return {
-        subject: '📧 Verify Your Email - Chttrix Account Activation',
-        html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f5; }
-          .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 40px; text-align: center; }
-          .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
-          .icon { font-size: 48px; margin-bottom: 10px; }
-          .content { padding: 40px; }
-          .urgent-box { background: #fef3c7; border: 2px solid #f59e0b; padding: 20px; margin: 25px 0; border-radius: 12px; text-align: center; }
-          .urgent-text { font-size: 18px; font-weight: bold; color: #92400e; margin-bottom: 15px; }
-          .button { display: inline-block; padding: 16px 32px; background: #f59e0b; color: white; text-decoration: none; border-radius: 12px; font-weight: bold; margin: 20px 0; transition: background 0.3s; }
-          .button:hover { background: #d97706; }
-          .info-box { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0; border-radius: 8px; color: #1e40af; }
-          .footer { background: #fafafa; padding: 30px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-          h1 { margin: 0; font-size: 28px; font-weight: 800; }
-          h2 { color: #1f2937; margin-top: 0; font-size: 20px; }
-          p { color: #4b5563; margin-bottom: 15px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">Chttrix</div>
-            <div class="icon">📧</div>
-            <h1>Email Verification Required</h1>
-          </div>
-          <div class="content">
-            <h2>Hello ${username},</h2>
-            <p>You attempted to login, but your account isn't verified yet. To access your Chttrix account, please verify your email address.</p>
-            
-            <div class="urgent-box">
-              <div class="urgent-text">⚠️ Action Required</div>
-              <p style="margin: 0; color: #92400e;">Your account is almost ready! Just one click to activate it.</p>
-            </div>
-
-            <center>
-              <a href="${verificationUrl}" class="button">Verify Email Address →</a>
-            </center>
-            
-            <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280;">
-              Or copy and paste this link: <br/>
-              <a href="${verificationUrl}" style="color: #f59e0b; word-break: break-all;">${verificationUrl}</a>
-            </p>
-
-            <div class="info-box">
-              <strong>Why verify?</strong><br/>
-              Email verification helps us ensure account security and allows you to recover your account if needed.
-            </div>
-
-            <p style="margin-top: 30px; font-size: 14px; color: #6b7280;">
-              <strong>Didn't sign up?</strong><br/>
-              If you didn't create a Chttrix account, you can safely ignore this email.
-            </p>
-          </div>
-          <div class="footer">
-            <p><strong>Need help?</strong> Contact our support team</p>
-            <p style="margin-top: 10px;">This is an automated message. Please do not reply to this email.</p>
-            © ${new Date().getFullYear()} Chttrix Inc. All rights reserved.
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-        text: `
-Hello ${username},
-
-You attempted to login, but your account isn't verified yet.
-
-ACTION REQUIRED:
-To access your Chttrix account, please verify your email address.
-
-Verify your email here: ${verificationUrl}
-
-Why verify?
-Email verification helps us ensure account security and allows you to recover your account if needed.
-
-Didn't sign up?
-If you didn't create a Chttrix account, you can safely ignore this email.
-
-Best regards,
-The Chttrix Team
-    `
-    };
+  const body = `
+    ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
+    ${p('Your Chttrix account is almost ready! Click the button below to verify your email and activate your account.')}
+    ${btn('Verify Email Address', verificationUrl)}
+    ${link('Verify your email', verificationUrl)}
+    ${alert('This verification link expires in <strong>24 hours</strong>. If you did not create a Chttrix account, you can safely ignore this email.', 'info')}
+  `;
+  return {
+    subject: `Verify your Chttrix email address`,
+    html: shell({
+      icon: '📬',
+      title: 'Verify Your Email',
+      subtitle: 'One click to activate your Chttrix account.',
+      preheader: `Hi ${username}, please verify your email to get started on Chttrix.`,
+      body,
+    }),
+    text: `Hi ${username},\n\nVerify your Chttrix email here: ${verificationUrl}\n\nThis link expires in 24 hours.\n\n— The Chttrix Team`,
+  };
 };
 
 module.exports = {
-    generateVerificationCode,
-    emailVerificationTemplate,
-    passwordResetTemplate,
-    passwordSetTemplate,
-    resendVerificationTemplate
+  generateVerificationCode,
+  emailVerificationTemplate,
+  passwordResetTemplate,
+  passwordSetTemplate,
+  resendVerificationTemplate,
 };

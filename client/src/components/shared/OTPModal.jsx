@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import { X, RefreshCw, CheckCircle, AlertCircle, Mail, Phone } from 'lucide-react';
 
 const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -34,32 +34,25 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
             setTimeLeft(300);
             setError('');
             setSuccess(false);
-            // Auto-focus first input
             setTimeout(() => inputRefs.current[0]?.focus(), 100);
         }
     }, [isOpen]);
 
     const handleChange = (index, value) => {
-        // Only allow digits
         if (value && !/^\d$/.test(value)) return;
-
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
         setError('');
-
-        // Auto-focus next input
         if (value && index < 5) {
             inputRefs.current[index + 1]?.focus();
         }
     };
 
     const handleKeyDown = (index, e) => {
-        // Handle backspace
         if (e.key === 'Backspace' && !otp[index] && index > 0) {
             inputRefs.current[index - 1]?.focus();
         }
-        // Handle paste
         if (e.key === 'v' && (e.ctrlKey || e.metaKey)) {
             e.preventDefault();
             navigator.clipboard.readText().then((text) => {
@@ -78,16 +71,12 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
             setError('Please enter all 6 digits');
             return;
         }
-
         setIsVerifying(true);
         setError('');
-
         try {
             await onVerify(otpString);
             setSuccess(true);
-            setTimeout(() => {
-                onClose();
-            }, 1500);
+            setTimeout(() => { onClose(); }, 1500);
         } catch (err) {
             setError(err.message || 'Invalid OTP. Please try again.');
             setOtp(['', '', '', '', '', '']);
@@ -100,7 +89,6 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
     const handleResend = async () => {
         setIsResending(true);
         setError('');
-
         try {
             await onResend();
             setOtp(['', '', '', '', '', '']);
@@ -119,158 +107,245 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const timerPercent = Math.round((timeLeft / 300) * 100);
+
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fadeIn">
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '16px', fontFamily: 'Inter, system-ui, sans-serif',
+            animation: 'otpFadeIn 0.2s ease-out',
+        }}>
             {/* Backdrop */}
             <div
-                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+                style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
                 onClick={!success ? onClose : undefined}
             />
 
-            {/* Modal */}
-            <div className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 p-8 animate-slideUp">
-                {/* Close Button */}
-                {!success && (
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    >
-                        <X size={20} className="text-gray-500 dark:text-gray-400" />
-                    </button>
-                )}
+            {/* Modal card */}
+            <div style={{
+                position: 'relative', width: '100%', maxWidth: '400px',
+                background: '#111', border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
+                animation: 'otpSlideUp 0.28s cubic-bezier(.22,1,.36,1)',
+                overflow: 'hidden',
+            }}>
 
                 {!success ? (
                     <>
-                        {/* Header */}
-                        <div className="text-center mb-6">
-                            <div className="w-16 h-16 mx-auto mb-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-full flex items-center justify-center">
-                                <svg className="w-8 h-8 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                </svg>
+                        {/* Header bar */}
+                        <div style={{
+                            padding: '20px 24px 18px',
+                            borderBottom: '1px solid rgba(255,255,255,0.06)',
+                            background: 'rgba(255,255,255,0.02)',
+                            display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                {/* Icon badge */}
+                                <div style={{
+                                    width: '38px', height: '38px', background: 'rgba(184,149,106,0.12)',
+                                    border: '1px solid rgba(184,149,106,0.25)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                                }}>
+                                    {targetType === 'email'
+                                        ? <Mail size={17} style={{ color: '#b8956a' }} />
+                                        : <Phone size={17} style={{ color: '#b8956a' }} />
+                                    }
+                                </div>
+
+                                <div>
+                                    <h2 style={{ fontSize: '14px', fontWeight: 700, color: '#e4e4e4', margin: 0, letterSpacing: '-0.01em' }}>
+                                        Verify {targetType === 'email' ? 'Email Address' : 'Phone Number'}
+                                    </h2>
+                                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.4)', margin: '3px 0 0', lineHeight: 1.4 }}>
+                                        6-digit code sent to{' '}
+                                        <span style={{ color: '#b8956a', fontWeight: 600 }}>{target}</span>
+                                    </p>
+                                </div>
                             </div>
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                                Verify {targetType === 'email' ? 'Email' : 'Phone'}
-                            </h2>
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
-                                Enter the 6-digit code sent to
-                            </p>
-                            <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-1">
-                                {target}
-                            </p>
+
+                            <button
+                                onClick={onClose}
+                                style={{
+                                    width: '28px', height: '28px', display: 'flex', alignItems: 'center',
+                                    justifyContent: 'center', background: 'none', border: 'none',
+                                    color: 'rgba(228,228,228,0.3)', cursor: 'pointer', flexShrink: 0,
+                                    transition: 'color 150ms ease',
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.3)'}
+                            >
+                                <X size={16} />
+                            </button>
                         </div>
 
-                        {/* OTP Inputs */}
-                        <div className="flex gap-2 justify-center mb-6">
-                            {otp.map((digit, index) => (
-                                <input
-                                    key={index}
-                                    ref={(el) => (inputRefs.current[index] = el)}
-                                    type="text"
-                                    inputMode="numeric"
-                                    maxLength={1}
-                                    value={digit}
-                                    onChange={(e) => handleChange(index, e.target.value)}
-                                    onKeyDown={(e) => handleKeyDown(index, e)}
-                                    className={`w-12 h-14 text-center text-2xl font-bold rounded-xl border-2 ${error
-                                            ? 'border-red-500 bg-red-50 dark:bg-red-900/20'
-                                            : 'border-gray-300 dark:border-gray-700 focus:border-indigo-500 dark:focus:border-indigo-400'
-                                        } bg-white dark:bg-slate-800 text-gray-900 dark:text-white outline-none transition-all`}
-                                />
-                            ))}
-                        </div>
-
-                        {/* Error Message */}
-                        {error && (
-                            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                                <AlertCircle size={16} />
-                                <span>{error}</span>
+                        {/* Body */}
+                        <div style={{ padding: '28px 24px 24px' }}>
+                            {/* OTP digit inputs */}
+                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
+                                {otp.map((digit, index) => (
+                                    <input
+                                        key={index}
+                                        ref={(el) => (inputRefs.current[index] = el)}
+                                        type="text"
+                                        inputMode="numeric"
+                                        maxLength={1}
+                                        value={digit}
+                                        onChange={(e) => handleChange(index, e.target.value)}
+                                        onKeyDown={(e) => handleKeyDown(index, e)}
+                                        style={{
+                                            width: '46px', height: '54px',
+                                            textAlign: 'center', fontSize: '22px', fontWeight: 700,
+                                            background: digit ? 'rgba(184,149,106,0.08)' : 'rgba(255,255,255,0.04)',
+                                            border: `1px solid ${error
+                                                ? 'rgba(239,68,68,0.5)'
+                                                : digit ? 'rgba(184,149,106,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                                            color: '#e4e4e4',
+                                            outline: 'none',
+                                            fontFamily: 'Inter, system-ui, sans-serif',
+                                            transition: 'border-color 150ms ease, background 150ms ease',
+                                            cursor: 'text',
+                                        }}
+                                        onFocus={e => {
+                                            if (!error) e.target.style.borderColor = 'rgba(184,149,106,0.6)';
+                                            e.target.style.background = 'rgba(184,149,106,0.06)';
+                                        }}
+                                        onBlur={e => {
+                                            if (!digit) {
+                                                e.target.style.borderColor = error ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.1)';
+                                                e.target.style.background = 'rgba(255,255,255,0.04)';
+                                            }
+                                        }}
+                                    />
+                                ))}
                             </div>
-                        )}
 
-                        {/* Timer */}
-                        <div className="text-center mb-6">
-                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {/* Error */}
+                            {error && (
+                                <div style={{
+                                    marginBottom: '16px', padding: '10px 14px',
+                                    background: 'rgba(239,68,68,0.06)',
+                                    border: '1px solid rgba(239,68,68,0.2)',
+                                    display: 'flex', alignItems: 'center', gap: '8px',
+                                    color: '#f87171', fontSize: '12px',
+                                }}>
+                                    <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                                    <span>{error}</span>
+                                </div>
+                            )}
+
+                            {/* Timer row */}
+                            <div style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                marginBottom: '20px',
+                            }}>
+                                <div style={{ flex: 1, marginRight: '12px' }}>
+                                    {/* Progress bar */}
+                                    <div style={{ height: '2px', background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                                        <div style={{
+                                            height: '100%',
+                                            width: `${timerPercent}%`,
+                                            background: timeLeft > 60 ? '#b8956a' : '#f87171',
+                                            transition: 'width 1s linear, background 0.5s ease',
+                                        }} />
+                                    </div>
+                                </div>
+                                <span style={{
+                                    fontSize: '12px', fontWeight: 600, flexShrink: 0,
+                                    color: timeLeft > 60 ? '#b8956a' : '#f87171',
+                                    fontVariantNumeric: 'tabular-nums',
+                                }}>
+                                    {timeLeft > 0 ? formatTime(timeLeft) : 'Expired'}
+                                </span>
+                            </div>
+
+                            {/* Verify button */}
+                            <button
+                                onClick={handleVerify}
+                                disabled={otp.join('').length !== 6 || isVerifying}
+                                style={{
+                                    width: '100%', padding: '12px',
+                                    background: otp.join('').length === 6 && !isVerifying ? '#b8956a' : 'rgba(184,149,106,0.2)',
+                                    border: 'none',
+                                    color: otp.join('').length === 6 && !isVerifying ? '#0c0c0c' : 'rgba(228,228,228,0.3)',
+                                    fontSize: '13px', fontWeight: 700, cursor: otp.join('').length !== 6 || isVerifying ? 'not-allowed' : 'pointer',
+                                    fontFamily: 'inherit', transition: 'opacity 150ms ease, background 150ms ease',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px',
+                                    marginBottom: '10px',
+                                }}
+                                onMouseEnter={e => { if (otp.join('').length === 6 && !isVerifying) e.currentTarget.style.opacity = '0.88'; }}
+                                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                            >
+                                {isVerifying ? (
+                                    <><RefreshCw size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> Verifying…</>
+                                ) : 'Verify Code'}
+                            </button>
+
+                            {/* Resend */}
+                            <div style={{ textAlign: 'center' }}>
                                 {timeLeft > 0 ? (
-                                    <>
-                                        Code expires in{' '}
-                                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                                            {formatTime(timeLeft)}
-                                        </span>
-                                    </>
+                                    <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', margin: 0 }}>
+                                        Didn't receive it? Resend available in{' '}
+                                        <span style={{ color: '#b8956a', fontWeight: 600 }}>{formatTime(timeLeft)}</span>
+                                    </p>
                                 ) : (
-                                    <span className="text-red-600 dark:text-red-400 font-semibold">
-                                        Code expired
-                                    </span>
+                                    <button
+                                        onClick={handleResend}
+                                        disabled={isResending}
+                                        style={{
+                                            background: 'none', border: 'none', fontSize: '12px', fontWeight: 600,
+                                            color: isResending ? 'rgba(228,228,228,0.3)' : '#b8956a',
+                                            cursor: isResending ? 'not-allowed' : 'pointer',
+                                            fontFamily: 'inherit', transition: 'opacity 150ms ease',
+                                            display: 'inline-flex', alignItems: 'center', gap: '5px',
+                                        }}
+                                        onMouseEnter={e => { if (!isResending) e.currentTarget.style.opacity = '0.75'; }}
+                                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                                    >
+                                        {isResending
+                                            ? <><RefreshCw size={12} style={{ animation: 'spin 0.8s linear infinite' }} /> Resending…</>
+                                            : 'Resend Code →'
+                                        }
+                                    </button>
                                 )}
-                            </p>
+                            </div>
                         </div>
-
-                        {/* Verify Button */}
-                        <button
-                            onClick={handleVerify}
-                            disabled={otp.join('').length !== 6 || isVerifying}
-                            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 text-white font-bold rounded-xl transition-all disabled:cursor-not-allowed mb-4"
-                        >
-                            {isVerifying ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <RefreshCw size={18} className="animate-spin" />
-                                    Verifying...
-                                </span>
-                            ) : (
-                                'Verify Code'
-                            )}
-                        </button>
-
-                        {/* Resend Button */}
-                        <button
-                            onClick={handleResend}
-                            disabled={timeLeft > 0 || isResending}
-                            className="w-full py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 disabled:text-gray-400 dark:disabled:text-gray-600 font-semibold disabled:cursor-not-allowed transition-colors"
-                        >
-                            {isResending ? (
-                                <span className="flex items-center justify-center gap-2">
-                                    <RefreshCw size={16} className="animate-spin" />
-                                    Resending...
-                                </span>
-                            ) : (
-                                `Didn't receive the code? Resend`
-                            )}
-                        </button>
                     </>
                 ) : (
-                    /* Success State */
-                    <div className="text-center py-8">
-                        <div className="w-20 h-20 mx-auto mb-4 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-                            <CheckCircle size={40} className="text-green-600 dark:text-green-400" />
+                    /* Success state */
+                    <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                        <div style={{
+                            width: '52px', height: '52px', margin: '0 auto 16px',
+                            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                            <CheckCircle size={26} style={{ color: '#4ade80' }} />
                         </div>
-                        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                            Verified Successfully!
+                        <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#e4e4e4', margin: '0 0 6px', letterSpacing: '-0.01em' }}>
+                            Verified Successfully
                         </h2>
-                        <p className="text-gray-600 dark:text-gray-400">
-                            Your {targetType} has been verified
+                        <p style={{ fontSize: '12px', color: 'rgba(228,228,228,0.4)', margin: 0 }}>
+                            Your {targetType === 'email' ? 'email address' : 'phone number'} has been confirmed.
                         </p>
                     </div>
                 )}
             </div>
 
             <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        @keyframes slideUp {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
-        }
-        .animate-slideUp {
-          animation: slideUp 0.3s ease-out;
-        }
-      `}</style>
+                @keyframes otpFadeIn {
+                    from { opacity: 0; }
+                    to   { opacity: 1; }
+                }
+                @keyframes otpSlideUp {
+                    from { transform: translateY(16px); opacity: 0; }
+                    to   { transform: translateY(0);    opacity: 1; }
+                }
+                @keyframes spin {
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </div>
     );
 };

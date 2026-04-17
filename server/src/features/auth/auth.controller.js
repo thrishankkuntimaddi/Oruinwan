@@ -13,6 +13,7 @@ const {
   verifyEmailTemplate,
   reactivateAccountTemplate,
   emailVerificationTemplate,
+  generateVerificationCode,
 } = require('../../../utils/emailTemplates');
 const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
@@ -1555,7 +1556,6 @@ exports.revokeOtherSessions = async (req, res) => {
 // ----------------------------------------------------
 // EMAIL MANAGEMENT
 // ----------------------------------------------------
-const { generateVerificationCode, emailVerificationTemplate } = require("../../../utils/emailTemplates");
 
 // Add new email
 exports.addEmail = async (req, res) => {

@@ -1,94 +1,133 @@
 // server/utils/emailTemplates/workspace.js
-// Workspace collaboration email templates
+// Workspace collaboration email templates — Chttrix dark theme
 
-/**
- * Workspace Invitation Template
- */
+const YEAR = new Date().getFullYear();
+const APP  = 'Chttrix';
+
+const T = {
+  bgOuter:     '#060606',
+  bgCard:      '#111111',
+  bgHeader:    '#0c0c0c',
+  bgSection:   '#0a0a0a',
+  accent:      '#b8956a',
+  accentDark:  '#8a6a4a',
+  textPrimary: '#e4e4e4',
+  textSub:     '#9a9a9a',
+  textMuted:   '#5a5a5a',
+  border:      '#1e1e1e',
+  borderAccent:'rgba(184,149,106,0.35)',
+};
+
+function shell({ icon, title, subtitle, body, preheader = '' }) {
+  return `<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="color-scheme" content="dark">
+  <meta name="supported-color-schemes" content="dark">
+  <title>${title}</title>
+  <style>@media only screen and (max-width:600px){.ec{width:100%!important;}.ep{padding:24px 18px!important;}}</style>
+</head>
+<body style="margin:0;padding:0;background-color:${T.bgOuter};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,Helvetica,Arial,sans-serif">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:${T.bgOuter};line-height:1px">${preheader || title}&zwnj;&nbsp;&zwnj;&nbsp;</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${T.bgOuter}">
+    <tr><td align="center" style="padding:40px 16px 60px">
+      <table class="ec" role="presentation" width="580" cellpadding="0" cellspacing="0" border="0"
+        style="max-width:580px;width:100%;background-color:${T.bgCard};border:1px solid ${T.border}">
+
+        <tr>
+          <td bgcolor="${T.bgHeader}" style="padding:18px 32px;border-bottom:1px solid ${T.border}">
+            <span style="font-size:17px;font-weight:800;color:${T.textPrimary};letter-spacing:-0.03em">${APP}</span>
+            <span style="font-size:10px;font-weight:600;color:${T.accent};letter-spacing:0.2em;text-transform:uppercase;margin-left:10px">AI Collaboration</span>
+          </td>
+        </tr>
+        <tr><td height="2" bgcolor="${T.accent}" style="font-size:0;line-height:0">&nbsp;</td></tr>
+        <tr>
+          <td class="ep" style="padding:40px 32px 24px;border-bottom:1px solid ${T.border}">
+            <p style="margin:0 0 12px;font-size:38px;line-height:1">${icon}</p>
+            <h1 style="margin:0 0 10px;font-size:22px;font-weight:700;color:${T.textPrimary};letter-spacing:-0.02em;line-height:1.3">${title}</h1>
+            <p style="margin:0;font-size:14px;color:${T.textSub};line-height:1.6">${subtitle}</p>
+          </td>
+        </tr>
+        <tr><td class="ep" style="padding:32px">${body}</td></tr>
+        <tr>
+          <td bgcolor="${T.bgHeader}" style="padding:18px 32px;border-top:1px solid ${T.border}">
+            <p style="margin:0 0 4px;font-size:12px;color:${T.textMuted};line-height:1.5">Automated message from ${APP}. Please do not reply.</p>
+            <p style="margin:0;font-size:12px;color:#333">&copy; ${YEAR} ${APP} Inc. All rights reserved.</p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}
+
+function btn(text, url) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0">
+  <tr><td style="background-color:${T.accent};padding:14px 32px">
+    <a href="${url}" style="font-size:14px;font-weight:700;color:#000;text-decoration:none;letter-spacing:0.03em;white-space:nowrap">${text} &rarr;</a>
+  </td></tr>
+</table>`;
+}
+
+function infoCard(rows) {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background-color:${T.bgSection};border:1px solid ${T.border};margin:20px 0">
+  <tr><td style="padding:16px 20px">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>
+  </td></tr>
+</table>`;
+}
+
+function row(label, value) {
+  return `<tr>
+  <td style="padding:10px 0;border-bottom:1px solid ${T.border};font-size:13px;color:${T.textSub};width:140px;vertical-align:top">${label}</td>
+  <td style="padding:10px 0;border-bottom:1px solid ${T.border};font-size:13px;color:${T.textPrimary};font-weight:500">${value}</td>
+</tr>`;
+}
+
+function p(text, { size = '14px', color = T.textSub, mt = '0', mb = '16px' } = {}) {
+  return `<p style="margin:${mt} 0 ${mb};font-size:${size};color:${color};line-height:1.7">${text}</p>`;
+}
+
+function link(text, url) {
+  return `<p style="margin:0;font-size:13px;color:${T.textMuted};word-break:break-all">
+  Or copy: <a href="${url}" style="color:${T.accent};text-decoration:none">${url}</a>
+</p>`;
+}
+
+// ─── Workspace Invitation ─────────────────────────────────────────────────────
 const workspaceInvitationTemplate = (workspaceName, inviterName, inviteUrl, role, expiryDays) => {
-    return {
-        subject: `You're invited to join ${workspaceName} on Chttrix`,
-        html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f5; }
-          .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-          .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 40px; text-align: center; }
-          .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; margin-bottom: 10px; }
-          .icon { font-size: 48px; margin-bottom: 10px; }
-          .content { padding: 40px; }
-          .workspace-card { background: #f9fafb; border: 2px solid #e5e7eb; padding: 25px; margin: 25px 0; border-radius: 12px; text-align: center; }
-          .workspace-name { font-size: 24px; font-weight: bold; color: #1f2937; margin-bottom: 10px; }
-          .role-badge { display: inline-block; background: #dbeafe; color: #1e40af; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; text-transform: uppercase; }
-          .button { display: inline-block; padding: 16px 32px; background: #4f46e5; color: white; text-decoration: none; border-radius: 12px; font-weight: bold; margin: 20px 0; transition: background 0.3s; }
-          .button:hover { background: #4338ca; }
-          .inviter-info { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0; border-radius: 8px; }
-          .footer { background: #fafafa; padding: 30px; text-align: center; font-size: 13px; color: #6b7280; border-top: 1px solid #e5e7eb; }
-          h1 { margin: 0; font-size: 28px; font-weight: 800; }
-          p { color: #4b5563; margin-bottom: 15px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <div class="logo">Chttrix</div>
-            <div class="icon">🎉</div>
-            <h1>You're Invited!</h1>
-          </div>
-          <div class="content">
-            <p>You've been invited to collaborate on Chttrix!</p>
-            
-            <div class="workspace-card">
-              <div class="workspace-name">${workspaceName}</div>
-              <span class="role-badge">Role: ${role || 'Member'}</span>
-            </div>
+  const body = `
+    ${p('You\'ve been invited to collaborate on Chttrix!')}
+    ${infoCard(
+      row('Workspace', `<strong style="color:${T.textPrimary}">${workspaceName}</strong>`) +
+      row('Invited by', inviterName) +
+      row('Your role', `<span style="color:${T.accent};font-weight:600">${role || 'Member'}</span>`)
+    )}
+    ${p('Join this workspace to start collaborating with your team through channels, direct messages, tasks, and shared resources.')}
+    ${btn('Join Workspace', inviteUrl)}
+    ${link('Join workspace', inviteUrl)}
+    ${p(`This invitation expires in <strong style="color:${T.textPrimary}">${expiryDays || 7} days</strong> and can only be used once.`, { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
+  `;
 
-            <div class="inviter-info">
-              <strong>👤 Invited by:</strong> ${inviterName}
-            </div>
-
-            <p>Join this workspace to start collaborating with your team through channels, direct messages, and shared resources.</p>
-            
-            <center>
-              <a href="${inviteUrl}" class="button">Join Workspace →</a>
-            </center>
-            
-            <p style="text-align: center; margin-top: 20px; font-size: 14px; color: #6b7280;">
-              Or copy and paste this link: <br/>
-              <a href="${inviteUrl}" style="color: #4f46e5; word-break: break-all;">${inviteUrl}</a>
-            </p>
-
-            <p style="margin-top: 30px; font-size: 13px; color: #9ca3af; text-align: center;">
-              This invitation link expires in ${expiryDays || 7} days and can only be used once.
-            </p>
-          </div>
-          <div class="footer">
-            <p><strong>What is Chttrix?</strong></p>
-            <p>Chttrix is a modern collaboration platform that brings teams together with powerful communication tools.</p>
-            <p style="margin-top: 20px;">This is an automated message. Please do not reply to this email.</p>
-            © ${new Date().getFullYear()} Chttrix Inc. All rights reserved.
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-        text: `
-You've been invited to join ${workspaceName} on Chttrix!
-
-Invited by: ${inviterName}
-Role: ${role || 'Member'}
-
-Join here: ${inviteUrl}
-
-This invitation link expires in ${expiryDays || 7} days and can only be used once.
-
-Best regards,
-The Chttrix Team
-    `
-    };
+  return {
+    subject: `You're invited to join "${workspaceName}" on Chttrix`,
+    html: shell({
+      icon: '💬',
+      title: `Join ${workspaceName}`,
+      subtitle: `${inviterName} has invited you to collaborate on Chttrix.`,
+      preheader: `${inviterName} invited you to join ${workspaceName} on Chttrix.`,
+      body,
+    }),
+    text: `You've been invited to join ${workspaceName} on Chttrix!\n\nInvited by: ${inviterName}\nRole: ${role || 'Member'}\n\nJoin here: ${inviteUrl}\n\nThis link expires in ${expiryDays || 7} days.\n\n— The Chttrix Team`,
+  };
 };
 
 module.exports = {
-    workspaceInvitationTemplate
+  workspaceInvitationTemplate,
 };
