@@ -16,8 +16,8 @@ function initials(user) {
 }
 
 const T = {
-  bg: '#0c0c0c', bar: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.07)',
-  text: '#e4e4e4', muted: 'rgba(228,228,228,0.35)', accent: '#b8956a',
+  bg: 'var(--bg-base)', bar: 'var(--bg-hover)', border: 'var(--border-subtle)',
+  text: 'var(--text-primary)', muted: 'var(--text-muted)', accent: '#b8956a',
   font: 'Inter, system-ui, sans-serif',
 };
 
@@ -45,7 +45,7 @@ function WorkloadRow({ item, maxCount }) {
   return (
     <div
       style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderBottom: `1px solid ${T.border}`, transition: 'background 150ms ease', fontFamily: T.font, background: 'transparent', cursor: 'default' }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
     >
       <div
@@ -140,7 +140,7 @@ export default function WorkloadPanel({ workspaceId }) {
 
       {/* Legend */}
       {!loading && workload.length > 0 && (
-        <div style={{ flexShrink: 0, padding: '6px 16px', background: 'rgba(255,255,255,0.02)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ flexShrink: 0, padding: '6px 16px', background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
           {[
             { color: T.accent, label: 'Normal (≤50%)' },
             { color: '#f97316', label: 'Heavy (51-75%)' },
