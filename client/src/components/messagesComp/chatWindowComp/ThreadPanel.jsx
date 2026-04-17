@@ -447,11 +447,11 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                             backgroundColor: 'var(--bg-surface)',
                             flexShrink: 0,
                         }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>Thread</h3>
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>#{parentMessageState?.channelId?.name || 'discussion'}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1, overflow: 'hidden' }}>
+                                <h3 style={{ margin: 0, fontWeight: 700, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT, flexShrink: 0 }}>Thread</h3>
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{parentMessageState?.channelId?.name || 'discussion'}</span>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                                 {/* Follow / Unfollow toggle */}
                                 <button
                                     onClick={toggleFollow}
