@@ -890,6 +890,30 @@ Chttrix uses a custom design system called **Monolith Flow** — a dark-first, b
 
 ---
 
+## 💬 A Note from the Builder
+
+> *Before you fork, star, or scroll past — I want to be honest with you.*
+
+I built Chttrix **alone, for 5 months straight.**
+
+No co-founder. No team. No one to rubber-duck debug with at 2am. Just me, a blank editor, and an idea that felt enormous every single morning and impossible every single night.
+
+Somewhere along the way, I lost patience with it. Then I lost hope. I genuinely don't know if this project is something great that I couldn't see clearly anymore, or if I built in the wrong direction, or if I just burned out too hard to tell the difference. Maybe all three. Maybe none. I honestly don't know what went wrong — or if anything went wrong at all.
+
+What I do know is this: **I can't keep carrying it alone.**
+
+So I'm making it public. Not because it's finished. Not because it's perfect. But because maybe the right eyes will see something I've stopped being able to see — a gap worth filling, a feature worth building, an architecture worth extending, or a bug worth fixing.
+
+If that's you — **let's build it together.**
+
+And if you think it's a waste of time, tell me that too. Honest feedback from strangers beats quiet doubt from a solo dev every single time.
+
+Rate it. Break it. Improve it. Fork it. Whatever you do — **do it with me, not without me.**
+
+— *Thrishank*
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Here's how to get started:
