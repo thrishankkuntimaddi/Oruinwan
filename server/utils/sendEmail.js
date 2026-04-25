@@ -1,9 +1,8 @@
-// server/utils/sendEmail.js
 const axios = require("axios");
 
 async function sendEmail({ to, subject, text, html }) {
 
-  // Check if Brevo API key is configured
+  
   if (!process.env.BREVO_API_KEY) {
     console.error("❌ BREVO_API_KEY not configured");
     throw new Error("BREVO_API_KEY not configured");
@@ -26,7 +25,7 @@ async function sendEmail({ to, subject, text, html }) {
           "api-key": process.env.BREVO_API_KEY,
           "Content-Type": "application/json",
         },
-        timeout: 5000, // Prevent hanging
+        timeout: 5000, 
       }
     );
 

@@ -1,11 +1,3 @@
-/**
- * NotificationsContext.jsx
- *
- * Provides real-time notification data across the entire app.
- * - Fetches from REST API on mount + workspace change
- * - Subscribes to socket `notification:new` via SocketContext's addNotificationListener
- * - Exposes markRead, markAllRead, dismiss, clearAll, refresh, loadMore
- */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useSocket } from './SocketContext';
@@ -16,7 +8,7 @@ import { useDesktopNotification } from '../hooks/useDesktopNotification';
 const NotificationsContext = createContext(null);
 
 export function useNotifications() {
-    return useContext(NotificationsContext); // returns null when outside provider — safe
+    return useContext(NotificationsContext); 
 }
 
 export function NotificationsProvider({ children }) {
@@ -33,7 +25,7 @@ export function NotificationsProvider({ children }) {
 
     const workspaceId = activeWorkspace?.id;
 
-    // ── Fetch from REST ────────────────────────────────────────────────
+    
     const fetchNotifications = useCallback(async (pg = 1, append = false) => {
         if (!workspaceId || !accessToken) return;
         setLoading(true);
@@ -52,30 +44,30 @@ export function NotificationsProvider({ children }) {
         }
     }, [workspaceId, accessToken]);
 
-    // Refresh on workspace change
+    
     useEffect(() => {
         setNotifications([]);
         setPage(1);
         fetchNotifications(1, false);
-    }, [workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [workspaceId]); 
 
-    // Load next page
+    
     const loadMore = useCallback(() => {
         if (!hasMore || loading) return;
         fetchNotifications(page + 1, true);
     }, [hasMore, loading, page, fetchNotifications]);
 
-    // ── Real-time: subscribe via SocketContext's listener mechanism ────
+    
     useEffect(() => {
         const unsubscribe = addNotificationListener((event, payload) => {
             if (event !== 'notification:new') return;
             const { notification } = payload || {};
             if (!notification) return;
-            // Only inject if it belongs to the current workspace
+            
             if (String(notification.workspaceId) !== String(workspaceId)) return;
             setNotifications(prev => [notification, ...prev]);
             setUnreadCount(c => c + 1);
-            // Fire desktop notification when app is in background
+            
             triggerDesktopNotification(
                 notification.title,
                 notification.body || 'Chttrix'
@@ -85,7 +77,7 @@ export function NotificationsProvider({ children }) {
         return unsubscribe;
     }, [addNotificationListener, workspaceId, triggerDesktopNotification]);
 
-    // ── Mutations ──────────────────────────────────────────────────────
+    
     const markRead = useCallback(async (notifId) => {
         if (!notifId) return;
         try {

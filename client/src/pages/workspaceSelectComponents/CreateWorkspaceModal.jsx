@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Rocket, X, CheckCircle2, ArrowRight, AlertCircle, Zap, Shield, Check } from 'lucide-react';
 
 const s = {
-    // Shared style helpers
+    
     label: { display: 'block', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '8px' },
     input: { width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box', transition: '150ms ease' },
     inputErr: { width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--state-danger)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' },
@@ -33,7 +33,7 @@ const CreateWorkspaceModal = ({
         <div className="fixed inset-0 z-[100] flex items-center justify-center md:p-4" style={{ background: 'rgba(0,0,0,0.75)' }}>
             <div className="fixed inset-0 flex flex-col md:relative md:inset-auto md:flex-row md:max-w-5xl md:min-h-[580px] md:h-[80vh]" style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden', fontFamily: 'var(--font)', width: '100%' }}>
 
-                {/* Sidebar — desktop only */}
+                {}
                 <div className="hidden md:flex" style={{ width: '220px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', padding: '24px', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
                         <h3 style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)', marginBottom: '24px', marginTop: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -81,10 +81,10 @@ const CreateWorkspaceModal = ({
                     </div>
                 </div>
 
-                {/* Content area */}
+                {}
                 <div className="min-h-0" style={{ flex: 1, display: 'flex', flexDirection: 'column', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
 
-                    {/* Mobile header */}
+                    {}
                     <div className="flex md:hidden" style={{ alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             {createStep > 1 && (
@@ -102,11 +102,11 @@ const CreateWorkspaceModal = ({
                         </button>
                     </div>
 
-                    {/* Scrollable form */}
+                    {}
                     <div className="flex-1 overflow-y-auto pb-20 md:pb-0" style={{ padding: '24px 32px', minHeight: 0 }}>
                         <form id="create-workspace-form" onSubmit={onSubmit} style={{ maxWidth: '640px', margin: '0 auto' }}>
 
-                            {/* Step 1 */}
+                            {}
                             {createStep === 1 && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                     <div>
@@ -162,7 +162,7 @@ const CreateWorkspaceModal = ({
                                 </div>
                             )}
 
-                            {/* Step 2 */}
+                            {}
                             {createStep === 2 && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                     <div>
@@ -231,7 +231,7 @@ const CreateWorkspaceModal = ({
                                 </div>
                             )}
 
-                            {/* Step 3 */}
+                            {}
                             {createStep === 3 && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                     <div>
@@ -285,7 +285,7 @@ const CreateWorkspaceModal = ({
                                 </div>
                             )}
 
-                            {/* Step 4 */}
+                            {}
                             {createStep === 4 && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                                     <div>
@@ -324,7 +324,7 @@ const CreateWorkspaceModal = ({
                         </form>
                     </div>
 
-                    {/* Footer */}
+                    {}
                     <div className="absolute bottom-0 left-0 right-0 md:relative md:bottom-auto" style={{ padding: '12px 24px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-base)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
 
                         {createStep > 1 ? (

@@ -1,9 +1,7 @@
-// client/src/components/files/FilePreviewModal.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, Download, MessageCircle, Tag, Clock, User, ChevronRight, Send, ExternalLink, FileText, Film, Image as ImageIcon, File } from 'lucide-react';
 import { useFiles } from '../../hooks/useFiles';
 
-/* ─── helpers ─────────────────────────────────────────────────────────────── */
 function mimeCategory(mime = '') {
     if (mime.startsWith('image/')) return 'image';
     if (mime === 'application/pdf') return 'pdf';
@@ -31,17 +29,16 @@ function MimeIcon({ mime, size = 28 }) {
     return <File size={size} className="text-gray-400" />;
 }
 
-/* ─── main component ──────────────────────────────────────────────────────── */
 export default function FilePreviewModal({ fileId, onClose }) {
     const { getFile, getComments, addComment } = useFiles();
 
     const [file, setFile] = useState(null);
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
-    const [tab, setTab] = useState('preview'); // 'preview' | 'comments' | 'meta'
+    const [tab, setTab] = useState('preview'); 
     const [loading, setLoading] = useState(true);
 
-    /* load file + comments */
+    
     useEffect(() => {
         if (!fileId) return;
         let active = true;
@@ -59,7 +56,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
         return () => { active = false; };
     }, [fileId, getFile, getComments]);
 
-    /* close on Escape */
+    
     useEffect(() => {
         const handler = (e) => { if (e.key === 'Escape') onClose(); };
         document.addEventListener('keydown', handler);
@@ -73,7 +70,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
         setNewComment('');
     }, [fileId, newComment, addComment]);
 
-    /* ── preview renderer ── */
+    
     const renderPreview = () => {
         if (!file) return null;
         const cat = mimeCategory(file.mimeType);
@@ -99,7 +96,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
         if (cat === 'video') {
             return (
                 <div className="flex h-full items-center justify-center bg-black rounded-xl">
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    {}
                     <video controls src={file.url} className="max-h-full max-w-full" />
                 </div>
             );
@@ -108,13 +105,13 @@ export default function FilePreviewModal({ fileId, onClose }) {
         if (cat === 'audio') {
             return (
                 <div className="flex h-full items-center justify-center">
-                    {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                    {}
                     <audio controls src={file.url} className="w-full" />
                 </div>
             );
         }
 
-        /* fallback */
+        
         return (
             <div className="flex flex-col h-full items-center justify-center gap-4 text-center">
                 <MimeIcon mime={file.mimeType} size={56} />
@@ -131,7 +128,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
         );
     };
 
-    /* ── skeleton while loading ── */
+    
     if (loading) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
@@ -166,7 +163,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
         >
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl flex flex-col w-[92vw] max-w-5xl h-[88vh] overflow-hidden animate-scale-in">
 
-                {/* ── header ── */}
+                {}
                 <div className="flex items-center gap-3 px-5 py-3 border-b border-gray-200 dark:border-gray-800 shrink-0">
                     <MimeIcon mime={file.mimeType} size={20} />
                     <div className="flex-1 min-w-0">
@@ -189,7 +186,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
                     </button>
                 </div>
 
-                {/* ── tabs ── */}
+                {}
                 <div className="flex gap-1 px-5 pt-2 border-b border-gray-200 dark:border-gray-800 shrink-0">
                     {tabs.map(t => (
                         <button
@@ -206,15 +203,15 @@ export default function FilePreviewModal({ fileId, onClose }) {
                     ))}
                 </div>
 
-                {/* ── body ── */}
+                {}
                 <div className="flex-1 overflow-hidden p-4">
 
-                    {/* PREVIEW tab */}
+                    {}
                     {tab === 'preview' && (
                         <div className="h-full">{renderPreview()}</div>
                     )}
 
-                    {/* COMMENTS tab */}
+                    {}
                     {tab === 'comments' && (
                         <div className="flex flex-col h-full gap-3">
                             <div className="flex-1 overflow-y-auto space-y-3 pr-1">
@@ -252,7 +249,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
                         </div>
                     )}
 
-                    {/* DETAILS tab */}
+                    {}
                     {tab === 'meta' && (
                         <div className="overflow-y-auto h-full">
                             <dl className="space-y-4 text-sm">

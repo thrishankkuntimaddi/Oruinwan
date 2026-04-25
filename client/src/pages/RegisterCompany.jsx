@@ -5,7 +5,6 @@ import { useTheme } from "../contexts/ThemeContext";
 import OTPModal from "../components/shared/OTPModal";
 import api from '@services/api';
 
-// Import extracted components
 import RegisterLayout from "./register/layout/RegisterLayout";
 import SuccessView from "./register/views/SuccessView";
 import Step1OrganizationForm from "./register/steps/Step1OrganizationForm";
@@ -22,17 +21,17 @@ const RegisterCompany = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    // Password Visibility State
+    
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-    // Verification States
+    
     const [verificationStatus, setVerificationStatus] = useState({
         personalEmail: "idle",
         phone: "idle"
     });
 
-    // Inline Validation States
+    
     const [validationStatus, setValidationStatus] = useState({
         companyName: 'idle',
         companyDomain: 'idle',
@@ -40,7 +39,7 @@ const RegisterCompany = () => {
         phone: 'idle'
     });
 
-    // OTP Modal State
+    
     const [otpModal, setOtpModal] = useState({
         isOpen: false,
         target: '',
@@ -77,7 +76,7 @@ const RegisterCompany = () => {
 
     const currentPhoneCode = PHONE_CODES.find(c => c.code === formData.phoneCode) || PHONE_CODES[0];
 
-    // Debounced validation for company name
+    
     useEffect(() => {
         const timer = setTimeout(async () => {
             if (formData.companyName && formData.companyName.trim().length >= 2) {
@@ -103,7 +102,7 @@ const RegisterCompany = () => {
         return () => clearTimeout(timer);
     }, [formData.companyName]);
 
-    // Debounced validation for company domain
+    
     useEffect(() => {
         const timer = setTimeout(async () => {
             const domain = formData.companyDomain.trim();
@@ -111,14 +110,14 @@ const RegisterCompany = () => {
                 setValidationStatus(prev => ({ ...prev, companyDomain: 'idle' }));
                 return;
             }
-            // Format check first — must be like acme.com / co.uk / startup.io
+            
             const domainRegex = /^(?!-)([a-zA-Z0-9-]{1,63}(?:\.[a-zA-Z0-9-]{1,63})*)\.[a-zA-Z]{2,}$/;
             if (!domainRegex.test(domain)) {
                 setErrors(prev => ({ ...prev, companyDomain: 'Invalid domain format (e.g. acme.com)' }));
                 setValidationStatus(prev => ({ ...prev, companyDomain: 'taken' }));
                 return;
             }
-            // Format is valid — clear any format error and check availability
+            
             setErrors(prev => ({ ...prev, companyDomain: '' }));
             if (domain.length >= 4) {
                 setValidationStatus(prev => ({ ...prev, companyDomain: 'checking' }));
@@ -143,8 +142,7 @@ const RegisterCompany = () => {
         return () => clearTimeout(timer);
     }, [formData.companyDomain]);
 
-
-    // Debounced validation for personal email
+    
     useEffect(() => {
         const timer = setTimeout(async () => {
             if (formData.personalEmail && /\S+@\S+\.\S+/.test(formData.personalEmail)) {
@@ -172,7 +170,7 @@ const RegisterCompany = () => {
         return () => clearTimeout(timer);
     }, [formData.personalEmail, errors.personalEmail]);
 
-    // Debounced validation for phone
+    
     useEffect(() => {
         const timer = setTimeout(async () => {
             const phoneDigits = formData.phone.replace(/\D/g, '');
@@ -217,7 +215,7 @@ const RegisterCompany = () => {
         setFormData(prev => ({ ...prev, documents: file }));
     };
 
-    // Validation Logic
+    
     const validateStep1 = () => {
         const newErrors = {};
         if (!formData.companyName.trim()) newErrors.companyName = "Company Name is required";
@@ -297,7 +295,7 @@ const RegisterCompany = () => {
         setCurrentStep(p => Math.max(p - 1, 1));
     };
 
-    // Verification Handlers
+    
     const handleVerify = async (field) => {
         const target = formData[field];
         if (!target) {
@@ -425,7 +423,7 @@ const RegisterCompany = () => {
         }
     };
 
-    // Render success view
+    
     if (isSuccess) {
         return <SuccessView formData={formData} theme={theme} onNavigate={navigate} />;
     }
@@ -497,7 +495,7 @@ const RegisterCompany = () => {
                 )}
             </RegisterLayout>
 
-            {/* OTP Modal */}
+            {}
             <OTPModal
                 isOpen={otpModal.isOpen}
                 onClose={handleOTPModalClose}

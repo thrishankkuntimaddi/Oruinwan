@@ -10,7 +10,6 @@ import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
 import ScheduleMeetingModal from '../../components/messagesComp/chatWindowComp/modals/ScheduleMeetingModal';
 import { useParams } from 'react-router-dom';
 
-// ── Helpers ────────────────────────────────────────────────────────────────
 function formatTime(seconds) {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -30,7 +29,6 @@ function getInitials(name = '') {
     return name.trim().split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '??';
 }
 
-// ── Participant Video Card ─────────────────────────────────────────────────
 const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
     const color = AVATAR_COLORS[colorIdx % AVATAR_COLORS.length];
     const label = isLocal ? 'You' : (participant.username || participant.userId?.slice(-4) || 'Guest');
@@ -38,22 +36,22 @@ const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
 
     return (
         <div className="relative bg-gradient-to-br from-white/5 to-white/[0.02] rounded-[28px] overflow-hidden border border-white/10 shadow-2xl transition-all duration-300 hover:border-white/20 group aspect-video flex items-center justify-center">
-            {/* Ambient glow */}
+            {}
             <div className={`absolute inset-0 bg-gradient-to-br ${color} opacity-10`} />
 
-            {/* Avatar */}
+            {}
             <div className={`w-24 h-24 rounded-full bg-gradient-to-br ${color} p-[2px] shadow-2xl`}>
                 <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: '#111' }}>
                     <span className="text-3xl font-bold text-white">{getInitials(label)}</span>
                 </div>
             </div>
 
-            {/* Speaking ring */}
+            {}
             {isAudioOn && (
                 <div className="absolute inset-0 border-2 border-emerald-500/40 rounded-[28px] animate-pulse pointer-events-none" />
             )}
 
-            {/* Name label */}
+            {}
             <div className="absolute bottom-4 left-4 flex items-center gap-2">
                 <div className="px-3 py-1.5 bg-black/60 backdrop-blur-xl rounded-xl border border-white/10 flex items-center gap-2 shadow-lg">
                     <span className="text-sm font-semibold text-white tracking-wide">{label}</span>
@@ -69,10 +67,9 @@ const ParticipantCard = ({ participant, isLocal, colorIdx }) => {
     );
 };
 
-// ── Landing / No Huddle Selected View ─────────────────────────────────────
 const LandingView = ({ onStart, onSchedule, starting }) => (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '32px', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
-        {/* Ambient glow */}
+        {}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '30%', left: '20%', width: '40vw', height: '40vw', background: 'rgba(184,149,106,0.04)', borderRadius: '50%', filter: 'blur(100px)' }} />
             <div style={{ position: 'absolute', bottom: '25%', right: '20%', width: '30vw', height: '30vw', background: 'rgba(184,149,106,0.03)', borderRadius: '50%', filter: 'blur(80px)' }} />
@@ -119,7 +116,7 @@ const LandingView = ({ onStart, onSchedule, starting }) => (
                 </button>
             </div>
 
-            {/* Feature Pills */}
+            {}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '36px' }}>
                 {["HD Video", "Screen Share", "Real-time Audio", "Participants List", "In-call Chat"].map(f => (
                     <span key={f} style={{ padding: '4px 12px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', color: 'var(--text-muted)', fontSize: '11px', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -131,7 +128,6 @@ const LandingView = ({ onStart, onSchedule, starting }) => (
     </div>
 );
 
-// ── Active Meeting Room ────────────────────────────────────────────────────
 const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
     onToggleMute, onToggleVideo, onToggleScreen, onLeave }) => {
 
@@ -146,13 +142,13 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
 
     return (
         <div className="h-full w-full flex flex-col text-white overflow-hidden relative" style={{ background: 'var(--bg-base)' }}>
-            {/* Ambient Background — amber tones only */}
+            {}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] rounded-full" style={{ background: 'rgba(184,149,106,0.04)', filter: 'blur(150px)', animation: 'pulse 4s ease-in-out infinite' }} />
                 <div className="absolute bottom-[-20%] right-[-10%] w-[60vw] h-[60vw] rounded-full" style={{ background: 'rgba(184,149,106,0.025)', filter: 'blur(150px)', animation: 'pulse 4s ease-in-out infinite', animationDelay: '1s' }} />
             </div>
 
-            {/* ── Header ── */}
+            {}
             <header className="relative z-10 flex items-center justify-between px-6 py-4">
                 <div className="flex items-center gap-3">
                     <div className="flex items-center gap-3 px-4 py-2 bg-white/5 backdrop-blur-2xl rounded-full border border-white/10 shadow-lg">
@@ -169,7 +165,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                 </div>
 
                 <div className="flex items-center gap-2">
-                    {/* Signal */}
+                    {}
                     <div className="relative group flex items-center justify-center w-9 h-9 bg-white/5 rounded-full border border-white/10 text-emerald-400 cursor-help">
                         <Signal size={15} />
                         <div className="absolute top-11 right-0 w-32 bg-black/90 text-[10px] p-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none border border-white/10 text-center">
@@ -185,7 +181,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                 </div>
             </header>
 
-            {/* ── Participant Grid ── */}
+            {}
             <main className="relative z-10 flex-1 px-6 pb-28 overflow-hidden">
                 {participants.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center gap-4">
@@ -211,10 +207,10 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                 )}
             </main>
 
-            {/* ── Control Dock ── */}
+            {}
             <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
                 <div className="flex items-center gap-2 p-2 px-4 bg-black/40 backdrop-blur-3xl rounded-3xl border border-white/10 shadow-2xl ring-1 ring-white/5 h-18">
-                    {/* Mic */}
+                    {}
                     <button
                         onClick={onToggleMute}
                         className={`w-13 h-13 rounded-2xl flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg ${muted ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
@@ -225,7 +221,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                         {muted ? <MicOff size={20} /> : <Mic size={20} />}
                     </button>
 
-                    {/* Video */}
+                    {}
                     <button
                         onClick={onToggleVideo}
                         className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${isVideoOff ? 'bg-red-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
@@ -236,7 +232,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                         {isVideoOff ? <VideoOff size={20} /> : <Video size={20} />}
                     </button>
 
-                    {/* Screen Share */}
+                    {}
                     <button
                         onClick={onToggleScreen}
                         className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${isScreenSharing ? 'text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'}`}
@@ -246,7 +242,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                         <Monitor size={20} />
                     </button>
 
-                    {/* Raise Hand */}
+                    {}
                     <button
                         onClick={() => setHandRaised(h => !h)}
                         className={`flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${handRaised ? 'bg-yellow-500 text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
@@ -259,7 +255,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
 
                     <div className="w-px h-8 bg-white/10 mx-1" />
 
-                    {/* Chat */}
+                    {}
                     <button
                         onClick={() => setShowChat(c => !c)}
                         className={`relative flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl ${showChat ? 'text-white' : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'}`}
@@ -268,7 +264,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
                         <MessageSquare size={20} />
                     </button>
 
-                    {/* Participants */}
+                    {}
                     <button
                         className="flex items-center justify-center bg-white/10 text-white hover:bg-white/20 border border-white/10 transition-all hover:scale-105 active:scale-95 shadow-lg rounded-2xl relative"
                         style={{ width: 52, height: 52 }}
@@ -284,7 +280,7 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
 
                     <div className="w-px h-8 bg-white/10 mx-1" />
 
-                    {/* Leave */}
+                    {}
                     <button
                         onClick={onLeave}
                         className="flex items-center justify-center bg-red-500 hover:bg-red-600 text-white transition-all hover:scale-105 active:scale-95 shadow-lg shadow-red-500/30 rounded-2xl"
@@ -299,7 +295,6 @@ const ActiveRoom = ({ huddle, participants, muted, isVideoOff, isScreenSharing,
     );
 };
 
-// ── Connecting State ───────────────────────────────────────────────────────
 const ConnectingView = () => (
     <div className="h-full flex flex-col items-center justify-center text-white" style={{ background: 'var(--bg-base)' }}>
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -322,7 +317,6 @@ const ConnectingView = () => (
     </div>
 );
 
-// ── Main Component ─────────────────────────────────────────────────────────
 const Meetings = () => {
     const { showToast } = useToast();
     const { workspaceId } = useParams();
@@ -346,7 +340,7 @@ const Meetings = () => {
     const [isVideoOff, setIsVideoOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-    // When a huddle starts, show connecting state briefly
+    
     useEffect(() => {
         if (active && connecting) {
             const t = setTimeout(() => setConnecting(false), 2000);
@@ -386,10 +380,10 @@ const Meetings = () => {
         }
     }, [createMeeting, showToast]);
 
-    // Show connecting animation briefly
+    
     if (connecting) return <ConnectingView />;
 
-    // Active huddle in this context — show the room
+    
     if (active && selectedHuddle) {
         return (
             <>
@@ -419,7 +413,7 @@ const Meetings = () => {
         );
     }
 
-    // Landing view
+    
     return (
         <>
             <LandingView

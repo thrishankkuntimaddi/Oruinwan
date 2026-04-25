@@ -1,4 +1,3 @@
-// server/src/features/ai/insights/ai-insights.routes.js
 'use strict';
 
 const express  = require('express');
@@ -7,7 +6,6 @@ const auth     = require('../../../shared/middleware/auth');
 const insights = require('./ai-insights.service');
 const logger   = require('../../../../utils/logger');
 
-// GET /api/ai/insights/productivity?workspaceId=&days=
 router.get('/insights/productivity', auth, async (req, res) => {
     try {
         const { workspaceId, days = 7 } = req.query;
@@ -20,7 +18,6 @@ router.get('/insights/productivity', auth, async (req, res) => {
     }
 });
 
-// GET /api/ai/insights/collaboration?workspaceId=&days=
 router.get('/insights/collaboration', auth, async (req, res) => {
     try {
         const { workspaceId, days = 7 } = req.query;
@@ -33,7 +30,6 @@ router.get('/insights/collaboration', auth, async (req, res) => {
     }
 });
 
-// GET /api/ai/insights/engagement?workspaceId=&days=
 router.get('/insights/engagement', auth, async (req, res) => {
     try {
         const { workspaceId, days = 7 } = req.query;
@@ -46,7 +42,6 @@ router.get('/insights/engagement', auth, async (req, res) => {
     }
 });
 
-// GET /api/ai/insights/anomalies?workspaceId=
 router.get('/insights/anomalies', auth, async (req, res) => {
     try {
         const { workspaceId } = req.query;

@@ -1,4 +1,3 @@
-// ManagerTasks — Monolith Flow Design System
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '@services/api';
@@ -49,22 +48,22 @@ export default function ManagerTasks() {
 
     if (loading) return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header skeleton */}
+            {}
             <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div><div className="sk" style={{ height: '13px', width: '110px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '200px' }} /></div>
                 <div className="sk" style={{ height: '30px', width: '90px' }} />
             </div>
-            {/* Kanban skeleton */}
+            {}
             <div style={{ flex: 1, padding: '20px 28px', display: 'flex', gap: '12px', overflow: 'hidden' }}>
                 {['To Do', 'In Progress', 'Completed'].map(col => (
                     <div key={col} style={{ flex: '1 1 280px', minWidth: '260px', display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-                        {/* Column header */}
+                        {}
                         <div style={{ padding: '10px 14px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '7px' }}>
                             <div className="sk" style={{ width: '13px', height: '13px' }} />
                             <div className="sk" style={{ flex: 1, height: '9px' }} />
                             <div className="sk" style={{ width: '28px', height: '18px' }} />
                         </div>
-                        {/* Task card skeletons */}
+                        {}
                         <div style={{ flex: 1, padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             {[1,2,3].map(i => (
                                 <div key={i} style={{ background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '12px' }}>
@@ -89,7 +88,7 @@ export default function ManagerTasks() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -100,17 +99,17 @@ export default function ManagerTasks() {
                 <NewTaskBtn onClick={() => setModalOpen(true)} />
             </header>
 
-            {/* Kanban */}
+            {}
             <div style={{ flex: 1, overflowX: 'auto', padding: '20px 28px', display: 'flex', gap: '12px' }} className="custom-scrollbar">
                 {COLS.map(col => (
                     <div key={col.key} style={{ flex: '1 1 280px', minWidth: '260px', display: 'flex', flexDirection: 'column', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-                        {/* Col header */}
+                        {}
                         <div style={{ padding: '10px 14px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '7px', flexShrink: 0 }}>
                             <col.icon size={13} style={{ color: 'var(--accent)' }} />
                             <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', flex: 1 }}>{col.title}</span>
                             <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 7px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', color: 'var(--text-muted)' }}>{tasks[col.key]?.length || 0}</span>
                         </div>
-                        {/* Cards */}
+                        {}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }} className="custom-scrollbar">
                             {(!tasks[col.key] || tasks[col.key].length === 0) && (
                                 <div style={{ padding: '32px 16px', textAlign: 'center', border: '1px dashed var(--border-accent)', color: 'var(--text-muted)', fontSize: '11px' }}>No tasks</div>
@@ -123,7 +122,7 @@ export default function ManagerTasks() {
                 ))}
             </div>
 
-            {/* Create Modal */}
+            {}
             {modalOpen && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', fontFamily: 'Inter, system-ui, sans-serif' }}>

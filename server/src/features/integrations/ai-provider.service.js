@@ -1,10 +1,5 @@
-// server/src/features/integrations/ai-provider.service.js
-// AI Provider framework — connect, switch, fallback between AI providers
 const AIProvider = require('./ai-provider.model');
 
-/**
- * Connect (add/update) an AI provider for a workspace.
- */
 async function connectProvider({ workspaceId, provider, apiKey, config = {}, userId }) {
   const record = await AIProvider.findOneAndUpdate(
     { workspaceId, provider },
@@ -19,19 +14,13 @@ async function connectProvider({ workspaceId, provider, apiKey, config = {}, use
   return record;
 }
 
-/**
- * Get all AI providers for a workspace (masks apiKey).
- */
 async function getProviders(workspaceId) {
   const providers = await AIProvider.find({ workspaceId }).lean();
   return providers.map(p => ({ ...p, apiKey: '••••••••' }));
 }
 
-/**
- * Switch the default AI provider for a workspace.
- */
 async function switchProvider({ workspaceId, provider }) {
-  // Unset all defaults for this workspace
+  
   await AIProvider.updateMany({ workspaceId }, { isDefault: false });
 
   const updated = await AIProvider.findOneAndUpdate(
@@ -50,9 +39,6 @@ async function switchProvider({ workspaceId, provider }) {
   return updated;
 }
 
-/**
- * Disconnect an AI provider.
- */
 async function disconnectProvider({ workspaceId, provider }) {
   return AIProvider.findOneAndUpdate(
     { workspaceId, provider },
@@ -61,14 +47,10 @@ async function disconnectProvider({ workspaceId, provider }) {
   );
 }
 
-/**
- * Get the active default provider config for the workspace.
- * Falls back through the provider chain: gemini → openai → claude → local_llm
- */
 async function getActiveProvider(workspaceId) {
   const fallbackOrder = ['gemini', 'openai', 'claude', 'local_llm'];
 
-  // Try default first
+  
   let provider = await AIProvider.findOne({
     workspaceId,
     isDefault: true,
@@ -77,7 +59,7 @@ async function getActiveProvider(workspaceId) {
 
   if (provider) return provider;
 
-  // Fallback chain
+  
   for (const name of fallbackOrder) {
     provider = await AIProvider.findOne({
       workspaceId,

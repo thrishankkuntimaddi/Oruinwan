@@ -1,5 +1,3 @@
-// server/src/features/developer/apps.routes.js
-// Basic app marketplace — list, install, uninstall
 const express = require('express');
 const router = express.Router();
 const App = require('./app.model');
@@ -8,7 +6,6 @@ const logger = require('../../../utils/logger');
 
 router.use(requireAuth);
 
-// GET /api/developer/apps?workspaceId=xxx — list all apps, mark which are installed
 router.get('/apps', async (req, res) => {
   try {
     const { workspaceId } = req.query;
@@ -30,7 +27,6 @@ router.get('/apps', async (req, res) => {
   }
 });
 
-// POST /api/developer/apps/:id/install
 router.post('/apps/:id/install', async (req, res) => {
   try {
     const { workspaceId } = req.body;
@@ -52,7 +48,6 @@ router.post('/apps/:id/install', async (req, res) => {
   }
 });
 
-// DELETE /api/developer/apps/:id/uninstall
 router.delete('/apps/:id/uninstall', async (req, res) => {
   try {
     const { workspaceId } = req.body;

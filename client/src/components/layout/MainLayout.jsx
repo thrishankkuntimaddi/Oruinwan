@@ -11,7 +11,6 @@ import MobileHomePage from "./MobileHomePage";
 import { useIsMobile } from "../../hooks/useIsMobile";
 import { Bot, BookOpen, Command, Bug, Sparkles, Search, MessageCircle, X, Loader2, Bell, CircleHelp, AtSign, UserPlus, Check, Trash2, ExternalLink, ChevronLeft } from "lucide-react";
 
-// Icon map — all use the same neutral bg, consistent with Monolith design
 const NOTIF_ICONS = {
     mention:         { Icon: AtSign,       color: 'var(--text-muted)' },
     dm:              { Icon: MessageCircle, color: 'var(--text-muted)' },
@@ -39,7 +38,7 @@ const WorkspaceNotificationPanel = () => {
     const navigate = useNavigate();
     const { activeWorkspace } = useWorkspace();
 
-    // useNotifications() returns null when outside NotificationsProvider — safe to call unconditionally
+    
     const notifCtx = useNotifications();
 
     const notifications = notifCtx?.notifications || [];
@@ -49,7 +48,7 @@ const WorkspaceNotificationPanel = () => {
     const dismiss = notifCtx?.dismiss || (() => { });
     const markRead = notifCtx?.markRead || (() => { });
 
-    // Show only the most recent 8 in the dropdown
+    
     const preview = notifications.slice(0, 8);
 
     const handleClickNotif = (n) => {
@@ -82,7 +81,7 @@ const WorkspaceNotificationPanel = () => {
             {open && (
                 <div style={{ position: 'absolute', top: '38px', right: 0, width: '300px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 100, overflow: 'hidden', animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)', fontFamily: 'var(--font)' }}>
 
-                    {/* Header */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
                             <Bell size={13} />
@@ -101,7 +100,7 @@ const WorkspaceNotificationPanel = () => {
                         </div>
                     </div>
 
-                    {/* List */}
+                    {}
                     <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
                         {loading && notifications.length === 0 ? (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px', color: 'var(--text-muted)' }}>
@@ -147,7 +146,7 @@ const WorkspaceNotificationPanel = () => {
                         })}
                     </div>
 
-                    {/* Footer */}
+                    {}
                     <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)' }}>
                         <button
                             onClick={() => { setOpen(false); navigate(`/workspace/${activeWorkspace?.id}/notifications`); }}
@@ -182,8 +181,6 @@ const WorkspaceNotificationPanel = () => {
     );
 };
 
-
-
 const MainLayout = ({ children, sidePanel }) => {
     const { activeWorkspace } = useWorkspace();
     const [showProfile, setShowProfile] = useState(false);
@@ -194,7 +191,7 @@ const MainLayout = ({ children, sidePanel }) => {
     const location = useLocation();
     const isMobile = useIsMobile(768);
 
-    // Detect if we're on a "detail" route (content is active, not panel root)
+    
     const workspaceId = activeWorkspace?.id || activeWorkspace?._id;
     const currentPath = location.pathname;
     const isDetailRoute = !!workspaceId && (
@@ -205,12 +202,12 @@ const MainLayout = ({ children, sidePanel }) => {
         currentPath.includes('/note/')
     );
 
-    // Mobile home: show the MobileHomePage grid instead of sidePanel
+    
     const isMobileHome = isMobile && !isDetailRoute && !!workspaceId &&
         (currentPath === `/workspace/${workspaceId}/home` ||
          currentPath === `/workspace/${workspaceId}`);
 
-    // Mobile section title shown in top bar
+    
     const getMobileSectionTitle = () => {
         if (!workspaceId) return activeWorkspace?.name || 'Chttrix';
         const p = currentPath;
@@ -229,7 +226,7 @@ const MainLayout = ({ children, sidePanel }) => {
         return activeWorkspace?.name || 'Chttrix';
     };
 
-    // Where to navigate "back" to from a detail route
+    
     const getMobileBackPath = () => {
         const base = `/workspace/${workspaceId}`;
         if (currentPath.includes('/channel/'))  return `${base}/channels`;
@@ -246,8 +243,7 @@ const MainLayout = ({ children, sidePanel }) => {
         else navigate(backPath);
     };
 
-
-    // Cmd+Shift+A → toggle Chttrix AI panel (Cmd+Shift+K conflicts with Chrome on macOS)
+    
     useEffect(() => {
         const fn = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyA') {
@@ -259,47 +255,47 @@ const MainLayout = ({ children, sidePanel }) => {
         return () => window.removeEventListener('keydown', fn);
     }, []);
 
-    // Persist workspaceId so pages outside MainLayout (e.g. Settings) can use it
+    
     useEffect(() => {
         if (workspaceId) localStorage.setItem('lastWorkspaceId', workspaceId);
     }, [workspaceId]);
 
-    // Auto-open AI panel when navigated here with state: { openAI: true }
-    // (e.g. from Settings page bottom nav AI tab)
+    
+    
     useEffect(() => {
         if (location.state?.openAI && isMobile) {
             setShowAI(true);
-            // Clear the flag so back-navigation doesn't re-trigger it
+            
             navigate(location.pathname, { replace: true, state: {} });
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
     }, [location.state?.openAI]);
 
-    // Help State
+    
     const [showHelp, setShowHelp] = useState(false);
-    const [activeHelpModal, setActiveHelpModal] = useState(null); // academy, shortcuts, bug, whatsnew
+    const [activeHelpModal, setActiveHelpModal] = useState(null); 
 
-    // Refs for resizing
+    
     const isResizingAIRef = useRef(false);
     const isResizingSidePanelRef = useRef(false);
 
-    // Resizing Logic
+    
     useEffect(() => {
         const handleMouseMove = (e) => {
-            // Handle AI Resizing (Right Side)
+            
             if (isResizingAIRef.current) {
                 const newWidth = window.innerWidth - e.clientX;
-                // Min: 300px, Max: 600px (Prevent extreme width)
+                
                 if (newWidth > 300 && newWidth < 600) {
                     setAiWidth(newWidth);
                 }
             }
 
-            // Handle SidePanel Resizing (Left Side)
+            
             if (isResizingSidePanelRef.current) {
-                // IconSidebar is 60px wide
+                
                 const newWidth = e.clientX - 60;
-                // Min: 200px, Max: 400px (Prevent extreme width)
+                
                 if (newWidth > 200 && newWidth < 400) {
                     setSidePanelWidth(newWidth);
                 }
@@ -334,9 +330,9 @@ const MainLayout = ({ children, sidePanel }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100%', overflow: 'hidden', background: 'var(--bg-base)', position: 'fixed', inset: 0, fontFamily: 'var(--font)', paddingBottom: isMobile ? 'calc(56px + env(safe-area-inset-bottom))' : 0 }}>
-            {/* ... (Top Bar remains same) ... */}
+            {}
 
-            {/* Help Modals */}
+            {}
             {activeHelpModal && (
                 <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)', padding: '16px', fontFamily: 'var(--font)' }}>
                     <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '560px', maxHeight: '80vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}>
@@ -477,14 +473,14 @@ const MainLayout = ({ children, sidePanel }) => {
                 </div>
             )}
 
-            {/* 1. Top Utility Bar */}
+            {}
             <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '0 6px' : '0 8px', background: 'var(--bg-base)', flexShrink: 0, zIndex: 60, position: 'relative', borderBottom: '1px solid var(--border-subtle)', gap: '4px' }}>
 
-                {/* Mobile: left side — AI dismiss / back / section title */}
+                {}
                 {isMobile && (
                     <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0, marginRight: '6px' }}>
                         {showAI ? (
-                            /* AI is open → tapping closes it */
+                            
                             <button
                                 onClick={() => setShowAI(false)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '6px 4px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: 'var(--font)', WebkitTapHighlightColor: 'transparent' }}
@@ -506,19 +502,18 @@ const MainLayout = ({ children, sidePanel }) => {
                     </div>
                 )}
 
-                {/* Center: Search bar */}
+                {}
                 <div style={{ flex: 1, minWidth: 0, maxWidth: '560px', margin: '0 auto', position: 'relative', zIndex: 70 }}>
                     <SearchInlineBar workspaceId={activeWorkspace?.id || activeWorkspace?._id} />
                 </div>
 
-
-                {/* Right: Utilities */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px', justifyContent: 'flex-end', flexShrink: 0, position: 'relative' }}>
 
-                    {/* Notification Bell — always visible */}
+                    {}
                     <WorkspaceNotificationPanel />
 
-                    {/* Help Button — desktop only (bottom nav on mobile) */}
+                    {}
                     {!isMobile && <div style={{ position: 'relative' }}>
                         <button
                             onClick={() => setShowHelp(!showHelp)}
@@ -530,12 +525,12 @@ const MainLayout = ({ children, sidePanel }) => {
                             <CircleHelp size={18} strokeWidth={2} />
                         </button>
 
-                        {/* Help Popover */}
+                        {}
                         {showHelp && (
                             <>
                                 <div style={{ position: 'fixed', inset: 0, zIndex: 90 }} onClick={() => setShowHelp(false)} />
                                 <div style={{ position: 'absolute', top: '36px', right: 0, width: '220px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', zIndex: 100, overflow: 'hidden', animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)' }}>
-                                    {/* Header */}
+                                    {}
                                     <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-active)' }}>
                                         <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Support</span>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -544,7 +539,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                         </div>
                                     </div>
 
-                                    {/* Actions */}
+                                    {}
                                     <div style={{ padding: '4px' }}>
                                         {[
                                             { key: 'academy',   Icon: BookOpen,       label: 'Academy' },
@@ -564,7 +559,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                         ))}
                                     </div>
 
-                                    {/* Footer */}
+                                    {}
                                     <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '6px' }}>
                                         <button onClick={() => { setShowHelp(false); setActiveHelpModal('contact'); }}
                                             style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '7px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', cursor: 'pointer', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', fontFamily: 'var(--font)', transition: '150ms ease' }}
@@ -580,7 +575,7 @@ const MainLayout = ({ children, sidePanel }) => {
                         )}
                     </div>}
 
-                    {/* ChttrixAI Button — desktop only (bottom nav tab on mobile) */}
+                    {}
                     {!isMobile && <button
                         onClick={() => setShowAI(!showAI)}
                         style={{ padding: '6px', borderRadius: '2px', background: showAI ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: showAI ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
@@ -593,14 +588,14 @@ const MainLayout = ({ children, sidePanel }) => {
                 </div>
             </div>
 
-            {/* 2. Main Workspace Area */}
+            {}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-                {/* A. Icon Sidebar — hidden on mobile */}
+                {}
                 <div style={{ display: isMobile ? 'none' : 'flex', height: '100%' }}>
                     <IconSidebar onProfileClick={() => setShowProfile(true)} />
 
-                    {/* B. Side Panel — desktop only or mobile panel-root */}
+                    {}
                     {sidePanel && (
                         <div
                             className="h-full flex"
@@ -611,7 +606,7 @@ const MainLayout = ({ children, sidePanel }) => {
                             >
                                 {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...' })}
                             </div>
-                            {/* SidePanel Drag Handle */}
+                            {}
                             <div
                                 className="hidden md:block w-1 cursor-col-resize flex-shrink-0 z-40 transition-colors"
                                 style={{ background: 'transparent' }}
@@ -623,7 +618,7 @@ const MainLayout = ({ children, sidePanel }) => {
                     )}
                 </div>
 
-                {/* Mobile: Home screen (grid) — replaces sidePanel at /home; hidden when AI is open */}
+                {}
                 {isMobile && isMobileHome && !showAI && (
                     <MobileHomePage
                         workspaceId={workspaceId}
@@ -631,15 +626,15 @@ const MainLayout = ({ children, sidePanel }) => {
                     />
                 )}
 
-                {/* Mobile: Side Panel — full-width, shown at non-home, non-detail panel routes */}
+                {}
                 {isMobile && sidePanel && !isDetailRoute && !isMobileHome && !showAI && (
                     <div style={{ flex: 1, background: 'var(--bg-base)', height: '100%', overflow: 'hidden' }}>
                         {React.cloneElement(sidePanel, { title: activeWorkspace?.name || 'Loading...', isMobile: true })}
                     </div>
                 )}
 
-                {/* C. Center: Main Content + Right Sidebar */}
-                {/* On mobile: shown only when detail route OR no sidePanel OR AI open OR home */}
+                {}
+                {}
                 <main
                     style={{
                         flex: 1,
@@ -647,15 +642,15 @@ const MainLayout = ({ children, sidePanel }) => {
                         minWidth: 0, background: 'var(--bg-base)', position: 'relative', width: '100%',
                     }}
                 >
-                    {/* Page Content — hidden on mobile when AI is open so AI gets full screen */}
+                    {}
                     <div style={{ flex: 1, overflow: 'hidden', position: 'relative', width: '100%', display: (isMobile && showAI) ? 'none' : undefined }}>
                         {children}
                     </div>
 
-                    {/* D. Right Sidebar: Chttrix AI */}
+                    {}
                     {showAI && (
                         <>
-                            {/* Drag Handle — desktop only */}
+                            {}
                             {!isMobile && (
                                 <div
                                     className="hidden md:block w-1 flex-shrink-0 z-40 cursor-col-resize transition-colors"
@@ -666,7 +661,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                 />
                             )}
 
-                            {/* AI Panel */}
+                            {}
                             <div
                                 style={{
                                     width: isMobile ? '100%' : aiWidth,
@@ -683,11 +678,10 @@ const MainLayout = ({ children, sidePanel }) => {
                 </main>
             </div>
 
-
-            {/* Overlays */}
+            {}
             {showProfile && <ProfileMenu onClose={() => setShowProfile(false)} />}
 
-            {/* Mobile Bottom Navigation */}
+            {}
             {isMobile && (
                 <MobileBottomNav
                     workspaceId={workspaceId}

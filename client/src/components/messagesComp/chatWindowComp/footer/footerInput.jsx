@@ -258,12 +258,12 @@ export default function FooterInput({
       flexShrink: 0,
       position: 'relative',
     }}>
-      {/* Reply Preview */}
+      {}
       {replyingTo && (
         <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />
       )}
 
-      {/* Smart Reply Suggestions */}
+      {}
       {showSmartReply && recentMessages.length > 0 && (
         <SmartReplySuggestions
           recentMessages={recentMessages}
@@ -279,7 +279,7 @@ export default function FooterInput({
         />
       )}
 
-      {/* Slash command preview */}
+      {}
       {previewCommand && !showSlashMenu && (
         <SlashCommandPreview
           command={previewCommand}
@@ -297,7 +297,7 @@ export default function FooterInput({
         onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
         onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
       >
-        {/* Link Preview Banner */}
+        {}
         {(linkPreview || linkPreviewLoading) && (
           <div style={{
             padding: '8px 12px',
@@ -348,7 +348,7 @@ export default function FooterInput({
           </div>
         )}
 
-        {/* Rich Text Input */}
+        {}
         <div style={{ width: '100%', padding: '8px 12px', maxHeight: '30vh', overflowY: 'auto', overflowX: 'hidden', minHeight: '4rem', position: 'relative' }}>
           <div
             ref={editableRef}
@@ -381,7 +381,7 @@ export default function FooterInput({
           )}
         </div>
 
-        {/* Mention Autocomplete */}
+        {}
         {showSuggestions && (
           <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 60, marginBottom: '4px' }}>
             <MentionAutocomplete
@@ -393,7 +393,7 @@ export default function FooterInput({
           </div>
         )}
 
-        {/* Slash Command Menu */}
+        {}
         {showSlashMenu && (
           <div style={{ position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 60, marginBottom: '4px' }}>
             <SlashCommandMenu
@@ -405,7 +405,7 @@ export default function FooterInput({
           </div>
         )}
 
-        {/* Link Input Popover */}
+        {}
         {showLinkInput && (
           <div style={{
             position: 'absolute', bottom: '48px', left: '80px', zIndex: 50,
@@ -446,14 +446,14 @@ export default function FooterInput({
           </div>
         )}
 
-        {/* Toolbar */}
+        {}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '4px 8px 6px',
           backgroundColor: 'var(--bg-input)',
           borderTop: '1px solid var(--border-subtle)',
         }}>
-          {/* Left: Formatting Tools */}
+          {}
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
             {showAI && (
               <>
@@ -481,9 +481,9 @@ export default function FooterInput({
             <ToolBtn icon={<List size={14} />} title="List" onClick={() => insertFormat("list")} />
           </div>
 
-          {/* Right: Actions */}
+          {}
           <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-            {/* Emoji */}
+            {}
             <div style={{ position: 'relative' }} ref={emojiRef}>
               <ToolBtn
                 icon={<Smile size={16} />}
@@ -498,7 +498,7 @@ export default function FooterInput({
               )}
             </div>
 
-            {/* Attachments */}
+            {}
             <div style={{ position: 'relative' }} ref={attachRef}>
               <ToolBtn
                 icon={<Paperclip size={16} />}
@@ -521,7 +521,7 @@ export default function FooterInput({
               )}
             </div>
 
-            {/* Voice */}
+            {}
             {showVoice && (
               <>
                 <ToolBtn
@@ -540,7 +540,7 @@ export default function FooterInput({
               </>
             )}
 
-            {/* Screen Recorder */}
+            {}
             {showScreenRecord && (
               <ScreenRecorder
                 disabled={blocked || disabled}
@@ -548,7 +548,7 @@ export default function FooterInput({
               />
             )}
 
-            {/* Send Button */}
+            {}
             <button
               onClick={handleSend}
               disabled={!hasText || blocked || disabled}

@@ -1,11 +1,5 @@
-// server/src/features/integrations/providers/github.handler.js
-// GitHub integration — handles webhooks for push, issues, pull_request events
 const axios = require('axios');
 
-/**
- * Verify the GitHub config by hitting the /user or /rate_limit endpoint.
- * Returns the config if valid.
- */
 async function verify(config) {
   if (!config.token) throw Object.assign(new Error('GitHub: token is required'), { statusCode: 400 });
 
@@ -27,20 +21,16 @@ async function verify(config) {
   }
 }
 
-/**
- * Handle incoming GitHub webhook events.
- * Maps GitHub events → Chttrix internal actions (task creation, activity feed).
- */
 async function handleWebhook(payload, headers, integration) {
   const event = headers['x-github-event'];
   const results = [];
 
   if (event === 'issues') {
-    const action = payload.action; // opened, edited, closed, reopened
+    const action = payload.action; 
     const issue = payload.issue;
 
     if (['opened', 'reopened'].includes(action)) {
-      // Create a task from the GitHub issue
+      
       results.push({
         action: 'task.create',
         data: {

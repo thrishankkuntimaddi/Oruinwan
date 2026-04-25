@@ -1,5 +1,3 @@
-// server/src/features/developer/seedApps.js
-// Seed the marketplace with demo apps (run once — idempotent)
 const App = require('./app.model');
 
 const DEMO_APPS = [

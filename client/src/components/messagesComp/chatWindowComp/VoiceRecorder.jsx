@@ -1,20 +1,11 @@
-// client/src/components/messagesComp/chatWindowComp/VoiceRecorder.jsx
-// Phase-8: Voice message recorder using MediaRecorder API
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-// refactor(consistency): use canonical api.js (handles auth tokens + 401 refresh; FormData uploads still work)
+
 import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
-/**
- * VoiceRecorder — inline voice message recording and upload.
- *
- * Props:
- *  onSend(attachmentObj)  — called with { type: 'voice', url, name, mimeType, duration, size }
- *  onCancel()             — dismiss without sending
- */
 export default function VoiceRecorder({ onSend, onCancel }) {
-  const [phase, setPhase] = useState('idle'); // idle | recording | preview | uploading
+  const [phase, setPhase] = useState('idle'); 
   const [seconds, setSeconds] = useState(0);
   const [blobUrl, setBlobUrl] = useState(null);
   const [error, setError]     = useState(null);
@@ -24,7 +15,7 @@ export default function VoiceRecorder({ onSend, onCancel }) {
   const blobRef          = useRef(null);
   const timerRef         = useRef(null);
 
-  // Cleanup on unmount
+  
   useEffect(() => () => {
     clearInterval(timerRef.current);
     if (blobUrl) URL.revokeObjectURL(blobUrl);
@@ -51,13 +42,13 @@ export default function VoiceRecorder({ onSend, onCancel }) {
         setPhase('preview');
       };
 
-      recorder.start(200); // collect every 200ms
+      recorder.start(200); 
       setPhase('recording');
       setSeconds(0);
 
       timerRef.current = setInterval(() => {
         setSeconds(s => {
-          if (s >= 300) { stopRecording(); return s; } // 5 min cap
+          if (s >= 300) { stopRecording(); return s; } 
           return s + 1;
         });
       }, 1000);
@@ -123,7 +114,7 @@ export default function VoiceRecorder({ onSend, onCancel }) {
           <span style={{ color: '#fff', fontVariantNumeric: 'tabular-nums', minWidth: 42, fontSize: 14 }}>
             {fmt(seconds)}
           </span>
-          {/* Minimal waveform bars */}
+          {}
           <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
             {[3, 6, 9, 7, 4, 8, 5, 6, 3].map((h, i) => (
               <div key={i} style={{

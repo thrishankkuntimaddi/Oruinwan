@@ -4,13 +4,13 @@ async function testAIChat() {
     console.log('🧪 Testing AI Chat endpoint...\n');
 
     try {
-        // You'll need to replace this with a valid token
+        
         const response = await axios.post('http://localhost:5000/api/ai/chat', {
             message: 'Hello! Can you introduce yourself?',
             history: []
         }, {
             headers: {
-                'Authorization': 'Bearer YOUR_TOKEN_HERE' // This will be provided by the login
+                'Authorization': 'Bearer YOUR_TOKEN_HERE' 
             }
         });
 

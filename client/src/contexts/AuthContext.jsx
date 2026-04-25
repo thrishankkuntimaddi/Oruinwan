@@ -1,5 +1,3 @@
-// client/src/contexts/AuthContext.jsx
-
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { setOnTokenRefreshed, API_BASE } from '@services/api';
 import api from '@services/api';
@@ -10,20 +8,20 @@ export const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  // ✅ FIX 1: Add encryption ready state
+  
   const [encryptionReady, setEncryptionReady] = useState(false);
-  // ✅ Password unlock state
+  
   const [requiresPassword, setRequiresPassword] = useState(false);
-  // Initialize from localStorage immediately
+  
   const [accessToken, setAccessToken] = useState(() => {
     return localStorage.getItem("accessToken") || null;
   });
 
-  // ------------------------------------------------------------
-  // Load user on app start
-  // ------------------------------------------------------------
-  // Helper: attempt one silent token refresh via the httpOnly cookie.
-  // Returns the new access token string on success, or null on failure.
+  
+  
+  
+  
+  
   const silentRefresh = async () => {
     try {
       const storedRefreshToken = localStorage.getItem('refreshToken');
@@ -31,7 +29,7 @@ export const AuthProvider = ({ children }) => {
         method: "POST",
         credentials: "include",
         headers: { 'Content-Type': 'application/json' },
-        // Send refreshToken in body as cross-origin cookie fallback
+        
         body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
       });
 
@@ -40,7 +38,7 @@ export const AuthProvider = ({ children }) => {
         if (refreshData.accessToken) {
           localStorage.setItem("accessToken", refreshData.accessToken);
           setAccessToken(refreshData.accessToken);
-          // Rotate the stored refresh token if server returned a new one
+          
           if (refreshData.refreshToken) {
             localStorage.setItem('refreshToken', refreshData.refreshToken);
           }
@@ -58,7 +56,7 @@ export const AuthProvider = ({ children }) => {
 
   const loadUser = async () => {
     try {
-      // Step 1: Get access token — refresh silently if not in localStorage
+      
       let token = localStorage.getItem("accessToken");
 
       if (!token) {
@@ -66,7 +64,7 @@ export const AuthProvider = ({ children }) => {
         token = await silentRefresh();
 
         if (!token) {
-          // Refresh cookie absent or expired — genuine logged-out state
+          
           console.log('ℹ️ [LOAD USER] No valid session — user is logged out');
           setUser(null);
           setAccessToken(null);
@@ -77,7 +75,7 @@ export const AuthProvider = ({ children }) => {
         setAccessToken(token);
       }
 
-      // Step 2: Fetch user profile with the access token
+      
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         credentials: "include",
         headers: {
@@ -85,13 +83,13 @@ export const AuthProvider = ({ children }) => {
         },
       });
 
-      // Step 3: If token expired mid-session, try one silent refresh then retry
+      
       if (res.status === 401) {
         console.log('🔄 [LOAD USER] Access token rejected by /me — attempting silent refresh...');
         const newToken = await silentRefresh();
 
         if (!newToken) {
-          // Refresh also failed → genuine session expiry
+          
           console.warn('⚠️ [LOAD USER] Silent refresh failed after /me 401 — clearing session');
           setUser(null);
           setAccessToken(null);
@@ -100,7 +98,7 @@ export const AuthProvider = ({ children }) => {
           return;
         }
 
-        // Retry /me with the fresh token
+        
         const retryRes = await fetch(`${API_BASE}/api/auth/me`, {
           credentials: "include",
           headers: { Authorization: `Bearer ${newToken}` },
@@ -126,7 +124,7 @@ export const AuthProvider = ({ children }) => {
         setUser(data);
         initializeEncryption(data);
       } else {
-        // Non-401 error (e.g. 500) — clear token but don't blame the refresh cookie
+        
         console.warn(`⚠️ [LOAD USER] /me returned ${res.status} — clearing access token`);
         setUser(null);
         setAccessToken(null);
@@ -142,9 +140,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // ============================================================
-  // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (extracted helper)
-  // ============================================================
+  
+  
+  
   const initializeEncryption = (data) => {
     (async () => {
       try {
@@ -158,7 +156,7 @@ export const AuthProvider = ({ children }) => {
         const result = await identityKeyService.initializeIdentityKeys(userId, null);
 
         if (result?.status === 'PASSWORD_REQUIRED') {
-          // Genuine case: user has PASSWORD-protected UMEK and no cached key
+          
           console.log('🔐 [PHASE 1] Password-protected identity - cache missing, encryption deferred');
           setEncryptionReady(false);
           setRequiresPassword(true);
@@ -170,7 +168,7 @@ export const AuthProvider = ({ children }) => {
           setEncryptionReady(true);
           setRequiresPassword(false);
 
-          // Fire-and-forget repair (NEVER await, NEVER block UI)
+          
           fetch(`${API_BASE}/api/v2/conversations/repair-access`, {
             method: 'POST',
             credentials: 'include',
@@ -191,18 +189,18 @@ export const AuthProvider = ({ children }) => {
         );
 
         if (isServerError) {
-          // Transient server error — don't show password modal, just log it
-          // Encryption will be unavailable until the user manually retries via Settings
+          
+          
           console.warn('⚠️ [PHASE 1] Transient server error during encryption init (not a password issue):', err.message);
           setEncryptionReady(false);
-          // Do NOT setRequiresPassword(true) — that would wrongly prompt for a password
+          
           return;
         }
 
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.error('❌ [PHASE 1] HARD crypto failure:', err);
         console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        // Only show password modal for genuine crypto failures (wrong key, bad decrypt, etc.)
+        
         setEncryptionReady(false);
         setRequiresPassword(true);
       }
@@ -210,13 +208,13 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Set up token refresh callback for the axios interceptor
+    
     setOnTokenRefreshed((newToken) => {
       setAccessToken(newToken);
     });
 
-    // Listen for forced logout events dispatched by the api.js interceptor
-    // (when refresh fails mid-session during an API call)
+    
+    
     const handleForceLogout = () => {
       console.warn('🔴 [AUTH] Force logout event received from API interceptor');
       logoutRef.current();
@@ -228,23 +226,23 @@ export const AuthProvider = ({ children }) => {
     return () => {
       window.removeEventListener('auth:force-logout', handleForceLogout);
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); 
 
-  // ------------------------------------------------------------
-  // 🔄 AUTOMATIC TOKEN REFRESH
-  // Refresh access token before it expires (every 10 minutes)
-  // 5-minute safety buffer before the 15-minute expiry avoids race
-  // conditions with the Axios interceptor also trying to refresh.
-  // ------------------------------------------------------------
+  
+  
+  
+  
+  
+  
   useEffect(() => {
     if (!user) {
-      return; // Don't set up refresh if not logged in
+      return; 
     }
 
-    // Refresh 5 minutes before expiry (15m - 5m = 10m = 600000ms)
-    // Previously 13 minutes — too close to expiry, caused race conditions
-    // with the Axios interceptor on the first expired API call.
-    const REFRESH_INTERVAL = 10 * 60 * 1000; // 10 minutes
+    
+    
+    
+    const REFRESH_INTERVAL = 10 * 60 * 1000; 
 
     console.log('⏰ [TOKEN REFRESH] Setting up automatic refresh every 10 minutes');
 
@@ -252,7 +250,7 @@ export const AuthProvider = ({ children }) => {
       try {
         console.log('🔄 [TOKEN REFRESH] Attempting automatic token refresh...');
 
-        // Guard: skip if no access token exists (already logged out)
+        
         const existingToken = localStorage.getItem('accessToken');
         if (!existingToken) {
           console.log('⏭️ [TOKEN REFRESH] No access token in storage, skipping proactive refresh');
@@ -264,7 +262,7 @@ export const AuthProvider = ({ children }) => {
           method: "POST",
           credentials: "include",
           headers: { 'Content-Type': 'application/json' },
-          // Always send body fallback — cookie may be blocked cross-origin in production
+          
           body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
         });
 
@@ -279,37 +277,37 @@ export const AuthProvider = ({ children }) => {
             console.log('✅ [TOKEN REFRESH] Access token refreshed successfully');
           }
         } else {
-          // ⚠️ DO NOT logout here on proactive refresh failure.
-          // The Axios interceptor in api.js already handles 401s correctly on every
-          // API call, including retrying with the refresh token. Logging out here
-          // causes a race: if both the proactive timer AND the interceptor fire at
-          // ~15 min, the second one gets a 403 (already-rotated token) and this
-          // handler would wrongly terminate the session.
-          // Let the session expire naturally; the interceptor will handle recovery.
+          
+          
+          
+          
+          
+          
+          
           console.warn(
             `⚠️ [TOKEN REFRESH] Proactive refresh failed (status ${refreshRes.status}). ` +
             'Will retry on next API call via Axios interceptor — NOT logging out.'
           );
         }
       } catch (error) {
-        // Network error — silent, do not logout. Interceptor handles recovery.
+        
         console.error('❌ [TOKEN REFRESH] Network error during proactive refresh (will retry on next API call):', error.message);
       }
     }, REFRESH_INTERVAL);
 
-    // Cleanup interval on unmount or when user logs out
+    
     return () => {
       console.log('🛑 [TOKEN REFRESH] Clearing automatic refresh interval');
       clearInterval(refreshInterval);
     };
-  }, [user]); // CRITICAL: Only depend on user, NOT accessToken (prevents loop)
+  }, [user]); 
 
-  // ------------------------------------------------------------
-  // Login (normal email/password)
-  // ------------------------------------------------------------
+  
+  
+  
   const login = async (email, password) => {
     try {
-      // PHASE 3: Get device metadata
+      
       const deviceMetadata = getDeviceMetadata();
 
       const response = await api.post(
@@ -317,13 +315,13 @@ export const AuthProvider = ({ children }) => {
         {
           email,
           password,
-          ...deviceMetadata  // Include device info
+          ...deviceMetadata  
         }
       );
 
       const { data } = response;
 
-      // Save access token and refresh token
+      
       if (data.accessToken) {
         localStorage.setItem("accessToken", data.accessToken);
         setAccessToken(data.accessToken);
@@ -332,28 +330,28 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('refreshToken', data.refreshToken);
       }
 
-      // Ensure data.user exists and is valid
+      
       if (!data || !data.user || typeof data.user !== 'object') {
         throw new Error('Invalid user data received from login');
       }
       sessionStorage.setItem("lastLoginAttempt", Date.now().toString());
 
-      // Merge company data into user object for consistency with /me endpoint
+      
       const userWithCompany = { ...data.user };
       if (data.company) {
         userWithCompany.company = data.company;
       }
       setUser(userWithCompany);
 
-      // ============================================================
-      // 🔐 PHASE 1: IDENTITY KEY INITIALIZATION (via shared helper)
-      // Email/password authentication = user is finalized
-      // ============================================================
+      
+      
+      
+      
       (async () => {
         try {
           const userId = data.user._id || data.user.id;
           const identityKeyService = (await import('../services/identityKeyService')).default;
-          // Pass password for UMEK derivation on login
+          
           const result = await identityKeyService.initializeIdentityKeys(userId, password);
 
           if (result?.status === 'PASSWORD_REQUIRED') {
@@ -386,25 +384,24 @@ export const AuthProvider = ({ children }) => {
           setEncryptionReady(false);
         }
       })();
-      // ============================================================
-      // END PHASE 1
-      // ============================================================
-
+      
+      
+      
 
       return data;
     } catch (error) {
-      // Preserve response data for special cases (e.g., deactivation with requiresReactivation flag)
+      
       const err = new Error(error.response?.data?.message || error.message || "Login failed");
       if (error.response) {
-        err.response = error.response;  // Preserve the full response object
+        err.response = error.response;  
       }
       throw err;
     }
   };
 
-  // ------------------------------------------------------------
-  // Logout
-  // ------------------------------------------------------------
+  
+  
+  
   const logout = useCallback(async () => {
     try {
       await api.post('/api/auth/logout', {});
@@ -418,27 +415,27 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("refreshToken");
     sessionStorage.removeItem("lastLoginAttempt");
 
-    // ✅ FIX 1: Reset encryption ready state
+    
     setEncryptionReady(false);
 
-    // PHASE 3: Clear device ID on logout
+    
     clearDeviceId();
 
-    // E2EE: Clear encryption keys from IndexedDB
-    // This will be handled by service cleanup listeners
-    // Trigger event for encryption cleanup
+    
+    
+    
     window.dispatchEvent(new Event('auth:logout'));
-  }, []); // Stable logout reference - prevents stale closures in intervals
+  }, []); 
 
-  // Keep a stable ref to logout so the interval never captures a stale closure
+  
   const logoutRef = useRef(logout);
   useEffect(() => {
     logoutRef.current = logout;
   }, [logout]);
 
-  // ------------------------------------------------------------
-  // Update profile
-  // ------------------------------------------------------------
+  
+  
+  
   const updateProfile = async (updates) => {
     const res = await fetch(`${API_BASE}/api/auth/me`, {
       method: "PUT",
@@ -458,9 +455,9 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  // ------------------------------------------------------------
-  // Update password
-  // ------------------------------------------------------------
+  
+  
+  
   const updatePassword = async (oldPassword, newPassword) => {
     const res = await fetch(`${API_BASE}/api/auth/me/password`, {
       method: "PUT",
@@ -478,10 +475,10 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  // ============================================================
-  // 🔐 UNLOCK ENCRYPTION (Password Unlock Modal)
-  // Retries identity key initialization with provided password
-  // ============================================================
+  
+  
+  
+  
   const unlockEncryption = async (password) => {
     if (!user) {
       throw new Error('No user logged in');
@@ -492,11 +489,11 @@ export const AuthProvider = ({ children }) => {
       throw new Error('Invalid user ID');
     }
 
-    // Dynamically import to avoid circular dependencies
+    
     const identityKeyService = (await import('../services/identityKeyService')).default;
 
-    // Step 1: Try without password first (SERVER_KEK users or already cached)
-    // This handles users whose UMEK is server-protected (no password needed)
+    
+    
     try {
       const resultNoPass = await identityKeyService.initializeIdentityKeys(userId, null);
       if (resultNoPass?.status === 'READY') {
@@ -506,20 +503,20 @@ export const AuthProvider = ({ children }) => {
         return;
       }
     } catch (serverKekErr) {
-      // SERVER_KEK failed — this is expected if user has PASSWORD protection
-      // Continue to password-based unlock below
+      
+      
       console.warn('⚠️ [UNLOCK] Server KEK unlock failed, trying password:', serverKekErr.message);
     }
 
-    // Step 2: Retry with password (PASSWORD protection mode)
+    
     const result = await identityKeyService.initializeIdentityKeys(userId, password);
 
-    // Check if password was incorrect (still returns PASSWORD_REQUIRED)
+    
     if (result?.status === 'PASSWORD_REQUIRED') {
       throw new Error('Incorrect password');
     }
 
-    // Success - encryption unlocked
+    
     if (result?.status === 'READY') {
       setRequiresPassword(false);
       setEncryptionReady(true);
@@ -531,16 +528,16 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
-        setUser,        // <-- IMPORTANT FIX
+        setUser,        
         loading,
         accessToken,
-        encryptionReady, // ✅ FIX 1: Export encryption ready state
-        requiresPassword, // ✅ Password unlock state
-        unlockEncryption, // ✅ Password unlock function
+        encryptionReady, 
+        requiresPassword, 
+        unlockEncryption, 
         login,
         logout,
         loadUser,
-        refreshUser: loadUser, // Alias for manual refresh
+        refreshUser: loadUser, 
         updateProfile,
         updatePassword,
       }}

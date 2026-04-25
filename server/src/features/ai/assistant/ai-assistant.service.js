@@ -1,20 +1,8 @@
-// server/src/features/ai/assistant/ai-assistant.service.js
 'use strict';
 
 const Message       = require('../../messages/message.model');
 const aiCore        = require('../ai-core.service');
 
-// ─── Channel Summarization ────────────────────────────────────────────────────
-
-/**
- * Fetch the last N plaintext messages from a channel, concatenate, and summarise.
- * Only non-deleted, non-encrypted messages with text are included.
- *
- * @param {string} channelId
- * @param {string} workspaceId
- * @param {number} [limit=50]
- * @returns {Promise<{ summary: string, messageCount: number, fallback: boolean }>}
- */
 async function summarizeChannel(channelId, workspaceId, limit = 50) {
     const messages = await Message.find({
         channel:             channelId,
@@ -34,7 +22,7 @@ async function summarizeChannel(channelId, workspaceId, limit = 50) {
         return { summary: 'No messages to summarise in this channel.', messageCount: 0, fallback: false };
     }
 
-    // Reverse so they read oldest → newest
+    
     const ordered = [...messages].reverse();
     const text = ordered.map(m => {
         const name = m.sender?.username || m.sender?.firstName || 'User';
@@ -50,24 +38,10 @@ async function summarizeChannel(channelId, workspaceId, limit = 50) {
     return { summary, messageCount: messages.length, fallback };
 }
 
-// ─── Action Item Extraction ───────────────────────────────────────────────────
-
-/**
- * Extract action items from arbitrary text (message body, meeting transcript, etc.)
- * @param {string} text
- * @returns {Promise<{ items: string[], fallback: boolean }>}
- */
 async function extractActionItems(text) {
     return aiCore.extractTasks(text);
 }
 
-// ─── Smart Replies ────────────────────────────────────────────────────────────
-
-/**
- * Generate 3 smart reply suggestions given recent messages.
- * @param {Array<{sender: string, text: string}>} messages
- * @returns {Promise<{ suggestions: string[], fallback: boolean }>}
- */
 async function generateSmartReplies(messages) {
     return aiCore.generateReplies(messages);
 }

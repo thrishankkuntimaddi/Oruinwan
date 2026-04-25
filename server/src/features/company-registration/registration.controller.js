@@ -1,19 +1,13 @@
-// src/features/company-registration/registration.controller.js
-
 const registrationService = require("./registration.service");
 const Company = require("../../../models/Company");
 const Department = require("../../../models/Department");
 const User = require("../../../models/User");
 
-/**
- * Register new company (pending verification)
- * POST /api/companies/register
- */
 exports.registerCompany = async (req, res) => {
     try {
         console.log("🚀 Starting company registration...");
 
-        // Use registration service
+        
         const { company, _adminUser } = await registrationService.registerCompany({
             ...req.body,
             req
@@ -34,7 +28,7 @@ exports.registerCompany = async (req, res) => {
     } catch (err) {
         console.error("❌ REGISTER COMPANY ERROR:", err.message);
 
-        // Handle specific errors with appropriate status codes
+        
         const errorStatusMap = {
             'Company name, admin name, email, and password are required': 400,
             'Personal email is already linked to a registered company': 409,
@@ -53,17 +47,13 @@ exports.registerCompany = async (req, res) => {
     }
 };
 
-/**
- * Verify company and provision resources (Admin only)
- * POST /api/companies/:id/verify
- */
 exports.verifyCompany = async (req, res) => {
     try {
         const companyId = req.params.id;
         const { decision, rejectionReason } = req.body;
 
-        // In a real app, strict admin permissions checking here
-        // For now, assume this endpoint is protected by an internal admin middleware
+        
+        
 
         const company = await Company.findById(companyId);
         if (!company) {
@@ -79,13 +69,13 @@ exports.verifyCompany = async (req, res) => {
         if (decision === "approve") {
             console.log(`✅ Approving company: ${company.name}...`);
 
-            // Mark as approved first
+            
             company.verificationStatus = "approved";
             await company.save();
 
-            // Use registration service to provision resources
-            // Note: This contains complex provisioning logic that might need to stay inline
-            // or be extracted to a separate provisioning service
+            
+            
+            
             try {
                 await registrationService.provisionCompanyResources({
                     companyId,
@@ -100,7 +90,7 @@ exports.verifyCompany = async (req, res) => {
                 });
             } catch (provisionErr) {
                 console.error("Provisioning error:", provisionErr);
-                // Rollback approval
+                
                 company.verificationStatus = "pending";
                 await company.save();
 
@@ -132,10 +122,6 @@ exports.verifyCompany = async (req, res) => {
     }
 };
 
-/**
- * Start Company Setup (Transition from Confirm -> Wizard)
- * POST /api/companies/:id/start-setup
- */
 exports.startSetup = async (req, res) => {
     try {
         const companyId = req.params.id;
@@ -145,7 +131,7 @@ exports.startSetup = async (req, res) => {
         const company = await Company.findById(companyId);
         if (!company) return res.status(404).json({ message: "Company not found" });
 
-        // Check admin
+        
         if (typeof company.isAdmin === 'function' && !company.isAdmin(userId)) {
             return res.status(403).json({ message: "Only admins can perform setup" });
         } else if (!company.isAdmin && company.admins.every(a => a.user.toString() !== userId)) {
@@ -156,11 +142,11 @@ exports.startSetup = async (req, res) => {
             return res.status(400).json({ message: "Setup already complete" });
         }
 
-        // Save Selection
-        if (plan) company.plan = plan.toLowerCase(); // free, starter, etc
+        
+        if (plan) company.plan = plan.toLowerCase(); 
         if (acceptedTerms) company.metadata = { ...company.metadata, acceptedTermsAt: new Date(), acceptedTermsBy: userId };
 
-        // Move to Step 1 (Wizard Start)
+        
         company.setupStep = 1;
         await company.save();
 
@@ -175,14 +161,6 @@ exports.startSetup = async (req, res) => {
     }
 };
 
-/**
- * Complete Company Setup (Phase 4)
- * PUT /api/companies/:id/setup
- * Body: { step: number, data: object }
- * 
- * NOTE: This function contains complex provisioning logic that should ideally
- * be extracted to a provisioning service. Kept inline for now to avoid breaking changes.
- */
 exports.updateCompanySetup = async (req, res) => {
     try {
         const companyId = req.params.id;
@@ -192,18 +170,18 @@ exports.updateCompanySetup = async (req, res) => {
         const company = await Company.findById(companyId);
         if (!company) return res.status(404).json({ message: "Company not found" });
 
-        // Use isAdmin helper if available, or manual check
+        
         if (typeof company.isAdmin === 'function' && !company.isAdmin(userId)) {
             return res.status(403).json({ message: "Only admins can perform setup" });
         } else if (!company.isAdmin && company.admins.every(a => a.user.toString() !== userId)) {
             return res.status(403).json({ message: "Only admins can perform setup" });
         }
 
-        // Handle steps (simplified - full logic remains in original controller for now)
-        if (step === 1) { // Profile (Logo, Timezone)
+        
+        if (step === 1) { 
             if (data.displayName) company.displayName = data.displayName;
             company.setupStep = 1;
-        } else if (step === 2) { // Departments
+        } else if (step === 2) { 
             if (data.departments && Array.isArray(data.departments)) {
                 company.metadata = {
                     ...company.metadata,
@@ -219,13 +197,13 @@ exports.updateCompanySetup = async (req, res) => {
                 };
             }
             company.setupStep = 3;
-        } else if (step === 4) { // Complete
+        } else if (step === 4) { 
             console.log("🚀 Finalizing Company Setup & Provisioning Resources...");
 
-            // Create departments from setup wizard
+            
             const departmentsToCreate = company.metadata?.finalDepartments || [];
 
-            // ✅ Check for existing departments to prevent duplication
+            
             const existingDepartments = await Department.find({
                 company: company._id,
                 name: { $in: departmentsToCreate }
@@ -238,12 +216,12 @@ exports.updateCompanySetup = async (req, res) => {
 
             const createdDepartmentIds = [];
 
-            // Only create departments that don't exist
+            
             for (const deptName of newDepartmentNames) {
                 const dept = new Department({
                     name: deptName,
                     company: company._id,
-                    head: userId,  // Owner who completed setup
+                    head: userId,  
                     members: [userId],
                     createdAt: new Date()
                 });
@@ -252,16 +230,16 @@ exports.updateCompanySetup = async (req, res) => {
                 console.log(`✅ Created new department: ${deptName}`);
             }
 
-            // Add existing department IDs to the list for owner linkage
+            
             const allDepartmentIds = [
                 ...createdDepartmentIds,
                 ...existingDepartments.map(d => d._id)
             ];
 
-            // Update owner's departments (with all departments, not just new ones)
+            
             const ownerUser = await User.findById(userId);
             if (ownerUser) {
-                // Use Set to avoid duplicates
+                
                 const existingUserDeptIds = ownerUser.departments.map(id => id.toString());
                 const newDeptIds = allDepartmentIds.map(id => id.toString());
                 const uniqueDeptIds = [...new Set([...existingUserDeptIds, ...newDeptIds])];
@@ -271,7 +249,7 @@ exports.updateCompanySetup = async (req, res) => {
                 console.log(`✅ Updated owner's departments: ${uniqueDeptIds.length} total departments`);
             }
 
-            // Log what happened
+            
             if (existingDeptNames.length > 0) {
                 console.log(`ℹ️ Skipped ${existingDeptNames.length} existing departments:`, existingDeptNames);
             }

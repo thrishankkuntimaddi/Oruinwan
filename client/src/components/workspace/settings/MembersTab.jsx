@@ -65,7 +65,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'none'}
         >
-            {/* Avatar + info */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                     {member.avatar ? (
@@ -90,7 +90,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
                 </div>
             </div>
 
-            {/* Role + actions */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 {member.memberStatus === 'suspended' && (
                     <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 6px', color: '#e59e0c', background: 'rgba(229,158,12,0.1)', border: '1px solid rgba(229,158,12,0.3)', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -159,7 +159,7 @@ const MembersTab = ({ activeWorkspace, isAdmin, members, loadingMembers, memberA
         <div style={{ fontFamily: 'var(--font)' }}>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '14px' }}>Manage who has access to this workspace.</p>
 
-            {/* Search */}
+            {}
             <div style={{ position: 'relative', marginBottom: '16px' }}>
                 <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input type="text" placeholder="Search members…"

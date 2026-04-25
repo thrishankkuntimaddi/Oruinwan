@@ -1,33 +1,12 @@
-// server/src/features/company-updates/updates.service.js
-//
-// Phase 2 — Company Communication Layer (refactored from Phase 5)
-// Business logic: company-scoped updates ("internal LinkedIn feed").
-// Separate from workspace updates (/api/updates) — do NOT merge.
-//
-// Socket room: ROOMS.companyUpdates(companyId)
-
 const Update = require('../../../models/Update');
 const User = require('../../../models/User');
 const ROOMS = require('../../shared/utils/rooms');
-
-// ============================================================================
-// EMIT HELPERS
-// ============================================================================
 
 function emit(io, companyId, event, payload) {
     if (!io) return;
     io.to(ROOMS.companyUpdates(companyId)).emit(event, payload);
 }
 
-// ============================================================================
-// POST UPDATE
-// ============================================================================
-
-/**
- * Create a new company update.
- * Only manager, admin, owner may post (enforced at middleware level, but
- * double-checked here for defence-in-depth.
- */
 async function postUpdate({ companyId, posterId, title, content, type, priority, visibility, targetDepartment, attachments, mentions, io }) {
 
     const ALLOWED_ROLES = ['manager', 'admin', 'owner'];
@@ -46,7 +25,7 @@ async function postUpdate({ companyId, posterId, title, content, type, priority,
 
     const update = await Update.create({
         company: companyId,
-        workspace: null,                         // company-scoped: no workspace
+        workspace: null,                         
         postedBy: posterId,
         title: title || null,
         message: content,
@@ -67,15 +46,6 @@ async function postUpdate({ companyId, posterId, title, content, type, priority,
     return populated;
 }
 
-
-// ============================================================================
-// GET UPDATES
-// ============================================================================
-
-/**
- * List non-deleted company updates with optional filters.
- * Pinned updates sort first; then newest-first.
- */
 async function getUpdates(companyId, { type, priority, search, limit = 50, page = 1 } = {}) {
     const filter = { company: companyId, isDeleted: false };
 
@@ -102,14 +72,6 @@ async function getUpdates(companyId, { type, priority, search, limit = 50, page 
     return { updates, total, page: parseInt(page), limit: parseInt(limit) };
 }
 
-// ============================================================================
-// DELETE UPDATE
-// ============================================================================
-
-/**
- * Soft-delete a company update.
- * Only the original poster OR an admin/owner can delete.
- */
 async function deleteUpdate({ updateId, companyId, requesterId, requesterRole, io }) {
     const update = await Update.findOne({ _id: updateId, company: companyId, isDeleted: false });
     if (!update) {
@@ -134,13 +96,6 @@ async function deleteUpdate({ updateId, companyId, requesterId, requesterRole, i
     return { deleted: true, updateId };
 }
 
-// ============================================================================
-// REACTIONS (toggle)
-// ============================================================================
-
-/**
- * Toggle a reaction (add if not exists, remove if already reacted with same emoji).
- */
 async function addReaction({ updateId, companyId, userId, emoji, io }) {
     const update = await Update.findOne({ _id: updateId, company: companyId, isDeleted: false });
     if (!update) {
@@ -172,13 +127,6 @@ async function addReaction({ updateId, companyId, userId, emoji, io }) {
     return { action, reactions: update.reactions };
 }
 
-// ============================================================================
-// MARK AS READ
-// ============================================================================
-
-/**
- * Mark an update as read for a specific user.
- */
 async function markAsRead({ updateId, companyId, userId }) {
     await Update.findOneAndUpdate(
         { _id: updateId, company: companyId, isDeleted: false },
@@ -186,10 +134,6 @@ async function markAsRead({ updateId, companyId, userId }) {
     );
     return { read: true };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     postUpdate,

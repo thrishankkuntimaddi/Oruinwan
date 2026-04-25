@@ -1,7 +1,3 @@
-/**
- * VoiceMessage.jsx — Phase 7.1 / 7.2
- * Audio player: play/pause + scrub bar + timestamps.
- */
 import React, { useRef, useState, useEffect } from "react";
 import { Play, Pause, Mic } from "lucide-react";
 import { toProxyUrl } from "../../../../../utils/gcsProxy";
@@ -75,7 +71,7 @@ export default function VoiceMessage({ msg }) {
         }}>
             <audio ref={audioRef} src={proxyUrl} preload="metadata" />
 
-            {/* Play/Pause */}
+            {}
             <button
                 onClick={toggle}
                 style={{
@@ -92,7 +88,7 @@ export default function VoiceMessage({ msg }) {
                 }
             </button>
 
-            {/* Scrub bar + times */}
+            {}
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div
                     style={{ height: '3px', backgroundColor: 'var(--border-accent)', borderRadius: '99px', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
@@ -108,7 +104,7 @@ export default function VoiceMessage({ msg }) {
                 </div>
             </div>
 
-            {/* Mic badge */}
+            {}
             <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
                 <Mic size={13} />
             </div>

@@ -10,7 +10,6 @@ import ProfileQuickSettings from "../components/workspace/ProfileQuickSettings";
 import ChttrixAIChat from "../components/ai/ChttrixAIChat/ChttrixAIChat";
 import { WorkspaceProvider } from "../contexts/WorkspaceContext";
 
-// Extracted view components
 import Header from './workspaceSelectComponents/Header.jsx';
 import WorkspaceGrid from "./workspaceSelectComponents/WorkspaceGrid.jsx";
 import CreateWorkspaceModal from "./workspaceSelectComponents/CreateWorkspaceModal.jsx";
@@ -22,29 +21,29 @@ const WorkspaceSelect = () => {
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
-    // ⚡ PLATFORM ADMIN REDIRECT - Platform admins should NEVER be here
+    
     React.useEffect(() => {
         if (user?.roles?.includes('chttrix_admin')) {
             navigate('/chttrix-admin', { replace: true });
         }
     }, [user, navigate]);
 
-    // State
+    
     const [workspaces, setWorkspaces] = useState([]);
     const [isLoadingWorkspaces, setIsLoadingWorkspaces] = useState(true);
     const [loadError, setLoadError] = useState(null);
 
-    // Help State
+    
     const [showHelp, setShowHelp] = useState(false);
     const [activeHelpModal, setActiveHelpModal] = useState(null);
 
-    // Profile Quick Settings State
+    
     const [showProfile, setShowProfile] = useState(false);
 
-    // ChttrixAI State
+    
     const [showAI, setShowAI] = useState(false);
 
-    // Create Modal State
+    
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [createStep, setCreateStep] = useState(1);
     const [nameError, setNameError] = useState("");
@@ -58,7 +57,7 @@ const WorkspaceSelect = () => {
     });
     const [termsAccepted, setTermsAccepted] = useState(false);
 
-    // Load Workspaces
+    
     const loadWorkspaces = React.useCallback(async () => {
         try {
             setIsLoadingWorkspaces(true);
@@ -101,7 +100,7 @@ const WorkspaceSelect = () => {
         navigate(`/workspace/${workspaceId}/home`);
     };
 
-    // --- Create Workspace Logic ---
+    
     const resetCreateModal = () => {
         setIsCreateModalOpen(false);
         setCreateStep(1);
@@ -120,7 +119,7 @@ const WorkspaceSelect = () => {
     const handleCreateSubmit = async (e) => {
         e.preventDefault();
 
-        // Step-specific validation
+        
         if (createStep === 1) {
             if (!createData.name.trim()) {
                 setNameError("Please enter a workspace name");
@@ -145,11 +144,11 @@ const WorkspaceSelect = () => {
             return;
         }
 
-        // Final submission on step 4
+        
         if (createStep === 4) {
             try {
 
-                // 1. Create Workspace
+                
                 const res = await api.post('/api/workspaces/create', {
                     name: createData.name,
                     icon: createData.icon,
@@ -159,8 +158,7 @@ const WorkspaceSelect = () => {
 
                 const newWorkspaceId = res.data.workspace.id;
 
-
-                // 2. Send Invites (if any)
+                
                 if (createData.invites && createData.invites.trim()) {
                     try {
                         await api.post(`/api/workspaces/${newWorkspaceId}/invite`, {
@@ -172,7 +170,7 @@ const WorkspaceSelect = () => {
                     }
                 }
 
-                await loadWorkspaces(); // Refresh list
+                await loadWorkspaces(); 
                 resetCreateModal();
                 navigate(`/workspace/${newWorkspaceId}/home`);
             } catch (error) {
@@ -186,7 +184,7 @@ const WorkspaceSelect = () => {
         }
     };
 
-    // Helper to get Icon component
+    
     const getIconComponent = (iconName) => {
         const icons = {
             rocket: Rocket, briefcase: Briefcase, zap: Zap, palette: Palette,
@@ -198,7 +196,7 @@ const WorkspaceSelect = () => {
 
     return (
     <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'var(--font)' }}>
-            {/* Header */}
+            {}
             <Header
                 showHelp={showHelp}
                 setShowHelp={setShowHelp}
@@ -214,7 +212,7 @@ const WorkspaceSelect = () => {
                 showAI={showAI}
             />
 
-            {/* Main Content */}
+            {}
             <main style={{ paddingTop: '80px', paddingBottom: '48px', paddingLeft: '16px', paddingRight: '16px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
                 <div style={{ marginBottom: '32px', textAlign: 'center', maxWidth: '560px', margin: '0 auto 32px' }}>
                     <h1 style={{
@@ -247,7 +245,7 @@ const WorkspaceSelect = () => {
                 )}
             </main>
 
-            {/* Create Modal */}
+            {}
             <CreateWorkspaceModal
                 isOpen={isCreateModalOpen}
                 onClose={resetCreateModal}
@@ -264,16 +262,16 @@ const WorkspaceSelect = () => {
                 user={user}
             />
 
-            {/* Help Modals */}
+            {}
             <HelpModalsContainer
                 activeModal={activeHelpModal}
                 onClose={() => setActiveHelpModal(null)}
             />
 
-            {/* Profile Quick Settings Modal */}
+            {}
             {showProfile && <ProfileQuickSettings onClose={() => setShowProfile(false)} />}
 
-            {/* ChttrixAI Panel — starts below the 48px fixed header */}
+            {}
             {showAI && (
                 <div style={{ position: 'fixed', top: '48px', right: 0, width: '320px', height: 'calc(100vh - 48px)', zIndex: 40, borderLeft: '1px solid var(--border-subtle)' }}>
                     <WorkspaceProvider>

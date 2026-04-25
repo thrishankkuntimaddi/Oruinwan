@@ -12,7 +12,7 @@ export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewCh
     const clamped = Math.min(activeIdx, Math.max(filtered.length - 1, 0));
     setActiveIdx(clamped);
     onPreviewChange?.(filtered[clamped] ?? null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [query]);
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewCh
         overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
       }}
     >
-      {/* Header */}
+      {}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '6px 12px',
@@ -94,7 +94,7 @@ export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewCh
         >✕</button>
       </div>
 
-      {/* List */}
+      {}
       <div ref={listRef} style={{ maxHeight: '260px', overflowY: 'auto', padding: '4px 6px' }}>
         {grouped.map((cat) => (
           <div key={cat.id}>
@@ -122,7 +122,7 @@ export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewCh
         ))}
       </div>
 
-      {/* Footer */}
+      {}
       <div style={{
         display: 'flex', alignItems: 'center', gap: '12px',
         padding: '6px 12px',

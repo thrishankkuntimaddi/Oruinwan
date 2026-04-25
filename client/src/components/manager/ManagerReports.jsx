@@ -1,4 +1,3 @@
-// ManagerReports — Monolith Flow Design System (Limited Visibility)
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Users, Building, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -23,7 +22,7 @@ export default function ManagerReports() {
             .finally(() => setLoading(false));
     }, [selectedDepartment]);
 
-    // ── Loading skeleton ──────────────────────────────────────────
+    
     if (loading) return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -31,12 +30,12 @@ export default function ManagerReports() {
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
                 <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Permission notice */}
+                    {}
                     <div style={{ display: 'flex', gap: '10px', padding: '14px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                         <div className="sk" style={{ width: '14px', height: '14px', flexShrink: 0, marginTop: '1px' }} />
                         <div style={{ flex: 1 }}><div className="sk" style={{ height: '11px', width: '160px', marginBottom: '6px' }} /><div className="sk" style={{ height: '9px', width: '100%', marginBottom: '3px' }} /><div className="sk" style={{ height: '9px', width: '80%' }} /></div>
                     </div>
-                    {/* 2-col cards */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         {[1,2].map(i => (
                             <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderTop: '2px solid var(--border-accent)', padding: '16px' }}>
@@ -50,7 +49,7 @@ export default function ManagerReports() {
                             </div>
                         ))}
                     </div>
-                    {/* Dept info */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
                         <div className="sk" style={{ height: '9px', width: '180px', marginBottom: '16px' }} />
                         <div className="sk" style={{ height: '24px', width: '200px', marginBottom: '14px' }} />
@@ -73,7 +72,7 @@ export default function ManagerReports() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -85,7 +84,7 @@ export default function ManagerReports() {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
                 <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {/* Permission notice */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '14px 16px', background: 'rgba(184,149,106,0.05)', border: '1px solid rgba(184,149,106,0.25)' }}>
                         <AlertCircle size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
                         <div>
@@ -96,7 +95,7 @@ export default function ManagerReports() {
                         </div>
                     </div>
 
-                    {/* Can / Cannot see */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <VisCard icon={Eye} color="var(--state-success)" title="What You Can See" items={[
                             { Icon: Building, label: 'Department name and description' },
@@ -112,7 +111,7 @@ export default function ManagerReports() {
                         ]} />
                     </div>
 
-                    {/* Dept Info - Read only */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
                         <p style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>Department Information (Read-Only)</p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -154,7 +153,7 @@ export default function ManagerReports() {
                         </div>
                     </div>
 
-                    {/* Contact CTA */}
+                    {}
                     <div style={{ padding: '20px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
                         <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Need More Access?</p>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.6' }}>Contact your admin or owner to request additional permissions or changes to department settings.</p>

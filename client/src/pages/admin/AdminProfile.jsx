@@ -57,7 +57,7 @@ const AdminProfile = () => {
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }} className="custom-scrollbar">
                 <div style={{ maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {/* Profile Banner */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderLeft: `3px solid var(--accent)`, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
                         <div style={{ position: 'relative' }}>
                             <div style={{ width: '64px', height: '64px', background: 'var(--bg-active)', border: '2px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 700, color: 'var(--accent)', overflow: 'hidden', flexShrink: 0 }}>
@@ -87,7 +87,7 @@ const AdminProfile = () => {
                         </div>
                     </div>
 
-                    {/* Personal Info */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
                         <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <User size={14} style={{ color: 'var(--accent)' }} /> Personal Information
@@ -125,7 +125,7 @@ const AdminProfile = () => {
                         </div>
                     </div>
 
-                    {/* Account Security */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
                         <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Shield size={14} style={{ color: 'var(--accent)' }} /> Account Security

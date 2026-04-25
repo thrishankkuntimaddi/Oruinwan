@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import { X, ArrowRight, FileText, Zap, Layers, ClipboardList, Lightbulb, Users, FolderKanban, Cpu, Megaphone, StickyNote } from 'lucide-react';
 
-// ─────────────────────────────────────────────
-// Template Definitions
-// ─────────────────────────────────────────────
 export const TEMPLATES = [
-    /* ── Quick Start ── */
+    
     {
         id: 'blank', category: 'quick',
         TypeIcon: StickyNote, iconColor: '#64748b', color: '#0f172a', accent: '#334155',
@@ -15,7 +12,7 @@ export const TEMPLATES = [
         blocks: [], title: 'Untitled Note',
     },
 
-    /* ── Project ── */
+    
     {
         id: 'projectspec', category: 'project',
         TypeIcon: FolderKanban, iconColor: '#7dd3fc', color: '#0369a1', accent: '#0284c7',
@@ -68,7 +65,7 @@ export const TEMPLATES = [
         ],
     },
 
-    /* ── Meeting & Ops ── */
+    
     {
         id: 'meeting', category: 'meeting',
         TypeIcon: Users, iconColor: '#6ee7b7', color: '#065f46', accent: '#059669',
@@ -116,7 +113,7 @@ export const TEMPLATES = [
         ],
     },
 
-    /* ── Documents ── */
+    
     {
         id: 'document', category: 'docs',
         TypeIcon: FileText, iconColor: '#93c5fd', color: '#1d4ed8', accent: '#3b82f6',
@@ -135,9 +132,6 @@ export const TEMPLATES = [
     },
 ];
 
-// ─────────────────────────────────────────────
-// Category sidebar config
-// ─────────────────────────────────────────────
 const CATEGORIES = [
     { id: 'quick',   label: 'Quick Start',        Icon: Zap },
     { id: 'project', label: 'Project Templates',  Icon: Layers },
@@ -145,9 +139,6 @@ const CATEGORIES = [
     { id: 'docs',    label: 'Documents',           Icon: FileText },
 ];
 
-// ─────────────────────────────────────────────
-// Component
-// ─────────────────────────────────────────────
 const NoteTemplateModal = ({ onSelect, onClose }) => {
     const [activeCategory, setActiveCategory] = useState('quick');
     const [hovered, setHovered] = useState(null);
@@ -162,7 +153,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
         >
             <div style={{ background: 'var(--bg-surface)', width: '100%', maxWidth: '900px', height: '600px', display: 'flex', overflow: 'hidden', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)' }}>
 
-                {/* Left sidebar */}
+                {}
                 <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-base)', borderRight: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '20px 20px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
                         <h2 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.06em', textTransform: 'uppercase', margin: 0 }}>New Note</h2>
@@ -202,7 +193,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                     </div>
                 </div>
 
-                {/* Right panel */}
+                {}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: 'var(--bg-surface)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -238,7 +229,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                             transform: isHov ? 'translateY(-1px)' : 'none',
                                             boxShadow: isHov ? '0 4px 16px rgba(0,0,0,0.1)' : 'none',
                                         }}>
-                                        {/* Coloured header — always dark per template brand colour */}
+                                        {}
                                         <div style={{ padding: '14px 14px 12px', position: 'relative', overflow: 'hidden', backgroundColor: tmpl.color }}>
                                             <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', backgroundColor: tmpl.accent }} />
                                             <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -252,7 +243,7 @@ const NoteTemplateModal = ({ onSelect, onClose }) => {
                                                 <span style={{ fontSize: '10px', fontFamily: 'monospace', color: 'rgba(255,255,255,0.35)' }}>{tmpl.blocks.length}B</span>
                                             </div>
                                         </div>
-                                        {/* Body — theme-aware */}
+                                        {}
                                         <div style={{ padding: '14px', background: 'var(--bg-base)' }}>
                                             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '10px', margin: '0 0 10px 0' }}>{tmpl.desc}</p>
                                             <div style={{ marginBottom: '14px' }}>

@@ -1,5 +1,3 @@
-// client/src/contexts/CompanyContext.jsx
-
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api, { API_BASE } from '@services/api';
@@ -20,7 +18,7 @@ export const CompanyProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch company details
+    
     const fetchCompanyDetails = useCallback(async () => {
         if (!user?.companyId) {
             setCompany(null);
@@ -31,12 +29,11 @@ export const CompanyProvider = ({ children }) => {
         try {
             setLoading(true);
 
-            // Extract ID - handle both object and string formats  
+            
 
             const companyId = typeof user.companyId === 'object' && user.companyId !== null
                 ? (user.companyId._id || user.companyId.id || user.companyId)
                 : user.companyId;
-
 
             const response = await api.get(`${API_BASE}/api/companies/${companyId}`);
             setCompany(response.data.company);
@@ -50,12 +47,12 @@ export const CompanyProvider = ({ children }) => {
         }
     }, [user?.companyId]);
 
-    // Fetch company on mount or when user changes
+    
     useEffect(() => {
         fetchCompanyDetails();
     }, [fetchCompanyDetails]);
 
-    // Update company settings
+    
     const updateCompanySettings = async (settings) => {
         if (!user?.companyId) {
             throw new Error('No company ID');
@@ -63,12 +60,11 @@ export const CompanyProvider = ({ children }) => {
 
         try {
 
-            // Extract ID - handle both object and string formats  
+            
 
             const companyId = typeof user.companyId === 'object' && user.companyId !== null
                 ? (user.companyId._id || user.companyId.id || user.companyId)
                 : user.companyId;
-
 
             const response = await api.put(
                 `${API_BASE}/api/companies/${companyId}`,
@@ -82,15 +78,15 @@ export const CompanyProvider = ({ children }) => {
         }
     };
 
-    // Refresh company data
+    
     const refreshCompanyData = () => {
         return fetchCompanyDetails();
     };
 
-    // Get user's company role from user object
+    
     const userCompanyRole = user?.companyRole || 'member';
 
-    // Permission checks
+    
     const isCompanyAdmin = () => {
         return userCompanyRole === 'owner' || userCompanyRole === 'admin';
     };
@@ -118,7 +114,7 @@ export const CompanyProvider = ({ children }) => {
         userCompanyRole,
         updateCompanySettings,
         refreshCompanyData,
-        // Permission helpers
+        
         isCompanyAdmin,
         isCompanyOwner,
         canManageUsers,

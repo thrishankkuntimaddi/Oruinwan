@@ -7,10 +7,6 @@ const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 
-/**
- * GET /api/admin-dashboard/users-access
- * User management and access stats
- */
 router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -26,7 +22,7 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
             User.countDocuments({ companyId, companyRole: 'guest', accountStatus: { $ne: 'removed' } })
         ]);
 
-        // Get recent invites (last 7 days)
+        
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const recentInvites = await User.find({
             companyId,
@@ -61,10 +57,6 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-/**
- * GET /api/admin-dashboard/departments
- * Department structure and management
- */
 router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -75,7 +67,7 @@ router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
             .populate('managers', 'username email')
             .lean();
 
-        // Attach user count to each department (exclude removed users)
+        
         for (const dept of departments) {
             dept.userCount = await User.countDocuments({
                 companyId,
@@ -91,10 +83,6 @@ router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-/**
- * GET /api/admin-dashboard/workspaces-access
- * Workspace access and management view
- */
 router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -106,7 +94,7 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
             .populate('department', 'name')
             .lean();
 
-        // Enhance with activity data
+        
         const Message = require("../messages/message.model.js");
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -134,10 +122,6 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
     }
 });
 
-/**
- * GET /api/admin-dashboard/audit-security
- * Audit logs and security events
- */
 router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -146,7 +130,7 @@ router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
 
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-        // Get recent audit actions
+        
         const recentActions = await AuditLog.find({
             companyId,
             createdAt: { $gte: sevenDaysAgo }
@@ -156,7 +140,7 @@ router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
             .limit(50)
             .lean();
 
-        // Count role changes and permission changes
+        
         const [roleChanges, permissionChanges] = await Promise.all([
             AuditLog.countDocuments({
                 companyId,
@@ -186,34 +170,30 @@ router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-/**
- * GET /api/admin-dashboard/workspaces
- * Get all company workspaces with detailed information
- */
 router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
         const companyId = user.companyId;
 
-        // Find all workspaces for the company
+        
         const workspaces = await Workspace.find({ company: companyId })
             .populate('createdBy', 'username email')
             .populate('department', 'name')
             .lean();
 
-        // Get Channel model for counting
+        
         const Channel = require("../channels/channel.model.js");
 
-        // Enhance each workspace with additional data
+        
         const enhancedWorkspaces = await Promise.all(workspaces.map(async (workspace) => {
-            // Count channels in this workspace
+            
             const channelCount = await Channel.countDocuments({ workspace: workspace._id });
 
-            // Get member count (only active members)
+            
             const memberCount = workspace.members.filter(m => m.status === 'active').length;
 
-            // Find admin/owner of workspace
+            
             const adminMember = workspace.members.find(m =>
                 m.role === 'owner' || m.role === 'admin'
             );
@@ -224,7 +204,7 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
                 admin = adminUser;
             }
 
-            // Determine status
+            
             const status = workspace.isArchived ? 'archived' : (workspace.isActive ? 'active' : 'inactive');
 
             return {
@@ -236,7 +216,7 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
                 memberCount,
                 channelCount,
                 status,
-                admin: admin || workspace.createdBy, // Fallback to creator if no admin found
+                admin: admin || workspace.createdBy, 
                 department: workspace.department,
                 createdAt: workspace.createdAt,
                 updatedAt: workspace.updatedAt,
@@ -251,12 +231,6 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-
-/**
- * GET /api/admin-dashboard/company-members
- * List all active members of the company (for the "add member" picker)
- * Only returns users that belong to the same company as the requester
- */
 router.get('/company-members', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -282,10 +256,6 @@ router.get('/company-members', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-/**
- * GET /api/admin-dashboard/workspaces/:workspaceId/members
- * List members of a specific company workspace
- */
 router.get('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -301,7 +271,7 @@ router.get('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async 
             return res.status(404).json({ message: 'Workspace not found' });
         }
 
-        // Enforce company isolation — workspace must belong to caller's company
+        
         if (!workspace.company || String(workspace.company) !== String(companyId)) {
             return res.status(403).json({ message: 'This workspace does not belong to your company' });
         }
@@ -326,11 +296,6 @@ router.get('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async 
     }
 });
 
-/**
- * POST /api/admin-dashboard/workspaces/:workspaceId/members
- * Add a company member to a workspace (direct add, no invite link needed)
- * Security: target user MUST be a member of the same company
- */
 router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async (req, res) => {
     try {
         const callerId = req.user.sub || req.user._id;
@@ -343,13 +308,13 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
             return res.status(400).json({ message: 'userId is required' });
         }
 
-        // Validate role
+        
         const allowedRoles = ['member', 'admin'];
         if (!allowedRoles.includes(role)) {
             return res.status(400).json({ message: 'role must be member or admin' });
         }
 
-        // Fetch workspace — must belong to caller's company
+        
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
@@ -358,7 +323,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
             return res.status(403).json({ message: 'This workspace does not belong to your company' });
         }
 
-        // Fetch target user — MUST be a member of the same company (no external users)
+        
         const targetUser = await User.findById(targetUserId);
         if (!targetUser) {
             return res.status(404).json({ message: 'User not found' });
@@ -369,7 +334,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
             });
         }
 
-        // Check not already a member
+        
         const alreadyMember = workspace.members.some(
             m => String(m.user) === String(targetUserId)
         );
@@ -377,7 +342,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
             return res.status(400).json({ message: 'User is already a member of this workspace' });
         }
 
-        // Add to workspace
+        
         workspace.members.push({
             user: targetUserId,
             role,
@@ -386,7 +351,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
         });
         await workspace.save();
 
-        // Add workspace to user's workspaces list (single source of truth)
+        
         const alreadyInUserList = targetUser.workspaces.some(
             w => String(w.workspace) === String(workspaceId)
         );
@@ -395,7 +360,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
             await targetUser.save();
         }
 
-        // Auto-join default channels
+        
         const Channel = require('../channels/channel.model.js');
         const defaultChannels = await Channel.find({ workspace: workspaceId, isDefault: true });
         for (const channel of defaultChannels) {
@@ -429,10 +394,6 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
     }
 });
 
-/**
- * DELETE /api/admin-dashboard/workspaces/:workspaceId/members/:userId
- * Remove a member from a company workspace
- */
 router.delete('/workspaces/:workspaceId/members/:userId', requireAuth, requireAdmin, async (req, res) => {
     try {
         const callerId = req.user.sub || req.user._id;
@@ -445,12 +406,12 @@ router.delete('/workspaces/:workspaceId/members/:userId', requireAuth, requireAd
             return res.status(404).json({ message: 'Workspace not found' });
         }
 
-        // Company isolation check
+        
         if (!workspace.company || String(workspace.company) !== String(companyId)) {
             return res.status(403).json({ message: 'This workspace does not belong to your company' });
         }
 
-        // Cannot remove the workspace owner
+        
         const targetMember = workspace.members.find(m => String(m.user) === String(targetUserId));
         if (!targetMember) {
             return res.status(404).json({ message: 'User is not a member of this workspace' });
@@ -459,11 +420,11 @@ router.delete('/workspaces/:workspaceId/members/:userId', requireAuth, requireAd
             return res.status(403).json({ message: 'Cannot remove the workspace owner' });
         }
 
-        // Remove from workspace
+        
         workspace.members = workspace.members.filter(m => String(m.user) !== String(targetUserId));
         await workspace.save();
 
-        // Remove from user's workspaces list
+        
         await User.findByIdAndUpdate(targetUserId, {
             $pull: { workspaces: { workspace: workspace._id } }
         });

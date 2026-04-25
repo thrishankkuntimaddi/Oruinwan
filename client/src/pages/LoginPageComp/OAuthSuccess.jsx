@@ -20,23 +20,23 @@ export default function OAuthSuccess() {
       setIsProcessing(true);
 
       try {
-        // Store access token to localStorage
+        
         saveAccessToken(access);
 
-        // ============================================================
-        // 🔐 PHASE 1: OAuth authentication = user is finalized
-        // Load user data and initialize identity keys
-        // NOTE: requiresPasswordSetup is UX-only (optional password prompt)
-        // and does NOT affect Phase 1 identity establishment
-        // ============================================================
+        
+        
+        
+        
+        
+        
         await loadUser();
 
-        // Wait a bit for context to update
+        
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // ============================================================
-        // Password setup check (UX flow - happens AFTER identity)
-        // ============================================================
+        
+        
+        
         if (requiresPasswordSetup) {
           navigate("/set-password");
         } else {
@@ -45,7 +45,7 @@ export default function OAuthSuccess() {
       } catch (error) {
         console.error("❌ OAuth error:", error);
 
-        // Retry once if first attempt fails
+        
         if (loadAttempts < 1) {
 
           setLoadAttempts(prev => prev + 1);

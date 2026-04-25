@@ -1,4 +1,3 @@
-// LoginForm.jsx — Monolith Flow Design System
 import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../contexts/AuthContext';
@@ -7,7 +6,6 @@ import { useGoogleLogin } from '@react-oauth/google';
 import api from '@services/api';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 
-// ── OAuth Icons ────────────────────────────────────────────────────────────────
 const GoogleIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -29,7 +27,6 @@ const LinkedInIcon = () => (
     </svg>
 );
 
-// ── Shared input style ─────────────────────────────────────────────────────────
 const inp = (focused, hasError) => ({
     width: '100%', boxSizing: 'border-box',
     padding: '10px 36px 10px 12px',
@@ -46,7 +43,6 @@ const Label = ({ children }) => (
     </label>
 );
 
-// ── Component ──────────────────────────────────────────────────────────────────
 const LoginForm = ({ onSwitch, initialEmail = '' }) => {
     const [formData, setFormData] = useState({ email: initialEmail, password: '' });
     const [showPassword, setShowPassword] = useState(false);
@@ -161,14 +157,14 @@ const LoginForm = ({ onSwitch, initialEmail = '' }) => {
                 </button>
             </form>
 
-            {/* Divider */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
                 <div style={{ flex: 1, height: '1px', background: 'var(--bg-active)' }} />
                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Or continue with</span>
                 <div style={{ flex: 1, height: '1px', background: 'var(--bg-active)' }} />
             </div>
 
-            {/* OAuth buttons */}
+            {}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
                 {[
                     { icon: <GoogleIcon />, label: 'Google', onClick: googleLogin },

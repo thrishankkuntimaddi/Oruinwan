@@ -1,4 +1,3 @@
-// server/src/features/permissions/permissions.controller.js
 'use strict';
 
 const permissionsService = require('./permissions.service');
@@ -6,10 +5,6 @@ const WorkspacePermission = require('../../models/WorkspacePermission');
 const AuditLog = require('../../../models/AuditLog');
 const { handleError } = require('../../../utils/responseHelpers');
 
-/**
- * GET /api/permissions/matrix?companyId=
- * Returns the full role → permission matrix for a company.
- */
 exports.getMatrix = async (req, res) => {
     try {
         const companyId = req.query.companyId || req.user?._dbUser?.companyId || req.companyId;
@@ -22,11 +17,6 @@ exports.getMatrix = async (req, res) => {
     }
 };
 
-/**
- * PUT /api/permissions/matrix
- * Bulk-update the role → permission matrix for a company.
- * Body: { companyId, updates: { admin: { sendMessages: true, ... } } }
- */
 exports.updateMatrix = async (req, res) => {
     try {
         const { companyId, updates } = req.body;
@@ -38,7 +28,7 @@ exports.updateMatrix = async (req, res) => {
 
         const matrix = await permissionsService.updateMatrix(companyId, updates, userId);
 
-        // Audit log
+        
         await AuditLog.create({
             companyId, userId,
             action: 'permissions.matrix.updated',
@@ -52,17 +42,13 @@ exports.updateMatrix = async (req, res) => {
     }
 };
 
-/**
- * GET /api/permissions/workspace/:workspaceId/features
- * Returns feature toggles for a workspace.
- */
 exports.getFeatureToggles = async (req, res) => {
     try {
         const { workspaceId } = req.params;
         let perms = await WorkspacePermission.findOne({ workspace: workspaceId }).lean();
 
         if (!perms) {
-            // Return defaults if no document exists yet
+            
             perms = {
                 featureToggles: {
                     tasks: true, notes: true, polls: true, ai: true,
@@ -87,11 +73,6 @@ exports.getFeatureToggles = async (req, res) => {
     }
 };
 
-/**
- * PUT /api/permissions/workspace/:workspaceId/features
- * Update feature toggles for a workspace.
- * Body: { featureToggles: { tasks: true, polls: false, ... }, invitePermission?, channelCreationPermission? }
- */
 exports.updateFeatureToggles = async (req, res) => {
     try {
         const { workspaceId } = req.params;
@@ -110,7 +91,7 @@ exports.updateFeatureToggles = async (req, res) => {
             { upsert: true, new: true, runValidators: true }
         );
 
-        // Audit log + realtime notification
+        
         await AuditLog.create({
             companyId, userId,
             action: 'permissions.features.updated',
@@ -119,7 +100,7 @@ exports.updateFeatureToggles = async (req, res) => {
             category: 'permissions', severity: 'info', status: 'success'
         }).catch(() => {});
 
-        // Broadcast realtime so all workspace clients re-check toggles
+        
         const io = req.app?.get('io');
         if (io) {
             io.to(`workspace:${workspaceId}`).emit('permissions:updated', {
@@ -135,11 +116,6 @@ exports.updateFeatureToggles = async (req, res) => {
     }
 };
 
-/**
- * GET /api/permissions/audit-logs
- * Paginated, filtered audit log reader (admins+).
- * Query: companyId, category, severity, userId, page, limit, from, to
- */
 exports.getAuditLogs = async (req, res) => {
     try {
         const AuditLog = require('../../../models/AuditLog');

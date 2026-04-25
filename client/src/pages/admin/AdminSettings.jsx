@@ -1,6 +1,3 @@
-// client/src/pages/admin/AdminSettings.jsx
-// Comprehensive Company Settings for Admin — Monolith Flow design system
-
 import React, { useState } from 'react';
 import {
     Building, Shield, Bell, CreditCard, Users, Globe,
@@ -67,7 +64,7 @@ const AdminSettings = () => {
             <AdminSidebar />
 
             <main style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                {/* Header */}
+                {}
                 <header style={{ height: '56px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
                     <div>
                         <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>Company Settings</h2>
@@ -77,7 +74,7 @@ const AdminSettings = () => {
                 </header>
 
                 <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                    {/* Sidebar Tabs */}
+                    {}
                     <div style={{ width: '220px', background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', overflowY: 'auto', flexShrink: 0 }} className="custom-scrollbar">
                         <nav style={{ padding: '12px 8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                             {tabs.map(tab => (
@@ -86,7 +83,7 @@ const AdminSettings = () => {
                         </nav>
                     </div>
 
-                    {/* Content */}
+                    {}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }} className="custom-scrollbar">
                         <div style={{ maxWidth: '640px' }}>
                             {activeTab === 'company' && <CompanyTab settings={settings} setSettings={setSettings} />}
@@ -105,7 +102,6 @@ const AdminSettings = () => {
     );
 };
 
-// ─── Tabs ───────────────────────────────────────────────────────────────
 const CompanyTab = ({ settings, setSettings }) => (
     <Section title="Company Profile" desc="Manage your organization's basic information">
         <Card>
@@ -341,7 +337,6 @@ const DataTab = () => (
     </Section>
 );
 
-// ─── Helpers ────────────────────────────────────────────────────────────
 const Section = ({ title, desc, children }) => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         <div style={{ marginBottom: '4px' }}>

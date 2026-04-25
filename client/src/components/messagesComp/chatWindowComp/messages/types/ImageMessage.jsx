@@ -1,7 +1,3 @@
-/**
- * ImageMessage.jsx — Phase 7.1 Attachments
- * Renders an inline image with a click-to-expand lightbox.
- */
 import React, { useState } from "react";
 import { X, ExternalLink } from "lucide-react";
 import { toProxyUrl } from "../../../../../utils/gcsProxy";
@@ -16,7 +12,7 @@ export default function ImageMessage({ msg }) {
 
     return (
         <>
-            {/* Thumbnail */}
+            {}
             <div
                 style={{
                     marginTop: '6px', display: 'inline-block', maxWidth: '280px',
@@ -47,7 +43,7 @@ export default function ImageMessage({ msg }) {
                 )}
             </div>
 
-            {/* Lightbox */}
+            {}
             {lightbox && (
                 <div
                     style={{ position: 'fixed', inset: 0, zIndex: 9999, backgroundColor: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}

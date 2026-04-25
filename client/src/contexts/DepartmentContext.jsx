@@ -1,5 +1,3 @@
-// client/src/contexts/DepartmentContext.jsx
-
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api, { API_BASE } from '@services/api';
@@ -21,7 +19,7 @@ export const DepartmentProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // Fetch all departments for the company
+    
     const fetchDepartments = useCallback(async () => {
         if (!user?.companyId) {
             setDepartments([]);
@@ -32,11 +30,11 @@ export const DepartmentProvider = ({ children }) => {
         try {
             setLoading(true);
 
-            // GET /api/departments — server derives companyId from JWT via requireCompanyMember
+            
             const response = await api.get(`${API_BASE}/api/departments`);
             setDepartments(response.data.departments || []);
 
-            // Set user's department if they have one
+            
             if (user.departmentId) {
                 const userDept = response.data.departments?.find(d => d._id === user.departmentId);
                 setUserDepartment(userDept || null);
@@ -52,12 +50,12 @@ export const DepartmentProvider = ({ children }) => {
         }
     }, [user?.companyId, user?.departmentId]);
 
-    // Fetch on mount or when user changes
+    
     useEffect(() => {
         fetchDepartments();
     }, [fetchDepartments]);
 
-    // Create new department
+    
     const createDepartment = async (name, description = '') => {
         if (!user?.companyId) {
             throw new Error('No company ID');
@@ -65,19 +63,18 @@ export const DepartmentProvider = ({ children }) => {
 
         try {
 
-            // Extract ID - handle both object and string formats
+            
 
             const companyId = typeof user.companyId === 'object' && user.companyId !== null
                 ? (user.companyId._id || user.companyId.id || user.companyId)
                 : user.companyId;
-
 
             const response = await api.post(
                 `${API_BASE}/api/departments`,
                 { companyId, name, description }
             );
 
-            // Add new department to state
+            
             setDepartments(prev => [...prev, response.data.department]);
             return response.data.department;
         } catch (err) {
@@ -86,7 +83,7 @@ export const DepartmentProvider = ({ children }) => {
         }
     };
 
-    // Update department
+    
     const updateDepartment = async (departmentId, data) => {
         try {
             const response = await api.put(
@@ -94,7 +91,7 @@ export const DepartmentProvider = ({ children }) => {
                 data
             );
 
-            // Update in state
+            
             setDepartments(prev =>
                 prev.map(dept =>
                     dept._id === departmentId ? response.data.department : dept
@@ -107,12 +104,12 @@ export const DepartmentProvider = ({ children }) => {
         }
     };
 
-    // Delete department
+    
     const deleteDepartment = async (departmentId) => {
         try {
             await api.delete(`${API_BASE}/api/departments/${departmentId}`);
 
-            // Remove from state
+            
             setDepartments(prev => prev.filter(dept => dept._id !== departmentId));
         } catch (err) {
             console.error('Error deleting department:', err);
@@ -120,7 +117,7 @@ export const DepartmentProvider = ({ children }) => {
         }
     };
 
-    // Get department members
+    
     const getDepartmentMembers = async (departmentId) => {
         try {
             const response = await api.get(`${API_BASE}/api/departments/${departmentId}/members`);
@@ -131,7 +128,7 @@ export const DepartmentProvider = ({ children }) => {
         }
     };
 
-    // Assign user to department
+    
     const assignUserToDepartment = async (userId, departmentId) => {
         try {
             await api.post(
@@ -139,7 +136,7 @@ export const DepartmentProvider = ({ children }) => {
                 { userId }
             );
 
-            // Refresh departments to get updated member counts
+            
             await fetchDepartments();
         } catch (err) {
             console.error('Error assigning user to department:', err);
@@ -147,12 +144,12 @@ export const DepartmentProvider = ({ children }) => {
         }
     };
 
-    // Remove user from department
+    
     const removeUserFromDepartment = async (userId, departmentId) => {
         try {
             await api.delete(`${API_BASE}/api/departments/${departmentId}/members/${userId}`);
 
-            // Refresh departments
+            
             await fetchDepartments();
         } catch (err) {
             console.error('Error removing user from department:', err);
@@ -160,7 +157,7 @@ export const DepartmentProvider = ({ children }) => {
         }
     };
 
-    // Refresh department data
+    
     const refreshDepartments = () => {
         return fetchDepartments();
     };

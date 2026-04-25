@@ -1,12 +1,9 @@
-// server/src/features/developer/publicApi.routes.js
-// Public API — accessed via X-Api-Key header, workspace-scoped
 const express = require('express');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const apiKeyMiddleware = require('./apiKey.middleware');
 const logger = require('../../../utils/logger');
 
-// ── Rate limit: 100 req/min per API key ──────────────────────────────────────
 const publicApiLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 100,
@@ -22,20 +19,18 @@ const publicApiLimiter = rateLimit({
 router.use(publicApiLimiter);
 router.use(apiKeyMiddleware);
 
-// ── Log all public API usage ──────────────────────────────────────────────────
 router.use((req, res, next) => {
   logger.info(`[PublicAPI] ${req.method} ${req.path} | workspace:${req.workspaceId} | key:${req.apiKeyDoc.keyPrefix}`);
   next();
 });
 
-// ── GET /api/public/messages ──────────────────────────────────────────────────
 router.get('/messages', async (req, res) => {
   try {
     const mongoose = require('mongoose');
     const db = mongoose.connection.db;
     const { limit = 50, channelId } = req.query;
 
-    // Try fetching from InternalMessage collection (messages stored there)
+    
     const InternalMessage = require('../../models/InternalMessage');
     const query = { workspaceId: req.workspaceId };
     if (channelId) query.channelId = channelId;
@@ -54,7 +49,6 @@ router.get('/messages', async (req, res) => {
   }
 });
 
-// ── GET /api/public/tasks ─────────────────────────────────────────────────────
 router.get('/tasks', async (req, res) => {
   try {
     const Task = require('../../models/Task');
@@ -77,10 +71,9 @@ router.get('/tasks', async (req, res) => {
   }
 });
 
-// ── POST /api/public/tasks ────────────────────────────────────────────────────
 router.post('/tasks', async (req, res) => {
   try {
-    // Check write permission
+    
     const perms = req.apiKeyDoc.permissions;
     if (!perms.includes('tasks:write') && !perms.includes('*')) {
       return res.status(403).json({ error: 'API key does not have tasks:write permission' });
@@ -108,7 +101,6 @@ router.post('/tasks', async (req, res) => {
   }
 });
 
-// ── GET /api/public/files ─────────────────────────────────────────────────────
 router.get('/files', async (req, res) => {
   try {
     const WorkspaceFile = require('../../features/files/WorkspaceFile');
@@ -127,7 +119,6 @@ router.get('/files', async (req, res) => {
   }
 });
 
-// ── GET /api/public/users ─────────────────────────────────────────────────────
 router.get('/users', async (req, res) => {
   try {
     const Workspace = require('../../features/workspaces/workspace.model');
@@ -154,10 +145,9 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// ── GET /api/public/channels ──────────────────────────────────────────────────
 router.get('/channels', async (req, res) => {
   try {
-    // Try finding channels associated with this workspace
+    
     const mongoose = require('mongoose');
     let channels = [];
     try {
@@ -166,7 +156,7 @@ router.get('/channels', async (req, res) => {
         .select('name description type membersCount createdAt')
         .lean();
     } catch {
-      // Channel model may have different name
+      
       channels = [];
     }
 

@@ -1,23 +1,8 @@
-// client/src/services/searchService.js
-/**
- * Unified Search Service — Frontend
- * Wraps the /api/search v2 endpoint and manages recent searches in localStorage.
- */
-
 import api from './api';
 
 const RECENT_SEARCHES_KEY = 'chttrix_recent_searches';
 const MAX_RECENT = 8;
 
-// ─── API call ─────────────────────────────────────────────────────────────────
-
-/**
- * Full search with all filters.
- * @param {string} query
- * @param {object} filters  - { type, from, to, channelId, tags, limit, offset, semantic }
- * @param {string} workspaceId
- * @returns {Promise<object>} - { messages, files, users, channels, tasks, notes, knowledge, total, query }
- */
 export async function searchAll(query, filters = {}, workspaceId) {
     if (!query || !query.trim() || !workspaceId) {
         return { messages: [], files: [], users: [], channels: [], tasks: [], notes: [], knowledge: [], total: 0, query: '' };
@@ -36,8 +21,6 @@ export async function searchAll(query, filters = {}, workspaceId) {
     const { data } = await api.get(`/api/search?${params.toString()}`);
     return data;
 }
-
-// ─── Recent Searches ──────────────────────────────────────────────────────────
 
 export function getRecentSearches() {
     try {

@@ -1,17 +1,11 @@
-// src/features/company/settings.controller.js
-
 const settingsService = require("./settings.service");
 
-/**
- * Update company profile
- * PUT /api/companies/:id/settings/profile
- */
 exports.updateCompanyProfile = async (req, res) => {
     try {
         const { id } = req.params;
         const profileData = req.body;
 
-        // Use service layer
+        
         const company = await settingsService.updateCompanyProfile(id, profileData);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
@@ -27,16 +21,12 @@ exports.updateCompanyProfile = async (req, res) => {
     }
 };
 
-/**
- * Update security settings
- * PUT /api/companies/:id/settings/security
- */
 exports.updateSecuritySettings = async (req, res) => {
     try {
         const { id } = req.params;
         const securityData = req.body;
 
-        // Use service layer
+        
         const settings = await settingsService.updateSecuritySettings(id, securityData);
         if (!settings) {
             return res.status(404).json({ message: "Company not found" });
@@ -52,16 +42,12 @@ exports.updateSecuritySettings = async (req, res) => {
     }
 };
 
-/**
- * Update domain & SSO settings
- * PUT /api/companies/:id/settings/domain
- */
 exports.updateDomainSettings = async (req, res) => {
     try {
         const { id } = req.params;
         const domainData = req.body;
 
-        // Use service layer
+        
         const settings = await settingsService.updateDomainSettings(id, domainData);
         if (!settings) {
             return res.status(404).json({ message: "Company not found" });

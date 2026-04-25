@@ -1,34 +1,7 @@
-// server/src/features/admin/admin.service.js
-/**
- * Admin Service - Company Analytics & Management
- * 
- * Behavior-preserving migration from controllers/adminController.js
- * 
- * Provides analytics stats and department management for company admins.
- * 
- * @module features/admin/admin.service
- */
-
 const User = require('../../../models/User');
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
 
-// ============================================================================
-// SERVICE METHODS
-// ============================================================================
-
-/**
- * Get analytics stats for company dashboard
- * 
- * Business Rules:
- * - User must have companyId
- * - Returns counts for users, departments, workspaces
- * - Returns formatted stats array with hardcoded change values
- * - Includes icons and colors for UI display
- * 
- * @param {string} companyId - Company ID from user
- * @returns {Promise<Object>} { stats: Array }
- */
 async function getAnalyticsStats(companyId) {
     if (!companyId) {
         const error = new Error('No company associated with user');
@@ -40,12 +13,12 @@ async function getAnalyticsStats(companyId) {
         usersCount,
         departmentsCount,
         workspacesCount,
-        _totalChannels // Optional placeholder
+        _totalChannels 
     ] = await Promise.all([
         User.countDocuments({ companyId: companyId }),
         Department.countDocuments({ company: companyId }),
         Workspace.countDocuments({ company: companyId }),
-        Promise.resolve(0) // Placeholder for channels count if needed
+        Promise.resolve(0) 
     ]);
 
     return {
@@ -86,26 +59,13 @@ async function getAnalyticsStats(companyId) {
     };
 }
 
-/**
- * Get departments list with details
- * 
- * Business Rules:
- * - Returns departments for user's company
- * - Populates department head info
- * - Populates workspace references
- * - Calculates member counts
- * - Sorted by creation date (newest first)
- * 
- * @param {string} companyId - Company ID from user
- * @returns {Promise<Object>} { departments: Array }
- */
 async function getDepartments(companyId) {
     const departments = await Department.find({ company: companyId })
         .populate('head', 'username email profilePicture')
         .populate('workspaces', 'name id')
         .sort({ createdAt: -1 });
 
-    // Calculate member counts
+    
     const deptData = await Promise.all(departments.map(async (dept) => {
         const memberCount = await User.countDocuments({ departments: dept._id });
         return {
@@ -121,10 +81,6 @@ async function getDepartments(companyId) {
 
     return { departments: deptData };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     getAnalyticsStats,

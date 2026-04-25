@@ -1,11 +1,3 @@
-// client/src/components/search/SearchResultsPage.jsx
-/**
- * SearchResultsPage — Full-page search results.
- * Tabs: All, Messages, Files, People, Channels, Tasks, Notes, Knowledge
- * Filters: type, date range, tags
- * Pagination: load-more
- */
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSearch } from '../../contexts/SearchContext';
@@ -43,7 +35,7 @@ export default function SearchResultsPage() {
         workspaceId,
     } = useSearch();
 
-    // Local filter state (apply on button click)
+    
     const [localFilters, setLocalFilters] = useState({
         from: filters.from || '',
         to:   filters.to   || '',
@@ -52,14 +44,14 @@ export default function SearchResultsPage() {
 
     const inputRef = useRef(null);
 
-    // Sync query from URL param on mount
+    
     useEffect(() => {
         const q = searchParams.get('q');
         if (q && q !== query) setQuery(q);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, []);
 
-    // Focus input on mount
+    
     useEffect(() => { inputRef.current?.focus(); }, []);
 
     const handleTabChange = (tabKey) => {
@@ -79,7 +71,7 @@ export default function SearchResultsPage() {
         applyFilters({ from: '', to: '', tags: [] });
     };
 
-    // Get current tab's results
+    
     const getTabResults = (tabKey) => {
         if (tabKey === 'all') {
             return [
@@ -105,7 +97,7 @@ export default function SearchResultsPage() {
 
     return (
         <div className="srp-page">
-            {/* Header */}
+            {}
             <div className="srp-header">
                 <button className="srp-back-btn" onClick={() => navigate(-1)}>← Back</button>
 
@@ -136,7 +128,7 @@ export default function SearchResultsPage() {
                 </div>
             </div>
 
-            {/* Tabs */}
+            {}
             <div style={{ padding: '12px 24px 0', background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <div className="srp-tabs">
                     {TABS.map(tab => (
@@ -155,9 +147,9 @@ export default function SearchResultsPage() {
                 </div>
             </div>
 
-            {/* Layout */}
+            {}
             <div className="srp-layout">
-                {/* Sidebar */}
+                {}
                 <div className="srp-sidebar">
                     <div className="srp-filter-card">
                         <p className="srp-filter-title">Filters</p>
@@ -207,16 +199,16 @@ export default function SearchResultsPage() {
                     </div>
                 </div>
 
-                {/* Results */}
+                {}
                 <div className="srp-results-col">
-                    {/* Error */}
+                    {}
                     {error && (
                         <div className="srp-results-card">
                             <div style={{ padding: '16px', color: '#f87171', fontSize: 13 }}>⚠️ {error}</div>
                         </div>
                     )}
 
-                    {/* No query */}
+                    {}
                     {!query && (
                         <div className="srp-results-card">
                             <div className="srp-empty">
@@ -226,7 +218,7 @@ export default function SearchResultsPage() {
                         </div>
                     )}
 
-                    {/* Loading skeleton */}
+                    {}
                     {query && loading && (
                         <div className="srp-results-card">
                             <div className="gsb-loading-state" style={{ padding: '16px' }}>
@@ -243,7 +235,7 @@ export default function SearchResultsPage() {
                         </div>
                     )}
 
-                    {/* Results per category in "All" tab */}
+                    {}
                     {query && !loading && (activeTab === 'all' || !activeTab) && currentResults.length > 0 && (
                         (() => {
                             const sections = TABS.filter(t => t.key !== 'all');
@@ -265,7 +257,7 @@ export default function SearchResultsPage() {
                         })()
                     )}
 
-                    {/* Single-tab results */}
+                    {}
                     {query && !loading && activeTab && activeTab !== 'all' && (
                         <div className="srp-results-card">
                             <div className="srp-results-card-header">
@@ -295,7 +287,7 @@ export default function SearchResultsPage() {
                         </div>
                     )}
 
-                    {/* No results */}
+                    {}
                     {query && !loading && currentResults.length === 0 && !error && (
                         <div className="srp-results-card">
                             <div className="srp-empty">

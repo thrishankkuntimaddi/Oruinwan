@@ -1,9 +1,3 @@
-// server/scripts/cleanupBrokenDMSessions.js
-/**
- * Cleanup broken DM sessions that have invalid participant IDs
- * These were created due to a bug where session IDs were used as user IDs
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 const DMSession = require('../models/DMSession');
@@ -11,22 +5,22 @@ const User = require('../models/User');
 
 async function cleanupBrokenDMSessions() {
     try {
-        // Connect to MongoDB
+        
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB');
 
-        // Get all DM sessions
+        
         const allSessions = await DMSession.find({});
         console.log(`📊 Total DM sessions found: ${allSessions.length}`);
 
         let brokenCount = 0;
         const brokenSessions = [];
 
-        // Check each session
+        
         for (const session of allSessions) {
             const participants = session.participants;
 
-            // Check if both participants are valid user IDs
+            
             const validParticipants = [];
 
             for (const participantId of participants) {
@@ -38,7 +32,7 @@ async function cleanupBrokenDMSessions() {
                 }
             }
 
-            // If less than 2 valid participants, it's broken
+            
             if (validParticipants.length < 2) {
                 brokenCount++;
                 brokenSessions.push(session._id);

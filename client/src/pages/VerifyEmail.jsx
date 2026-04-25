@@ -1,9 +1,7 @@
-// client/src/pages/VerifyEmail.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Loader2, Mail, ArrowRight, RefreshCw } from 'lucide-react';
 
-/* ─── Inline design tokens (no Tailwind dependency) ──────────────────────── */
 const T = {
   bgOuter:     'var(--bg-base, #0c0c0c)',
   bgCard:      'var(--bg-surface, #111111)',
@@ -22,7 +20,6 @@ const T = {
   dangerDim:   'rgba(224,82,82,0.10)',
 };
 
-/* ─── Keyframe injection ─────────────────────────────────────────────────── */
 const STYLE = `
   @keyframes ve-progress {
     from { transform: scaleX(0); }
@@ -86,7 +83,7 @@ export default function VerifyEmail() {
     verify();
   }, [token, email, navigate]);
 
-  /* ── Icon + colours per state ──────────────────────────────────────── */
+  
   const stateMap = {
     idle:    { Icon: Mail,        iconBg: T.accentDim,  iconColor: T.accent,   label: 'Preparing...' },
     sending: { Icon: Loader2,     iconBg: T.accentDim,  iconColor: T.accent,   label: 'Verifying…' },
@@ -99,7 +96,7 @@ export default function VerifyEmail() {
     <>
       <style>{STYLE}</style>
 
-      {/* Full-page dark shell */}
+      {}
       <div style={{
         minHeight: '100vh',
         width: '100%',
@@ -114,7 +111,7 @@ export default function VerifyEmail() {
         fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
       }}>
 
-        {/* Wordmark */}
+        {}
         <div style={{ marginBottom: 36, textAlign: 'center' }}>
           <span style={{ fontSize: 20, fontWeight: 800, color: T.textPrimary, letterSpacing: '-0.03em' }}>
             Chttrix
@@ -124,7 +121,7 @@ export default function VerifyEmail() {
           </span>
         </div>
 
-        {/* Card */}
+        {}
         <div style={{
           width: '100%',
           maxWidth: 420,
@@ -133,13 +130,13 @@ export default function VerifyEmail() {
           overflow: 'hidden',
         }}>
 
-          {/* Amber top stripe */}
+          {}
           <div style={{ height: 2, backgroundColor: T.accent }} />
 
-          {/* Card body */}
+          {}
           <div style={{ padding: '40px 36px 36px', textAlign: 'center' }}>
 
-            {/* Icon */}
+            {}
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -160,7 +157,7 @@ export default function VerifyEmail() {
               />
             </div>
 
-            {/* Headline */}
+            {}
             <h1 style={{
               margin: '0 0 8px',
               fontSize: 24,
@@ -172,7 +169,7 @@ export default function VerifyEmail() {
               {label}
             </h1>
 
-            {/* Sub-message */}
+            {}
             <p style={{
               margin: '0 0 32px',
               fontSize: 14,
@@ -185,10 +182,10 @@ export default function VerifyEmail() {
               {status === 'error'   && message}
             </p>
 
-            {/* ── Success state ── */}
+            {}
             {status === 'success' && (
               <div className="ve-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                {/* Progress bar */}
+                {}
                 <div style={{
                   width: '100%',
                   height: 2,
@@ -205,7 +202,7 @@ export default function VerifyEmail() {
                   Redirecting to login automatically…
                 </p>
 
-                {/* CTA button */}
+                {}
                 <button
                   onClick={() => navigate('/login')}
                   style={{
@@ -233,7 +230,7 @@ export default function VerifyEmail() {
               </div>
             )}
 
-            {/* ── Error state ── */}
+            {}
             {status === 'error' && (
               <div className="ve-fadeIn" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <button
@@ -288,7 +285,7 @@ export default function VerifyEmail() {
               </div>
             )}
 
-            {/* Sending spinner text */}
+            {}
             {status === 'sending' && (
               <p style={{ fontSize: 12, color: T.textMuted, margin: 0 }}>
                 This usually takes just a moment…
@@ -296,7 +293,7 @@ export default function VerifyEmail() {
             )}
           </div>
 
-          {/* Card footer */}
+          {}
           <div style={{
             padding: '14px 36px',
             borderTop: `1px solid ${T.border}`,
@@ -308,7 +305,7 @@ export default function VerifyEmail() {
           </div>
         </div>
 
-        {/* Bottom wordmark / copyright */}
+        {}
         <p style={{ marginTop: 28, fontSize: 11, color: T.textMuted }}>
           © {new Date().getFullYear()} Chttrix Inc.
         </p>

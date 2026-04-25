@@ -1,6 +1,3 @@
-// Phase 1 — Reminder Picker Modal
-// Lets users schedule a "remind me" for any message
-
 import React, { useState } from "react";
 import { X, Bell, Clock } from "lucide-react";
 import api from '@services/api';
@@ -23,12 +20,6 @@ const inputStyle = {
     colorScheme: 'dark',
 };
 
-/**
- * @param {object} props
- * @param {string} props.messageId
- * @param {function} props.onClose
- * @param {function} [props.onSet] - Called with the reminder object after save
- */
 export default function ReminderPicker({ messageId, onClose, onSet }) {
     const [customDate, setCustomDate] = useState("");
     const [note,       setNote]       = useState("");
@@ -79,7 +70,7 @@ export default function ReminderPicker({ messageId, onClose, onSet }) {
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-default)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Bell size={15} style={{ color: 'var(--accent)' }} />
@@ -90,7 +81,7 @@ export default function ReminderPicker({ messageId, onClose, onSet }) {
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Presets */}
+                {}
                 <div style={{ padding: '8px 10px' }}>
                     {PRESETS.map(preset => (
                         <PresetBtn
@@ -102,7 +93,7 @@ export default function ReminderPicker({ messageId, onClose, onSet }) {
                     ))}
                 </div>
 
-                {/* Custom date */}
+                {}
                 <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <label style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: FONT }}>
                         Custom time
@@ -130,7 +121,7 @@ export default function ReminderPicker({ messageId, onClose, onSet }) {
                     </SubmitBtn>
                 </div>
 
-                {/* Feedback */}
+                {}
                 {success && (
                     <div style={{ padding: '0 16px 14px', textAlign: 'center', fontSize: '12px', color: 'var(--state-success)', fontWeight: 500, fontFamily: FONT }}>
                         ✅ Reminder set!

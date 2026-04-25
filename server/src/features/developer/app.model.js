@@ -1,4 +1,3 @@
-// server/src/features/developer/app.model.js
 const mongoose = require('mongoose');
 
 const appSchema = new mongoose.Schema({
@@ -22,12 +21,12 @@ const appSchema = new mongoose.Schema({
     type: String,
     default: null
   },
-  // Configurable parameters for this app
+  
   config: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
   },
-  // Workspaces that have installed this app
+  
   installedIn: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Workspace'

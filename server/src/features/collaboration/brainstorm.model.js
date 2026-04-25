@@ -1,5 +1,4 @@
 'use strict';
-// server/src/features/collaboration/brainstorm.model.js
 
 const mongoose = require('mongoose');
 
@@ -9,7 +8,7 @@ const brainstormItemSchema = new mongoose.Schema({
         x: { type: Number, default: 100 },
         y: { type: Number, default: 100 },
     },
-    color: { type: String, default: '#FBBF24' },   // amber-400 default
+    color: { type: String, default: '#FBBF24' },   
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

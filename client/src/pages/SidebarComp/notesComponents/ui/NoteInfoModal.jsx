@@ -44,7 +44,7 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
             onClick={e => e.target === e.currentTarget && setShowInfoModal(false)}
         >
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '384px', overflow: 'hidden', boxShadow: 'var(--card-shadow)' }}>
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -66,9 +66,9 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                     </button>
                 </div>
 
-                {/* Stats */}
+                {}
                 <div style={{ padding: '18px' }}>
-                    {/* Stats grid */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '10px', marginBottom: '18px' }}>
                         {[{ val: wordCount, label: 'Words' }, { val: blocks.length, label: 'Blocks' }, { val: sizeKb, label: 'KB' }].map(({ val, label }) => (
                             <div key={label} style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', padding: '12px 10px', textAlign: 'center' }}>
@@ -78,7 +78,7 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                         ))}
                     </div>
 
-                    {/* Block breakdown */}
+                    {}
                     {blockSummary.length > 0 && (
                         <div style={{ marginBottom: '18px' }}>
                             <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'monospace' }}>Block breakdown</p>
@@ -98,7 +98,7 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                         </div>
                     )}
 
-                    {/* Tags */}
+                    {}
                     {note.tags && note.tags.length > 0 && (
                         <div style={{ marginBottom: '18px' }}>
                             <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Tags</p>
@@ -112,7 +112,7 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                         </div>
                     )}
 
-                    {/* Dates */}
+                    {}
                     <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
                         {[{ label: 'Created', val: createdFull }, { label: 'Last edited', val: editedFull }].map(({ label, val }) => (
                             <div key={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -124,7 +124,7 @@ const NoteInfoModal = ({ note, blocks, showInfoModal, setShowInfoModal }) => {
                         ))}
                     </div>
 
-                    {/* Close */}
+                    {}
                     <button onClick={() => setShowInfoModal(false)}
                         style={{ width: '100%', padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                         onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.borderColor = 'var(--border-accent)'; }}

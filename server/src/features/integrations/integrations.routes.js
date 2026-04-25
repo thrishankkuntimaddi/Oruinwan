@@ -1,16 +1,11 @@
-// server/src/features/integrations/integrations.routes.js
 const router = require('express').Router();
 const requireAuth = require('../../shared/middleware/auth');
 const integrationService = require('./integration.service');
 const aiProviderService = require('./ai-provider.service');
 const Webhook = require('./webhook.model');
 
-// ─── All routes require authentication ────────────────────────────────────────
 router.use(requireAuth);
 
-// ── Integration CRUD ──────────────────────────────────────────────────────────
-
-// GET /api/v2/integrations?workspaceId=xxx
 router.get('/', async (req, res) => {
   try {
     const { workspaceId } = req.query;
@@ -23,7 +18,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/v2/integrations/connect
 router.post('/connect', async (req, res) => {
   try {
     const { workspaceId, type, config, label } = req.body;
@@ -42,7 +36,6 @@ router.post('/connect', async (req, res) => {
   }
 });
 
-// POST /api/v2/integrations/disconnect
 router.post('/disconnect', async (req, res) => {
   try {
     const { workspaceId, type } = req.body;
@@ -55,14 +48,12 @@ router.post('/disconnect', async (req, res) => {
   }
 });
 
-// POST /api/v2/integrations/webhook/:type (inbound webhook from external providers)
-// No auth — external providers POST here. Workspace identified via query param.
 router.post('/webhook/:type', async (req, res) => {
   try {
     const { type } = req.params;
     const { workspaceId } = req.query;
 
-    // Slack URL verification challenge — must respond immediately
+    
     if (req.body?.type === 'url_verification') {
       return res.json({ challenge: req.body.challenge });
     }
@@ -74,13 +65,13 @@ router.post('/webhook/:type', async (req, res) => {
       workspaceId
     });
 
-    // ── Automation integration: forward webhook events into the automation engine ──
+    
     if (workspaceId) {
       try {
         const automationService = require('../automations/automation.service');
         const io = req.app.get('io');
 
-        // Map known provider events to named trigger types
+        
         const payload = req.body || {};
         const isMergedPR = type === 'github' && payload.action === 'closed' && payload.pull_request?.merged;
         if (isMergedPR) {
@@ -93,14 +84,14 @@ router.post('/webhook/:type', async (req, res) => {
           }, io);
         }
 
-        // Always fire generic webhook.received trigger
+        
         automationService.processEvent('webhook.received', {
           workspaceId,
           webhookType: type,
           event: payload
         }, io);
       } catch (autoErr) {
-        // Non-fatal: log and continue
+        
         require('../../../utils/logger').error('[IntegrationWebhook] Automation processEvent failed:', autoErr.message);
       }
     }
@@ -111,17 +102,13 @@ router.post('/webhook/:type', async (req, res) => {
   }
 });
 
-
-// ── Webhook management ────────────────────────────────────────────────────────
-
-// GET /api/v2/integrations/webhooks?workspaceId=xxx
 router.get('/webhooks', async (req, res) => {
   try {
     const { workspaceId } = req.query;
     if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
 
     const webhooks = await Webhook.find({ workspaceId })
-      .select('-secret') // never expose HMAC secret
+      .select('-secret') 
       .lean();
     res.json({ webhooks });
   } catch (err) {
@@ -129,7 +116,6 @@ router.get('/webhooks', async (req, res) => {
   }
 });
 
-// POST /api/v2/integrations/webhooks
 router.post('/webhooks', async (req, res) => {
   try {
     const { workspaceId, event, url } = req.body;
@@ -137,7 +123,7 @@ router.post('/webhooks', async (req, res) => {
       return res.status(400).json({ message: 'workspaceId, event, and url required' });
     }
 
-    // Basic URL validation
+    
     try { new URL(url); } catch { return res.status(400).json({ message: 'Invalid URL' }); }
 
     const webhook = await Webhook.create({
@@ -147,13 +133,12 @@ router.post('/webhooks', async (req, res) => {
       createdBy: req.user.sub
     });
 
-    res.status(201).json({ webhook: { ...webhook.toObject(), secret: webhook.secret } }); // expose secret on creation only
+    res.status(201).json({ webhook: { ...webhook.toObject(), secret: webhook.secret } }); 
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
-// DELETE /api/v2/integrations/webhooks/:id
 router.delete('/webhooks/:id', async (req, res) => {
   try {
     const webhook = await Webhook.findByIdAndDelete(req.params.id);
@@ -164,9 +149,6 @@ router.delete('/webhooks/:id', async (req, res) => {
   }
 });
 
-// ── AI Provider management ────────────────────────────────────────────────────
-
-// GET /api/v2/integrations/ai-providers?workspaceId=xxx
 router.get('/ai-providers', async (req, res) => {
   try {
     const { workspaceId } = req.query;
@@ -179,7 +161,6 @@ router.get('/ai-providers', async (req, res) => {
   }
 });
 
-// POST /api/v2/integrations/ai-providers/connect
 router.post('/ai-providers/connect', async (req, res) => {
   try {
     const { workspaceId, provider, apiKey, config } = req.body;
@@ -196,7 +177,6 @@ router.post('/ai-providers/connect', async (req, res) => {
   }
 });
 
-// POST /api/v2/integrations/ai-providers/switch
 router.post('/ai-providers/switch', async (req, res) => {
   try {
     const { workspaceId, provider } = req.body;
@@ -209,7 +189,6 @@ router.post('/ai-providers/switch', async (req, res) => {
   }
 });
 
-// POST /api/v2/integrations/ai-providers/disconnect
 router.post('/ai-providers/disconnect', async (req, res) => {
   try {
     const { workspaceId, provider } = req.body;

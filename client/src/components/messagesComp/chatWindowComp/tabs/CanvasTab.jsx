@@ -9,8 +9,6 @@ import {
     Check, Loader2, Users, Circle, PanelRight
 } from 'lucide-react';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function countWords(html) {
     const text = html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
     return text.length === 0 ? 0 : text.split(' ').filter(Boolean).length;
@@ -41,8 +39,6 @@ const COVER_COLORS = [
     { label: 'Orange', value: '#F97316' },
 ];
 
-// ─── Avatar helper ────────────────────────────────────────────────────────────
-
 function Avatar({ name = '?', src, size = 32, ring, status }) {
     const initials = (name || '?').slice(0, 2).toUpperCase();
     const hue = (name.charCodeAt(0) || 0) * 47 % 360;
@@ -69,8 +65,6 @@ function Avatar({ name = '?', src, size = 32, ring, status }) {
         </div>
     );
 }
-
-// ─── Emoji Picker ─────────────────────────────────────────────────────────────
 
 function EmojiPicker({ onSelect, onClose }) {
     const ref = useRef(null);
@@ -112,8 +106,6 @@ function EmojiPicker({ onSelect, onClose }) {
     );
 }
 
-// ─── Cover Picker ─────────────────────────────────────────────────────────────
-
 function CoverPicker({ current, onSelect, onClose }) {
     const ref = useRef(null);
     useEffect(() => {
@@ -153,8 +145,6 @@ function CoverPicker({ current, onSelect, onClose }) {
     );
 }
 
-// ─── Toolbar Button ───────────────────────────────────────────────────────────
-
 function TBtn({ icon: Icon, onClick, title, active }) {
     const [hovered, setHovered] = React.useState(false);
     return (
@@ -173,8 +163,6 @@ function TBtn({ icon: Icon, onClick, title, active }) {
     );
 }
 
-// ─── Presence Sidebar ─────────────────────────────────────────────────────────
-
 function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId, coverColor, lastEditedUser, lastEdited }) {
     const members = useMemo(() => {
         if (!channelMembers?.length) return [];
@@ -189,7 +177,7 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
 
     const viewerIds = new Set(viewers.map(v => v.userId));
 
-    // Sort: viewers first, then online, then rest
+    
     const sorted = [...members].sort((a, b) => {
         const aViewing = viewerIds.has(a.userId);
         const bViewing = viewerIds.has(b.userId);
@@ -210,7 +198,7 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
             backgroundColor: 'var(--bg-surface)', borderLeft: '1px solid var(--border-default)',
             width: '200px', flexShrink: 0, overflowY: 'auto',
         }}>
-            {/* Header */}
+            {}
             <div style={{ padding: '16px 12px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                     <Users size={12} style={{ color: 'var(--text-muted)' }} />
@@ -225,7 +213,7 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
                 </p>
             </div>
 
-            {/* Viewing Now */}
+            {}
             {viewingNow.length > 0 && (
                 <div style={{ padding: '12px 12px 4px' }}>
                     <p style={{
@@ -242,7 +230,7 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
                 </div>
             )}
 
-            {/* Online */}
+            {}
             {onlineRest.length > 0 && (
                 <div style={{ padding: '12px 12px 4px' }}>
                     <p style={{
@@ -259,7 +247,7 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
                 </div>
             )}
 
-            {/* Offline */}
+            {}
             {offlineRest.length > 0 && (
                 <div style={{ padding: '12px 12px 12px' }}>
                     <p style={{
@@ -276,7 +264,7 @@ function PresenceSidebar({ viewers, onlineUserIds, channelMembers, currentUserId
                 </div>
             )}
 
-            {/* Last edited */}
+            {}
             {lastEditedUser && (
                 <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)', padding: '12px' }}>
                     <p style={{
@@ -343,8 +331,6 @@ function dopColor(status, accent) {
     return 'var(--text-muted)';
 }
 
-// ─── Main Editor ──────────────────────────────────────────────────────────────
-
 export default function CanvasTab({ tab, onSave, connected, socket, channelId, currentUserId, channelMembers = [] }) {
     const [content, setContent] = useState(tab.content || '');
     const [emoji, setEmoji] = useState(tab.emoji || '📄');
@@ -356,9 +342,9 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [showCoverPicker, setShowCoverPicker] = useState(false);
 
-    // Presence state
-    const [viewers, setViewers] = useState([]);           // who's viewing this tab
-    const [onlineUserIds, setOnlineUserIds] = useState(new Set()); // globally online
+    
+    const [viewers, setViewers] = useState([]);           
+    const [onlineUserIds, setOnlineUserIds] = useState(new Set()); 
 
     const contentRef = useRef(tab.content || '');
     const emojiRef = useRef(tab.emoji || '📄');
@@ -371,7 +357,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
     const wordCount = useMemo(() => countWords(content), [content]);
     const readTime = wordCount > 0 ? `${Math.max(1, Math.round(wordCount / 200))} min` : null;
 
-    // ── Fullscreen ──
+    
     const toggleFullScreen = useCallback(() => {
         if (!document.fullscreenElement) containerRef.current?.requestFullscreen().catch(() => { });
         else document.exitFullscreen();
@@ -382,7 +368,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
         return () => document.removeEventListener('fullscreenchange', h);
     }, []);
 
-    // ── Canvas join/leave emit ──
+    
     useEffect(() => {
         if (!socket || !tab._id || !channelId) return;
         socket.emit('canvas:join', { tabId: tab._id, channelId });
@@ -391,16 +377,16 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
         };
     }, [socket, tab._id, channelId]);
 
-    // ── Socket event listeners ──
+    
     useEffect(() => {
         if (!socket) return;
 
-        // Canvas viewer list updates
+        
         const handleViewers = ({ tabId, viewers: v }) => {
             if (tabId === tab._id) setViewers(v || []);
         };
 
-        // Global presence
+        
         const handleOnline = ({ userId }) => {
             setOnlineUserIds(prev => { const s = new Set(prev); s.add(userId); return s; });
         };
@@ -408,7 +394,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
             setOnlineUserIds(prev => { const s = new Set(prev); s.delete(userId); return s; });
         };
 
-        // Tab content updates from other users
+        
         const handleTabUpdate = (data) => {
             if (data.tabId !== tab._id || data.updatedBy === currentUserId) return;
             isRemoteUpdate.current = true;
@@ -432,7 +418,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
         };
     }, [socket, tab._id, currentUserId]);
 
-    // ── Sync when tab prop changes ──
+    
     useEffect(() => {
         if (!isRemoteUpdate.current) {
             setContent(tab.content || '');
@@ -446,7 +432,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
         isRemoteUpdate.current = false;
     }, [tab._id, tab.content, tab.emoji, tab.coverColor]);
 
-    // ── Save ──
+    
     const triggerSave = useCallback((updates = {}) => {
         setSaveStatus('saving');
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -481,7 +467,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
             clearTimeout(saveTimeoutRef.current);
             onSave({ content: contentRef.current, emoji: emojiRef.current, coverColor: coverRef.current, wordCount: countWords(contentRef.current) });
         }
-    }, []); // eslint-disable-line
+    }, []); 
 
     const toolbarGroups = [
         [
@@ -522,7 +508,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
     return (
         <div ref={containerRef} style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, backgroundColor: 'var(--bg-base)', overflow: 'hidden' }}>
 
-            {/* ── Toolbar ── */}
+            {}
             <div style={{
                 flexShrink: 0, backgroundColor: 'var(--bg-surface)',
                 borderBottom: '1px solid var(--border-default)',
@@ -543,7 +529,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
                     <TBtn icon={isFullScreen ? Minimize2 : Maximize2} onClick={toggleFullScreen} title="Fullscreen" />
                 </div>
 
-                {/* Right: status + sidebar toggle */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                     {!connected && (
                         <span style={{
@@ -594,27 +580,27 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
                 </div>
             </div>
 
-            {/* ── Main layout: Editor + Sidebar ── */}
+            {}
             <div className="flex flex-1 min-h-0 overflow-hidden">
 
-                {/* ── Editor area ── */}
+                {}
                 <div className="flex-1 overflow-y-auto">
                     <div style={{ maxWidth: '760px', margin: '0 auto', padding: '32px 24px' }}>
-                        {/* Cover color strip */}
+                        {}
                         <div style={{
                             height: '3px', marginBottom: '24px',
                             background: `linear-gradient(90deg, ${coverColor}, ${coverColor}60)`,
                             transition: 'background 300ms ease',
                         }} />
 
-                        {/* Paper */}
+                        {}
                         <div style={{
                             backgroundColor: 'var(--bg-surface)',
                             border: '1px solid var(--border-default)',
                             borderRadius: '2px', overflow: 'hidden', marginBottom: '32px',
                         }}>
 
-                            {/* Doc header */}
+                            {}
                             <div style={{ padding: '32px 40px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', position: 'relative' }}>
                                     <div style={{ position: 'relative' }}>
@@ -669,7 +655,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
                                 </div>
                             </div>
 
-                            {/* Editor body */}
+                            {}
                             <div style={{ padding: '32px 40px', minHeight: '500px' }}>
                                 <ContentEditable
                                     innerRef={editorRef}
@@ -700,7 +686,7 @@ export default function CanvasTab({ tab, onSave, connected, socket, channelId, c
                     </div>
                 </div>
 
-                {/* ── Presence Sidebar ── */}
+                {}
                 {showSidebar && (
                     <PresenceSidebar
                         viewers={viewers}

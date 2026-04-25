@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
 import { getAvatarUrl } from '../../../utils/avatarUtils';
 
-/**
- * Avatar component.
- * Props:
- *   src       – real profile picture URL (optional)
- *   username  – used to generate a deterministic DiceBear avatar when src is absent
- *   alt       – image alt / fallback initials seed
- *   fallback  – explicit initials seed (takes priority over alt)
- *   size      – 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'
- *   status    – 'online' | 'offline' | 'busy' | 'away'
- */
 const Avatar = ({ src, username, alt, fallback, size = "md", className = "", status, ...props }) => {
     const [error, setError] = useState(false);
 
@@ -35,10 +25,10 @@ const Avatar = ({ src, username, alt, fallback, size = "md", className = "", sta
         return name.substring(0, 2).toUpperCase();
     };
 
-    // Determine the effective image source:
-    // 1. Real photo (src) — highest priority
-    // 2. DiceBear auto-avatar seeded on username or alt
-    // 3. Initials text fallback (only if no username either)
+    
+    
+    
+    
     const seed = username || alt || fallback;
     const autoAvatarSrc = seed ? getAvatarUrl({ username: seed }) : null;
     const effectiveSrc = (!error && src) ? src : (!error && autoAvatarSrc ? null : null);
@@ -67,4 +57,3 @@ const Avatar = ({ src, username, alt, fallback, size = "md", className = "", sta
 };
 
 export default Avatar;
-

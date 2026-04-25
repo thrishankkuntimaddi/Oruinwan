@@ -1,6 +1,3 @@
-// server/scripts/createChttrixAdmin.js
-// One-time script to create the default Chttrix super admin user
-
 require("dotenv").config({ path: ".env" });
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
@@ -16,7 +13,7 @@ async function createChttrixAdmin() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log("✅ Connected to MongoDB");
 
-        // Check if admin already exists
+        
         const existingAdmin = await User.findOne({ email: CHTTRIX_ADMIN_EMAIL });
 
         if (existingAdmin) {
@@ -25,7 +22,7 @@ async function createChttrixAdmin() {
             console.log("👤 Username:", existingAdmin.username);
             console.log("🔑 Roles:", existingAdmin.roles);
 
-            // Update roles if needed
+            
             if (!existingAdmin.roles.includes("chttrix_admin")) {
                 existingAdmin.roles.push("chttrix_admin");
                 await existingAdmin.save();
@@ -36,19 +33,19 @@ async function createChttrixAdmin() {
             return;
         }
 
-        // Hash password
+        
         console.log("🔐 Hashing password...");
         const passwordHash = await bcrypt.hash(CHTTRIX_ADMIN_PASSWORD, 12);
 
-        // Create admin user
+        
         console.log("👤 Creating Chttrix admin user...");
         const adminUser = new User({
             username: CHTTRIX_ADMIN_USERNAME,
             email: CHTTRIX_ADMIN_EMAIL,
             passwordHash: passwordHash,
-            userType: "personal", // Not tied to any company
-            verified: true, // Skip email verification
-            roles: ["user", "chttrix_admin"], // Super admin role
+            userType: "personal", 
+            verified: true, 
+            roles: ["user", "chttrix_admin"], 
             accountStatus: "active",
             profile: {
                 name: CHTTRIX_ADMIN_USERNAME,
@@ -78,5 +75,4 @@ async function createChttrixAdmin() {
     }
 }
 
-// Run the script
 createChttrixAdmin();

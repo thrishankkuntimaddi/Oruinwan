@@ -1,18 +1,3 @@
-// server/src/features/analytics/analytics.service.js
-/**
- * Productivity Insights & Analytics Service
- *
- * Uses aggregation queries on existing collections:
- *   - Message (messages, communication patterns)
- *   - Task (productivity, workload)
- *   - ScheduledMeeting (meetings engagement)
- *   - User (active users, engagement)
- *   - Channel (channel analytics)
- *
- * Includes a lightweight in-memory cache (TTL: 5 minutes)
- * to avoid hammering the DB on repeat dashboard loads.
- */
-
 const Message = require('../messages/message.model');
 const Channel = require('../channels/channel.model');
 const Task = require('../../../models/Task');
@@ -20,9 +5,8 @@ const ScheduledMeeting = require('../../models/ScheduledMeeting');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 
-// ─── IN-MEMORY CACHE ────────────────────────────────────────────────────────
 const _cache = new Map();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000; 
 
 function _cacheGet(key) {
   const entry = _cache.get(key);
@@ -38,11 +22,6 @@ function _cacheSet(key, data) {
   _cache.set(key, { ts: Date.now(), data });
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
-
-/**
- * Build a date range starting `days` before now.
- */
 function _dateRange(days) {
   const end = new Date();
   const start = new Date();
@@ -50,11 +29,6 @@ function _dateRange(days) {
   return { start, end };
 }
 
-/**
- * Build an array of { label, start, end } buckets for a date range.
- * For ≤ 7 days  → daily buckets (Mon, Tue…)
- * For > 7 days  → weekly buckets (Week 1, Week 2…)
- */
 function _buildBuckets(days) {
   const buckets = [];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -80,12 +54,6 @@ function _buildBuckets(days) {
   return buckets;
 }
 
-// ─── SERVICE FUNCTIONS ────────────────────────────────────────────────────────
-
-/**
- * 1. ANALYTICS SUMMARY
- * High-level overview card counts + task completion rate.
- */
 async function getAnalyticsSummary(companyId, period = 30) {
   const cacheKey = `summary:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -110,7 +78,7 @@ async function getAnalyticsSummary(companyId, period = 30) {
       $or: [{ isOnline: true }, { lastActivityAt: { $gte: start } }]
     }),
 
-    // Previous period for growth % calculation
+    
     User.countDocuments({
       companyId,
       $or: [
@@ -160,10 +128,6 @@ async function getAnalyticsSummary(companyId, period = 30) {
   return result;
 }
 
-/**
- * 2. USER ACTIVITY ANALYTICS
- * Messages sent per user + trend data over time.
- */
 async function getUserActivityAnalytics(companyId, period = 30) {
   const cacheKey = `user-activity:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -173,7 +137,7 @@ async function getUserActivityAnalytics(companyId, period = 30) {
   const buckets = _buildBuckets(period);
 
   const [topContributors, trendRaw] = await Promise.all([
-    // Top contributors by message volume
+    
     Message.aggregate([
       {
         $match: {
@@ -204,7 +168,7 @@ async function getUserActivityAnalytics(companyId, period = 30) {
       }
     ]),
 
-    // Daily/weekly active user counts per bucket
+    
     Promise.all(
       buckets.map(async b => ({
         name: b.label,
@@ -225,10 +189,6 @@ async function getUserActivityAnalytics(companyId, period = 30) {
   return result;
 }
 
-/**
- * 3. WORKSPACE ANALYTICS
- * Per-workspace message counts and member activity.
- */
 async function getWorkspaceAnalytics(companyId, period = 30) {
   const cacheKey = `workspaces:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -273,10 +233,6 @@ async function getWorkspaceAnalytics(companyId, period = 30) {
   return result;
 }
 
-/**
- * 4. CHANNEL ENGAGEMENT ANALYTICS
- * Top channels by message volume, member count, and active users.
- */
 async function getChannelEngagementAnalytics(companyId, period = 30) {
   const cacheKey = `channels:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -327,10 +283,6 @@ async function getChannelEngagementAnalytics(companyId, period = 30) {
   return result;
 }
 
-/**
- * 5. TASK ANALYTICS (Productivity Metrics)
- * Tasks per status, completion rate, avg completion duration.
- */
 async function getTaskAnalytics(companyId, period = 30) {
   const cacheKey = `tasks:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -339,13 +291,13 @@ async function getTaskAnalytics(companyId, period = 30) {
   const { start } = _dateRange(period);
 
   const [statusBreakdown, completionDuration, trendData] = await Promise.all([
-    // Status distribution
+    
     Task.aggregate([
       { $match: { company: companyId, deleted: false, createdAt: { $gte: start } } },
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]),
 
-    // Average hours to complete (completedAt - createdAt)
+    
     Task.aggregate([
       {
         $match: {
@@ -361,7 +313,7 @@ async function getTaskAnalytics(companyId, period = 30) {
           durationHours: {
             $divide: [
               { $subtract: ['$completedAt', '$createdAt'] },
-              3600000 // ms → hours
+              3600000 
             ]
           }
         }
@@ -369,7 +321,7 @@ async function getTaskAnalytics(companyId, period = 30) {
       { $group: { _id: null, avgHours: { $avg: '$durationHours' } } }
     ]),
 
-    // Tasks created vs completed per bucket
+    
     (async () => {
       const buckets = _buildBuckets(period);
       const rows = await Promise.all(
@@ -408,10 +360,6 @@ async function getTaskAnalytics(companyId, period = 30) {
   return result;
 }
 
-/**
- * 6. MESSAGE VOLUME ANALYTICS
- * Total messages, channel vs DM split, trend over time.
- */
 async function getMessageVolumeAnalytics(companyId, period = 30) {
   const cacheKey = `messages:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -458,9 +406,6 @@ async function getMessageVolumeAnalytics(companyId, period = 30) {
   return result;
 }
 
-/**
- * 7. ENGAGEMENT TRENDS (DAU / WAU / MAU)
- */
 async function getEngagementTrends(companyId, period = 30) {
   const cacheKey = `engagement:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -484,9 +429,6 @@ async function getEngagementTrends(companyId, period = 30) {
   return result;
 }
 
-/**
- * 8. TEAM ACTIVITY — messages + tasks + meetings per user
- */
 async function getTeamActivity(companyId, period = 30) {
   const cacheKey = `team-activity:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -515,7 +457,7 @@ async function getTeamActivity(companyId, period = 30) {
     User.find({ companyId }).select('_id username profilePicture companyRole').lean()
   ]);
 
-  // Build maps for quick lookup
+  
   const msgMap = Object.fromEntries(msgByUser.map(m => [m._id.toString(), m.messages]));
   const taskMap = Object.fromEntries(
     taskByUser.map(t => [t._id.toString(), { assigned: t.tasksAssigned, completed: t.tasksCompleted }])
@@ -540,10 +482,6 @@ async function getTeamActivity(companyId, period = 30) {
   return result;
 }
 
-/**
- * 9. WORKLOAD ANALYSIS — overloaded / idle users
- * Simple threshold: overloaded = > mean + 1.5×stddev tasks
- */
 async function getWorkloadAnalysis(companyId, period = 30) {
   const cacheKey = `workload:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -610,9 +548,6 @@ async function getWorkloadAnalysis(companyId, period = 30) {
   return result;
 }
 
-/**
- * 10. COMMUNICATION PATTERNS
- */
 async function getCommunicationPatterns(companyId, period = 30) {
   const cacheKey = `comms:${companyId}:${period}`;
   const cached = _cacheGet(cacheKey);
@@ -620,7 +555,7 @@ async function getCommunicationPatterns(companyId, period = 30) {
 
   const { start } = _dateRange(period);
 
-  // Hour-of-day distribution (message frequency pattern)
+  
   const hourDist = await Message.aggregate([
     { $match: { company: companyId, type: { $ne: 'system' }, createdAt: { $gte: start } } },
     { $group: { _id: { $hour: '$createdAt' }, count: { $sum: 1 } } },
@@ -632,7 +567,7 @@ async function getCommunicationPatterns(companyId, period = 30) {
     return { hour: h, label: `${h}:00`, count: found?.count || 0 };
   });
 
-  // Top channels (already computed in channel analytics, reuse)
+  
   const topChannels = await Message.aggregate([
     { $match: { company: companyId, channel: { $ne: null }, type: { $ne: 'system' }, createdAt: { $gte: start } } },
     { $group: { _id: '$channel', count: { $sum: 1 } } },

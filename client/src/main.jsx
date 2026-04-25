@@ -16,7 +16,6 @@ root.render(
   </React.StrictMode>
 );
 
-// Register service worker for PWA support
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker

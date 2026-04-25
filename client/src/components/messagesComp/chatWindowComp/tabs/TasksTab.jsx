@@ -1,17 +1,3 @@
-/**
- * TasksTab.jsx — Jira-Grade Channel Task Board
- *
- * Discipline:
- *  - 5 column board: BACKLOG | TO DO | IN PROGRESS | IN REVIEW | DONE
- *  - BLOCKED tasks shown with red banner in their current column
- *  - Workflow state machine (mirrors backend workflowValidator.js)
- *  - Single-assignee per task, picked from workspace members
- *  - Subtasks as first-class citizens
- *  - Append-only activity log per task
- *  - Inline quick-add per column
- *  - Task detail side panel (click any card)
- */
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import {
     Plus, X, Loader2, ChevronUp, ChevronDown, Minus,
@@ -21,8 +7,6 @@ import {
 } from 'lucide-react';
 import api from '@services/api';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
-
-// ─── Workflow State Machine (mirrors backend workflowValidator.js) ─────────────
 
 const TRANSITIONS = {
     backlog: ['todo', 'cancelled'],
@@ -57,8 +41,6 @@ const pMeta = k => pMap[k] || pMap.medium;
 
 const JIRA_BLUE = 'var(--accent)';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
 function allowedTransitions(status) {
     return TRANSITIONS[status] || [];
 }
@@ -84,8 +66,6 @@ function isOverdue(task) {
     return task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'done' && task.status !== 'cancelled';
 }
 
-// ─── Priority Icon ────────────────────────────────────────────────────────────
-
 function PriorityIcon({ priority, size = 14 }) {
     const m = pMeta(priority);
     if (priority === 'highest') return <ChevronUp size={size} strokeWidth={3} style={{ color: m.color }} />;
@@ -94,8 +74,6 @@ function PriorityIcon({ priority, size = 14 }) {
     if (priority === 'lowest') return <ChevronDown size={size} strokeWidth={3} style={{ color: m.color }} />;
     return <Minus size={size} strokeWidth={2.5} style={{ color: m.color }} />;
 }
-
-// ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }) {
     const m = colMap[status] || colMap.todo;
@@ -112,8 +90,6 @@ function StatusBadge({ status }) {
         </span>
     );
 }
-
-// ─── Issue Type Icon (Jira-discipline) ────────────────────────────────────────
 
 const ISSUE_TYPE_META = {
     epic: { label: 'Epic', color: '#9c7fd4', bg: 'rgba(156,127,212,0.15)', Icon: Zap },
@@ -134,8 +110,6 @@ function IssueTypeIcon({ type = 'task', size = 12 }) {
         </span>
     );
 }
-
-// ─── Inline Quick-Add ─────────────────────────────────────────────────────────
 
 function InlineAdd({ defaultStatus, onSubmit, onCancel }) {
     const [title, setTitle] = useState('');
@@ -183,8 +157,6 @@ function InlineAdd({ defaultStatus, onSubmit, onCancel }) {
         </div>
     );
 }
-
-// ─── Task Card ────────────────────────────────────────────────────────────────
 
 function TaskCard({ task, onClick, onDelete }) {
     const blocked = task.status === 'blocked';
@@ -286,8 +258,6 @@ function TaskCard({ task, onClick, onDelete }) {
     );
 }
 
-// ─── Kanban Column ────────────────────────────────────────────────────────────
-
 function KanbanColumn({ col, tasks, blockedInCol, onCardClick, onDelete, onInlineAdd }) {
     const [adding, setAdding] = useState(false);
     const isTerminal = col.key === 'done' || col.key === 'cancelled';
@@ -352,8 +322,6 @@ function KanbanColumn({ col, tasks, blockedInCol, onCardClick, onDelete, onInlin
     );
 }
 
-// ─── Activity Log ─────────────────────────────────────────────────────────────
-
 function ActivityLog({ taskId }) {
     const [log, setLog] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -406,10 +374,8 @@ function ActivityLog({ taskId }) {
     );
 }
 
-// ─── Task Detail Panel ────────────────────────────────────────────────────────
-
 function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
-    const [tab, setTab] = useState('details'); // details | activity
+    const [tab, setTab] = useState('details'); 
     const [editTitle, setEditTitle] = useState(false);
     const [title, setTitle] = useState(task.title);
     const [desc, setDesc] = useState(task.description || '');
@@ -507,11 +473,11 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                 ))}
             </div>
 
-            {/* Scrollable body */}
+            {}
             <div className="flex-1 min-h-0 overflow-y-auto">
                 {tab === 'details' ? (
                     <div className="p-4 space-y-5">
-                        {/* Title */}
+                        {}
                         <div>
                             {editTitle ? (
                                 <input autoFocus value={title} onChange={e => setTitle(e.target.value)}
@@ -527,7 +493,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             )}
                         </div>
 
-                        {/* Description */}
+                        {}
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Description</p>
                             {editDesc ? (
@@ -544,7 +510,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             )}
                         </div>
 
-                        {/* Status transitions */}
+                        {}
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Status</p>
                             <div className="flex flex-wrap gap-1.5">
@@ -563,7 +529,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                                 })}
                             </div>
 
-                            {/* Blocked reason input */}
+                            {}
                             {showBlockedInput && (
                                 <div className="mt-2 p-2 bg-red-50 rounded border border-red-200">
                                     <p className="text-[10px] font-semibold text-red-600 mb-1">Reason for blocking *</p>
@@ -582,7 +548,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             )}
                         </div>
 
-                        {/* Priority */}
+                        {}
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Priority</p>
                             <div className="flex flex-wrap gap-1">
@@ -602,7 +568,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             </div>
                         </div>
 
-                        {/* Assignee */}
+                        {}
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Assignee</p>
                             {assignee ? (
@@ -633,7 +599,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             )}
                         </div>
 
-                        {/* Due date */}
+                        {}
                         <div>
                             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Due date</p>
                             <input type="date"
@@ -643,7 +609,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                                 style={{ borderColor: '#DFE1E6' }} />
                         </div>
 
-                        {/* Subtasks */}
+                        {}
                         <div>
                             <div className="flex items-center justify-between mb-2">
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Child Issues ({subtasks.length})</p>
@@ -684,7 +650,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             </div>
                         </div>
 
-                        {/* Tags */}
+                        {}
                         {task.tags?.length > 0 && (
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Labels</p>
@@ -699,7 +665,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             </div>
                         )}
 
-                        {/* Created by */}
+                        {}
                         {task.createdBy && (
                             <div>
                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Reporter</p>
@@ -713,7 +679,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
                             </div>
                         )}
 
-                        {/* Delete */}
+                        {}
                         <div className="pt-2 border-t" style={{ borderColor: '#DFE1E6' }}>
                             <button onClick={() => onDelete(task._id)}
                                 className="text-xs font-medium text-red-500 hover:text-red-700 transition-colors">
@@ -730,8 +696,6 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
         </div>
     );
 }
-
-// ─── Create Task Modal ────────────────────────────────────────────────────────
 
 function CreateModal({ onClose, onSubmit, members }) {
     const [title, setTitle] = useState('');
@@ -873,8 +837,6 @@ function CreateModal({ onClose, onSubmit, members }) {
     );
 }
 
-// ─── Main TasksTab ────────────────────────────────────────────────────────────
-
 export default function TasksTab({ channelId, channelName, workspaceId: workspaceIdProp, currentUserId, socket }) {
     const { activeWorkspace } = useWorkspace();
     const workspaceId = workspaceIdProp || activeWorkspace?.id || activeWorkspace?._id;
@@ -887,7 +849,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const [selected, setSelected] = useState(null);
     const [filter, setFilter] = useState('all');
 
-    // Load tasks + workspace members
+    
     const loadTasks = useCallback(async () => {
         if (!channelId || !workspaceId) { setLoading(false); return; }
         try {
@@ -908,11 +870,11 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
         finally { setLoading(false); }
     }, [channelId, workspaceId]);
 
-    // Load workspace members for assignee picker
+    
     const loadMembers = useCallback(async () => {
         if (!workspaceId) return;
         try {
-            // Correct endpoint: /api/workspaces/:id/members (no v2 prefix)
+            
             const res = await api.get(`/api/workspaces/${workspaceId}/members`).catch(() => ({ data: { members: [] } }));
             const list = res.data.members || res.data.users || res.data || [];
             setMembers(Array.isArray(list) ? list.map(m => m.user || m).filter(Boolean) : []);
@@ -921,7 +883,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
 
     useEffect(() => { loadTasks(); loadMembers(); }, [loadTasks, loadMembers]);
 
-    // Socket real-time
+    
     useEffect(() => {
         if (!socket || !channelId) return;
         const add = t => {
@@ -941,13 +903,13 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
         return () => { socket.off('task-created', add); socket.off('task-updated', upd); socket.off('task-deleted', del); };
     }, [socket, channelId]);
 
-    // Actions
+    
     const handleCreate = useCallback(async (data) => {
         try {
-            // Always use 'channel' assignment type when creating from the Tasks tab.
-            // This ensures the task is stored with visibility='channel' and a channel ID,
-            // so ALL channel members (including the assignee) can see it in their Tasks tab.
-            // Individual assignees are tracked via assignedToIds inside the channel task.
+            
+            
+            
+            
             const res = await api.post('/api/v2/tasks', {
                 title: data.title,
                 description: data.description,
@@ -991,7 +953,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
         catch { loadTasks(); }
     }, [loadTasks]);
 
-    // Filtered tasks
+    
     const filtered = useMemo(() => {
         if (filter === 'mine') return tasks.filter(t => {
             const assignees = Array.isArray(t.assignedTo) ? t.assignedTo : (t.assignedTo ? [t.assignedTo] : []);
@@ -1005,7 +967,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const allInCol = s => filtered.filter(t => (t.status || 'todo') === s);
     const blockedCountInCol = s => filtered.filter(t => t.status === 'blocked' && t.previousStatus === s).length;
 
-    // Mix blocked tasks into their previous column for display
+    
     const colTasks = s => {
         const base = filtered.filter(t => (t.status || 'todo') === s);
         const blockedHere = filtered.filter(t => t.status === 'blocked' && (t.previousStatus === s || (!t.previousStatus && s === 'in_progress')));
@@ -1015,7 +977,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
     const totalBlocked = filtered.filter(t => t.status === 'blocked').length;
     const doneCount = tasks.filter(t => t.status === 'done').length;
 
-    // Loading skeleton
+    
     if (loading) {
         return (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', backgroundColor: 'var(--bg-base)' }}>
@@ -1095,7 +1057,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                 ><Plus size={13} strokeWidth={2.5} /> Create</button>
             </div>
 
-            {/* ── Error Banner ── */}
+            {}
             {fetchError && (
                 <div className="flex items-center justify-between gap-3 mx-4 mt-3 px-4 py-3 rounded-sm bg-red-50 border border-red-200 text-sm">
                     <div className="flex items-center gap-2 text-red-700">
@@ -1111,9 +1073,9 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                 </div>
             )}
 
-            {/* ── 5-Column Board + optional detail panel ── */}
+            {}
             <div className="flex-1 min-h-0 flex overflow-hidden">
-                {/* Board */}
+                {}
                 <div className="flex-1 min-h-0 flex gap-2.5 p-3 overflow-x-auto overflow-y-hidden">
                     {COLUMNS.map(col => (
                         <KanbanColumn
@@ -1128,7 +1090,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                     ))}
                 </div>
 
-                {/* Detail panel */}
+                {}
                 {selected && (
                     <TaskDetailPanel
                         key={selected._id}

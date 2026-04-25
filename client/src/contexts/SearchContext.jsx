@@ -1,13 +1,3 @@
-// client/src/contexts/SearchContext.jsx
-/**
- * SearchContext — global state for the unified search system.
- * Provides debounced search, filter management, and recent search tracking.
- *
- * workspaceId resolution order:
- *   1. URL param (:workspaceId) — always available on workspace routes
- *   2. workspaceId prop passed to <SearchProvider workspaceId={...}>
- */
-
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { searchAll, saveRecentSearch, getRecentSearches } from '../services/searchService';
@@ -24,7 +14,7 @@ export function SearchProvider({ children }) {
     const navigate    = useNavigate();
     const params      = useParams();
 
-    // workspaceId comes from the URL param — always present on /workspace/:workspaceId/* routes
+    
     const workspaceId = params?.workspaceId || null;
 
     const [isOpen,         setIsOpen]         = useState(false);
@@ -41,7 +31,7 @@ export function SearchProvider({ children }) {
     const debounceTimer = useRef(null);
     const abortRef      = useRef(null);
 
-    // ── Debounced search ──────────────────────────────────────────────────────
+    
     const runSearch = useCallback(async (q, appliedFilters, wsId) => {
         if (!q || !q.trim() || !wsId) {
             setResults(EMPTY_RESULTS);
@@ -49,7 +39,7 @@ export function SearchProvider({ children }) {
             return;
         }
 
-        // Cancel previous in-flight request
+        
         if (abortRef.current) abortRef.current.abort();
         abortRef.current = new AbortController();
 
@@ -59,7 +49,7 @@ export function SearchProvider({ children }) {
             const data = await searchAll(q, appliedFilters, wsId);
             setResults(data);
         } catch (err) {
-            if (err?.code === 'ERR_CANCELED') return; // Aborted — ignore
+            if (err?.code === 'ERR_CANCELED') return; 
             setError('Search failed. Please try again.');
             setResults(EMPTY_RESULTS);
         } finally {
@@ -88,7 +78,7 @@ export function SearchProvider({ children }) {
         if (query) runSearch(query, newFilters, workspaceId);
     }, [filters, query, workspaceId, runSearch]);
 
-    // ── Open / Close ──────────────────────────────────────────────────────────
+    
     const openSearch = useCallback(() => setIsOpen(true), []);
     const closeSearch = useCallback(() => {
         setIsOpen(false);
@@ -97,19 +87,19 @@ export function SearchProvider({ children }) {
         setFilters(f => ({ ...f, offset: 0 }));
     }, []);
 
-    // ── Navigate to full results page ─────────────────────────────────────────
+    
     const goToResults = useCallback((q) => {
         const term = q || query;
         if (!term.trim()) return;
         saveRecentSearch(term);
         setRecentSearches(getRecentSearches());
         closeSearch();
-        // Navigate to workspace-scoped search route, or fallback to /search
+        
         const base = workspaceId ? `/workspace/${workspaceId}/search` : '/search';
         navigate(`${base}?q=${encodeURIComponent(term)}`);
     }, [query, navigate, closeSearch, workspaceId]);
 
-    // ── Keyboard shortcut: Cmd+K / Ctrl+K ────────────────────────────────────
+    
     useEffect(() => {
         const handler = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.key === 'k') {

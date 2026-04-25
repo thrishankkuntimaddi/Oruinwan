@@ -1,10 +1,6 @@
-// server/utils/emailTemplates/auth.js
-// Authentication email templates — Chttrix dark theme
-
 const YEAR = new Date().getFullYear();
 const APP = 'Chttrix';
 
-// ─── Design Tokens (inline-only for email client compat) ─────────────────────
 const T = {
   bgOuter:     '#f0ece6',
   bgCard:      '#ffffff',
@@ -21,7 +17,6 @@ const T = {
   borderAccent:'rgba(184,149,106,0.35)',
 };
 
-// ─── Shell ────────────────────────────────────────────────────────────────────
 function shell({ icon, title, subtitle, body, preheader = '' }) {
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -107,7 +102,6 @@ function shell({ icon, title, subtitle, body, preheader = '' }) {
 </html>`;
 }
 
-// ─── Partials ─────────────────────────────────────────────────────────────────
 function btn(text, url) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0">
   <tr>
@@ -173,11 +167,9 @@ function link(text, url) {
 </p>`;
 }
 
-// ─── Generate Verification Code ───────────────────────────────────────────────
 const generateVerificationCode = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
-// ─── 1. Email Verification OTP ────────────────────────────────────────────────
 const emailVerificationTemplate = (username, code) => {
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
@@ -198,7 +190,6 @@ const emailVerificationTemplate = (username, code) => {
   };
 };
 
-// ─── 2. Password Reset ────────────────────────────────────────────────────────
 const passwordResetTemplate = (username, resetUrl) => {
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
@@ -220,7 +211,6 @@ const passwordResetTemplate = (username, resetUrl) => {
   };
 };
 
-// ─── 3. Password Set (OAuth users) ───────────────────────────────────────────
 const passwordSetTemplate = (username, authProvider) => {
   const provider = authProvider
     ? authProvider.charAt(0).toUpperCase() + authProvider.slice(1)
@@ -243,7 +233,6 @@ const passwordSetTemplate = (username, authProvider) => {
   };
 };
 
-// ─── 4. Resend / Account Activation ──────────────────────────────────────────
 const resendVerificationTemplate = (username, verificationUrl) => {
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}

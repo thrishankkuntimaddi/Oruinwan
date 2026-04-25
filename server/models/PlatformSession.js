@@ -1,10 +1,5 @@
 const mongoose = require("mongoose");
 
-/**
- * Platform Admin ↔ Company Admin Session
- * NOT workspace
- * NOT E2EE
- */
 const PlatformSessionSchema = new mongoose.Schema(
   {
     companyId: {

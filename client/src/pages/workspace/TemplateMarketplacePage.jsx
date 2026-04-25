@@ -24,7 +24,7 @@ function TemplateCard({ template, onUse, importing }) {
   const Icon = cat.icon;
   return (
     <div className="group bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-lg transition-all duration-200">
-      {/* Card header */}
+      {}
       <div className={`h-2 bg-gradient-to-r ${cat.color}`} />
       <div className="p-5">
         <div className="flex items-start gap-3 mb-3">
@@ -98,7 +98,7 @@ export default function TemplateMarketplacePage() {
       setTemplates(res.data.templates || []);
       setTotalPages(res.data.totalPages || 1);
     } catch (err) {
-      // Gracefully fall back to empty state
+      
       setTemplates([]);
     } finally {
       setLoading(false);
@@ -128,7 +128,7 @@ export default function TemplateMarketplacePage() {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-gray-50 dark:bg-gray-950 min-h-0">
-      {/* Toast */}
+      {}
       {toast && (
         <div className={`fixed top-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium text-white transition-all ${
           toast.type === "error" ? "bg-red-500" : "bg-emerald-500"
@@ -137,7 +137,7 @@ export default function TemplateMarketplacePage() {
         </div>
       )}
 
-      {/* Header */}
+      {}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-8 py-6 flex-shrink-0">
         <div className="max-w-5xl mx-auto">
           <button
@@ -158,7 +158,7 @@ export default function TemplateMarketplacePage() {
             </div>
           </div>
 
-          {/* Search */}
+          {}
           <div className="relative mb-4">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             <input
@@ -170,7 +170,7 @@ export default function TemplateMarketplacePage() {
             />
           </div>
 
-          {/* Category pills */}
+          {}
           <div className="flex items-center gap-2 flex-wrap">
             {ALL_CATEGORIES.map(cat => (
               <button
@@ -189,7 +189,7 @@ export default function TemplateMarketplacePage() {
         </div>
       </div>
 
-      {/* Content */}
+      {}
       <div className="flex-1 overflow-y-auto px-8 py-6">
         <div className="max-w-5xl mx-auto">
           {loading ? (
@@ -217,7 +217,7 @@ export default function TemplateMarketplacePage() {
                 ))}
               </div>
 
-              {/* Pagination */}
+              {}
               {totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2">
                   <button

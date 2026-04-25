@@ -1,6 +1,3 @@
-// server/utils/emailTemplates/company.js
-// Company and employee management email templates — Chttrix dark theme
-
 const YEAR = new Date().getFullYear();
 const APP  = 'Chttrix';
 const APP_URL = process.env.FRONTEND_URL || 'https://chttrix.com';
@@ -126,7 +123,6 @@ function link(text, url) {
 </p>`;
 }
 
-// ─── Company Approved ─────────────────────────────────────────────────────────
 const companyApprovedTemplate = (username, companyName, loginUrl, customMessage) => {
   const msgBlock = customMessage
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
@@ -157,7 +153,6 @@ const companyApprovedTemplate = (username, companyName, loginUrl, customMessage)
   };
 };
 
-// ─── Company Rejected ─────────────────────────────────────────────────────────
 const companyRejectedTemplate = (username, companyName, reason, customMessage) => {
   const reasonText = customMessage || reason || 'Application criteria not met.';
   const body = `

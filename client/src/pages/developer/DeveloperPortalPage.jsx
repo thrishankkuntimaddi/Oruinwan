@@ -1,11 +1,9 @@
-// client/src/pages/developer/DeveloperPortalPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import './DeveloperPortalPage.css';
 
 const API = import.meta.env?.VITE_API_URL || '';
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'api-keys', label: 'API Keys', icon: '🔑' },
   { id: 'webhooks', label: 'Webhooks', icon: '🔗' },
@@ -14,7 +12,6 @@ const TABS = [
   { id: 'docs',     label: 'Docs',     icon: '📄' },
 ];
 
-// ── Helper ─────────────────────────────────────────────────────────────────────
 function CopyButton({ value }) {
   const [copied, setCopied] = useState(false);
   const copy = () => {
@@ -34,7 +31,6 @@ function Badge({ label, color = 'blue' }) {
   return <span className={`dp-badge dp-badge-${color}`}>{label}</span>;
 }
 
-// ── API Keys Tab ───────────────────────────────────────────────────────────────
 function ApiKeysTab({ workspaceId }) {
   const [keys, setKeys] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,7 +45,7 @@ function ApiKeysTab({ workspaceId }) {
       const res = await api.get(`/api/developer/api-keys?workspaceId=${workspaceId}`);
       setKeys(res.data.keys || []);
     } catch {
-      // silent
+      
     } finally {
       setLoading(false);
     }
@@ -148,7 +144,6 @@ function ApiKeysTab({ workspaceId }) {
   );
 }
 
-// ── Webhooks Tab ───────────────────────────────────────────────────────────────
 const WEBHOOK_EVENTS = ['message.sent','task.created','task.updated','task.completed','file.uploaded','meeting.completed','meeting.started','*'];
 
 function WebhooksTab({ workspaceId }) {
@@ -262,7 +257,6 @@ function WebhooksTab({ workspaceId }) {
   );
 }
 
-// ── Bots Tab ───────────────────────────────────────────────────────────────────
 function BotsTab({ workspaceId }) {
   const [bots, setBots] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -392,7 +386,6 @@ function BotsTab({ workspaceId }) {
   );
 }
 
-// ── Apps Tab ───────────────────────────────────────────────────────────────────
 const CATEGORY_ICONS = { productivity: '⚡', communication: '💬', developer: '🛠️', automation: '🔄', analytics: '📊' };
 
 function AppsTab({ workspaceId }) {
@@ -477,7 +470,6 @@ function AppsTab({ workspaceId }) {
   );
 }
 
-// ── Docs Tab ───────────────────────────────────────────────────────────────────
 function DocsTab() {
   const [activeSection, setActiveSection] = useState('quickstart');
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-chttrix-instance.com';
@@ -650,16 +642,15 @@ await client.webhooks.unsubscribe('webhookId');`}</code></pre>
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function DeveloperPortalPage({ workspaceId }) {
   const [activeTab, setActiveTab] = useState('api-keys');
 
-  // Allow workspaceId from URL params if not passed as prop
+  
   const wsId = workspaceId || new URLSearchParams(window.location.search).get('workspaceId') || '';
 
   return (
     <div className="dp-root">
-      {/* Header */}
+      {}
       <div className="dp-header">
         <div className="dp-header-content">
           <div className="dp-header-icon">⚡</div>
@@ -670,7 +661,7 @@ export default function DeveloperPortalPage({ workspaceId }) {
         </div>
       </div>
 
-      {/* Tabs */}
+      {}
       <div className="dp-tabs">
         {TABS.map(tab => (
           <button
@@ -684,7 +675,7 @@ export default function DeveloperPortalPage({ workspaceId }) {
         ))}
       </div>
 
-      {/* Content */}
+      {}
       <div className="dp-body">
         <div className="dp-body-inner">
           {activeTab === 'api-keys' && <ApiKeysTab workspaceId={wsId} />}

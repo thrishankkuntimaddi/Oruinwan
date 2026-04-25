@@ -1,4 +1,3 @@
-// Script to list all users in the database
 require('dotenv').config();
 const mongoose = require('mongoose');
 const User = require('../models/User');

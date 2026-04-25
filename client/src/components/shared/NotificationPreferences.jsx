@@ -1,11 +1,7 @@
-/**
- * NotificationPreferences.jsx — Monolith Flow dark theme
- */
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, Save, Loader2 } from 'lucide-react';
 import api from '@services/api';
 
-// ── Design tokens ─────────────────────────────────────────────
 const T = {
     bg:          'var(--bg-surface)',
     border:      'var(--border-subtle)',
@@ -77,7 +73,7 @@ export default function NotificationPreferences({ workspaceId }) {
     return (
         <div style={{ maxWidth: '480px', margin: '0 auto', fontFamily: T.font }}>
 
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
                 <div style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.accentBg, border: `1px solid ${T.accentBorder}` }}>
                     <Bell size={15} style={{ color: T.accent }} />
@@ -88,7 +84,7 @@ export default function NotificationPreferences({ workspaceId }) {
                 </div>
             </div>
 
-            {/* Preference rows */}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {PREF_ITEMS.map(({ key, label, description, Icon, dot }) => (
                     <div
@@ -97,18 +93,18 @@ export default function NotificationPreferences({ workspaceId }) {
                         onMouseEnter={e => e.currentTarget.style.borderColor = T.borderHover}
                         onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                     >
-                        {/* Icon */}
+                        {}
                         <div style={{ flexShrink: 0, width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: `${dot}18`, border: `1px solid ${dot}30` }}>
                             <Icon size={13} style={{ color: dot }} />
                         </div>
 
-                        {/* Text */}
+                        {}
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <p style={{ fontSize: '12px', fontWeight: 600, color: T.text, margin: 0 }}>{label}</p>
                             <p style={{ fontSize: '10px', color: T.muted, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{description}</p>
                         </div>
 
-                        {/* Toggle */}
+                        {}
                         <button
                             onClick={() => handleToggle(key)}
                             aria-label={`Toggle ${label}`}
@@ -133,12 +129,12 @@ export default function NotificationPreferences({ workspaceId }) {
                 ))}
             </div>
 
-            {/* Error */}
+            {}
             {error && (
                 <p style={{ fontSize: '11px', color: '#f87171', marginTop: '10px', textAlign: 'center' }}>{error}</p>
             )}
 
-            {/* Save button */}
+            {}
             <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
                 <button
                     onClick={handleSave}

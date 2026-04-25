@@ -1,4 +1,3 @@
-// SignupForm.jsx — Monolith Flow Design System
 import { useState, useEffect } from 'react';
 import { useToast } from '../../contexts/ToastContext';
 import { Eye, EyeOff, ChevronDown, CheckCircle2, AlertCircle, ArrowRight, Loader } from 'lucide-react';
@@ -55,7 +54,7 @@ const SignupForm = ({ onSwitch }) => {
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
 
-    // Debounced username check —————————————————————————————————————
+    
     useEffect(() => {
         const t = setTimeout(async () => {
             if (formData.username.trim().length >= 3) {
@@ -71,7 +70,7 @@ const SignupForm = ({ onSwitch }) => {
         return () => clearTimeout(t);
     }, [formData.username]);
 
-    // Debounced email check —————————————————————————————————————
+    
     useEffect(() => {
         const t = setTimeout(async () => {
             if (formData.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -87,7 +86,7 @@ const SignupForm = ({ onSwitch }) => {
         return () => clearTimeout(t);
     }, [formData.email]);
 
-    // Debounced phone check —————————————————————————————————————
+    
     useEffect(() => {
         const t = setTimeout(async () => {
             const digits = formData.phone.replace(/\D/g, '');
@@ -148,7 +147,7 @@ const SignupForm = ({ onSwitch }) => {
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {/* Username */}
+                {}
                 <div>
                     <Label>Username</Label>
                     <div style={{ position: 'relative' }}>
@@ -163,7 +162,7 @@ const SignupForm = ({ onSwitch }) => {
                     {errors.username && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.username}</p>}
                 </div>
 
-                {/* Email */}
+                {}
                 <div>
                     <Label>Email</Label>
                     <div style={{ position: 'relative' }}>
@@ -178,11 +177,11 @@ const SignupForm = ({ onSwitch }) => {
                     {errors.email && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.email}</p>}
                 </div>
 
-                {/* Phone */}
+                {}
                 <div>
                     <Label>Phone Number</Label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        {/* Country selector */}
+                        {}
                         <div style={{ position: 'relative', width: '110px', flexShrink: 0 }}>
                             <button type="button" onClick={() => setShowCountryDd(!showCountryDd)}
                                 style={{ width: '100%', padding: '10px 8px', background: 'var(--bg-input)', border: `1px solid ${focused === 'phone' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
@@ -200,7 +199,7 @@ const SignupForm = ({ onSwitch }) => {
                                 </div>
                             )}
                         </div>
-                        {/* Phone input */}
+                        {}
                         <div style={{ flex: 1, position: 'relative' }}>
                             <input name="phone" placeholder={`${selectedCountry.length} digits`}
                                 value={formData.phone} onChange={handleChange}
@@ -214,7 +213,7 @@ const SignupForm = ({ onSwitch }) => {
                     {errors.phone && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.phone}</p>}
                 </div>
 
-                {/* Password */}
+                {}
                 <div>
                     <Label>Password</Label>
                     <div style={{ position: 'relative' }}>
@@ -227,7 +226,7 @@ const SignupForm = ({ onSwitch }) => {
                             {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
                         </button>
                     </div>
-                    {/* Password rules */}
+                    {}
                     {formData.password.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
                             {pwdRules.map(r => (
@@ -240,7 +239,7 @@ const SignupForm = ({ onSwitch }) => {
                     )}
                 </div>
 
-                {/* Confirm password */}
+                {}
                 <div>
                     <Label>Confirm Password</Label>
                     <div style={{ position: 'relative' }}>
@@ -255,7 +254,7 @@ const SignupForm = ({ onSwitch }) => {
                     </div>
                 </div>
 
-                {/* Submit */}
+                {}
                 <button type="submit" disabled={!isFormValid || loading}
                     style={{ width: '100%', padding: '11px', background: isFormValid && !loading ? '#b8956a' : 'rgba(184,149,106,0.3)', border: 'none', color: isFormValid && !loading ? '#0c0c0c' : 'rgba(228,228,228,0.3)', fontSize: '13px', fontWeight: 700, cursor: isFormValid && !loading ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 150ms ease', marginTop: '4px' }}>
                     {loading ? 'Creating account...' : <><span>Create Account</span><ArrowRight size={13} /></>}

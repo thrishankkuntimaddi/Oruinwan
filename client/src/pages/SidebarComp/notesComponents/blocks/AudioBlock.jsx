@@ -91,7 +91,7 @@ const AudioBlock = ({
                 reader.readAsDataURL(audioBlob);
                 stream.getTracks().forEach(track => track.stop());
 
-                // Clear timers
+                
                 clearInterval(timerRef.current);
                 clearTimeout(autoStopRef.current);
                 setIsRecording(false);
@@ -102,12 +102,12 @@ const AudioBlock = ({
             setIsRecording(true);
             setRecordingSeconds(0);
 
-            // Ticker
+            
             timerRef.current = setInterval(() => {
                 setRecordingSeconds(s => s + 1);
             }, 1000);
 
-            // Auto-stop after 60 seconds
+            
             autoStopRef.current = setTimeout(() => {
                 if (mediaRecorderRef.current?.state === 'recording') {
                     mediaRecorderRef.current.stop();
@@ -174,7 +174,7 @@ const AudioBlock = ({
                         <Mic size={48} className={`${isRecording ? 'text-red-500 animate-pulse' : 'text-gray-400'}`} />
 
                         {isRecording ? (
-                            /* Recording in progress UI */
+                            
                             <div className="flex flex-col items-center gap-3">
                                 <div className="flex items-center gap-2">
                                     <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
@@ -191,7 +191,7 @@ const AudioBlock = ({
                                 </button>
                             </div>
                         ) : (
-                            /* Idle UI */
+                            
                             <div className="flex flex-col items-center gap-2">
                                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Add audio</p>
                                 <div className="flex gap-3">
@@ -219,7 +219,7 @@ const AudioBlock = ({
                             </div>
                         )}
 
-                        {/* Upload progress */}
+                        {}
                         {uploadProgress[block.id] !== undefined && (
                             <div className="w-full max-w-xs">
                                 <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">

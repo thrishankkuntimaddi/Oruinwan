@@ -1,16 +1,10 @@
-// server/src/features/onboarding/BulkOnboardingJob.js
-//
-// Phase 1 — Company Identity Layer
-// Persistent job record for async bulk employee onboarding.
-// Polling: GET /api/company/onboarding/status/:jobId reads this document.
-
 const mongoose = require('mongoose');
 
 const RowResultSchema = new mongoose.Schema({
     email: { type: String },
     name: { type: String },
     status: { type: String, enum: ['created', 'skipped', 'error'], required: true },
-    reason: { type: String },   // error/skip reason
+    reason: { type: String },   
 }, { _id: false });
 
 const WarningSchema = new mongoose.Schema({
@@ -19,7 +13,7 @@ const WarningSchema = new mongoose.Schema({
 }, { _id: false });
 
 const BulkOnboardingJobSchema = new mongoose.Schema({
-    // Stable identifier returned to the frontend immediately (HTTP 202)
+    
     jobId: {
         type: String,
         required: true,
@@ -39,7 +33,7 @@ const BulkOnboardingJobSchema = new mongoose.Schema({
         ref: 'User',
     },
 
-    // Lifecycle
+    
     status: {
         type: String,
         enum: ['queued', 'processing', 'done', 'failed'],
@@ -47,27 +41,26 @@ const BulkOnboardingJobSchema = new mongoose.Schema({
         index: true,
     },
 
-    // Row counts
+    
     totalRows: { type: Number, default: 0 },
     processedRows: { type: Number, default: 0 },
     createdCount: { type: Number, default: 0 },
     skippedCount: { type: Number, default: 0 },
     errorCount: { type: Number, default: 0 },
 
-    // Per-row results (capped at 500 to avoid doc bloat)
+    
     results: { type: [RowResultSchema], default: [] },
     warnings: { type: [WarningSchema], default: [] },
 
-    // Timestamps
+    
     startedAt: { type: Date, default: null },
     completedAt: { type: Date, default: null },
 
 }, {
-    timestamps: true,    // createdAt / updatedAt
+    timestamps: true,    
     collection: 'bulk_onboarding_jobs',
 });
 
-// TTL index — auto-delete stale jobs after 7 days
 BulkOnboardingJobSchema.index({ createdAt: 1 }, { expireAfterSeconds: 7 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('BulkOnboardingJob', BulkOnboardingJobSchema);

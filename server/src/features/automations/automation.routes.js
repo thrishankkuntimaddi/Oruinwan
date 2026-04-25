@@ -1,20 +1,3 @@
-/**
- * automation.routes.js
- *
- * REST API for Workflow Automations.
- *
- * All routes require authentication (applied at mount level in server.js).
- * Write operations (POST/PATCH/DELETE) are restricted to workspace admins.
- *
- * Endpoints:
- *   GET    /api/v2/automations/templates   — list predefined templates
- *   POST   /api/v2/automations             — create automation
- *   GET    /api/v2/automations             — list automations (?workspaceId=)
- *   GET    /api/v2/automations/:id         — get single automation
- *   PATCH  /api/v2/automations/:id         — update / toggle isActive
- *   DELETE /api/v2/automations/:id         — soft-delete
- */
-
 const express  = require('express');
 const router   = express.Router();
 const logger   = require('../../../utils/logger');
@@ -22,8 +5,6 @@ const service  = require('./automation.service');
 const templates = require('./automation.templates');
 
 const Workspace = require('../../../models/Workspace');
-
-// ─── Helper: verify requester is workspace admin/owner ───────────────────────
 
 async function _requireWorkspaceAdmin(userId, workspaceId, res) {
     const ws = await Workspace.findById(workspaceId).select('members').lean();
@@ -42,13 +23,9 @@ async function _requireWorkspaceAdmin(userId, workspaceId, res) {
     return true;
 }
 
-// ─── GET /templates ───────────────────────────────────────────────────────────
-
 router.get('/templates', (req, res) => {
     res.json({ templates });
 });
-
-// ─── POST / — create ─────────────────────────────────────────────────────────
 
 router.post('/', async (req, res) => {
     try {
@@ -71,8 +48,6 @@ router.post('/', async (req, res) => {
     }
 });
 
-// ─── GET / — list ─────────────────────────────────────────────────────────────
-
 router.get('/', async (req, res) => {
     try {
         const { workspaceId, page = 1, limit = 20 } = req.query;
@@ -89,8 +64,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// ─── GET /:id — single ────────────────────────────────────────────────────────
-
 router.get('/:id', async (req, res) => {
     try {
         const { workspaceId } = req.query;
@@ -103,8 +76,6 @@ router.get('/:id', async (req, res) => {
         res.status(err.statusCode || 500).json({ message: err.message });
     }
 });
-
-// ─── PATCH /:id — update / toggle ────────────────────────────────────────────
 
 router.patch('/:id', async (req, res) => {
     try {
@@ -121,8 +92,6 @@ router.patch('/:id', async (req, res) => {
         res.status(err.statusCode || 500).json({ message: err.message });
     }
 });
-
-// ─── DELETE /:id ──────────────────────────────────────────────────────────────
 
 router.delete('/:id', async (req, res) => {
     try {

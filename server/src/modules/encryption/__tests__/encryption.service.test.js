@@ -1,14 +1,6 @@
-// server/src/modules/encryption/__tests__/encryption.service.test.js
-/**
- * Encryption Service - Unit Tests
- * 
- * Tests for E2EE key management and encryption operations
- */
-
 const encryptionService = require('../encryption.service');
 const { UserWorkspaceKey, WorkspaceKey } = require('../../../../models/encryption');
 
-// Mock dependencies
 jest.mock('../../../../models/encryption');
 
 describe('Encryption Service', () => {

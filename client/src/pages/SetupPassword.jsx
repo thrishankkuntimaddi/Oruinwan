@@ -1,4 +1,3 @@
-// client/src/pages/SetupPassword.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle, Shield, Key } from 'lucide-react';
@@ -58,10 +57,10 @@ export default function SetupPassword() {
         }}>
             <div style={{ width: '100%', maxWidth: '420px' }}>
 
-                {/* Card */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}>
 
-                    {/* Header bar */}
+                    {}
                     <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '36px', height: '36px', background: 'rgba(184,149,106,0.1)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Shield size={18} style={{ color: 'var(--accent)' }} />
@@ -72,9 +71,9 @@ export default function SetupPassword() {
                         </div>
                     </div>
 
-                    {/* Body */}
+                    {}
                     <div style={{ padding: '24px' }}>
-                        {/* Who banner */}
+                        {}
                         {user?.username && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', marginBottom: '20px' }}>
                                 <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700, color: 'var(--accent)' }}>
@@ -86,7 +85,7 @@ export default function SetupPassword() {
                         )}
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            {/* New password */}
+                            {}
                             <div>
                                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
                                 <div style={{ position: 'relative' }}>
@@ -106,7 +105,7 @@ export default function SetupPassword() {
                                 </div>
                             </div>
 
-                            {/* Confirm password */}
+                            {}
                             <div>
                                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
                                 <div style={{ position: 'relative' }}>
@@ -126,7 +125,7 @@ export default function SetupPassword() {
                                 </div>
                             </div>
 
-                            {/* Requirements — shown when typing */}
+                            {}
                             {password && (
                                 <div style={{ background: 'var(--bg-active)', border: '1px solid var(--border-default)', padding: '12px 14px' }}>
                                     <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '10px' }}>Requirements</p>
@@ -149,13 +148,13 @@ export default function SetupPassword() {
                                 </div>
                             )}
 
-                            {/* Submit */}
+                            {}
                             <SubmitBtn onClick={handleSubmit} disabled={!isValid || loading} loading={loading} />
                         </div>
                     </div>
                 </div>
 
-                {/* Footer note */}
+                {}
                 <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
                     <Shield size={11} /> Your temporary password will be permanently invalidated after setup
                 </p>

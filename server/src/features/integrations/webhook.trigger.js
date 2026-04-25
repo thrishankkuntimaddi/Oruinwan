@@ -1,5 +1,3 @@
-// server/src/features/integrations/webhook.trigger.js
-// Async webhook trigger — fires registered webhook URLs for workspace events
 const axios = require('axios');
 const crypto = require('crypto');
 const Webhook = require('./webhook.model');
@@ -7,21 +5,17 @@ const logger = require('../../../utils/logger');
 const notifEmitter = require('../notifications/notificationEventEmitter');
 
 const MAX_RETRIES = 3;
-const RETRY_DELAYS_MS = [1000, 3000, 9000]; // exponential backoff
+const RETRY_DELAYS_MS = [1000, 3000, 9000]; 
 
-/**
- * Fire all active webhooks for the given workspaceId + event.
- * Runs asynchronously — does not block the caller.
- */
 function fire(workspaceId, event, data = {}) {
-  // Run async, don't await — callers should not wait for webhook delivery
+  
   _dispatch(workspaceId, event, data).catch(err =>
     logger.error(`[Webhook] Dispatch error for ${event}:`, err.message)
   );
 }
 
 async function _dispatch(workspaceId, event, data) {
-  // Find all active webhooks matching the event (including wildcard *)
+  
   const hooks = await Webhook.find({
     workspaceId,
     isActive: true,
@@ -55,7 +49,7 @@ async function _sendWithRetry(hook, payload, attempt = 0) {
       }
     });
 
-    // Update stats
+    
     await Webhook.findByIdAndUpdate(hook._id, {
       lastTriggeredAt: new Date(),
       lastStatusCode: response.status,
@@ -80,14 +74,14 @@ async function _sendWithRetry(hook, payload, attempt = 0) {
 
     logger.error(`[Webhook] All retries exhausted for ${hook.url}`);
 
-    // Notify workspace admins about persistent webhook failure
+    
     try {
         const Integration = require('./integration.model');
         const integration = await Integration.findOne({ workspaceId: hook.workspaceId }).lean();
         const adminIds = integration?.adminIds || [];
         if (adminIds.length > 0) {
             notifEmitter.emit('integration.webhook_failed', {
-                io: null, // no io here — will rely on polling
+                io: null, 
                 adminIds: adminIds.map(id => id.toString()),
                 workspaceId: hook.workspaceId?.toString(),
                 integrationName: hook.event,

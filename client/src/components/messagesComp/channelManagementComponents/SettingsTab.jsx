@@ -129,11 +129,11 @@ export default function SettingsTab({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
-            {/* Channel Information */}
+            {}
             <div>
                 <SectionTitle>Channel Information</SectionTitle>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                    {/* Channel Name */}
+                    {}
                     <FieldRow
                         label="Channel Name"
                         description="This is how your channel appears to all members"
@@ -163,7 +163,7 @@ export default function SettingsTab({
                         </div>
                     </FieldRow>
 
-                    {/* Channel Description */}
+                    {}
                     <FieldRow
                         label="Channel Description"
                         description="Help others understand what this channel is for"
@@ -208,7 +208,7 @@ export default function SettingsTab({
                 </div>
             </div>
 
-            {/* Privacy Settings */}
+            {}
             {!isDefaultChannel && (
                 <div>
                     <SectionTitle>Privacy &amp; Visibility</SectionTitle>
@@ -244,7 +244,7 @@ export default function SettingsTab({
                 </div>
             )}
 
-            {/* Community Sharing */}
+            {}
             {!isDefaultChannel && !channel.isPrivate && (
                 <div>
                     <SectionTitle>
@@ -298,7 +298,7 @@ export default function SettingsTab({
                 </div>
             )}
 
-            {/* Danger Zone */}
+            {}
             {!isDefaultChannel && (
                 <div>
                     <SectionTitle danger>
@@ -307,7 +307,7 @@ export default function SettingsTab({
                     </SectionTitle>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-                        {/* Clear Messages */}
+                        {}
                         <div style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '16px',
@@ -333,7 +333,7 @@ export default function SettingsTab({
                             />
                         </div>
 
-                        {/* Delete Channel */}
+                        {}
                         <div style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '16px',

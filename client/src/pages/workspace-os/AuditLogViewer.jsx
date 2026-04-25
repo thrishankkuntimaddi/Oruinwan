@@ -1,4 +1,3 @@
-// client/src/pages/workspace-os/AuditLogViewer.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -65,7 +64,7 @@ export default function AuditLogViewer({ companyId: propCompanyId }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -81,9 +80,9 @@ export default function AuditLogViewer({ companyId: propCompanyId }) {
                 </button>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '20px 28px' }}>
-                {/* Filters */}
+                {}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
                     <select value={category} onChange={e => setCategory(e.target.value)} style={inputBase}>
                         <option value="">All Categories</option>

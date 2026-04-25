@@ -1,4 +1,3 @@
-// ManagerSettings — Monolith Flow Design System
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';

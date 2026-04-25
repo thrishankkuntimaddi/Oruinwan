@@ -1,4 +1,3 @@
-// client/src/components/ai/AIAssistantPanel.jsx
 import React, { useState, useCallback } from 'react';
 
 const API = (path) => `/api/ai${path}`;
@@ -14,7 +13,6 @@ const fetchAI = async (path, body, token) => {
     return res.json();
 };
 
-// ─── Loading Spinner ──────────────────────────────────────────────────────────
 const Spinner = () => (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
         <div style={{
@@ -28,7 +26,6 @@ const Spinner = () => (
     </div>
 );
 
-// ─── Action Items List ────────────────────────────────────────────────────────
 const ActionItemsList = ({ items }) => (
     <ul style={{ listStyle: 'none', padding: '0', margin: '8px 0 0 0' }}>
         {items.map((item, i) => (
@@ -45,7 +42,6 @@ const ActionItemsList = ({ items }) => (
     </ul>
 );
 
-// ─── Summary Card ─────────────────────────────────────────────────────────────
 const SummaryCard = ({ summary, messageCount, fallback }) => (
     <div style={{
         background: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(59,130,246,0.08))',
@@ -69,7 +65,6 @@ const SummaryCard = ({ summary, messageCount, fallback }) => (
     </div>
 );
 
-// ─── Smart Reply Chips ────────────────────────────────────────────────────────
 export const SmartReplyChips = ({ suggestions = [], onSelect, style = {} }) => {
     if (!suggestions.length) return null;
     return (
@@ -104,9 +99,8 @@ export const SmartReplyChips = ({ suggestions = [], onSelect, style = {} }) => {
     );
 };
 
-// ─── Main Panel ───────────────────────────────────────────────────────────────
 export default function AIAssistantPanel({ channelId, workspaceId, onClose, token }) {
-    const [tab, setTab]             = useState('summary');  // 'summary' | 'actions'
+    const [tab, setTab]             = useState('summary');  
     const [summary, setSummary]     = useState(null);
     const [items, setItems]         = useState([]);
     const [actionText, setActionText] = useState('');
@@ -145,7 +139,7 @@ export default function AIAssistantPanel({ channelId, workspaceId, onClose, toke
 
     return (
         <div style={panelStyle}>
-            {/* Header */}
+            {}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: 8,
                 padding: '14px 16px', borderBottom: '1px solid rgba(139,92,246,0.15)',
@@ -163,7 +157,7 @@ export default function AIAssistantPanel({ channelId, workspaceId, onClose, toke
                 )}
             </div>
 
-            {/* Tabs */}
+            {}
             <div style={{ display: 'flex', borderBottom: '1px solid rgba(139,92,246,0.1)' }}>
                 {['summary', 'actions'].map(t => (
                     <button key={t} onClick={() => setTab(t)} style={{
@@ -180,7 +174,7 @@ export default function AIAssistantPanel({ channelId, workspaceId, onClose, toke
                 ))}
             </div>
 
-            {/* Body */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 {error && (
                     <div style={{
@@ -259,7 +253,7 @@ export default function AIAssistantPanel({ channelId, workspaceId, onClose, toke
                 )}
             </div>
 
-            {/* Footer branding */}
+            {}
             <div style={{
                 padding: '10px 16px', borderTop: '1px solid rgba(139,92,246,0.1)',
                 textAlign: 'center', fontSize: 11, color: '#475569',

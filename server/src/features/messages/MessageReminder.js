@@ -1,6 +1,3 @@
-// server/models/MessageReminder.js
-// Phase 1 — Message Reminders ("Remind me later")
-
 const mongoose = require('mongoose');
 
 const MessageReminderSchema = new mongoose.Schema(
@@ -16,18 +13,18 @@ const MessageReminderSchema = new mongoose.Schema(
       ref: 'Message',
       required: true
     },
-    // When to fire the reminder
+    
     remindAt: {
       type: Date,
       required: true,
       index: true
     },
-    // Optional custom note
+    
     note: {
       type: String,
       default: ''
     },
-    // Whether the reminder has been delivered via socket
+    
     delivered: {
       type: Boolean,
       default: false,
@@ -41,7 +38,6 @@ const MessageReminderSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Compound index for the cron job: find undelivered reminders due now
 MessageReminderSchema.index({ delivered: 1, remindAt: 1 });
 
 module.exports = mongoose.model('MessageReminder', MessageReminderSchema);

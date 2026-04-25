@@ -1,5 +1,3 @@
-// client/src/components/company/DepartmentCard.jsx
-
 import React from 'react';
 import { Users, Edit, Trash2 } from 'lucide-react';
 

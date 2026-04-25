@@ -1,16 +1,9 @@
-// server/src/features/company-updates/updates.validation.js
-//
-// Phase 5 — Company Updates Feed
-
 const { body, param, query } = require('express-validator');
 
 const VALID_TYPES = ['announcement', 'achievement', 'milestone', 'news', 'alert', 'general'];
 const VALID_PRIORITIES = ['low', 'normal', 'high', 'critical'];
 const isObjectId = (v) => /^[a-f\d]{24}$/i.test(v);
 
-/**
- * POST /api/company/updates
- */
 const postUpdate = [
     body('content')
         .trim()
@@ -39,9 +32,6 @@ const postUpdate = [
         .custom(ids => ids.every(isObjectId)).withMessage('All mentions must be valid IDs'),
 ];
 
-/**
- * GET /api/company/updates
- */
 const getUpdates = [
     query('type')
         .optional()
@@ -64,9 +54,6 @@ const getUpdates = [
         .isInt({ min: 1 }).withMessage('page must be ≥1'),
 ];
 
-/**
- * POST /api/company/updates/:id/react
- */
 const addReaction = [
     param('id').custom(isObjectId).withMessage('id must be a valid update ID'),
 

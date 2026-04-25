@@ -5,7 +5,6 @@ import { useToast } from "../../contexts/ToastContext";
 import { API_BASE } from '@services/api';
 import ConfirmationModal from "../../shared/components/ui/ConfirmationModal";
 
-// Extracted view components
 import ModalHeader from "./channelManagementComponents/ModalHeader";
 import TabNavigation from "./channelManagementComponents/TabNavigation";
 import MembersTab from "./channelManagementComponents/MembersTab";
@@ -33,21 +32,21 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
     const [memberToDemote, setMemberToDemote] = useState(null);
     const [showClearMessagesConfirm, setShowClearMessagesConfirm] = useState(false);
 
-    // Editing states
+    
     const [isEditingName, setIsEditingName] = useState(false);
     const [editedName, setEditedName] = useState(channel?.name || "");
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [editedDescription, setEditedDescription] = useState(channel?.description || "");
 
-    // Admin permission logic
+    
     const isDefaultChannel = channel?.isDefault || ['general', 'announcements'].includes(channel?.name?.toLowerCase().replace(/^#/, ''));
     const isWorkspaceAdmin = channel?.workspaceRole === 'owner' || channel?.workspaceRole === 'admin';
-    // createdBy can be a populated object {_id, username} or a raw ID string
+    
     const createdByIdStr = channel?.createdBy?._id
         ? String(channel.createdBy._id)
         : String(channel?.createdBy || '');
     const isChannelCreator = !!currentUserId && createdByIdStr === String(currentUserId);
-    // admins entries can be populated objects {_id, username} or raw ID strings
+    
     const isPromotedAdmin = channel?.admins && Array.isArray(channel.admins)
         ? channel.admins.some(a => String(a?._id || a) === String(currentUserId))
         : false;
@@ -88,7 +87,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
         }
     }, [activeTab, loadAllUsers]);
 
-    // Safety check
+    
     if (!channel) {
         console.error("ChannelManagementModal: channel prop is undefined");
         onClose?.();
@@ -197,7 +196,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                 "success"
             );
             setPrivacyVerification("");
-            // Close modal — 'channel-updated' socket event propagates the change reactively
+            
             setTimeout(() => onClose?.(), 800);
         } catch (err) {
             console.error("Toggle privacy failed:", err);
@@ -219,7 +218,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                     : "Public link disabled. Channel is now workspace-only.",
                 "success"
             );
-            // Update local channel state
+            
             channel.isPublic = newIsPublic;
         } catch (err) {
             console.error("Toggle public failed:", err);
@@ -264,7 +263,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             await api.delete(`/api/channels/${channel.id}/messages`);
             showToast("All messages have been cleared from this channel", "success");
             setShowClearMessagesConfirm(false);
-            // 'messages-cleared' socket event empties the chat window reactively
+            
         } catch (err) {
             console.error("Clear messages failed:", err);
             showToast(err?.response?.data?.message || "Failed to clear messages", "error");
@@ -291,7 +290,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             showToast("Channel name updated successfully", "success");
             setIsEditingName(false);
             setEditedName(editedName.trim().toLowerCase());
-            // 'channel-updated' socket event propagates the new name to all clients reactively
+            
         } catch (err) {
             console.error("Update name failed:", err);
             showToast(err?.response?.data?.message || "Failed to update channel name", "error");

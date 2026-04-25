@@ -1,31 +1,8 @@
-/**
- * PHASE 2: Admin-Only Repair Endpoint Controller
- * 
- * Provides explicit trigger for repairing INV-001 violations
- * ADMIN-ONLY: Requires platform admin authorization
- */
-
 const conversationKeysService = require('./conversationKeys.service');
 
-/**
- * POST /internal/e2ee/repair-conversation-key
- * 
- * Explicitly repair a single user's conversation key access
- * 
- * Request Body:
- * {
- *   "channelId": "<string>",
- *   "userId": "<string>"
- * }
- * 
- * Authorization: Platform admin only
- * 
- * @param {Object} req - Express request
- * @param {Object} res - Express response
- */
 async function repairConversationKey(req, res) {
     const { channelId, userId } = req.body;
-    const callerId = req.user?.sub; // From auth middleware
+    const callerId = req.user?.sub; 
 
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`🔧 [AUDIT][PHASE2][TRIGGER] Repair endpoint called`);
@@ -36,7 +13,7 @@ async function repairConversationKey(req, res) {
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
     try {
-        // Validate input
+        
         if (!channelId || !userId) {
             console.error(`❌ [AUDIT][PHASE2][TRIGGER] Missing required fields`);
             return res.status(400).json({
@@ -45,18 +22,18 @@ async function repairConversationKey(req, res) {
             });
         }
 
-        // Call repair function (5 gates will be checked inside)
+        
         const result = await conversationKeysService.repairConversationKeyForUser(
             channelId,
             userId
         );
 
-        // Log result
+        
         console.log(`📊 [AUDIT][PHASE2][TRIGGER] Repair completed`);
         console.log(`   ├─ Result: ${result.result}`);
         console.log(`   └─ Reason: ${result.reason || 'N/A'}`);
 
-        // Return result verbatim
+        
         if (result.result === 'REPAIR_SUCCESS') {
             return res.status(200).json({
                 success: true,
@@ -74,7 +51,7 @@ async function repairConversationKey(req, res) {
                 message: 'User already has encryption key (idempotent)'
             });
         } else {
-            // Gate failure
+            
             return res.status(400).json({
                 success: false,
                 result: result.result,

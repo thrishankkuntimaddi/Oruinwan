@@ -1,33 +1,39 @@
 'use strict';
 
 /**
- * Native Notification wrapper for Chttrix Desktop.
- * Uses Electron's built-in Notification API to surface
- * message alerts, task reminders, and system events.
+ * Chttrix Desktop — Native Notifications
+ *
+ * Uses Electron's built-in Notification API.
+ * Supports: messages, mentions, task reminders, system alerts.
+ * All notifications click to focus the app and optionally deep-link.
  */
 
-const { Notification, app } = require('electron');
+const { Notification, BrowserWindow } = require('electron');
 const path = require('path');
 
-// Resolve the icon relative to this file
 const ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.png');
 
-/**
- * Whether desktop notifications are currently enabled.
- * Can be toggled via the tray menu.
- */
 let notificationsEnabled = true;
+
+// ─── Core ─────────────────────────────────────────────────────────────────────
 
 /**
  * Show a native OS notification.
  *
- * @param {object} options
- * @param {string} options.title   - Notification title
- * @param {string} options.body    - Notification body text
- * @param {string} [options.type]  - 'message' | 'task' | 'mention' | 'system'
- * @param {Function} [options.onClick] - Callback when the notification is clicked
+ * @param {object}    options
+ * @param {string}    options.title
+ * @param {string}    options.body
+ * @param {'message'|'task'|'mention'|'system'} [options.type]
+ * @param {boolean}   [options.silent]  - true to suppress sound
+ * @param {Function}  [options.onClick] - called with { type } on notification click
  */
-function showNotification({ title = 'Chttrix', body = '', type = 'system', onClick } = {}) {
+function showNotification({
+  title = 'Chttrix',
+  body  = '',
+  type  = 'system',
+  silent = false,
+  onClick,
+} = {}) {
   if (!notificationsEnabled) return;
   if (!Notification.isSupported()) return;
 
@@ -35,16 +41,17 @@ function showNotification({ title = 'Chttrix', body = '', type = 'system', onCli
     title,
     body,
     icon: ICON_PATH,
-    silent: false,
+    silent,
+    urgency: type === 'mention' ? 'critical' : 'normal', // Linux urgency
   });
 
   notification.on('click', () => {
-    // Bring the app to front on click
-    const { BrowserWindow } = require('electron');
+    // Bring app window to front
     const wins = BrowserWindow.getAllWindows();
     if (wins.length > 0) {
       const win = wins[0];
       if (win.isMinimized()) win.restore();
+      win.show();
       win.focus();
     }
     if (typeof onClick === 'function') onClick({ type });
@@ -53,44 +60,48 @@ function showNotification({ title = 'Chttrix', body = '', type = 'system', onCli
   notification.show();
 }
 
+// ─── Typed helpers ────────────────────────────────────────────────────────────
+
 /**
- * Show a new-message notification.
+ * New direct message notification.
  */
 function notifyMessage({ senderName, preview, onClick } = {}) {
   showNotification({
-    title: `💬 New message from ${senderName || 'someone'}`,
-    body: preview || 'You have a new message',
-    type: 'message',
+    title: `💬 ${senderName || 'New message'}`,
+    body:  preview || 'You have a new message',
+    type:  'message',
     onClick,
   });
 }
 
 /**
- * Show a task-reminder notification.
+ * Task due / reminder notification.
  */
 function notifyTaskReminder({ taskTitle, dueDate, onClick } = {}) {
   const body = dueDate
     ? `Due: ${new Date(dueDate).toLocaleDateString()}`
     : 'A task requires your attention';
   showNotification({
-    title: `📋 Task Reminder: ${taskTitle || 'Untitled Task'}`,
+    title: `📋 ${taskTitle || 'Task Reminder'}`,
     body,
-    type: 'task',
+    type:  'task',
     onClick,
   });
 }
 
 /**
- * Show a mention notification.
+ * @mention notification — uses critical urgency on Linux.
  */
 function notifyMention({ senderName, channelName, onClick } = {}) {
   showNotification({
     title: `🔔 ${senderName || 'Someone'} mentioned you`,
-    body: channelName ? `in #${channelName}` : 'You were mentioned',
-    type: 'mention',
+    body:  channelName ? `in #${channelName}` : 'You were mentioned',
+    type:  'mention',
     onClick,
   });
 }
+
+// ─── State ────────────────────────────────────────────────────────────────────
 
 function setEnabled(enabled) {
   notificationsEnabled = !!enabled;

@@ -1,24 +1,3 @@
-/**
- * SupportTicket Model - Platform Support
- * 
- * PURPOSE:
- * - Platform support ticketing (company ↔ Chttrix platform admins)
- * - Technical support, billing, platform issues
- * - Cross-organization communication with platform team
- * 
- * SCOPE:
- * - Company admins/owners ↔ Chttrix platform administrators
- * - NOT for internal company tickets (use Ticket for that)
- * 
- * EXAMPLES:
- * - Billing inquiry to platform team
- * - Technical issue with Chttrix platform
- * - Feature request to Chttrix
- * - Account management questions
- * 
- * @see Ticket - For internal company ticketing
- */
-
 const mongoose = require("mongoose");
 
 const TicketMessageSchema = new mongoose.Schema(

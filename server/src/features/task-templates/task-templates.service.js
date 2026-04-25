@@ -1,4 +1,3 @@
-// server/src/features/task-templates/task-templates.service.js
 const TaskTemplate = require('../../../models/TaskTemplate');
 const Workspace = require('../../../models/Workspace');
 const User = require('../../../models/User');

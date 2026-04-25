@@ -1,4 +1,3 @@
-// client/src/pages/workspace-os/PermissionMatrixPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -36,7 +35,6 @@ const ROLE_COLORS = {
     guest:   'var(--text-muted)',
 };
 
-// Flat toggle for Monolith Flow
 const MatrixToggle = ({ enabled, onChange, locked }) => {
     const [hov, setHov] = React.useState(false);
     return (
@@ -116,7 +114,7 @@ export default function PermissionMatrixPage({ companyId: propCompanyId }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -140,9 +138,9 @@ export default function PermissionMatrixPage({ companyId: propCompanyId }) {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '20px 28px' }}>
-                {/* Owner notice */}
+                {}
                 <div style={{ padding: '10px 14px', background: 'rgba(184,149,106,0.08)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Shield size={13} style={{ flexShrink: 0 }} />
                     Owner permissions are immutable and always have full access.

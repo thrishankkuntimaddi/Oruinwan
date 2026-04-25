@@ -1,4 +1,3 @@
-// src/components/messageComp/chatWindow/pinned/pinnedMessage.jsx
 import React from "react";
 
 export default function PinnedMessage({ pinned, onUnpin }) {

@@ -16,7 +16,6 @@ const STATUS_MAP = {
     offline: { label: 'Invisible', dot: 'rgba(228,228,228,0.25)' },
 };
 
-// Quick access 2×2 grid
 const QUICK = [
     { id: 'channels', Icon: Hash,         label: 'Channels',  bg: 'rgba(184,149,106,0.12)', path: '/channels'  },
     { id: 'messages', Icon: MessageSquare,label: 'Messages',  bg: 'rgba(52,211,153,0.10)',  path: '/messages'  },
@@ -35,7 +34,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
     const status     = user?.userStatus || 'active';
     const statusCfg  = STATUS_MAP[status] || STATUS_MAP.active;
 
-    // "More" rows — conditionally shown
+    
     const MORE_ROWS = [
         { Icon: Newspaper, label: 'Updates',          path: '/updates',                show: user?.userType === 'company' },
         { Icon: Video,     label: 'Meetings',         path: '/huddles',                show: true },
@@ -57,13 +56,13 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
             WebkitOverflowScrolling: 'touch',
         }} className="custom-scrollbar">
 
-            {/* ── Profile Card ─────────────────────────────── */}
+            {}
             <div style={{
                 margin: '12px 12px 0', padding: '14px',
                 background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)',
                 display: 'flex', alignItems: 'center', gap: '12px',
             }}>
-                {/* Avatar */}
+                {}
                 <button
                     onClick={onProfileClick}
                     style={{ flexShrink: 0, position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
@@ -81,7 +80,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                     }} />
                 </button>
 
-                {/* Info */}
+                {}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {user?.username || 'User'}
@@ -95,7 +94,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                     </div>
                 </div>
 
-                {/* Profile button */}
+                {}
                 <button
                     onClick={onProfileClick}
                     style={{
@@ -109,7 +108,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                 </button>
             </div>
 
-            {/* ── Workspace Switcher ────────────────────────── */}
+            {}
             <div style={{ margin: '8px 12px 0', position: 'relative' }}>
                 <button
                     onClick={() => setShowWs(s => !s)}
@@ -163,7 +162,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                 )}
             </div>
 
-            {/* ── Quick Access Grid ─────────────────────────── */}
+            {}
             <div style={{ margin: '16px 12px 0' }}>
                 <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
                     Quick Access
@@ -193,7 +192,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                 </div>
             </div>
 
-            {/* ── More Options ──────────────────────────────── */}
+            {}
             {MORE_ROWS.length > 0 && (
                 <div style={{ margin: '16px 12px 0' }}>
                     <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -223,7 +222,7 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
                 </div>
             )}
 
-            {/* ── Account Actions ───────────────────────────── */}
+            {}
             <div style={{ margin: '16px 12px 0', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                 <button
                     onClick={() => navigate('/settings')}

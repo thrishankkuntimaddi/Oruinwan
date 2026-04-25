@@ -18,7 +18,7 @@ const Partners = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-[#030712] text-slate-900 dark:text-white transition-colors duration-500">
-            {/* Navbar */}
+            {}
             <nav className="fixed top-0 w-full z-50 bg-white/80 dark:bg-[#030712]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5">
                 <div className="max-w-7xl mx-auto px-6 h-20 flex justify-between items-center">
                     <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
@@ -31,7 +31,7 @@ const Partners = () => {
                 </div>
             </nav>
 
-            {/* Hero Section */}
+            {}
             <header className="pt-40 pb-20 bg-gradient-to-b from-white to-slate-50 dark:from-[#0B0F19] dark:to-[#030712] border-b border-slate-200 dark:border-white/5 px-6 text-center">
                 <div className="max-w-4xl mx-auto">
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-500/20 rounded-full text-indigo-600 dark:text-indigo-400 font-bold mb-8">
@@ -50,7 +50,7 @@ const Partners = () => {
                 </div>
             </header>
 
-            {/* Partner Types */}
+            {}
             <section className="py-20 container mx-auto px-6 max-w-6xl">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-4">Who Can Partner with Chttrix</h2>
@@ -58,7 +58,7 @@ const Partners = () => {
                 </div>
 
                 <div className="grid md:grid-cols-3 gap-8">
-                    {/* Technology Partners */}
+                    {}
                     <div className="bg-white dark:bg-[#0B0F19] rounded-3xl border border-slate-200 dark:border-white/5 p-8 hover:border-blue-500 dark:hover:border-blue-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
                         <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6">
                             <Cpu size={28} />
@@ -87,7 +87,7 @@ const Partners = () => {
                         </div>
                     </div>
 
-                    {/* Integration Partners */}
+                    {}
                     <div className="bg-white dark:bg-[#0B0F19] rounded-3xl border border-slate-200 dark:border-white/5 p-8 hover:border-purple-500 dark:hover:border-purple-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
                         <div className="w-14 h-14 bg-purple-100 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-2xl flex items-center justify-center mb-6">
                             <Puzzle size={28} />
@@ -116,7 +116,7 @@ const Partners = () => {
                         </div>
                     </div>
 
-                    {/* Enterprise Partners */}
+                    {}
                     <div className="bg-white dark:bg-[#0B0F19] rounded-3xl border border-slate-200 dark:border-white/5 p-8 hover:border-pink-500 dark:hover:border-pink-500 transition-all hover:-translate-y-1 hover:shadow-xl group">
                         <div className="w-14 h-14 bg-pink-100 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-2xl flex items-center justify-center mb-6">
                             <Building2 size={28} />
@@ -144,12 +144,12 @@ const Partners = () => {
                 </div>
             </section>
 
-            {/* Criteria & Constraints */}
+            {}
             <section className="py-20 bg-white dark:bg-[#0B0F19] border-y border-slate-200 dark:border-white/5">
                 <div className="container mx-auto px-6 max-w-6xl">
                     <div className="grid md:grid-cols-2 gap-16">
 
-                        {/* What We Look For */}
+                        {}
                         <div>
                             <div className="flex items-center gap-3 mb-8">
                                 <ShieldCheck className="text-green-500" size={32} />
@@ -176,7 +176,7 @@ const Partners = () => {
                             </div>
                         </div>
 
-                        {/* What We Don't Offer */}
+                        {}
                         <div>
                             <div className="flex items-center gap-3 mb-8">
                                 <XCircle className="text-red-500" size={32} />
@@ -207,7 +207,7 @@ const Partners = () => {
                 </div>
             </section>
 
-            {/* CTA Section */}
+            {}
             <section className="py-24 bg-indigo-900 dark:bg-[#0F1623] text-white relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
 
@@ -228,7 +228,7 @@ const Partners = () => {
                 </div>
             </section>
 
-            {/* Footer */}
+            {}
             <footer className="py-12 bg-slate-900 text-center border-t border-slate-800">
                 <div className="flex flex-col items-center gap-4 mb-8">
                     <Lock className="text-slate-600" size={24} />

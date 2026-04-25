@@ -1,24 +1,6 @@
-// server/src/features/tasks/tasks.automation.js
-/**
- * Task Automation Rule Executor
- * 
- * Simple event-based rule engine. Called from tasks.service.js after
- * task create/update operations.
- * 
- * Supported triggers: 'on_create', 'on_complete'
- * Supported actions: 'move_to_done', 'assign_creator', 'set_high_priority'
- */
-
 const Task = require('../../../models/Task');
 const logger = require('../../../utils/logger');
 
-/**
- * Execute automation rules for a given task and trigger event.
- * Fire-and-forget: never throws — errors are logged and swallowed.
- * 
- * @param {Object} task - Mongoose Task document
- * @param {string} trigger - Event that fired ('on_create' | 'on_complete')
- */
 async function executeRules(task, trigger) {
     if (!task.automationRules || task.automationRules.length === 0) return;
 

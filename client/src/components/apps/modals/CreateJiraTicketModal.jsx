@@ -10,14 +10,6 @@ const PRIORITIES = [
   { value: "low", label: "🟢 Low" },
 ];
 
-/**
- * CreateJiraTicketModal
- * Mock Jira ticket creation modal — no real API calls.
- *
- * Props:
- *   onClose       – () => void
- *   onInsertText  – (text: string) => void — inserts formatted text into chat
- */
 export default function CreateJiraTicketModal({ onClose, onInsertText }) {
   const [project, setProject] = useState(MOCK_PROJECTS[0]);
   const [summary, setSummary] = useState("");
@@ -47,7 +39,7 @@ export default function CreateJiraTicketModal({ onClose, onInsertText }) {
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[120] backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
 
-        {/* Header */}
+        {}
         <div className="flex items-center gap-3 p-5 border-b border-gray-100 dark:border-gray-800">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-lg flex-shrink-0">
             🎫
@@ -61,7 +53,7 @@ export default function CreateJiraTicketModal({ onClose, onInsertText }) {
           </button>
         </div>
 
-        {/* Body */}
+        {}
         <div className="p-5 space-y-4">
           {done ? (
             <div className="flex flex-col items-center gap-3 py-4 animate-fade-in">
@@ -75,7 +67,7 @@ export default function CreateJiraTicketModal({ onClose, onInsertText }) {
             </div>
           ) : (
             <>
-              {/* Project */}
+              {}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Project</label>
                 <select
@@ -89,7 +81,7 @@ export default function CreateJiraTicketModal({ onClose, onInsertText }) {
                 </select>
               </div>
 
-              {/* Summary */}
+              {}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                   Summary <span className="text-red-400">*</span>
@@ -103,7 +95,7 @@ export default function CreateJiraTicketModal({ onClose, onInsertText }) {
                 />
               </div>
 
-              {/* Issue Type + Priority */}
+              {}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Issue Type</label>
@@ -134,7 +126,7 @@ export default function CreateJiraTicketModal({ onClose, onInsertText }) {
           )}
         </div>
 
-        {/* Footer */}
+        {}
         {!done && (
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex gap-2">
             <button

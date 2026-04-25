@@ -1,10 +1,3 @@
-// client/src/pages/dashboards/InsightsDashboard.jsx
-/**
- * Productivity Insights & Analytics Dashboard
- * Premium, clean UI — Linear Insights + Slack Analytics style
- * Uses only vanilla CSS + inline SVG charts (no external chart deps)
- */
-
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { API_BASE } from '@services/api';
@@ -14,14 +7,10 @@ import {
     ArrowUp, ArrowDown, Hash, Target, Layers
 } from 'lucide-react';
 
-// ─── AUTH HEADER ─────────────────────────────────────────────────────────────
 const authHeader = () => ({
     headers: { Authorization: `Bearer ${localStorage.getItem('accessToken')}` }
 });
 
-// ─── MICRO CHART COMPONENTS (pure SVG) ───────────────────────────────────────
-
-/** Tiny sparkline bar chart */
 function BarSparkline({ data = [], color = '#6366f1', height = 48 }) {
     if (!data.length) return <div style={{ height }} className="ins-chart-empty">No data</div>;
     const max = Math.max(...data.map(d => d.value || d.count || d), 1);
@@ -48,7 +37,6 @@ function BarSparkline({ data = [], color = '#6366f1', height = 48 }) {
     );
 }
 
-/** Trend line chart */
 function LineSparkline({ data = [], color = '#10b981', height = 60 }) {
     if (data.length < 2) return <div style={{ height }} className="ins-chart-empty">Not enough data</div>;
     const values = data.map(d => d.value ?? d ?? 0);
@@ -68,7 +56,6 @@ function LineSparkline({ data = [], color = '#10b981', height = 60 }) {
     );
 }
 
-/** Donut chart for task distribution */
 function DonutChart({ data = [], size = 120 }) {
     const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#10b981', '#f59e0b', '#ef4444'];
     const total = data.reduce((s, d) => s + (d.value || 0), 0);
@@ -113,7 +100,6 @@ function DonutChart({ data = [], size = 120 }) {
     );
 }
 
-/** Horizontal bar for channel/user rankings */
 function HBar({ label, value, max, color = '#6366f1', subtitle }) {
     const pct = max > 0 ? Math.round((value / max) * 100) : 0;
     return (
@@ -130,7 +116,6 @@ function HBar({ label, value, max, color = '#6366f1', subtitle }) {
     );
 }
 
-/** Status badge */
 function Badge({ status }) {
     const cfg = {
         overloaded: { bg: '#fef2f2', text: '#dc2626', label: '🔴 Overloaded' },
@@ -143,7 +128,6 @@ function Badge({ status }) {
     );
 }
 
-/** Stat card */
 function StatCard({ label, value, icon: Icon, color, trend, sub }) {
     const colorMap = {
         indigo: { bg: '#eef2ff', iconBg: '#6366f1', text: '#6366f1' },
@@ -173,8 +157,6 @@ function StatCard({ label, value, icon: Icon, color, trend, sub }) {
     );
 }
 
-// ─── SECTION COMPONENTS ───────────────────────────────────────────────────────
-
 function Card({ title, icon: Icon, iconColor = '#6366f1', children, style }) {
     return (
         <div className="ins-card" style={style}>
@@ -186,8 +168,6 @@ function Card({ title, icon: Icon, iconColor = '#6366f1', children, style }) {
         </div>
     );
 }
-
-// ─── MAIN DASHBOARD ──────────────────────────────────────────────────────────
 
 const InsightsDashboard = () => {
     const [period, setPeriod] = useState(30);
@@ -261,7 +241,7 @@ const InsightsDashboard = () => {
         <>
             <style>{STYLES}</style>
             <div className="ins-root">
-                {/* Header */}
+                {}
                 <div className="ins-header">
                     <div>
                         <h1 className="ins-title">
@@ -271,7 +251,7 @@ const InsightsDashboard = () => {
                         <p className="ins-subtitle">Real-time analytics across messaging, tasks, meetings & engagement</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {/* Period filter */}
+                        {}
                         <div className="ins-period-tabs">
                             {[7, 30].map(d => (
                                 <button key={d} className={`ins-period-btn${period === d ? ' active' : ''}`} onClick={() => setPeriod(d)}>
@@ -287,7 +267,7 @@ const InsightsDashboard = () => {
 
                 {error && <div className="ins-error">{error}</div>}
 
-                {/* ── OVERVIEW STATS ── */}
+                {}
                 <div className="ins-stats-grid">
                     <StatCard label="Total Users" value={s.totalUsers || 0} icon={Users} color="indigo" trend={s.userGrowth} />
                     <StatCard label="Active Users" value={s.activeUsers || 0} icon={Activity} color="green" sub={`in last ${period} days`} />
@@ -299,7 +279,7 @@ const InsightsDashboard = () => {
                     <StatCard label="Stickiness" value={`${engagement?.dauWauRatio || 0}%`} icon={Target} color="purple" sub="DAU / WAU ratio" />
                 </div>
 
-                {/* ── ROW 1: Team Activity + Communication Patterns ── */}
+                {}
                 <div className="ins-row-2">
                     <Card title="Team Activity" icon={Activity} iconColor="#6366f1" style={{ flex: 1 }}>
                         {teamActivity.length === 0 ? (
@@ -348,7 +328,7 @@ const InsightsDashboard = () => {
                     </Card>
                 </div>
 
-                {/* ── ROW 2: Productivity + Workload ── */}
+                {}
                 <div className="ins-row-2">
                     <Card title="Productivity Metrics" icon={CheckSquare} iconColor="#10b981" style={{ flex: 1 }}>
                         <div className="ins-productivity-row">
@@ -449,7 +429,7 @@ const InsightsDashboard = () => {
                     </Card>
                 </div>
 
-                {/* ── ROW 3: Channel Engagement + Message Volume ── */}
+                {}
                 <div className="ins-row-2">
                     <Card title="Top Channels by Engagement" icon={Hash} iconColor="#6366f1" style={{ flex: 1 }}>
                         {channels.length === 0 ? <EmptyState msg="No channel data in this period" /> : (
@@ -490,7 +470,7 @@ const InsightsDashboard = () => {
                     </Card>
                 </div>
 
-                {/* ── ROW 4: Top Contributors ── */}
+                {}
                 <Card title="Top Contributors" icon={TrendingUp} iconColor="#f59e0b">
                     <div className="ins-contributors-grid">
                         {(userActivity?.topContributors || []).slice(0, 10).map((u, i) => (
@@ -515,7 +495,6 @@ const InsightsDashboard = () => {
     );
 };
 
-// ─── LOADER ──────────────────────────────────────────────────────────────────
 function InsightsLoader() {
     return (
         <>
@@ -543,7 +522,6 @@ function EmptyState({ msg }) {
     return <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--ins-text-muted)', fontSize: 13 }}>{msg}</div>;
 }
 
-// ─── STYLES ───────────────────────────────────────────────────────────────────
 const STYLES = `
   :root {
     --ins-bg: #f8f9fc;

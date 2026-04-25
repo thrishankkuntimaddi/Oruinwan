@@ -1,4 +1,3 @@
-// src/components/messageComp/chatWindow/toolbar/selectionToolbar.jsx
 import React, { useState } from "react";
 import { X, Trash2 } from "lucide-react";
 

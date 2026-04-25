@@ -1,9 +1,3 @@
-/**
- * mockSlashCommands.js
- * Full set of mock slash commands for the Integration Ecosystem.
- * NO real API calls — purely visual.
- */
-
 export const SLASH_COMMAND_CATEGORIES = [
   { id: "developer", label: "Developer Tools" },
   { id: "productivity", label: "Productivity" },
@@ -13,7 +7,7 @@ export const SLASH_COMMAND_CATEGORIES = [
 ];
 
 export const SLASH_COMMANDS = [
-  // ── Developer Tools ──────────────────────────────────────────────────────────
+  
   {
     command: "/github",
     label: "GitHub",
@@ -83,7 +77,7 @@ export const SLASH_COMMANDS = [
     },
   },
 
-  // ── Productivity ────────────────────────────────────────────────────────────
+  
   {
     command: "/drive",
     label: "Google Drive",
@@ -152,7 +146,7 @@ export const SLASH_COMMANDS = [
     },
   },
 
-  // ── Communication ───────────────────────────────────────────────────────────
+  
   {
     command: "/zoom",
     label: "Zoom",
@@ -187,7 +181,7 @@ export const SLASH_COMMANDS = [
     },
   },
 
-  // ── AI Tools ─────────────────────────────────────────────────────────────────
+  
   {
     command: "/chatgpt",
     label: "ChatGPT",
@@ -240,7 +234,7 @@ export const SLASH_COMMANDS = [
     },
   },
 
-  // ── Automation ───────────────────────────────────────────────────────────────
+  
   {
     command: "/zapier",
     label: "Zapier",
@@ -275,13 +269,11 @@ export const SLASH_COMMANDS = [
   },
 ];
 
-// Grouped by category for display
 export const COMMANDS_BY_CATEGORY = SLASH_COMMAND_CATEGORIES.map((cat) => ({
   ...cat,
   commands: SLASH_COMMANDS.filter((cmd) => cmd.category === cat.id),
 })).filter((cat) => cat.commands.length > 0);
 
-// Filter helper
 export const filterSlashCommands = (query) => {
   if (!query || query === "/") return SLASH_COMMANDS;
   const q = query.toLowerCase();

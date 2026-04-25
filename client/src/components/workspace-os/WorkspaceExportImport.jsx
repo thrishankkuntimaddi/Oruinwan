@@ -1,5 +1,3 @@
-// client/src/components/workspace-os/WorkspaceExportImport.jsx
-// Export a workspace as JSON and import from JSON file.
 import React, { useState, useRef } from 'react';
 import api from '@services/api';
 import { Download, Upload, FileJson, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
@@ -37,7 +35,7 @@ export default function WorkspaceExportImport({ workspaceId, workspaceName, onIm
     const handleImportFile = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        e.target.value = ''; // Reset so same file can be re-selected
+        e.target.value = ''; 
 
         setImporting(true);
         setImportError(null);
@@ -64,7 +62,7 @@ export default function WorkspaceExportImport({ workspaceId, workspaceName, onIm
     return (
         <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Export Card */}
+                {}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
                     <div className="flex items-start gap-3 mb-4">
                         <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
@@ -90,7 +88,7 @@ export default function WorkspaceExportImport({ workspaceId, workspaceName, onIm
                     </button>
                 </div>
 
-                {/* Import Card */}
+                {}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5">
                     <div className="flex items-start gap-3 mb-4">
                         <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center">

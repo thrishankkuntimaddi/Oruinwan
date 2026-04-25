@@ -24,11 +24,11 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [filter, setFilter] = useState("all");
 
-    // Selection Mode State
+    
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
 
-    // ✅ CORRECT: Active chat derived from URL (single source of truth)
+    
     const activeChatId = dmId || channelId || null;
 
     const [contacts, setContacts] = useState([]);
@@ -36,11 +36,11 @@ const MessagesPanel = ({ title, isMobile = false }) => {
 
     const { socket } = useSocket();
 
-    // Strip the raw E2EE placeholder that the API returns when it can't decrypt server-side.
-    // The actual decrypted text is only available inside the open chat window.
+    
+    
     const sanitizePreview = (text) => {
         if (!text) return '';
-        if (text.startsWith('\u{1F512}')) return ''; // '🔒 Encrypted message…'
+        if (text.startsWith('\u{1F512}')) return ''; 
         return text;
     };
 
@@ -51,16 +51,16 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             try {
                 const res = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
                 const formatted = (res.data.sessions || []).map(session => {
-                    // Determine initial status
+                    
                     const user = session.otherUser;
                     let initialStatus = "offline";
                     if (user?.isOnline) {
-                        initialStatus = user.userStatus || "active"; // active, away, dnd
+                        initialStatus = user.userStatus || "active"; 
                     }
 
                     return {
                         id: session.id,
-                        userId: session.otherUser?._id || session.otherUser?.id, // Store User ID for socket updates
+                        userId: session.otherUser?._id || session.otherUser?.id, 
                         name: session.otherUser?.username || "User",
                         avatar: session.otherUser?.profilePicture,
                         status: initialStatus,
@@ -80,13 +80,13 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         loadDMs();
     }, [workspaceId, activeWorkspace?.currentUserId]);
 
-    // Listen for status changes
+    
     useEffect(() => {
         if (!socket) return;
 
         const handleStatusChange = ({ userId, status }) => {
             setContacts(prev => prev.map(contact => {
-                // Check if this contact corresponds to the user who changed status
+                
                 if (String(contact.userId) === String(userId)) {
                     return { ...contact, status: status };
                 }
@@ -115,9 +115,9 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         if (!targetUserId || !workspaceId) return;
 
         try {
-            // Resolve (or create) the DM session + E2EE keys BEFORE navigating
-            // This is the same pattern used by Home.jsx and ensures non-owners can
-            // start DMs with each other without hitting duplicate key errors.
+            
+            
+            
             const resolveRes = await api.get(
                 `/api/v2/messages/workspace/${workspaceId}/dm/resolve/${targetUserId}`
             );
@@ -125,7 +125,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 const sessionId = resolveRes.data.dmSessionId;
                 navigate(`/workspace/${workspaceId}/messages/dm/${sessionId}`);
             } else {
-                // Fallback: navigate with userId and let the auto-resolve handle it
+                
                 navigate(`/workspace/${workspaceId}/messages/dm/${targetUserId}`);
             }
         } catch (err) {
@@ -134,26 +134,25 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         }
     };
 
-
     const handleBroadcast = () => {
         setShowBroadcast(true);
     };
 
     const handleSendBroadcast = async (selectedItems, message) => {
         try {
-            // Separate users and channels
+            
             const userRecipients = selectedItems.filter(item => item.type === 'dm' || item.type === 'member');
             const channelRecipients = selectedItems.filter(item => item.type === 'channel');
 
             const promises = [];
 
-            // 1. Send to Users (DMs)
+            
             if (userRecipients.length > 0) {
-                const userIds = userRecipients.map(u => u.id); // Correctly extract 'id' property
+                const userIds = userRecipients.map(u => u.id); 
                 promises.push(messageService.sendBroadcast(workspaceId, userIds, message));
             }
 
-            // 2. Send to Channels
+            
             if (channelRecipients.length > 0) {
                 const channelPromises = channelRecipients.map(ch =>
                     api.post('/api/v2/messages/channel', {
@@ -170,7 +169,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             showToast(`Broadcast sent to ${selectedItems.length} recipient(s) successfully!`, 'success');
             setShowBroadcast(false);
 
-            // Optionally refresh DM list to show new conversations
+            
             const res = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
             const formatted = (res.data.sessions || []).map(session => {
                 const user = session.otherUser;
@@ -194,7 +193,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         } catch (err) {
             console.error('Failed to send broadcast:', err);
             showToast('Failed to send broadcast. Please try again.', 'error');
-            throw err; // Re-throw so BroadcastModal can handle it
+            throw err; 
         }
     };
 
@@ -225,8 +224,8 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                // ✅ CORRECT: Use React Router navigation only
-                // Keep sidebar context: DMs from Messages panel should stay in Messages view
+                
+                
                 const targetPath = isBroadcast
                     ? `/workspace/${workspaceId}/messages/broadcast/${item.id}`
                     : `/workspace/${workspaceId}/messages/dm/${item.id}`;
@@ -299,7 +298,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {/* Header */}
+            {}
             <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0, borderBottom: '1px solid var(--border-subtle)' }}>
                 <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Messages</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -318,7 +317,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 </div>
             </div>
 
-            {/* Search */}
+            {}
             <div style={{ padding: '10px 12px 4px' }}>
                 <div style={{ position: 'relative' }}>
                     <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={13} />
@@ -327,7 +326,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 </div>
             </div>
 
-            {/* Filters & Broadcast */}
+            {}
             <div style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', gap: '6px' }}>
                     {['all', 'unread'].map(f => (
@@ -345,7 +344,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 ><Megaphone size={15} /></button>
             </div>
 
-            {/* Selection Mode Header */}
+            {}
             {isSelectionMode && (
                 <div style={{ padding: '8px 16px', background: 'rgba(184,149,106,0.08)', borderBottom: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#b8956a', fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedItems.size} selected</span>
@@ -360,7 +359,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 </div>
             )}
 
-            {/* Contact List */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '4px 4px 8px' }}>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '4px 12px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                     {activeWorkspace?.name || 'Workspace'} Conversations
@@ -387,7 +386,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 )}
             </div>
 
-            {/* Confirmation Modal */}
+            {}
             <ConfirmationModal
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -397,7 +396,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 confirmText="Delete Conversations"
             />
 
-            {/* New DM Modal */}
+            {}
             {showCreateDM && (
                 <NewDMModal
                     onClose={() => setShowCreateDM(false)}
@@ -405,7 +404,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 />
             )}
 
-            {/* Broadcast Modal */}
+            {}
             {showBroadcast && (
                 <BroadcastModal
                     workspaceId={workspaceId}

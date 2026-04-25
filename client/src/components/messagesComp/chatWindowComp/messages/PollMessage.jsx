@@ -7,18 +7,18 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
     const [selectedOptions, setSelectedOptions] = useState([]);
     const [showVoters, setShowVoters] = useState(null);
 
-    // Fetch poll data if we only have an ID
+    
     useEffect(() => {
         const fetchPoll = async () => {
             try {
-                // If we have full poll data already, use it
+                
                 if (pollProp && pollProp.question) {
                     setPollData(pollProp);
                     setLoading(false);
                     return;
                 }
 
-                // Otherwise fetch from API using poll ID
+                
                 const pollId = pollProp || msg?.payload?.poll || msg?.poll;
                 if (!pollId) {
                     console.error('No poll ID found');
@@ -104,7 +104,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
         }
     };
 
-    // Calculate percentages
+    
     const optionsWithStats = useMemo(() => {
         const total = poll.totalVotes || 0;
         return poll.options.map((option, index) => ({
@@ -118,7 +118,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 my-2">
-            {/* Header */}
+            {}
             <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
                     <BarChart2 size={20} className="text-blue-600 dark:text-blue-400" />
@@ -148,7 +148,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                 </div>
             </div>
 
-            {/* Options */}
+            {}
             <div className="space-y-2">
                 {optionsWithStats.map((option, index) => {
                     const isSelected = selectedOptions.includes(index);
@@ -166,9 +166,9 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                                     : 'border-gray-200 dark:border-gray-700'
                                     } ${!canVote && 'cursor-default'}`}
                             >
-                                {/* Option content */}
+                                {}
                                 <div className="relative p-3">
-                                    {/* Background bar for votes */}
+                                    {}
                                     {hasVoted && (
                                         <div
                                             className={`absolute inset-0 rounded-lg transition-all ${isWinning
@@ -179,7 +179,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                                         />
                                     )}
 
-                                    {/* Option text and icon */}
+                                    {}
                                     <div className="relative flex items-center justify-between">
                                         <div className="flex items-center gap-3 flex-1">
                                             {canVote ? (
@@ -198,7 +198,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                                             </span>
                                         </div>
 
-                                        {/* Vote count/percentage */}
+                                        {}
                                         {hasVoted && (
                                             <div className="flex items-center gap-3">
                                                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -222,7 +222,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                                 </div>
                             </button>
 
-                            {/* Voter list (if not anonymous) */}
+                            {}
                             {!poll.anonymous && showVoters === index && option.votes && option.votes.length > 0 && (
                                 <div className="mt-1 ml-8 p-2 bg-gray-50 dark:bg-gray-700/50 rounded text-xs text-gray-600 dark:text-gray-400">
                                     {option.votes.map((voter, i) => (
@@ -238,7 +238,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                 })}
             </div>
 
-            {/* Vote button */}
+            {}
             {canVote && selectedOptions.length > 0 && (
                 <button
                     onClick={handleSubmitVote}
@@ -248,7 +248,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                 </button>
             )}
 
-            {/* Status messages */}
+            {}
             {hasVoted && (
                 <div className="mt-4 text-sm text-green-600 dark:text-green-400 font-medium">
                     ✓ You voted for: {userVotes.map(i => poll.options[i].text).join(', ')}

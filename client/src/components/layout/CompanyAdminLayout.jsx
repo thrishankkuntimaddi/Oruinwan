@@ -1,4 +1,3 @@
-// CompanyAdminLayout — Monolith Flow Design System (Mobile-Responsive)
 import React, { useState, useEffect, useCallback } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
@@ -18,18 +17,18 @@ const CompanyAdminLayout = () => {
     const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Track screen width
+    
     useEffect(() => {
         const onResize = () => {
             const mobile = window.innerWidth < 768;
             setIsMobile(mobile);
-            if (!mobile) setSidebarOpen(false); // reset when going back to desktop
+            if (!mobile) setSidebarOpen(false); 
         };
         window.addEventListener('resize', onResize);
         return () => window.removeEventListener('resize', onResize);
     }, []);
 
-    // Auto-close sidebar on any navigation
+    
     useEffect(() => {
         if (isMobile) setSidebarOpen(false);
     }, [location.pathname, isMobile]);
@@ -56,7 +55,7 @@ const CompanyAdminLayout = () => {
                 }
             `}</style>
 
-            {/* ── Mobile Backdrop ── */}
+            {}
             {isMobile && sidebarOpen && (
                 <div
                     onClick={closeSidebar}
@@ -69,16 +68,16 @@ const CompanyAdminLayout = () => {
                 />
             )}
 
-            {/* ── Sidebar ── */}
+            {}
             <div style={{
-                // On mobile: fixed overlay, slide in/out
+                
                 ...(isMobile ? {
                     position: 'fixed', top: 0, left: 0, height: '100%', zIndex: 40,
                     transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
                     transition: 'transform 280ms cubic-bezier(0.16,1,0.3,1)',
                     boxShadow: sidebarOpen ? '4px 0 32px rgba(0,0,0,0.5)' : 'none',
                 } : {
-                    // On desktop: static, part of the flex row
+                    
                     flexShrink: 0,
                 })
             }}>
@@ -88,10 +87,10 @@ const CompanyAdminLayout = () => {
                 }
             </div>
 
-            {/* ── Main Area ── */}
+            {}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', minWidth: 0 }}>
 
-                {/* ── Top Context Header ── */}
+                {}
                 <header style={{
                     height: '56px',
                     background: 'var(--bg-surface)',
@@ -104,7 +103,7 @@ const CompanyAdminLayout = () => {
                     zIndex: 10,
                     gap: '12px',
                 }}>
-                    {/* Left — Hamburger (mobile) + Company Identity */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                         {isMobile && (
                             <button
@@ -144,7 +143,7 @@ const CompanyAdminLayout = () => {
                         </div>
                     </div>
 
-                    {/* Right — Date + Status */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px', flexShrink: 0 }}>
                         {!isMobile && (
                             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1 }}>
@@ -165,7 +164,7 @@ const CompanyAdminLayout = () => {
                     </div>
                 </header>
 
-                {/* ── Main Content ── */}
+                {}
                 <main style={{
                     flex: 1, overflow: 'hidden',
                     background: 'var(--bg-base)',

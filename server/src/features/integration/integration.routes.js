@@ -1,37 +1,14 @@
-// server/src/features/integration/integration.routes.js
-//
-// Phase 4 — Enterprise Integration Layer
-//
-// Two route groups:
-//
-// A) SCIM provisioning (/api/scim/) — authenticated via SCIM Bearer token
-//    POST   /api/scim/users          — provision user
-//    GET    /api/scim/users          — list users
-//    GET    /api/scim/users/:id      — get user
-//    PATCH  /api/scim/users/:id      — update user
-//    DELETE /api/scim/users/:id      — deactivate user
-//
-// B) Admin integration console (/api/company/) — standard auth chain (admin/owner)
-//    POST   /api/company/scim/tokens          — issue SCIM bearer token
-//    GET    /api/company/scim/tokens          — list tokens
-//    DELETE /api/company/scim/tokens/:id      — revoke token
-//    POST   /api/company/integrations/sync    — trigger manual HR sync
-//    GET    /api/company/integrations/status  — last sync status
-
 const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 
 const scim = require('./scim.controller');
 
-// Standard company auth chain
 const requireAuth = require('../../shared/middleware/auth');
 const requireCompanyMember = require('../../shared/middleware/requireCompanyMember');
 const { requireCompanyRole } = require('../../shared/utils/companyRole');
 
 const { runHrSync } = require('./hr-sync.service');
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function handleError(res, err) {
     console.error('[INTEGRATION]', err.message);
@@ -46,14 +23,7 @@ function validationGuard(req, res) {
     return null;
 }
 
-// ── SHARED ADMIN GATE ─────────────────────────────────────────────────────────
-
 const gate = [requireAuth, requireCompanyMember, requireCompanyRole('admin')];
-
-// ============================================================================
-// A) SCIM PROVISIONING — /api/scim/users
-// All routes use SCIM Bearer token auth (scim.scimAuth middleware).
-// ============================================================================
 
 router.post('/scim/users', scim.scimAuth, scim.createUser);
 router.get('/scim/users', scim.scimAuth, scim.listUsers);
@@ -61,19 +31,6 @@ router.get('/scim/users/:id', scim.scimAuth, scim.getUser);
 router.patch('/scim/users/:id', scim.scimAuth, scim.updateUser);
 router.delete('/scim/users/:id', scim.scimAuth, scim.deactivateUser);
 
-// ============================================================================
-// B) ADMIN CONSOLE — /api/company/...
-// Standard requireAuth → requireCompanyMember → requireCompanyRole('admin')
-// ============================================================================
-
-// ── SCIM Token Management ─────────────────────────────────────────────────────
-
-/**
- * @route   POST /api/company/scim/tokens
- * @desc    Issue a new SCIM bearer token (raw shown once)
- * @access  admin / owner
- * @body    { label?, provider? }
- */
 router.post(
     '/company/scim/tokens',
     ...gate,
@@ -87,31 +44,10 @@ router.post(
     }
 );
 
-/**
- * @route   GET /api/company/scim/tokens
- * @desc    List issued SCIM tokens (no tokenHash returned)
- * @access  admin / owner
- */
 router.get('/company/scim/tokens', ...gate, scim.listTokens);
 
-/**
- * @route   DELETE /api/company/scim/tokens/:tokenId
- * @desc    Revoke a SCIM token
- * @access  admin / owner
- */
 router.delete('/company/scim/tokens/:tokenId', ...gate, scim.revokeToken);
 
-// ── HR Sync Management ────────────────────────────────────────────────────────
-
-/**
- * @route   POST /api/company/integrations/sync
- * @desc    Trigger a manual HR sync against a configured provider
- * @access  admin / owner
- * @body    { provider: 'workday'|'bamboohr'|'rippling', config: Object }
- *
- * NOTE: In production, config values should come from Company.hrIntegration
- *       (stored encrypted). This endpoint accepts override config for testing.
- */
 router.post(
     '/company/integrations/sync',
     ...gate,
@@ -128,8 +64,8 @@ router.post(
         try {
             const { provider, config } = req.body;
 
-            // Run sync — this can take minutes for large orgs.
-            // In production this should be queued via BullMQ/Agenda — for now run inline.
+            
+            
             const report = await runHrSync(req.companyId.toString(), provider, config);
 
             return res.json({ success: true, report });
@@ -139,11 +75,6 @@ router.post(
     }
 );
 
-/**
- * @route   POST /api/company/integrations/sync/dry-run
- * @desc    Preview a sync without writing to the DB (returns diff only)
- * @access  admin / owner
- */
 router.post(
     '/company/integrations/sync/dry-run',
     ...gate,
@@ -159,7 +90,7 @@ router.post(
             const connector = buildConnector(provider, config);
             const employees = await connector.getEmployees();
 
-            // Diff against DB (read-only)
+            
             const emails = employees.map(e => e.email);
             const existing = await require('../../../models/User').find({
                 email: { $in: emails },
@@ -175,8 +106,8 @@ router.post(
                 toCreate: employees.filter(e => !existingSet.has(e.email) && e.status !== 'terminated').length,
                 toDisable: employees.filter(e => existingSet.has(e.email) && e.status === 'terminated').length,
                 toUpdate: employees.filter(e => existingSet.has(e.email) && e.status !== 'terminated').length,
-                // S-12 SECURITY FIX: Return allowlisted fields only — raw connector
-                // objects may contain PII beyond what Chttrix requires.
+                
+                
                 employees: safeEmployeePreview,
             });
         } catch (err) {

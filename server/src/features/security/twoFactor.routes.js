@@ -1,7 +1,3 @@
-// server/src/features/security/twoFactor.routes.js
-// TOTP-based Two-Factor Authentication using otplib (RFC 6238)
-// Extends existing auth — does NOT replace it.
-
 'use strict';
 
 const express = require('express');
@@ -12,8 +8,6 @@ const User = require('../../../models/User');
 const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
 
-// ── Encryption helpers (AES-256-GCM) ─────────────────────────────────────────
-// Encrypts the TOTP secret before storing in DB.
 const ENCRYPT_KEY = Buffer.from(process.env.SERVER_KEK || process.env.ACCESS_TOKEN_SECRET.slice(0, 64), 'hex');
 
 function encryptSecret(plaintext) {
@@ -31,9 +25,6 @@ function decryptSecret(ciphertext) {
   return decipher.update(Buffer.from(encHex, 'hex')) + decipher.final('utf8');
 }
 
-// ── POST /api/auth/2fa/setup ──────────────────────────────────────────────────
-// Generates a TOTP secret, returns otpauth:// URI for QR code scanning.
-// Does NOT enable 2FA yet — user must verify with verify-setup first.
 router.post('/setup', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.sub).select('username email twoFactorEnabled');
@@ -45,14 +36,14 @@ router.post('/setup', requireAuth, async (req, res) => {
     const secret = authenticator.generateSecret();
     const otpauthUrl = authenticator.keyuri(user.email, 'Chttrix', secret);
 
-    // Store encrypted secret temporarily (not yet active — twoFactorEnabled stays false)
+    
     await User.findByIdAndUpdate(req.user.sub, {
       twoFactorSecret: encryptSecret(secret),
     });
 
     return res.json({
-      secret,           // user can manually type this into authenticator app
-      otpauthUrl,       // for QR code generation on frontend
+      secret,           
+      otpauthUrl,       
       message: 'Scan the QR code with your authenticator app, then call /2fa/verify-setup with the OTP to complete setup.'
     });
   } catch (err) {
@@ -61,8 +52,6 @@ router.post('/setup', requireAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/auth/2fa/verify-setup ──────────────────────────────────────────
-// Validates the first OTP → officially enables 2FA on the account.
 router.post('/verify-setup', requireAuth, async (req, res) => {
   try {
     const { otp } = req.body;
@@ -79,7 +68,7 @@ router.post('/verify-setup', requireAuth, async (req, res) => {
 
     await User.findByIdAndUpdate(req.user.sub, { twoFactorEnabled: true });
 
-    // Audit
+    
     await AuditLog.create({
       userId: user._id,
       action: 'auth.2fa_enabled',
@@ -99,8 +88,6 @@ router.post('/verify-setup', requireAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/auth/2fa/disable ────────────────────────────────────────────────
-// Disables 2FA. Requires valid OTP to prevent accidental/malicious disabling.
 router.post('/disable', requireAuth, async (req, res) => {
   try {
     const { otp } = req.body;
@@ -138,8 +125,6 @@ router.post('/disable', requireAuth, async (req, res) => {
   }
 });
 
-// ── POST /api/auth/2fa/verify ─────────────────────────────────────────────────
-// Validates an OTP for a logged-in user (used inline, e.g. confirming sensitive actions).
 router.post('/verify', requireAuth, async (req, res) => {
   try {
     const { otp } = req.body;
@@ -160,8 +145,6 @@ router.post('/verify', requireAuth, async (req, res) => {
   }
 });
 
-// ── GET /api/auth/2fa/status ──────────────────────────────────────────────────
-// Returns current 2FA status for the authenticated user.
 router.get('/status', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.sub).select('twoFactorEnabled');

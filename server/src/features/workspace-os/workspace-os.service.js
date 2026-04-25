@@ -1,6 +1,3 @@
-// server/src/features/workspace-os/workspace-os.service.js
-// Workspace OS Core — service layer for clone, export, import, and analytics.
-// All handlers here are orchestration-layer wrappers that call existing model logic.
 'use strict';
 
 const mongoose = require('mongoose');
@@ -14,9 +11,6 @@ const AuditLog = require('../../../models/AuditLog');
 const ComplianceLog = require('../../../models/ComplianceLog');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPER: Write audit + compliance log in parallel (non-blocking on failure)
-// ─────────────────────────────────────────────────────────────────────────────
 async function logAction(opts) {
     const { userId, companyId, action, category, severity = 'info', resourceType, resourceId, resourceName, details, ipAddress, userAgent } = opts;
     try {
@@ -53,21 +47,16 @@ async function logAction(opts) {
             }) : Promise.resolve()
         ]);
     } catch (err) {
-        // Non-fatal — logging must never block business operations
+        
         console.error('[WorkspaceOS] audit log write failed (non-fatal):', err.message);
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// cloneWorkspace
-// Deep-copies workspace structure + optionally members.
-// Messages and content are NOT copied.
-// ─────────────────────────────────────────────────────────────────────────────
 exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMembers = false, companyId, ipAddress, userAgent }) {
     const source = await Workspace.findById(sourceId).lean();
     if (!source) throw Object.assign(new Error('Source workspace not found'), { status: 404 });
 
-    // Tenant safety
+    
     if (source.company && companyId && String(source.company) !== String(companyId)) {
         throw Object.assign(new Error('Access denied to source workspace'), { status: 403 });
     }
@@ -77,7 +66,7 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
 
     const cloneName = name || `${source.name} (Clone)`;
 
-    // Create the new workspace
+    
     const cloned = await Workspace.create({
         company: resolvedCompanyId,
         type: source.type,
@@ -95,9 +84,9 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         templateId: source.templateId || null
     });
 
-    // Clone channels (structure only, no messages)
+    
     const sourceChannels = await Channel.find({ workspace: sourceId }).lean();
-    const channelIdMap = {}; // old → new
+    const channelIdMap = {}; 
 
     const creationDate = new Date();
     for (const ch of sourceChannels) {
@@ -115,7 +104,7 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         });
         channelIdMap[ch._id.toString()] = newChannel._id;
 
-        // Bootstrap E2EE conversation key for the new channel
+        
         try {
             await conversationKeysService.bootstrapConversationKey({
                 conversationId: newChannel._id.toString(),
@@ -128,7 +117,7 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         }
     }
 
-    // Update defaultChannels references on the cloned workspace
+    
     if (source.defaultChannels?.length) {
         cloned.defaultChannels = source.defaultChannels
             .map(id => channelIdMap[id.toString()])
@@ -136,7 +125,7 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         await cloned.save();
     }
 
-    // Add cloned workspace to creator's workspace list
+    
     await User.findByIdAndUpdate(userId, {
         $push: { workspaces: { workspace: cloned._id, role: 'owner' } }
     });
@@ -153,10 +142,6 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
     return cloned;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// exportWorkspace
-// Produces a JSON bundle snapshot of the workspace structure.
-// ─────────────────────────────────────────────────────────────────────────────
 exports.exportWorkspace = async function ({ workspaceId, userId, companyId, ipAddress, userAgent }) {
     const workspace = await Workspace.findById(workspaceId)
         .populate('createdBy', 'username email')
@@ -192,7 +177,7 @@ exports.exportWorkspace = async function ({ workspaceId, userId, companyId, ipAd
         templateId: workspace.templateId?.toString() || null
     };
 
-    // Stamp exportedAt on the workspace record
+    
     await Workspace.findByIdAndUpdate(workspaceId, { exportedAt: new Date() });
 
     await logAction({
@@ -207,12 +192,8 @@ exports.exportWorkspace = async function ({ workspaceId, userId, companyId, ipAd
     return bundle;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// importWorkspace
-// Reconstructs a workspace from an export bundle.
-// ─────────────────────────────────────────────────────────────────────────────
 exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress, userAgent }) {
-    // Schema validation
+    
     if (!bundle?.schemaVersion || !bundle?.workspace?.name) {
         throw Object.assign(new Error('Invalid workspace bundle — missing required fields'), { status: 400 });
     }
@@ -222,7 +203,7 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
 
     const { workspace: wsData, channels = [] } = bundle;
 
-    // Deduplicate name
+    
     const existingNames = await Workspace.distinct('name', { createdBy: userId });
     let finalName = wsData.name;
     if (existingNames.includes(finalName)) {
@@ -291,10 +272,6 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
     return imported;
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// getWorkspaceAnalytics
-// Computes real-time usage stats for a workspace.
-// ─────────────────────────────────────────────────────────────────────────────
 exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range = 30 }) {
     const since = new Date(Date.now() - range * 24 * 60 * 60 * 1000);
 
@@ -314,7 +291,7 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
             { $project: { count: { $size: '$members' } } }
         ]).then(r => r[0]?.count || 0),
         Channel.countDocuments({ workspace: workspaceId }),
-        // Daily message counts for sparkline chart
+        
         Message.aggregate([
             { $match: { workspace: new mongoose.Types.ObjectId(workspaceId), createdAt: { $gte: since } } },
             {
@@ -325,12 +302,12 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
             },
             { $sort: { _id: 1 } }
         ]),
-        // Active members (unique authors) in last 7 days
+        
         Message.distinct('author', {
             workspace: new mongoose.Types.ObjectId(workspaceId),
             createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
         }).then(ids => ids.length),
-        // Task completion rate
+        
         Task.aggregate([
             { $match: { workspace: new mongoose.Types.ObjectId(workspaceId) } },
             {
@@ -347,7 +324,7 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
         ? Math.round((taskStats[0].completed / taskStats[0].total) * 100)
         : 0;
 
-    // Update analyticsCache on the workspace doc (non-blocking)
+    
     Workspace.findByIdAndUpdate(workspaceId, {
         '$set': {
             'analyticsCache.totalMessages': totalMessages,
@@ -367,7 +344,7 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
             taskCompletionRate
         },
         charts: {
-            dailyMessages, // [{ _id: '2024-01-01', count: 5 }, ...]
+            dailyMessages, 
         },
         range,
         computedAt: new Date().toISOString()

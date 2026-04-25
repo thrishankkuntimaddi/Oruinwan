@@ -1,16 +1,3 @@
-// server/src/features/search/search.service.js
-/**
- * Unified Search Service
- *
- * Centralises all search DB logic and provides semantic re-ranking
- * via the existing Gemini AI core — no vector DB required.
- *
- * Exports:
- *   buildDateFilter(from, to)                               – shared date-range helper
- *   semanticRerank(query, results)                          – AI-powered result re-ranking
- *   searchAll(params)                                       – run all search types in parallel
- */
-
 'use strict';
 
 const Channel      = require('../channels/channel.model.js');
@@ -23,7 +10,6 @@ const WorkspaceFile = require('../files/WorkspaceFile');
 const KnowledgePage = require('../knowledge/KnowledgePage');
 const logger       = require('../../../utils/logger');
 
-// ─── Gemini client (lazy, shared with ai-core) ────────────────────────────────
 let _model = null;
 function _getModel() {
     if (!_model) {
@@ -34,14 +20,6 @@ function _getModel() {
     return _model;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-/**
- * Build a createdAt filter from ISO date strings.
- * @param {string} [from] - ISO date string
- * @param {string} [to]   - ISO date string
- * @returns {object|null}  MongoDB filter object or null
- */
 function buildDateFilter(from, to) {
     if (!from && !to) return null;
     const filter = {};
@@ -450,25 +428,6 @@ async function searchKnowledge(workspaceId, searchRegex, { dateFilter, tags, lim
     }
 }
 
-// ─── Main searchAll ───────────────────────────────────────────────────────────
-
-/**
- * Run all search types in parallel with optional filters and pagination.
- *
- * @param {object}  params
- * @param {string}  params.query          - Search query string
- * @param {string}  params.workspaceId    - Target workspace
- * @param {string}  params.userId         - Requesting user (for access control)
- * @param {string}  [params.type]         - Filter to one type: message|file|user|channel|task|note|knowledge
- * @param {string}  [params.from]         - ISO date — createdAt >= from
- * @param {string}  [params.to]           - ISO date — createdAt <= to
- * @param {string}  [params.channelId]    - Filter messages to a specific channel
- * @param {string[]}[params.tags]         - Filter by tags
- * @param {number}  [params.limit=10]     - Results per type
- * @param {number}  [params.offset=0]     - Offset for pagination
- * @param {boolean} [params.semantic=true]- Enable AI re-ranking
- * @returns {Promise<object>}             - { messages, files, users, channels, tasks, notes, knowledge, query, total }
- */
 async function searchAll(params) {
     const {
         query,
@@ -495,7 +454,7 @@ async function searchAll(params) {
     const tagList     = Array.isArray(tags) ? tags : (tags ? [tags] : []);
     const opts        = { dateFilter, channelId, tags: tagList, ...pagination };
 
-    // Determine which search types to run
+    
     const runAll      = !type || type === 'all';
     const runMessages = runAll || type === 'message';
     const runFiles    = runAll || type === 'file';
@@ -515,14 +474,14 @@ async function searchAll(params) {
         runKnowledge ? searchKnowledge(workspaceId, searchRegex, opts)        : Promise.resolve([]),
     ]);
 
-    // For global (all-type) search, apply semantic re-ranking across the combined top results
+    
     let allResults = { messages, files, users, channels, tasks, notes, knowledge };
 
     if (semantic && runAll) {
         const combined = [...messages, ...files, ...users, ...channels, ...tasks, ...notes, ...knowledge];
         const reranked  = await semanticRerank(searchTerm, combined);
 
-        // Re-bucket results by type after re-ranking
+        
         const bucket = (typeName) => reranked.filter(r => r.type === typeName);
         allResults = {
             messages:  bucket('message'),

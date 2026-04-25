@@ -1,42 +1,16 @@
-// server/src/features/onboarding/invite.service.js
-//
-// Phase 1 — Company Identity Layer
-//
-// Responsibilities:
-//   createInviteToken(user)      — generate token, hash it onto User, set 72h expiry
-//   sendInviteEmail(...)         — send magic-link email (no passwords ever)
-//   acceptInvite(token, password)— validate token, activate user, call assignMembers
-//   resendInvite(userId, ...)    — invalidate old token, issue fresh one
-
 const crypto = require('crypto');
 const User = require('../../../models/User');
 const sendEmail = require('../../../utils/sendEmail');
 const { inviteTemplate } = require('../../../utils/emailTemplates');
 
-// INVITE_EXPIRY_MS — 72 hours as per spec
 const INVITE_EXPIRY_MS = 72 * 60 * 60 * 1000;
 
-/**
- * SHA-256 a string — deterministic, no salt needed for tokens.
- */
 function _sha256(raw) {
     return crypto.createHash('sha256').update(raw).digest('hex');
 }
 
-// ============================================================================
-// CREATE TOKEN
-// ============================================================================
-
-/**
- * Generate a 64-char hex invite token, hash it, store on the user document.
- * Returns the RAW (unhashed) token — this is the only time it exists in plaintext.
- * The raw token goes into the email link only; the hash is stored in the DB.
- *
- * @param   {mongoose.Document} user  — must be a Mongoose document (not .lean())
- * @returns {string}                  — raw 64-char hex token (for email link only)
- */
 async function createInviteToken(user) {
-    const rawToken = crypto.randomBytes(32).toString('hex'); // 64-char hex
+    const rawToken = crypto.randomBytes(32).toString('hex'); 
     const tokenHash = _sha256(rawToken);
 
     user.inviteToken = tokenHash;
@@ -44,23 +18,9 @@ async function createInviteToken(user) {
     user.inviteEmailStatus = 'pending';
 
     await user.save();
-    return rawToken; // caller puts this in the email link ONLY
+    return rawToken; 
 }
 
-// ============================================================================
-// SEND EMAIL
-// ============================================================================
-
-/**
- * Send a styled invite email carrying the magic link.
- * Absolutely no password, no credentials, no temporary secrets in the email body.
- *
- * @param {string} toEmail
- * @param {string} companyName
- * @param {string} rawToken      — the unhashed invite token
- * @param {Object} [options]     — { name, jobTitle }
- * @returns {{ sent: boolean, reason?: string }}
- */
 async function sendInviteEmail(toEmail, companyName, rawToken, options = {}) {
     const { name = '', jobTitle = '' } = options;
 
@@ -75,24 +35,6 @@ async function sendInviteEmail(toEmail, companyName, rawToken, options = {}) {
     }
 }
 
-// ============================================================================
-// ACCEPT INVITE
-// ============================================================================
-
-/**
- * Validate invite token and activate the user account with a password they set.
- *
- * Steps:
- *   1. Hash the incoming raw token
- *   2. Find user by hash + expiry guard
- *   3. Set passwordHash, accountStatus:'active', clear invite fields
- *   4. Call department.service.assignMembers() for each pending department
- *      (stored in user.departments[] when the invite was created)
- *
- * @param {string} rawToken  — from URL query param
- * @param {string} password  — plain text from the Accept form (min 8 chars)
- * @returns {Promise<{ user: Object, alreadyActive: boolean }>}
- */
 async function acceptInvite(rawToken, password) {
     if (!rawToken || !password) {
         throw Object.assign(new Error('Token and password are required.'), { status: 400 });
@@ -105,7 +47,7 @@ async function acceptInvite(rawToken, password) {
 
     const user = await User.findOne({
         inviteToken: tokenHash,
-        inviteTokenExpiry: { $gt: new Date() },  // not yet expired
+        inviteTokenExpiry: { $gt: new Date() },  
     });
 
     if (!user) {
@@ -113,23 +55,23 @@ async function acceptInvite(rawToken, password) {
     }
 
     if (user.accountStatus === 'active') {
-        // S-11 SECURITY FIX: Unconditionally clear invite token even on the already-active
-        // path — prevents token re-use if a race condition or alternate activation path
-        // left the token populated without clearing it.
+        
+        
+        
         if (user.inviteToken || user.inviteTokenExpiry) {
             user.inviteToken = null;
             user.inviteTokenExpiry = null;
             await user.save();
         }
-        // Idempotent — already activated (double-click, etc.)
+        
         return { user: _safeUser(user), alreadyActive: true };
     }
 
-    // bcrypt is required for hashing
+    
     const bcrypt = require('bcryptjs');
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Activate account
+    
     user.passwordHash = passwordHash;
     user.accountStatus = 'active';
     user.verified = true;
@@ -139,7 +81,7 @@ async function acceptInvite(rawToken, password) {
 
     await user.save();
 
-    // Phase 3 — Security: log invite acceptance (non-blocking)
+    
     if (user.companyId) {
         const { logSecurityEvent } = require('../security/security.service');
         logSecurityEvent({
@@ -151,19 +93,19 @@ async function acceptInvite(rawToken, password) {
         });
     }
 
-    // FIX-3: trigger department.service.assignMembers() so Phase 4 workspace join fires
+    
 
-    // departments[] were stored on the user record at invite creation time
+    
     if (user.departments && user.departments.length > 0 && user.companyId) {
         try {
             const { assignMembers } = require('../departments/department.service');
             await assignMembers(
-                user.departments[0].toString(), // primary department
+                user.departments[0].toString(), 
                 user.companyId.toString(),
                 [user._id.toString()],
                 'add'
             );
-            // For additional departments (if multiple), iterate
+            
             for (let i = 1; i < user.departments.length; i++) {
                 await assignMembers(
                     user.departments[i].toString(),
@@ -173,7 +115,7 @@ async function acceptInvite(rawToken, password) {
                 );
             }
         } catch (err) {
-            // Non-fatal: user is activated, department join can be retried
+            
             console.warn('[INVITE] assignMembers failed on acceptance:', err.message);
         }
     }
@@ -181,18 +123,6 @@ async function acceptInvite(rawToken, password) {
     return { user: _safeUser(user), alreadyActive: false };
 }
 
-// ============================================================================
-// RESEND INVITE
-// ============================================================================
-
-/**
- * Invalidate the existing invite token and issue a fresh one.
- * Only works for users with accountStatus: 'invited'.
- *
- * @param {string} userId
- * @param {string} companyId     — for scope isolation
- * @returns {Promise<{ sent: boolean }>}
- */
 async function resendInvite(userId, companyId) {
     const user = await User.findOne({
         _id: userId,
@@ -207,12 +137,12 @@ async function resendInvite(userId, companyId) {
         );
     }
 
-    // Require Company for the name
+    
     const Company = require('../../../models/Company');
     const company = await Company.findById(companyId).lean();
     if (!company) throw Object.assign(new Error('Company not found.'), { status: 404 });
 
-    // Issue fresh token (overwrites old one atomically via save())
+    
     const rawToken = await createInviteToken(user);
 
     const emailResult = await sendInviteEmail(user.email, company.name, rawToken, {
@@ -220,16 +150,12 @@ async function resendInvite(userId, companyId) {
         jobTitle: user.jobTitle || '',
     });
 
-    // Update email status on the user record
+    
     user.inviteEmailStatus = emailResult.sent ? 'sent' : 'failed';
     await user.save();
 
     return { sent: emailResult.sent };
 }
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function _safeUser(user) {
     return {
@@ -246,5 +172,5 @@ module.exports = {
     sendInviteEmail,
     acceptInvite,
     resendInvite,
-    _sha256, // exported for testing
+    _sha256, 
 };

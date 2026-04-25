@@ -1,4 +1,3 @@
-// Contact.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { Mail, MessageSquare, Building2, Shield, CheckCircle2, ArrowRight } from 'lucide-react';
@@ -34,7 +33,7 @@ export default function Contact() {
 
     return (
         <PublicPageShell title="Contact">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 64px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
@@ -50,7 +49,7 @@ export default function Contact() {
 
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '72px 24px', display: 'flex', gap: '72px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
-                {/* Left — contact cards */}
+                {}
                 <div style={{ flex: '1 1 300px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Direct Contacts</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)', marginBottom: '32px' }}>
@@ -75,7 +74,7 @@ export default function Contact() {
                     </p>
                 </div>
 
-                {/* Right — form */}
+                {}
                 <div style={{ flex: '2 1 400px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Send a Message</p>
 

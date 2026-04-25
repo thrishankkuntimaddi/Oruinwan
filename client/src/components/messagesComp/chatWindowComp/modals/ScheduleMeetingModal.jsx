@@ -1,9 +1,3 @@
-/**
- * ScheduleMeetingModal.jsx — Phase 7.6
- *
- * Modal to schedule a meeting in a channel or DM.
- * Calls onSchedule({ title, startTime, duration, meetingLink, participants })
- */
 import React, { useState } from 'react';
 import { X, Video, Calendar, Clock, Link, Users } from 'lucide-react';
 
@@ -42,7 +36,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
         if (!title.trim()) { setError('A title is required.'); return; }
         const isoTime = buildISO();
         if (!isoTime) { setError('Please set a valid date and time.'); return; }
-        if (meetingLink && !/^https?:\/\//.test(meetingLink.trim())) {
+        if (meetingLink && !/^https?:\/\//i.test(meetingLink)) {
             setError('Meeting link must start with http:// or https://'); return;
         }
         setSubmitting(true);
@@ -80,7 +74,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                 overflow: 'hidden',
                 animation: 'fadeIn 180ms ease',
             }}>
-                {/* Header */}
+                {}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: '10px',
                     padding: '14px 16px',
@@ -102,10 +96,10 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Form */}
+                {}
                 <form onSubmit={handleSubmit} style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
 
-                    {/* Title */}
+                    {}
                     <FormField label="Meeting title" required icon={<Users size={11} />}>
                         <input
                             type="text" value={title}
@@ -118,7 +112,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         />
                     </FormField>
 
-                    {/* Date */}
+                    {}
                     <FormField label="Date" icon={<Calendar size={11} />}>
                         <input
                             type="date" value={startDate}
@@ -130,7 +124,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         />
                     </FormField>
 
-                    {/* Time + Duration */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <FormField label="Time" icon={<Clock size={11} />}>
                             <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
@@ -155,7 +149,7 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         </FormField>
                     </div>
 
-                    {/* Meeting Link */}
+                    {}
                     <FormField label="Meeting link (optional)" icon={<Link size={11} />}>
                         <input
                             type="url" value={meetingLink}
@@ -167,14 +161,14 @@ export default function ScheduleMeetingModal({ onSchedule, onClose, conversation
                         />
                     </FormField>
 
-                    {/* Error */}
+                    {}
                     {error && (
                         <p style={{ margin: 0, fontSize: '11px', color: 'var(--state-danger)', fontWeight: 500, fontFamily: FONT }}>
                             {error}
                         </p>
                     )}
 
-                    {/* Actions */}
+                    {}
                     <div style={{ display: 'flex', gap: '8px', paddingTop: '2px' }}>
                         <CancelBtn onClick={onClose}>Cancel</CancelBtn>
                         <SubmitBtn disabled={submitting}>

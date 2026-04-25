@@ -17,7 +17,7 @@ const HelpMenuView = ({ onBack, onNavigate }) => {
             boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
             overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif',
         }}>
-            {/* Header */}
+            {}
             <div style={{
                 padding: '12px 16px', display: 'flex', alignItems: 'center',
                 justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -35,7 +35,7 @@ const HelpMenuView = ({ onBack, onNavigate }) => {
                 <div style={{ width: '40px' }} />
             </div>
 
-            {/* Menu Items */}
+            {}
             <div style={{ padding: '6px' }}>
                 {ITEMS.map(({ key, label, Icon }) => (
                     <button

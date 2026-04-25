@@ -1,10 +1,6 @@
 import React from 'react';
 import { CheckCircle, Sparkles } from 'lucide-react';
 
-/**
- * SuccessView Component
- * Post-registration success screen
- */
 const SuccessView = ({ formData, theme, onNavigate }) => {
     return (
         <div className={`h-screen w-full ${theme === 'dark' ? 'bg-slate-900' : 'bg-white'} relative overflow-hidden font-sans flex flex-col items-center justify-center p-4 transition-colors duration-300`}>

@@ -1,4 +1,3 @@
-// server/src/features/files/files.controller.js
 const filesService = require('./files.service');
 const multer = require('multer');
 
@@ -18,7 +17,7 @@ const uploadFile = [
             if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
             const parsedTags = tags ? (Array.isArray(tags) ? tags : JSON.parse(tags)) : [];
             const file = await filesService.uploadFile(req.user.sub, workspaceId, req.file, { description, folderId, tags: parsedTags });
-            // Broadcast to workspace
+            
             if (req.io) req.io.to(`workspace:${workspaceId}`).emit('file:uploaded', { file });
             return res.status(201).json({ file });
         } catch (err) { return handleError(res, err); }
@@ -93,7 +92,7 @@ async function addComment(req, res) {
         const { content, parentId } = req.body;
         if (!content) return res.status(400).json({ message: 'content is required' });
         const result = await filesService.addComment(req.user.sub, req.params.id, content, parentId);
-        // Broadcast
+        
         if (req.io) req.io.to(`file:${req.params.id}`).emit('file:comment', { comment: result.comment });
         return res.status(201).json(result);
     } catch (err) { return handleError(res, err); }

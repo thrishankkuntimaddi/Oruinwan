@@ -1,12 +1,3 @@
-/**
- * Company Service - Business Logic Layer
- * 
- * Handles company CRUD operations, member management, and metrics.
- * Extracted from companyController.js to separate business logic from HTTP handling.
- * 
- * @module features/company/company.service
- */
-
 const Company = require('../../../models/Company');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
@@ -17,11 +8,6 @@ const nodemailer = require('nodemailer');
 const XLSX = require('xlsx');
 const { uploadToGCS } = require('../../modules/uploads/upload.service');
 
-/**
- * Get company by ID with populated relationships
- * @param {string} companyId - Company ID
- * @returns {Promise<Object>} Company document
- */
 async function getCompanyById(companyId) {
     const company = await Company.findById(companyId)
         .populate('admins.user', 'username email profilePicture')
@@ -38,12 +24,6 @@ async function getCompanyById(companyId) {
     return company;
 }
 
-/**
- * Check if user has access to company
- * @param {string} userId - User ID
- * @param {string} companyId - Company ID
- * @returns {Promise<{hasAccess: boolean, user: Object}>}
- */
 async function checkUserAccess(userId, companyId) {
     const user = await User.findById(userId);
 
@@ -51,18 +31,12 @@ async function checkUserAccess(userId, companyId) {
         return { hasAccess: false, user: null };
     }
 
-    // User doesn't belong to any company or belongs to this company
+    
     const hasAccess = !user.companyId || user.companyId.toString() === companyId;
 
     return { hasAccess, user };
 }
 
-/**
- * Check if user is admin (owner or admin role)
- * @param {string} userId - User ID
- * @param {string} companyId - Company ID
- * @returns {Promise<{isAdmin: boolean, user: Object}>}
- */
 async function checkIsAdmin(userId, companyId) {
     const user = await User.findById(userId);
 
@@ -77,12 +51,6 @@ async function checkIsAdmin(userId, companyId) {
     return { isAdmin, user };
 }
 
-/**
- * Update company with validation
- * @param {string} companyId - Company ID
- * @param {Object} updates - Fields to update
- * @returns {Promise<Object>} Updated company document
- */
 async function updateCompany(companyId, updates) {
     const company = await Company.findByIdAndUpdate(
         companyId,
@@ -95,18 +63,13 @@ async function updateCompany(companyId, updates) {
     return company;
 }
 
-/**
- * Get all members of a company
- * @param {string} companyId - Company ID
- * @returns {Promise<Array>} List of company members
- */
 async function getCompanyMembers(companyId) {
     const members = await User.find({
         companyId,
-        accountStatus: { $ne: 'removed' }, // ← exclude soft-deleted employees
+        accountStatus: { $ne: 'removed' }, 
     })
         .select([
-            'username', 'email', 'companyEmail',  // email = login/personal, companyEmail = company-provided
+            'username', 'email', 'companyEmail',  
             'profilePicture', 'companyRole',
             'jobTitle', 'phone', 'corporateId',
             'accountStatus', 'createdAt', 'lastLoginAt', 'isOnline',
@@ -119,13 +82,8 @@ async function getCompanyMembers(companyId) {
     return members;
 }
 
-/**
- * Get company metrics (user counts, workspace counts, etc.)
- * @param {string} companyId - Company ID
- * @returns {Promise<Object>} Metrics object
- */
 async function getCompanyMetrics(companyId) {
-    // Parallel fetch for speed
+    
     const [totalUsers, activeUsers, totalWorkspaces, totalDepartments] = await Promise.all([
         User.countDocuments({ companyId }),
         User.countDocuments({ companyId, isOnline: true }),
@@ -141,16 +99,6 @@ async function getCompanyMetrics(companyId) {
     };
 }
 
-/**
- * Update user role in company
- * @param {Object} params - Update parameters
- * @param {string} params.companyId - Company ID
- * @param {string} params.targetUserId - User whose role is being changed
- * @param {string} params.requesterId - User requesting the change
- * @param {string} params.newRole - New role to assign
- * @param {Object} params.req - Express request object (for logging)
- * @returns {Promise<Object>} Updated user info
- */
 async function updateMemberRole({ companyId, targetUserId, requesterId, newRole, req }) {
     const validRoles = ['owner', 'admin', 'manager', 'member', 'guest'];
 
@@ -158,18 +106,18 @@ async function updateMemberRole({ companyId, targetUserId, requesterId, newRole,
         throw new Error('Invalid role');
     }
 
-    // Get company
+    
     const company = await Company.findById(companyId);
     if (!company) {
         throw new Error('Company not found');
     }
 
-    // Check if requester is admin
+    
     if (!company.isAdmin(requesterId)) {
         throw new Error('Only company admins can change roles');
     }
 
-    // Get requester and target user
+    
     const requester = await User.findById(requesterId);
     const targetUser = await User.findById(targetUserId);
 
@@ -181,19 +129,19 @@ async function updateMemberRole({ companyId, targetUserId, requesterId, newRole,
         throw new Error('User does not belong to this company');
     }
 
-    // Prevent non-owners from assigning owner role
+    
     if (newRole === 'owner' && requester.companyRole !== 'owner') {
         throw new Error('Only owners can assign owner role');
     }
 
-    // Store old role for logging
+    
     const oldRole = targetUser.companyRole;
 
-    // Update role
+    
     targetUser.companyRole = newRole;
     await targetUser.save();
 
-    // Update company admins array if needed
+    
     if (newRole === 'owner' || newRole === 'admin') {
         const existingAdmin = company.admins.find(
             a => a.user.toString() === targetUserId
@@ -203,14 +151,14 @@ async function updateMemberRole({ companyId, targetUserId, requesterId, newRole,
             await company.save();
         }
     } else {
-        // Remove from admins if downgraded
+        
         company.admins = company.admins.filter(
             a => a.user.toString() !== targetUserId
         );
         await company.save();
     }
 
-    // Log role change
+    
     await logAction({
         userId: requesterId,
         action: 'user_role_changed',
@@ -230,9 +178,6 @@ async function updateMemberRole({ companyId, targetUserId, requesterId, newRole,
     };
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
 module.exports = {
     getCompanyById,
     checkUserAccess,
@@ -245,25 +190,18 @@ module.exports = {
     bulkInviteEmployees
 };
 
-// ============================================================================
-// NEW: Setup wizard service functions
-// ============================================================================
-
-/**
- * Process a single setup wizard step
- */
 async function processSetupStep({ companyId, userId, step, data, files }) {
     const company = await Company.findById(companyId);
     if (!company) throw new Error('Company not found');
 
     switch (step) {
         case 1: {
-            // Identity: company display name, timezone, and optional logo
+            
             const updates = {};
             if (data.displayName) updates.displayName = data.displayName;
             if (data.timezone) updates['settings.timezone'] = data.timezone;
 
-            // Logo upload via GCS if file provided
+            
             if (files.logo && files.logo[0]) {
                 const logoFile = files.logo[0];
                 const gcsResult = await uploadToGCS(logoFile, `company-logos/${companyId}`);
@@ -277,13 +215,13 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
         }
 
         case 2: {
-            // Structure: create/replace departments
+            
             const deptNames = data.departments || [];
 
-            // Remove old departments
+            
             await Department.deleteMany({ company: companyId });
 
-            // Create new departments and link to company
+            
             const createdDepts = await Promise.all(
                 deptNames.map(name =>
                     Department.create({ name, company: companyId })
@@ -301,27 +239,27 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
         }
 
         case 3: {
-            // People: parse Excel file or use JSON invites array
+            
             let employees = [];
 
             if (files.employeeFile && files.employeeFile[0]) {
-                // Parse Excel/CSV — supports both new 10-col and old 5-col formats
+                
                 const wb = XLSX.read(files.employeeFile[0].buffer, { type: 'buffer' });
                 const ws = wb.Sheets[wb.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-                const dataRows = rows.slice(1).filter(r => r[2] || r[1]); // email at col 2 (new) or col 1 (old)
+                const dataRows = rows.slice(1).filter(r => r[2] || r[1]); 
 
                 employees = dataRows.map(r => {
-                    // 10-column Excel format:
-                    // A(0): First Name  B(1): Last Name  C(2): Work Email  D(3): Personal Email
-                    // E(4): Job Title  F(5): Join Date  G(6): Mobile  H(7): Corp ID
-                    // I(8): Role  J(9): Department
+                    
+                    
+                    
+                    
                     const isNewFormat = String(r[2] || '').includes('@');
                     if (isNewFormat) {
                         return {
                             name: `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
-                            companyEmail: String(r[2] || '').trim().toLowerCase(),  // C: Work email
-                            personalEmail: String(r[3] || '').trim().toLowerCase(), // D: Personal email
+                            companyEmail: String(r[2] || '').trim().toLowerCase(),  
+                            personalEmail: String(r[3] || '').trim().toLowerCase(), 
                             jobTitle: String(r[4] || '').trim(),
                             joiningDate: String(r[5] || '').trim(),
                             phone: String(r[6] || '').trim(),
@@ -330,7 +268,7 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
                             department: String(r[9] || '').trim(),
                         };
                     }
-                    // Old 5-column fallback: Name(0), Email(1), Phone(2), Role(3), Dept(4)
+                    
                     return {
                         name: String(r[0] || '').trim(),
                         companyEmail: String(r[1] || '').trim().toLowerCase(),
@@ -341,12 +279,12 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
                     };
                 }).filter(e => e.companyEmail);
 
-                // Validate that companyEmail belongs to company domain (if domain set)
+                
                 const company = await Company.findById(companyId);
                 if (company?.domain) {
                     employees = employees.map(e => ({
                         ...e,
-                        // Flag if work email doesn't match company domain — still import but note it
+                        
                         domainMismatch: !e.companyEmail.endsWith(`@${company.domain}`)
                     }));
                 }
@@ -364,11 +302,11 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
         }
 
         case 4: {
-            // Launch: mark setup complete
+            
             await Company.findByIdAndUpdate(companyId, {
                 $set: { isSetupComplete: true, setupStep: 4 }
             });
-            // Update owner user's company status
+            
             await User.findByIdAndUpdate(userId, {
                 $set: { 'companyStatus': 'active' }
             });
@@ -384,15 +322,12 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
     }
 }
 
-/**
- * Create user accounts from employee list and send welcome emails
- */
 async function bulkInviteEmployees(companyId, companyDomain, employees) {
     const results = { created: 0, skipped: 0, errors: [] };
 
     const company = await Company.findById(companyId).populate('departments', 'name _id');
 
-    // Build dept name→id map
+    
     const deptMap = {};
     (company.departments || []).forEach(d => {
         deptMap[d.name.toLowerCase()] = d._id;
@@ -400,18 +335,18 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
 
     for (const emp of employees) {
         try {
-            // companyEmail = work email (column C)
-            // loginEmail   = personal email (column D) || work email as fallback
+            
+            
             const companyEmailVal = emp.companyEmail || emp.email || '';
             const loginEmail = (emp.personalEmail || companyEmailVal).toLowerCase();
-            const credentialEmail = emp.personalEmail || companyEmailVal; // where credentials are sent
+            const credentialEmail = emp.personalEmail || companyEmailVal; 
 
             if (!companyEmailVal && !loginEmail) {
                 results.errors.push({ name: emp.name, error: 'No email provided' });
                 continue;
             }
 
-            // Skip if companyEmail OR login email already registered
+            
             const existingUser = await User.findOne({
                 $or: [
                     { companyEmail: companyEmailVal },
@@ -424,29 +359,29 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
                 continue;
             }
 
-            // Generate random 10-char password
+            
             const tempPassword = generateTempPassword();
             const hashedPw = await bcrypt.hash(tempPassword, 10);
 
-            // Resolve department
+            
             const deptId = deptMap[emp.department?.toLowerCase()] || null;
 
-            // Determine role
+            
             const validRoles = ['owner', 'admin', 'manager', 'member', 'guest'];
             const companyRole = validRoles.includes(emp.role) ? emp.role : 'member';
 
-            // Create username from name or work email local part
+            
             const namePart = (emp.name || companyEmailVal.split('@')[0])
                 .toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
             const username = `${namePart}_${Math.random().toString(36).slice(2, 6)}`;
 
-            // Create the user
-            // email = login email (personal if provided, else work email)
-            // companyEmail = the work/company email
+            
+            
+            
             const newUser = await User.create({
                 username,
-                email: loginEmail,                       // login credential
-                companyEmail: companyEmailVal,           // company-provided work email
+                email: loginEmail,                       
+                companyEmail: companyEmailVal,           
                 phone: emp.phone || undefined,
                 jobTitle: emp.jobTitle || undefined,
                 corporateId: emp.corporateId || undefined,
@@ -459,12 +394,12 @@ async function bulkInviteEmployees(companyId, companyDomain, employees) {
                 accountStatus: 'active',
             });
 
-            // Send welcome email to personal/credential email
+            
             await sendWelcomeEmail({
                 to: credentialEmail,
                 name: emp.name || username,
                 companyName: company.name,
-                companyEmail: companyEmailVal,  // show them their work email in the email
+                companyEmail: companyEmailVal,  
                 loginEmail,
                 tempPassword
             });
@@ -528,6 +463,6 @@ async function sendWelcomeEmail({ to, name, companyName, companyEmail, loginEmai
         });
     } catch (err) {
         console.error('[WELCOME EMAIL] Failed to send to', to, ':', err.message);
-        // Don't throw — account creation should still succeed even if email fails
+        
     }
 }

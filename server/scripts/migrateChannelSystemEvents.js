@@ -1,13 +1,3 @@
-// server/scripts/migrateChannelSystemEvents.js
-/**
- * Migration Script: Add systemEvents to existing default channels
- * 
- * This script safely adds 'channel_created' systemEvents to all default channels
- * that are missing them, without modifying any existing data.
- * 
- * Usage: node scripts/migrateChannelSystemEvents.js
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Channel = require("../src/features/channels/channel.model.js");
@@ -16,11 +6,11 @@ async function migrateChannelSystemEvents() {
     try {
         console.log('🚀 Starting migration: Add systemEvents to default channels...\n');
 
-        // Connect to MongoDB
+        
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB\n');
 
-        // Find all default channels without systemEvents or with empty systemEvents
+        
         const channelsToMigrate = await Channel.find({
             isDefault: true,
             $or: [
@@ -40,17 +30,17 @@ async function migrateChannelSystemEvents() {
         let successCount = 0;
         let errorCount = 0;
 
-        // Process each channel
+        
         for (const channel of channelsToMigrate) {
             try {
-                // Use the channel's creation timestamp or first member's joinedAt
+                
                 const timestamp = channel.createdAt ||
                     (channel.members[0]?.joinedAt) ||
                     new Date();
 
                 const userId = channel.createdBy;
 
-                // Add channel_created event
+                
                 channel.systemEvents = [{
                     type: 'channel_created',
                     userId: userId,
@@ -88,7 +78,6 @@ async function migrateChannelSystemEvents() {
     }
 }
 
-// Run the migration
 migrateChannelSystemEvents()
     .then(() => {
         console.log('\n✨ All done!');

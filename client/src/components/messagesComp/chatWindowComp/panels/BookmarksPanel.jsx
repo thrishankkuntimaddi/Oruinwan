@@ -1,6 +1,3 @@
-// Phase 1 — Bookmarks Panel
-// Slide-in panel showing all messages the current user has bookmarked
-
 import React, { useEffect, useState, useCallback } from "react";
 import { X, Bookmark, Hash, MessageCircle, Loader2, ExternalLink } from "lucide-react";
 import api from '@services/api';
@@ -16,13 +13,6 @@ function fmtDate(ts) {
     });
 }
 
-/**
- * @param {object} props
- * @param {boolean} props.open
- * @param {function} props.onClose
- * @param {boolean} [props.inline] - When true, renders as inline flex panel (no backdrop, no fixed pos)
- * @param {function} [props.onJumpToMessage] - Called with messageId to navigate
- */
 export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline = false }) {
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -48,12 +38,12 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
         try {
             await api.post(`/api/messages/${messageId}/bookmark`);
             setMessages(prev => prev.filter(m => m._id !== messageId));
-        } catch { /* silent */ }
+        } catch {  }
     }, []);
 
     if (!open) return null;
 
-    // Inline mode: no backdrop, panel is a flex child in the chat layout
+    
     if (inline) {
         return (
             <div style={{
@@ -65,7 +55,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                 height: '100%', overflow: 'hidden',
                 animation: 'slideInRight 220ms cubic-bezier(0.16,1,0.3,1)',
             }}>
-                {/* Header */}
+                {}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '12px 14px',
@@ -100,7 +90,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                     </button>
                 </div>
 
-                {/* Body */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {loading && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80px', gap: '8px', color: 'var(--text-muted)', fontSize: '12px', fontFamily: FONT }}>
@@ -126,13 +116,13 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
 
     return (
         <>
-            {/* Backdrop */}
+            {}
             <div
                 style={{ position: 'fixed', inset: 0, zIndex: 40, backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(1px)' }}
                 onClick={onClose}
             />
 
-            {/* Panel */}
+            {}
             <div style={{
                 position: 'fixed', right: 0, top: 0, height: '100%', width: '320px',
                 zIndex: 50, backgroundColor: 'var(--bg-surface)',
@@ -142,7 +132,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                 fontFamily: FONT,
                 animation: 'slideInRight 220ms cubic-bezier(0.16,1,0.3,1)',
             }}>
-                {/* Header */}
+                {}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '14px 16px',
@@ -181,7 +171,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
                     </button>
                 </div>
 
-                {/* Body */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {loading && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '96px', gap: '8px', color: 'var(--text-muted)', fontSize: '13px', fontFamily: FONT }}>
@@ -234,7 +224,7 @@ function BookmarkCard({ msg, onJumpToMessage, onRemove }) {
                 cursor: 'default',
             }}
         >
-            {/* Context: sender + channel */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '6px' }}>
                 {msg.sender?.profilePicture ? (
                     <img
@@ -270,7 +260,7 @@ function BookmarkCard({ msg, onJumpToMessage, onRemove }) {
                 )}
             </div>
 
-            {/* Message content */}
+            {}
             <div style={{
                 fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6,
                 overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical',
@@ -279,7 +269,7 @@ function BookmarkCard({ msg, onJumpToMessage, onRemove }) {
                 <ReactMarkdown>{msg.text || "(attachment)"}</ReactMarkdown>
             </div>
 
-            {/* Timestamp + actions */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px' }}>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>{fmtDate(msg.createdAt)}</span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease' }}>

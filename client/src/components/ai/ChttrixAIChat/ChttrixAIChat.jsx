@@ -9,7 +9,6 @@ import {
   Image, ChevronRight
 } from "lucide-react";
 
-/* ─── helpers ──────────────────────────────────────────────── */
 const WELCOME = () => ({
   id: 1, sender: "ai",
   text: "Hi, I'm ChttrixAI. How can I help you today?",
@@ -25,7 +24,6 @@ const QUICK_ACTIONS = [
   { icon: CheckSquare,   label: "Add Task",        prompt: "Add a new task to my list" },
 ];
 
-/* ─── component ────────────────────────────────────────────── */
 const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
   const { activeWorkspace } = useWorkspace();
 
@@ -73,7 +71,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
     return () => document.removeEventListener("mousedown", fn);
   }, [showAttach]);
 
-  /* ─── handlers ─────────────────────────────────────────── */
+  
   const handleSend = async (text = input) => {
     if (!text.trim()) return;
     const userMsg = { id: Date.now(), sender: "user", text, replyTo: replyingTo, time: now() };
@@ -120,13 +118,12 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
     setEditingId(null);
   };
 
-  /* ─── render ─────────────────────────────────────────────── */
+  
   const panel = (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative', overflow: 'hidden', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'var(--font)', transition: 'opacity 300ms ease, transform 300ms ease', opacity: isSidebar ? (visible ? 1 : 0) : (visible ? 1 : 0), transform: isSidebar ? (visible ? 'translateX(0)' : 'translateX(32px)') : (visible ? 'scale(1)' : 'scale(0.95)') }}
       className={!isSidebar ? 'border border-[var(--border-default)]' : ''}>
 
-
-      {/* ── Info modal ── */}
+      {}
       {showInfoModal && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.75)' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '85%', maxWidth: '320px', padding: '20px', position: 'relative' }}>
@@ -167,7 +164,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
         </div>
       )}
 
-      {/* ── History panel ── */}
+      {}
       {showHistory && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 20, display: 'flex' }}>
           <div style={{ width: '220px', background: 'var(--bg-surface)', borderRight: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column' }}>
@@ -204,7 +201,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
         </div>
       )}
 
-      {/* ── Header ── */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px', height: '48px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ position: 'relative' }}>
@@ -240,7 +237,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
         </div>
       </div>
 
-      {/* ── Messages ── */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }} className="custom-scrollbar">
         {messages.length === 1 && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', padding: '32px 16px', userSelect: 'none' }}>
@@ -260,7 +257,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
           <div key={msg.id || i} className={`flex ${msg.sender === "ai" ? "justify-start" : "justify-end"} group`}>
             <div className={`flex flex-col max-w-[88%] ${msg.sender === "user" ? "items-end" : "items-start"}`}>
 
-              {/* Reply preview */}
+              {}
               {msg.replyTo && (
                 <div className={`mb-1.5 px-3 py-1.5 text-xs rounded-lg border-l-2 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 truncate max-w-full
                   ${msg.sender === "user" ? "border-violet-500 self-end" : "border-gray-300 dark:border-gray-600"}`}>
@@ -269,7 +266,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
                 </div>
               )}
 
-              {/* Bubble */}
+              {}
               {editingId === msg.id ? (
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '10px', minWidth: '180px' }}>
                   <textarea
@@ -297,7 +294,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
                 </div>
               )}
 
-              {/* Timestamp + actions */}
+              {}
               {editingId !== msg.id && (
                 <div className={`flex items-center gap-2 mt-1 ${msg.sender === "user" ? "flex-row-reverse" : ""}`}>
                   <span className="text-[9px] text-gray-400 px-1">{msg.time}</span>
@@ -311,7 +308,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
                 </div>
               )}
 
-              {/* Action badges */}
+              {}
               {msg.actions?.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                   {msg.actions.map((act, j) => (
@@ -325,7 +322,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
           </div>
         ))}
 
-        {/* Typing dots */}
+        {}
         {isTyping && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -338,7 +335,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
         <div ref={endRef} />
       </div>
 
-      {/* ── Quick actions ── */}
+      {}
       {messages.length < 3 && (
         <div style={{ padding: '0 10px 8px', display: 'flex', gap: '6px', overflowX: 'auto', flexShrink: 0 }} className="no-scrollbar">
           {QUICK_ACTIONS.map(({ icon: Icon, label, prompt }) => (
@@ -354,7 +351,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
         </div>
       )}
 
-      {/* ── Input area ── */}
+      {}
       <div style={{ padding: '8px 12px 12px', flexShrink: 0, background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)' }}>
         {replyingTo && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-active)', borderLeft: '2px solid var(--accent)', padding: '6px 10px', marginBottom: '8px', borderRadius: '0 2px 2px 0' }}>

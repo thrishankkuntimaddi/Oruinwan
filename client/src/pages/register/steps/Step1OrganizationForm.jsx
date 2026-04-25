@@ -1,4 +1,3 @@
-// Step1OrganizationForm.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import { Building, Globe, CheckCircle2, AlertCircle, Loader } from 'lucide-react';
 
@@ -23,7 +22,6 @@ const StatusIcon = ({ s }) => {
     return null;
 };
 
-// Ignore legacy theme prop — always dark
 const Step1OrganizationForm = ({ formData, onChange, errors, validationStatus, theme }) => {
     const [focused, setFocused] = useState(null);
     return (
@@ -33,7 +31,7 @@ const Step1OrganizationForm = ({ formData, onChange, errors, validationStatus, t
                 Tell us about the entity you are registering.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                {/* Company Name */}
+                {}
                 <div>
                     <Label>Company Name</Label>
                     <div style={{ position: 'relative' }}>
@@ -48,7 +46,7 @@ const Step1OrganizationForm = ({ formData, onChange, errors, validationStatus, t
                     {errors.companyName && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{errors.companyName}</p>}
                 </div>
 
-                {/* Company Domain */}
+                {}
                 <div>
                     <Label>Company Domain</Label>
                     <div style={{ position: 'relative' }}>

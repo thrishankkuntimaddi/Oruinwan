@@ -1,7 +1,5 @@
-// LoadingScreen.jsx — Monolith Flow: Sentient OS Boot Sequence
 import React, { useState, useEffect } from 'react';
 
-// Each line has: text, style ('code' | 'warm' | 'brand'), delay before typing starts (ms)
 const BOOT_LINES = [
     { text: '> Initializing workspace OS...', style: 'code', hold: 0 },
     { text: '> Connecting intelligence layer...', style: 'code', hold: 180 },
@@ -9,7 +7,7 @@ const BOOT_LINES = [
     { text: 'Hello. Welcome to Chttrix.', style: 'warm', hold: 400 },
 ];
 
-const CHAR_SPEED = 22; // ms per character
+const CHAR_SPEED = 22; 
 
 function useTypewriter(text, active, speed = CHAR_SPEED) {
     const [displayed, setDisplayed] = useState('');
@@ -31,7 +29,6 @@ function useTypewriter(text, active, speed = CHAR_SPEED) {
     return { displayed, done };
 }
 
-// Individual typed line
 function BootLine({ item, active, onDone }) {
     const { displayed, done } = useTypewriter(item.text, active, item.style === 'warm' ? 28 : CHAR_SPEED);
 
@@ -75,20 +72,20 @@ function BootLine({ item, active, onDone }) {
 }
 
 const LoadingScreen = ({ onComplete }) => {
-    const [phase, setPhase] = useState('boot'); // 'boot' | 'brand' | 'fade'
+    const [phase, setPhase] = useState('boot'); 
     const [lineIndex, setLineIndex] = useState(0);
     const [opacity, setOpacity] = useState(1);
     const [brandVisible, setBrandVisible] = useState(false);
 
-    // Advance to next line
+    
     const advance = () => {
         if (lineIndex < BOOT_LINES.length - 1) {
             setLineIndex(i => i + 1);
         } else {
-            // All lines done — show brand stamp
+            
             setTimeout(() => {
                 setBrandVisible(true);
-                // Then fade out
+                
                 setTimeout(() => {
                     setPhase('fade');
                     setOpacity(0);
@@ -124,11 +121,11 @@ const LoadingScreen = ({ onComplete }) => {
                 }
             `}</style>
 
-            {/* Ambient background glow */}
+            {}
             <div style={{ position: 'absolute', top: '30%', left: '50%', transform: 'translate(-50%,-50%)', width: '600px', height: '400px', background: 'radial-gradient(ellipse, rgba(184,149,106,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
             <div style={{ width: '520px', padding: '0 24px' }}>
-                {/* Terminal block */}
+                {}
                 <div style={{
                     borderLeft: '2px solid rgba(184,149,106,0.25)',
                     paddingLeft: '20px',
@@ -147,7 +144,7 @@ const LoadingScreen = ({ onComplete }) => {
                     ))}
                 </div>
 
-                {/* Brand stamp — appears after all lines */}
+                {}
                 {brandVisible && (
                     <div style={{
                         marginTop: '48px',

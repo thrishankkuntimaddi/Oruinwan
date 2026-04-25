@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/zoom.handler.js
 const axios = require('axios');
 
 async function verify(config) {
@@ -8,21 +7,16 @@ async function verify(config) {
   return config;
 }
 
-/**
- * Create a Zoom meeting and return the join URL.
- * Uses Zoom server-to-server OAuth in real usage.
- * Here we return a placeholder that works without deep SDK.
- */
 async function createMeeting({ topic, startTime, duration, config }) {
-  // In real impl: POST https://api.zoom.us/v2/users/me/meetings with Bearer token
-  // Returning structured data to show the pattern
+  
+  
   return {
     source: 'zoom',
     meetingId: `zoom-${Date.now()}`,
     topic,
     startTime,
     duration,
-    joinUrl: `https://zoom.us/j/${Date.now()}`, // placeholder
+    joinUrl: `https://zoom.us/j/${Date.now()}`, 
     hostUrl: `https://zoom.us/s/${Date.now()}`
   };
 }

@@ -9,7 +9,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
         if (editorRef.current && block.content !== undefined) {
             editorRef.current.innerHTML = block.content || '';
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [block.id]);
 
     useEffect(() => {
@@ -80,7 +80,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
 
     return (
         <div className="group relative mb-1">
-            {/* Format Toolbar */}
+            {}
             <div className="hidden group-focus-within:flex items-center gap-0.5 mb-2 w-fit"
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', padding: '3px 6px', boxShadow: 'var(--card-shadow)' }}>
                 <button onMouseDown={e => { e.preventDefault(); execFormat('bold'); }} style={fmtBtn} onMouseEnter={fmtBtnHover} onMouseLeave={fmtBtnLeave} title="Bold"><Bold size={12} /></button>
@@ -132,7 +132,7 @@ const TextBlock = ({ block, onBlockChange, onRemoveBlock, onSlashCommand, onAddB
                         caretColor: '#b8956a',
                     }}
                 />
-                {/* Placeholder */}
+                {}
                 <div
                     style={{ position: 'absolute', top: 0, left: 0, color: 'var(--text-muted)', fontSize: '15px', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 400, lineHeight: 1.75, pointerEvents: 'none', userSelect: 'none', display: block.content && block.content !== '<br>' ? 'none' : undefined }}
                 >

@@ -4,10 +4,6 @@ const Department = require("../../../models/Department");
 const Task = require("../../../models/Task");
 const Channel = require("../channels/channel.model.js");
 
-/**
- * Get Manager Scope (Departments & Workspaces they manage)
- * GET /api/managers/scope
- */
 exports.getManagerScope = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -16,16 +12,16 @@ exports.getManagerScope = async (req, res) => {
             .populate('workspaces.workspace', 'name description members')
             .lean();
 
-        // 1. Get Managed Departments
+        
         const managedDepts = user.managedDepartments || [];
 
-        // 2. Get Workspaces where they are Owner or Admin (Execution Owners)
+        
         const managedWorkspaces = user.workspaces
             .filter(w => w.role === 'owner' || w.role === 'admin')
             .map(w => w.workspace)
-            .filter(Boolean); // Filter out nulls if workspace was deleted
+            .filter(Boolean); 
 
-        // 3. Get Company Admin Contact (For "Contact Admin" feature)
+        
         let companyContact = null;
         if (user.companyId) {
             const Company = require('../../../models/Company');
@@ -34,7 +30,7 @@ exports.getManagerScope = async (req, res) => {
                 .lean();
 
             if (company && company.admins && company.admins.length > 0) {
-                // Prefer owner, otherwise first admin
+                
                 const admin = company.admins.find(a => a.role === 'owner') || company.admins[0];
                 if (admin && admin.user) {
                     companyContact = admin.user;
@@ -42,8 +38,8 @@ exports.getManagerScope = async (req, res) => {
             }
         }
 
-        // 4. Get a valid workspace ID for chat context (User must be in at least one workspace to chat)
-        // Prefer default workspace, or first available
+        
+        
         const chatWorkspaceId = user.workspaces?.[0]?.workspace?._id || null;
 
         res.json({
@@ -59,10 +55,6 @@ exports.getManagerScope = async (req, res) => {
     }
 };
 
-/**
- * Get Manager Metrics (Snapshot for Scope)
- * GET /api/managers/metrics?scopeType=department&scopeId=...
- */
 exports.getManagerMetrics = async (req, res) => {
     try {
         const { scopeType, scopeId } = req.query;
@@ -78,8 +70,8 @@ exports.getManagerMetrics = async (req, res) => {
             return res.status(400).json({ message: "Invalid scope" });
         }
 
-        // 1. Active Members (last 7 days)
-        // Note: Using a simple online/lastLogin check for now
+        
+        
         const activeUsers = await User.countDocuments({
             _id: { $in: memberIds },
             $or: [
@@ -88,15 +80,15 @@ exports.getManagerMetrics = async (req, res) => {
             ]
         });
 
-        // 2. Open Tasks (in this scope)
+        
         const taskQuery = { status: { $in: ['todo', 'in-progress'] } };
 
         if (scopeType === 'workspace') {
             taskQuery.workspace = scopeId;
         } else {
-            // For department, finding tasks is trickier as tasks are workspace-bound.
-            // We'll find all workspaces linked to this department or just count tasks assigned to members
-            // Simpler approach: Tasks where assignee is in memberIds
+            
+            
+            
             taskQuery.assignedTo = { $in: memberIds };
         }
 
@@ -119,10 +111,6 @@ exports.getManagerMetrics = async (req, res) => {
     }
 };
 
-/**
- * Get Team Tasks (Execution Panel)
- * GET /api/managers/tasks?scopeType=...&scopeId=...
- */
 exports.getManagerTasks = async (req, res) => {
     try {
         const { scopeType, scopeId } = req.query;
@@ -139,7 +127,7 @@ exports.getManagerTasks = async (req, res) => {
         const tasks = await Task.find(query)
             .populate('assignedTo', 'username profilePicture')
             .populate('createdBy', 'username')
-            .sort({ dueDate: 1, priority: -1 }) // Urgency first
+            .sort({ dueDate: 1, priority: -1 }) 
             .limit(50);
 
         res.json(tasks);
@@ -150,27 +138,23 @@ exports.getManagerTasks = async (req, res) => {
     }
 };
 
-/**
- * Get Activity Summary (Workspace Health)
- * GET /api/managers/activity?scopeType=workspace&scopeId=...
- */
 exports.getActivitySummary = async (req, res) => {
     try {
         const { scopeType, scopeId } = req.query;
 
         if (scopeType !== 'workspace') {
-            // Activity is mostly workspace-bound (channels)
+            
             return res.json({ activeChannels: 0, inactiveChannels: 0 });
         }
 
         const channels = await Channel.find({ workspace: scopeId });
 
-        // Simple metric: Channels with recent messages
-        // In a real app, we'd query Message model. 
-        // For MVP speed, we'll return channel count
+        
+        
+        
 
         res.json({
-            activeChannels: channels.length, // Placeholder for "Active"
+            activeChannels: channels.length, 
             totalChannels: channels.length
         });
 
@@ -180,10 +164,6 @@ exports.getActivitySummary = async (req, res) => {
     }
 };
 
-/**
- * Get Allocations Matrix
- * GET /api/managers/allocations
- */
 exports.getAllocations = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -193,12 +173,12 @@ exports.getAllocations = async (req, res) => {
                 populate: { path: 'members', select: 'username email profilePicture isOnline' }
             })
             .populate({
-                path: 'workspaces.workspace', // Get full workspace details
+                path: 'workspaces.workspace', 
                 select: 'name members'
             });
 
-        // 1. All Department Members (Who I Can Manage)
-        // Flatten members from all managed departments
+        
+        
         let members = [];
         const seenMemberIds = new Set();
 
@@ -213,19 +193,19 @@ exports.getAllocations = async (req, res) => {
                             email: m.email,
                             profilePicture: m.profilePicture,
                             isOnline: m.isOnline,
-                            department: dept.name // Primary dept tag
+                            department: dept.name 
                         });
                     }
                 });
             }
         });
 
-        // 2. All Managed Workspaces (Where I Can Put Them)
+        
         const managedWorkspaces = user.workspaces
             .filter(w => (w.role === 'owner' || w.role === 'admin') && w.workspace)
             .map(w => w.workspace);
 
-        // 3. The Matrix (Member ID -> [Workspace IDs they are in])
+        
         const allocationMatrix = {};
 
         members.forEach(m => {
@@ -239,7 +219,7 @@ exports.getAllocations = async (req, res) => {
             allocationMatrix[m._id] = memberWorkspaces;
         });
 
-        // 4. Return simplified data
+        
         res.json({
             members: members,
             workspaces: managedWorkspaces.map(w => ({ _id: w._id, name: w.name })),
@@ -252,22 +232,17 @@ exports.getAllocations = async (req, res) => {
     }
 };
 
-/**
- * Update Workspace Allocation (Add/Remove User)
- * POST /api/managers/allocations/update
- * Body: { userId, workspaceId, action: 'add' | 'remove' }
- */
 exports.updateWorkspaceAllocation = async (req, res) => {
     try {
         const { userId, workspaceId, action } = req.body;
         const managerId = req.user.sub;
 
-        // 1. Verify Manager Access to Workspace
+        
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) return res.status(404).json({ message: "Workspace not found" });
 
-        // Check if user is owner/admin of this workspace in User model (or Workspace model)
-        // We'll trust the User model cache for speed, or verify strict from Workspace
+        
+        
         const manager = await User.findById(managerId);
         const hasAccess = manager.workspaces.some(w =>
             w.workspace.toString() === workspaceId &&
@@ -278,15 +253,15 @@ exports.updateWorkspaceAllocation = async (req, res) => {
             return res.status(403).json({ message: "You don't have permission to manage this workspace" });
         }
 
-        // 2. Perform Action
+        
         if (action === 'add') {
-            // Check if already member
+            
             if (workspace.isMember(userId)) {
                 return res.json({ message: "Already a member" });
             }
             workspace.members.push({ user: userId, role: 'member', joinedAt: new Date() });
 
-            // Update User's workspace list too
+            
             await User.findByIdAndUpdate(userId, {
                 $push: { workspaces: { workspace: workspaceId, role: 'member' } }
             });
@@ -294,7 +269,7 @@ exports.updateWorkspaceAllocation = async (req, res) => {
         } else if (action === 'remove') {
             workspace.members = workspace.members.filter(m => m.user.toString() !== userId);
 
-            // Remove from User's list
+            
             await User.findByIdAndUpdate(userId, {
                 $pull: { workspaces: { workspace: workspaceId } }
             });
@@ -309,32 +284,27 @@ exports.updateWorkspaceAllocation = async (req, res) => {
     }
 };
 
-/**
- * Add Member to Department (Onboarding)
- * POST /api/managers/allocations/department/add
- * Body: { email, departmentId }
- */
 exports.addMemberToDepartment = async (req, res) => {
     try {
         const { email, departmentId } = req.body;
         const managerId = req.user.sub;
 
-        // Verify Manager owns this department
+        
         const manager = await User.findById(managerId);
         if (!manager.managedDepartments.includes(departmentId)) {
             return res.status(403).json({ message: "You don't manage this department" });
         }
 
-        // Find Target User
+        
         const userToAdd = await User.findOne({ email });
         if (!userToAdd) return res.status(404).json({ message: "User not found with that email" });
 
-        // Add to Department schema
+        
         await Department.findByIdAndUpdate(departmentId, {
             $addToSet: { members: userToAdd._id }
         });
 
-        // Add to User schema
+        
         userToAdd.departments.addToSet(departmentId);
         await userToAdd.save();
 
@@ -345,17 +315,13 @@ exports.addMemberToDepartment = async (req, res) => {
         res.status(500).json({ message: "Server error addding to department" });
     }
 };
-/**
- * Create Task (Manager Override)
- * POST /api/managers/tasks
- * Body: { title, description, priority, dueDate, assignedTo, workspaceId }
- */
+
 exports.createTask = async (req, res) => {
     try {
         const { title, description, priority, dueDate, assignedTo, workspaceId } = req.body;
         const managerId = req.user.sub;
 
-        // 1. Verify Access
+        
         const manager = await User.findById(managerId);
         const hasAccess = manager.workspaces.some(w =>
             w.workspace.toString() === workspaceId &&
@@ -366,22 +332,22 @@ exports.createTask = async (req, res) => {
             return res.status(403).json({ message: "You don't have permission to create tasks in this workspace" });
         }
 
-        // 2. Create Task
+        
         const task = new Task({
             title,
             description,
             priority,
             dueDate,
-            assignedTo, // Array of User IDs
+            assignedTo, 
             workspace: workspaceId,
             createdBy: managerId,
-            visibility: 'workspace', // Managers generally create open tasks, or 'private' if specific
+            visibility: 'workspace', 
             status: 'todo'
         });
 
         await task.save();
 
-        // 3. Populate return data
+        
         await task.populate('assignedTo', 'username profilePicture');
 
         res.status(201).json(task);

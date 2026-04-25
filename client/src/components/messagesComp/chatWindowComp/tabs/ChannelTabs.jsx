@@ -73,7 +73,7 @@ export default function ChannelTabs({
                 padding: '0 12px',
                 overflowX: 'auto',
             }}>
-                {/* Chat Tab */}
+                {}
                 <button
                     onClick={() => onTabChange("chat")}
                     style={tabStyle(activeTab === "chat")}
@@ -84,7 +84,7 @@ export default function ChannelTabs({
                     <span>Chat</span>
                 </button>
 
-                {/* Threads Tab */}
+                {}
                 <button
                     onClick={() => onTabChange("threads")}
                     style={tabStyle(activeTab === "threads")}
@@ -95,7 +95,7 @@ export default function ChannelTabs({
                     <span>Threads</span>
                 </button>
 
-                {/* Tasks Tab */}
+                {}
                 <button
                     onClick={() => onTabChange("tasks")}
                     style={tabStyle(activeTab === "tasks")}
@@ -106,7 +106,7 @@ export default function ChannelTabs({
                     <span>Tasks</span>
                 </button>
 
-                {/* Canvas Tab */}
+                {}
                 <button
                     onClick={() => onTabChange("canvas")}
                     style={tabStyle(activeTab === "canvas")}
@@ -117,7 +117,7 @@ export default function ChannelTabs({
                     <span>Canvas</span>
                 </button>
 
-                {/* Dynamic Canvas Tabs */}
+                {}
                 {tabs.map((tab) => {
                     const isActive = activeTab === tab._id;
                     return (
@@ -172,7 +172,7 @@ export default function ChannelTabs({
                     );
                 })}
 
-                {/* Add Tab Button */}
+                {}
                 <button
                     onClick={handleAddClick}
                     disabled={tabs.length >= 5}

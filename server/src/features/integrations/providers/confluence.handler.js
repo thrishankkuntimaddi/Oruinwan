@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/confluence.handler.js
 async function verify(config) {
   if (!config.token || !config.baseUrl) throw Object.assign(new Error('Confluence: token and baseUrl required'), { statusCode: 400 });
   return config;

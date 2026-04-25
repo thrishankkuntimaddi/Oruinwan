@@ -1,5 +1,3 @@
-// server/routes/auth.js
-
 const express = require("express");
 const router = express.Router();
 const axios = require("axios");
@@ -35,26 +33,23 @@ const {
 
 const requireAuth = require("../../shared/middleware/auth");
 
-// AUTH ROUTES
 router.post("/signup", signup);
 router.get("/verify-email", verifyEmail);
 router.post("/login", login);
-router.post("/refresh", refresh);  // Changed from GET to POST - mutations should use POST
+router.post("/refresh", refresh);  
 router.post("/logout", logout);
 router.post("/logout-all", logoutAll);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 
-// PROFILE ROUTES
 router.get("/me", requireAuth, getMe);
 router.put("/me", requireAuth, updateMe);
 router.put("/me/password", requireAuth, updatePassword);
-router.post("/me/set-password", requireAuth, setPassword); // For OAuth users
-router.post("/oauth/set-password", requireAuth, setPassword); // Alias for backward compatibility
-router.post("/oauth/skip-password", requireAuth, skipPassword); // Skip password setup for OAuth users
-router.post("/setup-temp-password", requireAuth, setupTempPassword); // Mandatory first-login setup for bulk-imported users
+router.post("/me/set-password", requireAuth, setPassword); 
+router.post("/oauth/set-password", requireAuth, setPassword); 
+router.post("/oauth/skip-password", requireAuth, skipPassword); 
+router.post("/setup-temp-password", requireAuth, setupTempPassword); 
 
-// PROFILE PICTURE ROUTES
 const multer = require('multer');
 const { uploadToGCS } = require('../../modules/uploads/upload.service');
 const { Storage } = require('@google-cloud/storage');
@@ -62,7 +57,7 @@ const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'chttrix-uploads';
 
 const profilePicUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  limits: { fileSize: 5 * 1024 * 1024 }, 
   fileFilter: (req, file, cb) => {
     const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
     if (!allowed.includes(file.mimetype)) {
@@ -79,7 +74,7 @@ router.post("/me/profile-picture", requireAuth, profilePicUpload.single('profile
 
     const user = await User.findById(req.user.sub).select('profilePicture profilePictureGcsPath');
 
-    // Delete old picture from GCS if it was one we uploaded (not an external URL)
+    
     if (user.profilePictureGcsPath) {
       try {
         const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
@@ -89,7 +84,7 @@ router.post("/me/profile-picture", requireAuth, profilePicUpload.single('profile
       }
     }
 
-    // Upload new picture to GCS
+    
     const gcsResult = await uploadToGCS(req.file, 'profiles');
 
     await User.findByIdAndUpdate(req.user.sub, {
@@ -132,20 +127,15 @@ router.delete("/me/profile-picture", requireAuth, async (req, res) => {
   }
 });
 
-
-
-// EMAIL MANAGEMENT ROUTES
 router.post("/me/emails", requireAuth, addEmail);
 router.post("/me/emails/:id/verify", requireAuth, verifyEmailCode);
 router.post("/me/emails/:id/resend", requireAuth, resendVerification);
 router.put("/me/emails/:id/primary", requireAuth, setPrimaryEmail);
 router.delete("/me/emails/:id", requireAuth, deleteEmail);
 
-// ACCOUNT MANAGEMENT ROUTES
 router.post("/me/deactivate", requireAuth, deactivateAccount);
 router.post("/reactivate/verify-otp", verifyReactivationOTP);
 
-// USER PREFERENCES ROUTES
 router.get("/me/preferences/privacy", requireAuth, async (req, res) => {
   try {
     const User = require("../../../models/User");
@@ -254,27 +244,25 @@ router.delete("/me/blocked-users/:userId", requireAuth, async (req, res) => {
   }
 });
 
-// SESSION ROUTES
 router.get("/sessions", requireAuth, getSessions);
 router.delete("/sessions/others", requireAuth, revokeOtherSessions);
 router.delete("/sessions/:id", requireAuth, revokeSession);
 
-// USERS LIST (for DMs and channel invitations)
 router.get("/users", requireAuth, async (req, res) => {
   try {
     const currentUserId = req.user.sub;
     const User = require("../../../models/User");
 
-    // SECURITY FIX (BUG-8): Scope users list to the requester's company.
-    // Previously returned all platform users \u2014 a user from Company A could enumerate
-    // all Company B users. Now: company users see only their company, personal users
-    // see only other personal (companyless) users.
+    
+    
+    
+    
     const currentUser = await User.findById(currentUserId).select('companyId').lean();
 
     const query = currentUser?.companyId
       ? { _id: { $ne: currentUserId }, companyId: currentUser.companyId }
-      // BUGFIX: $exists: false alone misses documents where companyId is explicitly null.
-      // User schema defaults companyId to null — so we must match BOTH null and missing field.
+      
+      
       : { _id: { $ne: currentUserId }, $or: [{ companyId: null }, { companyId: { $exists: false } }] };
 
     const users = await User.find(query)
@@ -289,24 +277,21 @@ router.get("/users", requireAuth, async (req, res) => {
   }
 });
 
-// GOOGLE LOGIN
 router.post("/google-login", googleLogin);
-router.post("/google", googleAuth);  // alias
+router.post("/google", googleAuth);  
 
 const passport = require("../../../config/passport");
 const User = require("../../../models/User");
 const jwt = require("jsonwebtoken");
 
-// Helper to generate token (if not exported from controller)
 const generateToken = (user) => {
   return jwt.sign(
     { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: '15m' } // Short lived access token, frontend should exchange/use it
+    { expiresIn: '15m' } 
   );
 };
 
-// GITHUB ROUTES
 router.get(
   "/github",
   passport.authenticate("github", { scope: ["user:email"] })
@@ -316,29 +301,27 @@ router.get(
   "/github/callback",
   passport.authenticate("github", { session: false, failureRedirect: "/login?error=github_failed" }),
   (req, res) => {
-    // Successful authentication
+    
     const token = generateToken(req.user);
-    // SECURITY FIX: Use URL fragment (#) instead of query string (?)
-    // Fragments are never sent to servers, never appear in access logs,
-    // and never appear in Referer headers sent to third-party resources.
+    
+    
+    
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#access=${token}`);
   }
 );
 
-// LinkedIn OAuth - Manual OpenID Connect Implementation
-// Using /v2/userinfo endpoint (passport-linkedin-oauth2 uses deprecated /v2/me)
 router.get("/linkedin", (req, res) => {
-  // SECURITY FIX (BUG-11): Use cryptographically secure random bytes for the OAuth state.
-  // Math.random() is predictable and not safe for CSRF protection.
+  
+  
   const { randomBytes } = require('crypto');
   const state = randomBytes(16).toString('hex');
 
-  // Store state in a short-lived HttpOnly cookie so we can validate it on callback.
-  // SameSite=Lax prevents cross-site cookie sending while allowing the OAuth redirect.
+  
+  
   res.cookie('linkedin_oauth_state', state, {
     httpOnly: true,
     sameSite: 'Lax',
-    maxAge: 5 * 60 * 1000,           // 5 minutes — OAuth flows complete within this window
+    maxAge: 5 * 60 * 1000,           
     secure: process.env.NODE_ENV === 'production'
   });
 
@@ -364,19 +347,19 @@ router.get("/linkedin/callback", async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
     }
 
-    // SECURITY FIX (BUG-11): Validate the state parameter against the cookie value.
-    // Without this check, any request to the callback URL processes an OAuth code,
-    // which enables CSRF — an attacker can link a victim's session to the attacker's account.
+    
+    
+    
     const storedState = req.cookies?.linkedin_oauth_state;
     if (!state || !storedState || state !== storedState) {
       console.error('LinkedIn OAuth: state mismatch — potential CSRF attack');
       res.clearCookie('linkedin_oauth_state');
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=oauth_state_mismatch`);
     }
-    // Clear the state cookie — single use only
+    
     res.clearCookie('linkedin_oauth_state');
 
-    // Exchange code for access token
+    
     const tokenRes = await axios.post(
       "https://www.linkedin.com/oauth/v2/accessToken",
       new URLSearchParams({
@@ -395,7 +378,7 @@ router.get("/linkedin/callback", async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
-    // Fetch user info using OpenID Connect userinfo endpoint
+    
     const userInfoRes = await axios.get(
       "https://api.linkedin.com/v2/userinfo",
       {
@@ -408,11 +391,11 @@ router.get("/linkedin/callback", async (req, res) => {
     const linkedinUser = userInfoRes.data;
     console.log('LinkedIn user profile:', linkedinUser);
 
-    // Find or create user
+    
     let user = await User.findOne({ linkedinId: linkedinUser.sub });
 
     if (!user && linkedinUser.email) {
-      // Try to find by email to link accounts
+      
       user = await User.findOne({ email: linkedinUser.email });
       if (user) {
         user.linkedinId = linkedinUser.sub;
@@ -422,7 +405,7 @@ router.get("/linkedin/callback", async (req, res) => {
     }
 
     if (!user) {
-      // Create new user
+      
       user = await User.create({
         linkedinId: linkedinUser.sub,
         username: linkedinUser.name || linkedinUser.given_name || `linkedin_${linkedinUser.sub}`,
@@ -435,7 +418,7 @@ router.get("/linkedin/callback", async (req, res) => {
     }
 
     const token = generateToken(user);
-    // SECURITY FIX: Use URL fragment (#) instead of query string (?)
+    
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#access=${token}`);
   } catch (err) {
     console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);

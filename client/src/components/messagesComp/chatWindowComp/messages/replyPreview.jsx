@@ -1,4 +1,3 @@
-// src/components/messageComp/chatWindow/messages/replyPreview.jsx
 import React from "react";
 import { X, MessageSquare } from "lucide-react";
 
@@ -19,13 +18,13 @@ export default function ReplyPreview({ replyingTo, onCancel }) {
       backgroundColor: 'var(--bg-active)',
       borderTop: '1px solid var(--border-default)',
     }}>
-      {/* Accent bar */}
+      {}
       <div style={{ width: '2px', height: '28px', backgroundColor: 'var(--accent)', borderRadius: '1px', flexShrink: 0 }} />
 
-      {/* Icon */}
+      {}
       <MessageSquare size={12} style={{ color: 'var(--accent)', flexShrink: 0 }} />
 
-      {/* Content */}
+      {}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent)', lineHeight: 1.3 }}>
           {senderName}
@@ -35,7 +34,7 @@ export default function ReplyPreview({ replyingTo, onCancel }) {
         </div>
       </div>
 
-      {/* Cancel */}
+      {}
       <button
         onClick={onCancel}
         style={{ flexShrink: 0, padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '100ms ease' }}

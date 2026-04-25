@@ -1,32 +1,15 @@
-/**
- * notifications.cron.js
- *
- * Lightweight cron jobs for the notification system:
- *   1. Daily digest — summarizes unread notifications per user/workspace
- *   2. Task due-soon reminder — fires for tasks due within 24h
- *
- * Uses setInterval (same pattern as reminders.cron.js in this codebase).
- */
-
 const Notification = require('../../models/Notification');
 const logger = require('../../../utils/logger');
 const notifEmitter = require('./notificationEventEmitter');
 
-// Lazy-load models to avoid circular deps
 const getTask = () => require('../../models/Task');
 const getUser = () => require('../../models/User');
 
-// ─── Digest ───────────────────────────────────────────────────────────────────
-
-/**
- * Generates a daily digest notification for each user with unread notifications.
- * Groups by (recipient, workspaceId) and creates a single summary notification.
- */
 async function generateDigest(io) {
     try {
         logger.info('[NotifCron] Running daily digest...');
 
-        // Aggregate unread counts per user+workspace
+        
         const pipeline = [
             { $match: { read: false, type: { $ne: 'digest' } } },
             {
@@ -36,7 +19,7 @@ async function generateDigest(io) {
                     types: { $addToSet: '$type' },
                 }
             },
-            { $match: { count: { $gte: 2 } } }, // only if 2+ unread
+            { $match: { count: { $gte: 2 } } }, 
         ];
 
         const groups = await Notification.aggregate(pipeline);
@@ -60,7 +43,7 @@ async function generateDigest(io) {
                     meta: { count, types: g.types },
                 });
             } catch (err) {
-                // Non-fatal — log and continue
+                
                 logger.warn(`[NotifCron] Digest failed for ${recipient}:`, err.message);
             }
         }
@@ -71,11 +54,6 @@ async function generateDigest(io) {
     }
 }
 
-// ─── Task due-soon reminder ───────────────────────────────────────────────────
-
-/**
- * Finds tasks due within 24 hours and emits task.due_soon events.
- */
 async function checkDueSoonTasks(io) {
     try {
         const Task = getTask();
@@ -111,21 +89,19 @@ async function checkDueSoonTasks(io) {
     }
 }
 
-// ─── Cron scheduler ───────────────────────────────────────────────────────────
-
-const DIGEST_INTERVAL_MS   = 24 * 60 * 60 * 1000; // 24 hours
-const DUE_SOON_INTERVAL_MS =  1 * 60 * 60 * 1000; // 1 hour
+const DIGEST_INTERVAL_MS   = 24 * 60 * 60 * 1000; 
+const DUE_SOON_INTERVAL_MS =  1 * 60 * 60 * 1000; 
 
 function startNotificationsCron(io) {
     logger.info('[NotifCron] Starting notification cron jobs...');
 
-    // Run digest once immediately at startup (staggered 30s after boot)
+    
     setTimeout(() => generateDigest(io), 30_000);
 
-    // Then every 24h
+    
     setInterval(() => generateDigest(io), DIGEST_INTERVAL_MS);
 
-    // Due-soon check every hour
+    
     setInterval(() => checkDueSoonTasks(io), DUE_SOON_INTERVAL_MS);
 
     logger.info('[NotifCron] Notification cron jobs registered ✔');

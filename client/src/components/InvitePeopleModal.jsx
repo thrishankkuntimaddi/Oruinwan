@@ -4,7 +4,6 @@ import { useToast } from "../contexts/ToastContext";
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
-// ── Design tokens ──────────────────────────────────────────────────────────
 const T = {
     bg: '#0c0c0c',
     sidebar: '#111111',
@@ -121,19 +120,19 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
         >
             <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '100%', maxWidth: '820px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'row', fontFamily: T.font, position: 'relative' }}>
 
-                {/* ── LEFT SIDEBAR ── */}
+                {}
                 <div style={{ width: '220px', flexShrink: 0, background: T.sidebar, borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column' }}>
-                    {/* Title */}
+                    {}
                     <div style={{ padding: '20px 16px', borderBottom: `1px solid ${T.border}` }}>
                         <h2 style={{ fontSize: '15px', fontWeight: 700, color: T.text, margin: 0 }}>Invite People</h2>
                         <p style={{ fontSize: '11px', color: T.muted, marginTop: '2px', marginBottom: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>to {workspaceName}</p>
                     </div>
 
-                    {/* Nav */}
+                    {}
                     <div style={{ padding: '12px 8px', flex: 1, overflowY: 'auto' }}>
                         <div style={{ fontSize: '9px', fontWeight: 700, color: T.dim, textTransform: 'uppercase', letterSpacing: '0.12em', padding: '0 8px', marginBottom: '6px' }}>Invite Via</div>
 
-                        {/* Email */}
+                        {}
                         <button
                             onClick={() => setInviteMethod("email")}
                             style={{
@@ -153,7 +152,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                             <span>Email Address</span>
                         </button>
 
-                        {/* Link */}
+                        {}
                         <button
                             onClick={() => setInviteMethod("link")}
                             style={{
@@ -173,7 +172,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                             <span>Shareable Link</span>
                         </button>
 
-                        {/* Pending invites */}
+                        {}
                         {pendingInvites.length > 0 && (
                             <>
                                 <div style={{ height: '1px', background: T.border, margin: '12px 8px' }} />
@@ -212,9 +211,9 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                     </div>
                 </div>
 
-                {/* ── RIGHT CONTENT ── */}
+                {}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, background: T.bg, position: 'relative', overflowY: 'auto' }}>
-                    {/* Close */}
+                    {}
                     <button
                         onClick={onClose}
                         style={{ position: 'absolute', top: '14px', right: '14px', padding: '5px', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', zIndex: 10, transition: '150ms ease' }}
@@ -226,10 +225,10 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
 
                     <div style={{ padding: '32px 28px', flex: 1 }}>
 
-                        {/* ── EMAIL VIEW ── */}
+                        {}
                         {inviteMethod === "email" ? (
                             <div style={{ maxWidth: '440px', margin: '0 auto' }}>
-                                {/* Icon + Header */}
+                                {}
                                 <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                                     <div style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.accentBg, border: `1px solid ${T.accentBorder}`, margin: '0 auto 12px' }}>
                                         <Mail size={18} style={{ color: T.accent }} />
@@ -238,7 +237,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                     <p style={{ fontSize: '12px', color: T.muted, margin: 0 }}>Send invitations directly to their inbox</p>
                                 </div>
 
-                                {/* Email textarea */}
+                                {}
                                 <div style={{ marginBottom: '20px' }}>
                                     <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '8px' }}>
                                         Email Addresses
@@ -262,7 +261,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                     </p>
                                 </div>
 
-                                {/* Role picker */}
+                                {}
                                 <div style={{ marginBottom: '24px' }}>
                                     <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px' }}>
                                         Assign Role
@@ -294,7 +293,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                     </div>
                                 </div>
 
-                                {/* Send CTA */}
+                                {}
                                 <button
                                     onClick={handleSendEmails}
                                     disabled={loading || !emails.trim()}
@@ -311,7 +310,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                             </div>
 
                         ) : (
-                            /* ── LINK VIEW ── */
+                            
                             <div style={{ maxWidth: '440px', margin: '0 auto' }}>
                                 <div style={{ textAlign: 'center', marginBottom: '28px' }}>
                                     <div style={{ width: '44px', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(192,132,252,0.1)', border: '1px solid rgba(192,132,252,0.2)', margin: '0 auto 12px' }}>
@@ -321,7 +320,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                                     <p style={{ fontSize: '12px', color: T.muted, margin: 0 }}>Anyone with this link can join instantly</p>
                                 </div>
 
-                                {/* Warning */}
+                                {}
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '12px 14px', background: 'rgba(251,191,36,0.06)', border: '1px solid rgba(251,191,36,0.15)', marginBottom: '24px' }}>
                                     <AlertCircle size={14} style={{ color: '#fbbf24', flexShrink: 0, marginTop: '1px' }} />
                                     <p style={{ fontSize: '12px', color: 'rgba(251,191,36,0.8)', margin: 0, lineHeight: 1.5 }}>

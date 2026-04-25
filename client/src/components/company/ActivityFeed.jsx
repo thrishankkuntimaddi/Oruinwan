@@ -1,5 +1,3 @@
-// client/src/components/company/ActivityFeed.jsx
-
 import React from 'react';
 import { Clock, User, FileText, MessageSquare, CheckSquare, Users } from 'lucide-react';
 
@@ -59,7 +57,6 @@ const ActivityFeed = ({ activities = [], emptyMessage = 'No recent activity' }) 
     );
 };
 
-// Helper function to calculate time ago
 const getTimeAgo = (timestamp) => {
     if (!timestamp) return 'Just now';
 

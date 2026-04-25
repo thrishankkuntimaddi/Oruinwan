@@ -1,16 +1,9 @@
-// server/src/features/people/people.validation.js
-//
-// Phase 3 — Company People Management
-// Express-validator rule sets for each endpoint.
-
 const { body, param, query } = require('express-validator');
 const mongoose = require('mongoose');
 
 const isObjectId = (v) => mongoose.Types.ObjectId.isValid(v);
 const VALID_ROLES = ['owner', 'admin', 'manager', 'member', 'guest'];
 const VALID_STATUSES = ['active', 'suspended', 'removed'];
-
-// ── Reusable ─────────────────────────────────────────────────────────────────
 
 const validObjectId = (field, location = param) =>
     location(field)
@@ -26,11 +19,6 @@ const validObjectIdArray = (field) =>
         .custom((ids) => ids.every(isObjectId))
         .withMessage(`All entries in ${field} must be valid IDs`);
 
-// ── Rule Sets ─────────────────────────────────────────────────────────────────
-
-/**
- * POST /api/company/invite
- */
 const inviteEmployee = [
     body('email')
         .isEmail().withMessage('A valid email is required')
@@ -55,9 +43,6 @@ const inviteEmployee = [
     validObjectIdArray('departments'),
 ];
 
-/**
- * GET /api/company/members (query param validation)
- */
 const listMembers = [
     query('status')
         .optional()
@@ -76,9 +61,6 @@ const listMembers = [
         .withMessage('search must be ≤100 chars'),
 ];
 
-/**
- * PATCH /api/company/members/:id/role
- */
 const changeRole = [
     param('id').custom(isObjectId).withMessage('id must be a valid member ID'),
 
@@ -89,9 +71,6 @@ const changeRole = [
     validObjectIdArray('managedDepartments'),
 ];
 
-/**
- * PATCH /api/company/members/:id/status
- */
 const updateStatus = [
     param('id').custom(isObjectId).withMessage('id must be a valid member ID'),
 

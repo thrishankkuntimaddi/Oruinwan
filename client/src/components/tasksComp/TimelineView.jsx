@@ -1,7 +1,3 @@
-// client/src/components/tasksComp/TimelineView.jsx
-/**
- * TimelineView — Horizontal Gantt-style timeline — Monolith Flow dark theme
- */
 import React, { useMemo } from 'react';
 import { Calendar, AlertTriangle } from 'lucide-react';
 
@@ -63,7 +59,7 @@ function DayMarkers({ min, max }) {
                     <div style={{ width: '1px', height: '6px', background: T.border, marginTop: '2px' }} />
                 </div>
             ))}
-            {/* Today marker */}
+            {}
             {(() => {
                 const todayPct = toPercent(Date.now(), min, max);
                 if (todayPct < 0 || todayPct > 100) return null;
@@ -94,14 +90,14 @@ function TimelineRow({ task, min, max, onClick }) {
             onClick={() => onClick(task)}
             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-            {/* Task name fixed panel */}
+            {}
             <div style={{ width: '192px', flexShrink: 0, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, borderRight: `1px solid ${T.border}` }}>
                 <div style={{ width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0, background: pColor }} />
                 <span style={{ fontSize: '12px', color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{task.title}</span>
                 {isOverdue && <AlertTriangle size={9} style={{ color: '#f87171', flexShrink: 0 }} />}
             </div>
 
-            {/* Bar area */}
+            {}
             <div style={{ flex: 1, position: 'relative', height: '100%', padding: '8px 12px 8px 0' }}>
                 <div style={{
                     position: 'absolute',
@@ -146,7 +142,7 @@ export default function TimelineView({ tasks = [], onTaskClick }) {
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: T.base }}>
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', flexShrink: 0, borderBottom: `1px solid ${T.border}`, background: T.base }}>
                 <div style={{ width: '192px', flexShrink: 0, padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', borderRight: `1px solid ${T.border}` }}>
                     <Calendar size={10} style={{ color: T.textDim }} />
@@ -157,7 +153,7 @@ export default function TimelineView({ tasks = [], onTaskClick }) {
                 </div>
             </div>
 
-            {/* Rows */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', background: T.surface, scrollbarWidth: 'thin' }}>
                 {withDates.map(task => (
                     <TimelineRow key={task.id || task._id} task={task} min={min} max={max} onClick={onTaskClick} />

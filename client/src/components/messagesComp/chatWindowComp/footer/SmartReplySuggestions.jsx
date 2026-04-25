@@ -1,4 +1,3 @@
-// SmartReplySuggestions — Monolith Flow Design System
 import React, { useState, useEffect, useCallback } from "react";
 import { Zap, X } from "lucide-react";
 import api from '@services/api';

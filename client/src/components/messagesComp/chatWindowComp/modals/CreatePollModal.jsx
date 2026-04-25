@@ -79,7 +79,7 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                 style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)', borderRadius: '2px', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 48px rgba(0,0,0,0.5)' }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '32px', height: '32px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -98,10 +98,10 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                     </button>
                 </div>
 
-                {/* Body */}
+                {}
                 <form onSubmit={handleSubmit} style={{ overflowY: 'auto', flex: 1 }}>
                     <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                        {/* Question */}
+                        {}
                         <div>
                             <label style={labelStyle}>Question *</label>
                             <input
@@ -114,7 +114,7 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                             />
                         </div>
 
-                        {/* Options */}
+                        {}
                         <div>
                             <label style={labelStyle}>Options * (minimum 2)</label>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -151,13 +151,13 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                             )}
                         </div>
 
-                        {/* Settings */}
+                        {}
                         <div style={{ paddingTop: '14px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <Checkbox checked={allowMultiple} onChange={setAllowMultiple} label="Allow multiple selections" sub="Users can vote for more than one option" />
                             <Checkbox checked={anonymous} onChange={setAnonymous} label="Anonymous voting" sub="Don't show who voted for what" />
                         </div>
 
-                        {/* End Date */}
+                        {}
                         <div>
                             <label style={labelStyle}>End Date (Optional)</label>
                             <input
@@ -171,7 +171,7 @@ export default function CreatePollModal({ isOpen, onClose, onCreatePoll, channel
                         </div>
                     </div>
 
-                    {/* Footer */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)', flexShrink: 0 }}>
                         <button type="button" onClick={handleClose}
                             style={{ padding: '7px 16px', fontSize: '13px', color: 'var(--text-secondary)', backgroundColor: 'transparent', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}

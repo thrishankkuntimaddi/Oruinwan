@@ -60,7 +60,7 @@ const OwnerBilling = () => {
                 <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '30px', width: '100px' }} /><div className="sk" style={{ height: '30px', width: '80px' }} /></div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-                {/* 3 billing stat tiles */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
                     {[1,2,3].map(i => (
                         <div key={i} style={{ background: 'var(--bg-surface)', padding: '20px' }}>
@@ -70,7 +70,7 @@ const OwnerBilling = () => {
                         </div>
                     ))}
                 </div>
-                {/* Plan + payment row */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                     {[1,2].map(i => (
                         <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
@@ -82,7 +82,7 @@ const OwnerBilling = () => {
                         </div>
                     ))}
                 </div>
-                {/* Invoice table */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                     <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)' }}><div className="sk" style={{ height: '12px', width: '100px' }} /></div>
                     {[1,2,3,4].map(i => (
@@ -107,7 +107,7 @@ const OwnerBilling = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-            {/* Header */}
+            {}
             <header style={{
                 height: '56px', padding: '0 28px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -127,13 +127,13 @@ const OwnerBilling = () => {
                     icon={<RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />} />
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                    {/* Plan + Seat */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '1px', background: 'var(--border-subtle)' }}>
-                        {/* Plan Card — accent-tinted */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', padding: '28px 32px', position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
@@ -158,7 +158,7 @@ const OwnerBilling = () => {
                             <UpgradeBtn onClick={handleUpgradePlan} />
                         </div>
 
-                        {/* Seat Usage */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', padding: '28px 24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                                 <Users size={16} style={{ color: 'var(--accent)' }} />
@@ -189,7 +189,7 @@ const OwnerBilling = () => {
                         </div>
                     </div>
 
-                    {/* Spending Overview */}
+                    {}
                     <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <TrendingUp size={14} style={{ color: 'var(--accent)' }} />
@@ -216,7 +216,7 @@ const OwnerBilling = () => {
                         </div>
                     </section>
 
-                    {/* Payment History */}
+                    {}
                     <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -244,7 +244,7 @@ const OwnerBilling = () => {
                         </div>
                     </section>
 
-                    {/* Payment Method + Billing Contact */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
                         <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                             <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px' }}>Payment Method</h3>
@@ -281,8 +281,6 @@ const OwnerBilling = () => {
         </div>
     );
 };
-
-// ─ Sub-components ────────────────────────────────────────────────────────────
 
 const InvoiceRow = ({ inv, onDownload }) => {
     const [hov, setHov] = React.useState(false);

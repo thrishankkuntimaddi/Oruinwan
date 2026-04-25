@@ -5,37 +5,66 @@
   "main": "electron/main.js",
   "private": true,
   "scripts": {
-    "start": "ELECTRON_IS_DEV=1 electron .",
-    "start:prod": "electron .",
-    "build": "electron-builder --mac --win --linux",
-    "pack": "electron-builder --dir"
+    "start":       "ELECTRON_IS_DEV=1 electron .",
+    "start:win":   "set ELECTRON_IS_DEV=1 && electron .",
+    "start:prod":  "electron .",
+    "build":       "electron-builder --mac --win --linux",
+    "build:mac":   "electron-builder --mac",
+    "build:win":   "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "pack":        "electron-builder --dir"
   },
   "dependencies": {
     "electron-store": "^8.1.0"
   },
   "devDependencies": {
-    "electron": "^28.2.0",
+    "electron":         "^28.2.0",
     "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId": "com.chttrix.desktop",
+    "appId":       "com.chttrix.desktop",
     "productName": "Chttrix",
+    "copyright":   "Copyright © 2024 Chttrix",
     "directories": {
-      "output": "dist"
+      "output":     "dist",
+      "buildResources": "assets"
     },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "assets/**/*",
+      "!node_modules"
+    ],
     "mac": {
-      "category": "public.app-category.productivity",
-      "icon": "assets/icon.icns"
+      "category":      "public.app-category.productivity",
+      "icon":          "assets/icon.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "target": [
+        { "target": "dmg",  "arch": ["x64", "arm64"] },
+        { "target": "zip",  "arch": ["x64", "arm64"] }
+      ]
     },
     "win": {
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ]
     },
     "linux": {
-      "icon": "assets/icon.png",
-      "category": "Network"
+      "icon":     "assets/icon.png",
+      "category": "Network",
+      "target": [
+        { "target": "AppImage", "arch": ["x64"] },
+        { "target": "deb",      "arch": ["x64"] }
+      ]
+    },
+    "nsis": {
+      "oneClick":        false,
+      "allowToChangeInstallationDirectory": true
     }
   },
-  "keywords": ["chttrix", "electron", "desktop"],
-  "author": "Chttrix Team",
+  "keywords": ["chttrix", "electron", "desktop", "workspace"],
+  "author":  "Chttrix Team",
   "license": "MIT"
 }

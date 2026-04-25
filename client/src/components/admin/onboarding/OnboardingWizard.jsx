@@ -8,7 +8,6 @@ import api from '@services/api';
 import { useCompany } from '../../../contexts/CompanyContext';
 import { getDepartments } from '../../../services/departmentService';
 
-// ─── Shared input style ────────────────────────────────────────────────────────
 const inputBase = {
     width: '100%', boxSizing: 'border-box',
     background: 'var(--bg-input)', border: '1px solid var(--border-default)',
@@ -125,10 +124,10 @@ const OnboardingWizard = ({ onComplete }) => {
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
             fontFamily: 'Inter, system-ui, sans-serif', position: 'relative',
         }}>
-            {/* Accent top bar */}
+            {}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
 
-            {/* Header */}
+            {}
             <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)',
@@ -147,9 +146,9 @@ const OnboardingWizard = ({ onComplete }) => {
                 </button>
             </div>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                {/* Steps Sidebar */}
+                {}
                 <div style={{
                     width: '200px', background: 'var(--bg-active)', borderRight: '1px solid var(--border-subtle)',
                     padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '4px', flexShrink: 0,
@@ -197,10 +196,10 @@ const OnboardingWizard = ({ onComplete }) => {
                     })}
                 </div>
 
-                {/* Form Area */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }} className="custom-scrollbar">
 
-                    {/* Step 1 — Basic Info */}
+                    {}
                     {step === 1 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '560px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -253,10 +252,10 @@ const OnboardingWizard = ({ onComplete }) => {
                         </div>
                     )}
 
-                    {/* Step 2 — Company & Role */}
+                    {}
                     {step === 2 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '560px' }}>
-                            {/* Corporate Email */}
+                            {}
                             <div style={{ padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
                                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>
                                     Corporate Identity
@@ -272,7 +271,7 @@ const OnboardingWizard = ({ onComplete }) => {
                                 </div>
                             </div>
 
-                            {/* Role */}
+                            {}
                             <div>
                                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>System Role</label>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
@@ -295,7 +294,7 @@ const OnboardingWizard = ({ onComplete }) => {
                                 </div>
                             </div>
 
-                            {/* Departments */}
+                            {}
                             <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px' }}>
                                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px' }}>Department Access</label>
                                 {departments.length === 0 ? (
@@ -335,7 +334,7 @@ const OnboardingWizard = ({ onComplete }) => {
                         </div>
                     )}
 
-                    {/* Step 3 — Review */}
+                    {}
                     {step === 3 && (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 0', gap: '20px', maxWidth: '420px', margin: '0 auto' }}>
                             <div style={{ width: '64px', height: '64px', background: 'var(--bg-active)', border: '1px solid var(--state-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -366,7 +365,7 @@ const OnboardingWizard = ({ onComplete }) => {
                 </div>
             </div>
 
-            {/* Footer */}
+            {}
             <div style={{
                 padding: '12px 20px', borderTop: '1px solid var(--border-subtle)',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -384,7 +383,7 @@ const OnboardingWizard = ({ onComplete }) => {
                 </button>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    {/* Step dots */}
+                    {}
                     <div style={{ display: 'flex', gap: '5px' }}>
                         {steps.map(s => (
                             <div key={s.num} style={{ width: '6px', height: '6px', borderRadius: '50%', background: step >= s.num ? 'var(--accent)' : 'var(--border-accent)', transition: 'background 150ms ease' }} />
@@ -409,7 +408,6 @@ const OnboardingWizard = ({ onComplete }) => {
     );
 };
 
-// Field wrapper
 const WField = ({ label, icon, children }) => (
     <div>
         {label && (

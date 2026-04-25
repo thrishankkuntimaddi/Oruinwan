@@ -1,14 +1,3 @@
-/**
- * Employee Service — Employee Management & Onboarding
- *
- * STABILIZED: Onboarding Stabilization pass
- *   FIX-1: Token-based invites via Invite model (no plaintext passwords)
- *   FIX-3: Department auto-workspace join via department.service.assignMembers()
- *   FIX-4: bulkOnboardEmployees() — async batch job engine, HTTP non-blocking
- *
- * @module features/employees/employee.service
- */
-
 const crypto = require('crypto');
 const XLSX = require('xlsx');
 const User = require('../../../models/User');
@@ -21,14 +10,10 @@ const { sha256 } = require('../../../utils/hashUtils');
 const { logAction } = require('../../../utils/historyLogger');
 const { assignMembers } = require('../departments/department.service');
 
-// ── Allowed roles per requester ceiling (FIX-2 used in controller, table here for reference) ──
 const VALID_INVITE_ROLES = ['admin', 'manager', 'member', 'guest'];
 
-// ── In-memory bulk job store ─────────────────────────────────────────────────
-// JobId → { companyId, status, total, processed, created, skipped, errors[], warnings[], startedAt }
-// Jobs expire from memory after 2 hours. For production: swap to Redis or BulkJob model.
 const _bulkJobs = new Map();
-const JOB_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const JOB_TTL_MS = 2 * 60 * 60 * 1000; 
 
 function _makeJobId() {
     return `bjob_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
@@ -49,24 +34,17 @@ function _createJob(jobId, companyId, total) {
         completedAt: null,
     };
     _bulkJobs.set(jobId, job);
-    // Auto-expire after TTL
+    
     setTimeout(() => _bulkJobs.delete(jobId), JOB_TTL_MS);
     return job;
 }
 
-/**
- * Get bulk job status. Returns null if not found or not owned by companyId.
- */
 function getBulkJobStatus(jobId, companyId) {
     const job = _bulkJobs.get(jobId);
     if (!job || job.companyId !== companyId.toString()) return null;
-    return { ...job }; // return copy, not reference
+    return { ...job }; 
 }
 
-/**
- * Create a hashed Invite record and return the raw token.
- * NEVER stores plaintext. The raw token is used once in the email link.
- */
 async function _createInviteRecord({ companyId, email, role, invitedBy, departmentIds = [], workspaceId }) {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = sha256(rawToken);
@@ -78,9 +56,9 @@ async function _createInviteRecord({ companyId, email, role, invitedBy, departme
         workspace: workspaceId || null,
         role,
         invitedBy,
-        // Store first departmentId for backward-compat with Invite model
+        
         department: departmentIds?.[0] || null,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
     });
 
     await invite.save();
@@ -89,9 +67,6 @@ async function _createInviteRecord({ companyId, email, role, invitedBy, departme
     return { invite, inviteLink, rawToken };
 }
 
-/**
- * Send invitation email — FIX-1: absolutely no plaintext credentials.
- */
 async function _sendInviteEmail(email, companyName, inviteLink, name = '') {
     try {
         await sendEmail({
@@ -117,24 +92,6 @@ async function _sendInviteEmail(email, companyName, inviteLink, name = '') {
     }
 }
 
-/**
- * Invite a single employee to the company.
- *
- * FIX-1: creates Invite record (hashed token), sends magic-link email — no password generated.
- * FIX-3: calls department.service.assignMembers() for each departmentId so Phase 4
- *        hybrid workspace join fires correctly.
- *
- * @param {Object} params
- * @param {string}   params.companyId
- * @param {string}   params.email            - Personal/invite email address
- * @param {string}   [params.firstName]
- * @param {string}   [params.lastName]
- * @param {string}   params.role             - companyRole to assign on acceptance
- * @param {string[]} [params.departmentIds]  - Dept ObjectIds (company-validated upstream)
- * @param {string[]} [params.additionalWorkspaceIds] - Extra workspace ObjectIds
- * @param {string}   params.invitedBy        - UserId of requester
- * @param {Object}   [params.req]            - Express req for audit log
- */
 async function inviteEmployee(params) {
     const {
         companyId,
@@ -155,7 +112,7 @@ async function inviteEmployee(params) {
 
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Idempotency: if already invited (not yet accepted), re-use existing invite
+    
     const existingUser = await User.findOne({ email: normalizedEmail }).lean();
     if (existingUser) {
         if (existingUser.accountStatus === 'active') {
@@ -166,7 +123,7 @@ async function inviteEmployee(params) {
         }
     }
 
-    // FIX-1: Create hashed invite token (no password ever generated)
+    
     const { invite, inviteLink } = await _createInviteRecord({
         companyId,
         email: normalizedEmail,
@@ -176,17 +133,17 @@ async function inviteEmployee(params) {
         workspaceId: company.defaultWorkspace || null,
     });
 
-    // Send magic-link email to personal email
+    
     const name = [firstName, lastName].filter(Boolean).join(' ');
     const emailResult = await _sendInviteEmail(normalizedEmail, company.name, inviteLink, name);
 
-    // FIX-3: Pre-register department memberships so they activate on invite acceptance.
-    // This also triggers Phase 4 hybrid workspace join if department has defaultWorkspaceId.
-    // We do this BEFORE the user record exists — assignMembers handles missing users gracefully.
-    // For now store the intent in the Invite metadata so accept-invite route can call assignMembers().
-    // (Department membership is finalised during accept-invite flow because the User doesn't exist yet.)
+    
+    
+    
+    
+    
 
-    // Store enriched metadata on the invite for use during acceptance
+    
     invite.metadata = {
         ...(invite.metadata || {}),
         firstName,
@@ -210,27 +167,23 @@ async function inviteEmployee(params) {
             metadata: { email: normalizedEmail, role, departmentIds },
             req,
         });
-    } catch { /* log failures are non-fatal */ }
+    } catch {  }
 
     return {
         inviteId: invite._id,
         emailSent: emailResult.sent,
-        // Never return the raw token in the API response
+        
     };
 }
 
-/**
- * Parse an Excel/CSV buffer into a rows array.
- * Supports both 10-column (new) and 5-column (legacy) formats.
- */
 function _parseEmployeeFile(buffer) {
     const wb = XLSX.read(buffer, { type: 'buffer' });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
     return rows
-        .slice(1) // skip header
-        .filter(r => r[2] || r[1]) // email at col 2 (new) or col 1 (old)
+        .slice(1) 
+        .filter(r => r[2] || r[1]) 
         .map(r => {
             const isNewFormat = String(r[2] || '').includes('@');
             if (isNewFormat) {
@@ -244,7 +197,7 @@ function _parseEmployeeFile(buffer) {
                     jobTitle: String(r[4] || '').trim(),
                 };
             }
-            // Legacy 5-column format
+            
             return {
                 firstName: String(r[0] || '').trim(),
                 lastName: '',
@@ -257,30 +210,20 @@ function _parseEmployeeFile(buffer) {
         .filter(e => e.email);
 }
 
-// Delay helper for throttling email sends
 const _delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * Start an async bulk onboarding job.
- *
- * FIX-4: Returns { jobId, total } immediately — processing happens in background.
- *        Never blocks the HTTP response. One row failure cannot fail the batch.
- *        Batches of 20 rows, 200ms delay between batches (Brevo rate limiting).
- *
- * @returns {{ jobId: string, total: number }}
- */
 async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invitedBy, req }) {
     const company = await Company.findById(companyId).lean();
     if (!company) throw Object.assign(new Error('Company not found'), { status: 404 });
 
-    // Pre-load all departments for this company (name → ObjectId map)
+    
     const { default: Department } = await import('../../../models/Department.js').catch(() =>
         ({ default: require('../../../models/Department') })
     );
     const depts = await Department.find({ company: companyId, isActive: true }).select('_id name').lean();
     const deptNameMap = new Map(depts.map(d => [d.name.toLowerCase().trim(), d._id.toString()]));
 
-    // Parse rows from the uploaded file
+    
     const rows = _parseEmployeeFile(fileBuffer);
 
     if (rows.length === 0) {
@@ -291,7 +234,7 @@ async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invi
         throw Object.assign(new Error('Maximum 500 employees per bulk import. Split your file into smaller batches.'), { status: 400 });
     }
 
-    // De-duplicate emails within the file
+    
     const seenEmails = new Set();
     const warnings = [];
     const dedupedRows = [];
@@ -308,23 +251,23 @@ async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invi
     const job = _createJob(jobId, companyId, dedupedRows.length);
     job.warnings.push(...warnings);
 
-    // ── Background processing (non-blocking) ────────────────────────────────
+    
     setImmediate(async () => {
         const BATCH_SIZE = 20;
-        const BATCH_DELAY = 200; // ms between batches
+        const BATCH_DELAY = 200; 
 
         for (let i = 0; i < dedupedRows.length; i += BATCH_SIZE) {
             const batch = dedupedRows.slice(i, i + BATCH_SIZE);
 
             for (const row of batch) {
                 try {
-                    // Validate role ceiling
+                    
                     if (!VALID_INVITE_ROLES.includes(row.role)) {
                         row.role = 'member';
                         job.warnings.push({ email: row.email, warning: `Invalid role '${row.role}' — defaulted to member` });
                     }
 
-                    // Resolve department name → ObjectId
+                    
                     const departmentIds = [];
                     if (row.department) {
                         const deptId = deptNameMap.get(row.department.toLowerCase().trim());
@@ -335,7 +278,7 @@ async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invi
                         }
                     }
 
-                    // FIX-1 + FIX-3: use inviteEmployee (token invite + dept assignMembers intent stored)
+                    
                     await inviteEmployee({
                         companyId,
                         email: row.email,
@@ -350,7 +293,7 @@ async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invi
 
                     job.created++;
                 } catch (err) {
-                    // One failure cannot stop the batch
+                    
                     job.errors.push({ email: row.email, error: err.message });
                     job.skipped++;
                 } finally {
@@ -358,7 +301,7 @@ async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invi
                 }
             }
 
-            // Throttle between batches
+            
             if (i + BATCH_SIZE < dedupedRows.length) {
                 await _delay(BATCH_DELAY);
             }
@@ -378,17 +321,13 @@ async function bulkOnboardEmployees({ companyId, requesterRole, fileBuffer, invi
                 metadata: { total: dedupedRows.length, created: job.created, skipped: job.skipped },
                 req,
             });
-        } catch { /* log failures are non-fatal */ }
+        } catch {  }
     });
-    // ── End background ───────────────────────────────────────────────────────
+    
 
     return { jobId, total: dedupedRows.length };
 }
 
-/**
- * Resend invite email for a user still in 'invited' state.
- * Invalidates the old Invite record and issues a fresh token.
- */
 async function resendInvite({ userId, companyId, req }) {
     const user = await User.findOne({ _id: userId, companyId, accountStatus: 'invited' }).lean();
     if (!user) throw Object.assign(new Error('User not found or no longer pending.'), { status: 404 });
@@ -396,13 +335,13 @@ async function resendInvite({ userId, companyId, req }) {
     const company = await Company.findById(companyId).lean();
     if (!company) throw Object.assign(new Error('Company not found'), { status: 404 });
 
-    // Invalidate any existing pending invite for this email
+    
     await Invite.updateMany(
         { email: user.email, company: companyId, acceptedAt: null },
-        { $set: { expiresAt: new Date() } } // expire immediately
+        { $set: { expiresAt: new Date() } } 
     );
 
-    // Create fresh invite
+    
     const { invite, inviteLink } = await _createInviteRecord({
         companyId,
         email: user.email,
@@ -416,21 +355,18 @@ async function resendInvite({ userId, companyId, req }) {
     return { inviteId: invite._id, email: user.email };
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
 module.exports = {
-    // Core token invite (FIX-1, FIX-3)
+    
     inviteEmployee,
 
-    // Bulk import async job (FIX-4)
+    
     bulkOnboardEmployees,
     getBulkJobStatus,
 
-    // Resend invite
+    
     resendInvite,
 
-    // Legacy / still used by other routes — preserved for backward-compat
+    
     _createInviteRecord,
     _sendInviteEmail,
 };

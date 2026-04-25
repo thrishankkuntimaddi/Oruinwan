@@ -1,22 +1,5 @@
-/**
- * Input Validation Middleware
- * Provides validation helpers and MongoDB injection prevention
- */
-
 const { validationResult } = require('express-validator');
 
-/**
- * Middleware to check express-validator validation results
- * Use after validation rules
- * 
- * Example:
- * router.post('/login',
- *   body('email').isEmail(),
- *   body('password').isLength({ min: 6 }),
- *   validate,
- *   authController.login
- * );
- */
 function validate(req, res, next) {
     const errors = validationResult(req);
 
@@ -34,29 +17,22 @@ function validate(req, res, next) {
     next();
 }
 
-/**
- * Sanitize MongoDB operators from input
- * Prevents NoSQL injection attacks
- * 
- * Removes keys starting with $ (MongoDB operators)
- * Example: { email: { $ne: null } } becomes { email: {} }
- */
 function sanitizeInput(req, res, next) {
     const sanitize = (obj) => {
         if (typeof obj !== 'object' || obj === null) {
             return obj;
         }
 
-        // Handle arrays
+        
         if (Array.isArray(obj)) {
             return obj.map(item => sanitize(item));
         }
 
-        // Handle objects - remove MongoDB operators
+        
         const sanitized = {};
         Object.keys(obj).forEach(key => {
             if (key.startsWith('$')) {
-                // Skip MongoDB operators
+                
                 return;
             }
 
@@ -70,7 +46,7 @@ function sanitizeInput(req, res, next) {
         return sanitized;
     };
 
-    // Sanitize all input sources
+    
     if (req.body) {
         req.body = sanitize(req.body);
     }
@@ -86,10 +62,6 @@ function sanitizeInput(req, res, next) {
     next();
 }
 
-/**
- * Rate limiter for specific operations
- * Can be used in addition to express-rate-limit
- */
 const operationTimestamps = new Map();
 
 function operationRateLimit(operation, maxPerMinute = 10) {
@@ -97,7 +69,7 @@ function operationRateLimit(operation, maxPerMinute = 10) {
         const userId = req.user?.sub || req.ip;
         const key = `${userId}:${operation}`;
         const now = Date.now();
-        const windowStart = now - 60000; // 1 minute
+        const windowStart = now - 60000; 
 
         if (!operationTimestamps.has(key)) {
             operationTimestamps.set(key, []);
@@ -105,7 +77,7 @@ function operationRateLimit(operation, maxPerMinute = 10) {
 
         const timestamps = operationTimestamps.get(key);
 
-        // Remove timestamps outside the window
+        
         const recentTimestamps = timestamps.filter(ts => ts > windowStart);
 
         if (recentTimestamps.length >= maxPerMinute) {
@@ -119,8 +91,8 @@ function operationRateLimit(operation, maxPerMinute = 10) {
         recentTimestamps.push(now);
         operationTimestamps.set(key, recentTimestamps);
 
-        // Cleanup old entries periodically
-        if (Math.random() < 0.01) { // 1% chance
+        
+        if (Math.random() < 0.01) { 
             const allKeys = Array.from(operationTimestamps.keys());
             allKeys.forEach(k => {
                 const ts = operationTimestamps.get(k) || [];

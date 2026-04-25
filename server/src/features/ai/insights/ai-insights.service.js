@@ -1,14 +1,10 @@
-// server/src/features/ai/insights/ai-insights.service.js
 'use strict';
 
 const Message  = require('../../messages/message.model');
 const logger   = require('../../../../utils/logger');
 
-// Try loading Task model gracefully (may have different path)
 let TaskModel = null;
 try { TaskModel = require('../../../../models/Task'); } catch { TaskModel = null; }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function daysAgo(n) {
     const d = new Date();
@@ -16,17 +12,11 @@ function daysAgo(n) {
     return d;
 }
 
-// ─── Productivity Insights ────────────────────────────────────────────────────
-
-/**
- * @param {string} workspaceId
- * @param {number} [days=7]
- */
 async function getProductivityInsights(workspaceId, days = 7) {
     const since = daysAgo(days);
 
     const [messageCount, taskStats, activeUserIds] = await Promise.all([
-        // Total messages in period
+        
         Message.countDocuments({
             workspace:  workspaceId,
             createdAt:  { $gte: since },
@@ -34,7 +24,7 @@ async function getProductivityInsights(workspaceId, days = 7) {
             type:       { $in: ['message', 'checklist'] },
         }),
 
-        // Task stats (if Task model available)
+        
         TaskModel
             ? Promise.all([
                 TaskModel.countDocuments ? TaskModel.countDocuments({ workspaceId, createdAt: { $gte: since } }).catch(() => 0) : Promise.resolve(0),
@@ -42,7 +32,7 @@ async function getProductivityInsights(workspaceId, days = 7) {
               ])
             : Promise.resolve([0, 0]),
 
-        // Distinct active users
+        
         Message.distinct('sender', {
             workspace:  workspaceId,
             createdAt:  { $gte: since },
@@ -62,13 +52,11 @@ async function getProductivityInsights(workspaceId, days = 7) {
     };
 }
 
-// ─── Collaboration Analytics ──────────────────────────────────────────────────
-
 async function getCollaborationInsights(workspaceId, days = 7) {
     const since = daysAgo(days);
     const mongoose = require('mongoose');
 
-    // Validate workspaceId is a valid ObjectId before using in aggregation
+    
     if (!mongoose.Types.ObjectId.isValid(workspaceId)) {
         return { period: `Last ${days} days`, topChannels: [], activeThreads: 0, totalReplies: 0 };
     }
@@ -96,13 +84,10 @@ async function getCollaborationInsights(workspaceId, days = 7) {
     return {
         period:          `Last ${days} days`,
         topChannels:     channelActivity.map(c => ({ channelId: c._id, messageCount: c.count })),
-        activeThreads:   Math.floor(threadCount / 3), // rough thread count (replies / avg replies per thread)
+        activeThreads:   Math.floor(threadCount / 3), 
         totalReplies:    threadCount,
     };
 }
-
-
-// ─── Engagement Analytics ─────────────────────────────────────────────────────
 
 async function getEngagementInsights(workspaceId, days = 7) {
     const since = daysAgo(days);
@@ -135,8 +120,6 @@ async function getEngagementInsights(workspaceId, days = 7) {
         })),
     };
 }
-
-// ─── Anomaly Detection ────────────────────────────────────────────────────────
 
 async function detectAnomalies(workspaceId) {
     const now   = daysAgo(0);

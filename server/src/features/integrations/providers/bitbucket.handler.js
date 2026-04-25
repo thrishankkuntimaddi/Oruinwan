@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/bitbucket.handler.js
 async function handleWebhook(payload, headers, integration) {
   const event = headers['x-event-key'] || '';
   const results = [];

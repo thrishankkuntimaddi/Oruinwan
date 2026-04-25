@@ -1,14 +1,3 @@
-/**
- * Metrics Service — Company Analytics and Reporting
- *
- * Provides real analytics data for company dashboards including user stats,
- * message activity, task tracking, and department performance.
- *
- * All metrics are derived from live database counts — no placeholder data.
- *
- * @module features/company/metrics.service
- */
-
 'use strict';
 
 const User = require('../../../models/User');
@@ -19,13 +8,8 @@ const Task = require('../../../models/Task');
 const Channel = require('../channels/channel.model.js');
 const logger = require('../../shared/utils/logger');
 
-/**
- * Get comprehensive company analytics
- * @param {string} companyId - Company ID
- * @returns {Promise<Object>} Analytics object with overview, department stats, and user activity
- */
 async function getCompanyAnalytics(companyId) {
-    // Get basic counts (parallel for speed)
+    
     const [totalUsers, workspaces, departments, _messages, tasks] = await Promise.all([
         User.countDocuments({ companyId }),
         Workspace.countDocuments({ company: companyId }),
@@ -34,7 +18,7 @@ async function getCompanyAnalytics(companyId) {
         Task.find({ companyId })
     ]);
 
-    // Count active users (logged in last 7 days)
+    
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     const activeUsers = await User.countDocuments({
@@ -42,7 +26,7 @@ async function getCompanyAnalytics(companyId) {
         lastLogin: { $gte: sevenDaysAgo }
     });
 
-    // Messages stats (today, week, month)
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const weekAgo = new Date();
@@ -65,20 +49,20 @@ async function getCompanyAnalytics(companyId) {
         })
     ]);
 
-    // Task stats (open, completed, overdue)
+    
     const taskStats = {
         open: tasks.filter(t => t.status === 'open' || t.status === 'in-progress').length,
         completed: tasks.filter(t => t.status === 'completed').length,
         overdue: tasks.filter(t => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'completed').length
     };
 
-    // Department stats: member counts + real message activity
+    
     const departmentList = await Department.find({ company: companyId }).lean();
     const departmentStats = await Promise.all(
         departmentList.map(async (dept) => {
             const [memberCount, deptChannels] = await Promise.all([
                 User.countDocuments({ companyId, departments: dept._id }),
-                // Find channels associated with this department
+                
                 Channel.find({ company: companyId, department: dept._id }).select('_id').lean(),
             ]);
 
@@ -90,7 +74,7 @@ async function getCompanyAnalytics(companyId) {
             return {
                 name: dept.name,
                 memberCount,
-                activityScore,           // Real: messages in dept channels (last 7 days)
+                activityScore,           
                 totalMessages: channelIds.length
                     ? await Message.countDocuments({ channel: { $in: channelIds } })
                     : 0,
@@ -98,7 +82,7 @@ async function getCompanyAnalytics(companyId) {
         })
     );
 
-    // Top users by real message count (last 30 days)
+    
     const users = await User.find({ companyId })
         .select('username email profilePicture')
         .lean();
@@ -120,7 +104,7 @@ async function getCompanyAnalytics(companyId) {
 
     logger.debug({ companyId, totalUsers, activeUsers }, 'Company analytics computed');
 
-    // Return comprehensive analytics
+    
     return {
         overview: {
             totalUsers,
@@ -136,14 +120,11 @@ async function getCompanyAnalytics(companyId) {
         },
         departmentStats,
         topUsers,
-        userGrowth: [],      // Placeholder: time-series growth (future milestone)
-        activityData: [],    // Placeholder: activity chart data (future milestone)
+        userGrowth: [],      
+        activityData: [],    
     };
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
 module.exports = {
     getCompanyAnalytics
 };

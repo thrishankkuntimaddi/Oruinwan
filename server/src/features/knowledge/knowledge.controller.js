@@ -1,4 +1,3 @@
-// server/src/features/knowledge/knowledge.controller.js
 const knowledgeService = require('./knowledge.service');
 
 function handleError(res, err) {

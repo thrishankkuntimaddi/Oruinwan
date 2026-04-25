@@ -1,4 +1,3 @@
-// Community.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { Users, MessageSquare, Sparkles, Globe, ArrowRight, Hash, Star } from 'lucide-react';
@@ -27,7 +26,7 @@ const Star5 = () => (
 export default function Community() {
     return (
         <PublicPageShell title="Community">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 64px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px', display: 'flex', gap: '60px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ flex: '1 1 400px' }}>
@@ -64,7 +63,7 @@ export default function Community() {
                 </div>
             </div>
 
-            {/* Community channels */}
+            {}
             <div style={{ padding: '64px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Community Channels</p>
@@ -88,7 +87,7 @@ export default function Community() {
                 </div>
             </div>
 
-            {/* Community spotlights */}
+            {}
             <div style={{ padding: '64px 0' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Community Spotlights</p>
@@ -108,7 +107,7 @@ export default function Community() {
                         ))}
                     </div>
 
-                    {/* CTA */}
+                    {}
                     <div style={{ padding: '32px', background: 'rgba(184,149,106,0.05)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
                         <div>
                             <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '5px' }}>Ready to join?</h3>

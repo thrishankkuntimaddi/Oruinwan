@@ -17,7 +17,7 @@ const BillingSummary = ({ data }) => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Current Plan */}
+                {}
                 <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-xl shadow-lg p-6 text-white relative overflow-hidden">
                     <div className="absolute top-0 right-0 p-4 opacity-20">
                         <CreditCard className="w-24 h-24 transform rotate-12" />
@@ -38,7 +38,7 @@ const BillingSummary = ({ data }) => {
                     </div>
                 </div>
 
-                {/* Seat Usage */}
+                {}
                 <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-colors">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-3">

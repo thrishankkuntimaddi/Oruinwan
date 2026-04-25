@@ -10,7 +10,6 @@ import { useToast } from "../../../contexts/ToastContext";
 import { useScheduledMeetings } from "../../../hooks/useScheduledMeetings";
 import ScheduleMeetingModal from "../../messagesComp/chatWindowComp/modals/ScheduleMeetingModal";
 
-// ── Section Header ─────────────────────────────────────────────────────────
 const SectionHeader = ({ label, isOpen, onClick, count }) => (
     <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', cursor: 'pointer', marginTop: '8px', transition: 'background 150ms ease' }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -25,7 +24,6 @@ const SectionHeader = ({ label, isOpen, onClick, count }) => (
     </div>
 );
 
-// ── Meeting Card ───────────────────────────────────────────────────────────
 const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, isSelected }) => (
     <div onClick={onJoin} style={{ margin: '0 8px 6px', padding: '10px 12px 10px 14px', border: `1px solid ${isSelected ? 'rgba(184,149,106,0.3)' : 'var(--border-subtle)'}`, background: isSelected ? 'var(--accent-dim)' : 'var(--bg-surface)', cursor: onJoin ? 'pointer' : 'default', position: 'relative', overflow: 'hidden', transition: 'all 150ms ease' }}
         onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
@@ -66,7 +64,6 @@ const MeetingCard = ({ title, time, status, participants = [], channel, onJoin, 
     </div>
 );
 
-// ── Main Panel ─────────────────────────────────────────────────────────────
 const MeetingsPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -141,7 +138,7 @@ const MeetingsPanel = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' }}>
 
-            {/* ── Header ── */}
+            {}
             <div style={{ height: '56px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0 }}>
                 <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Video Huddles</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -160,7 +157,7 @@ const MeetingsPanel = () => {
                 </div>
             </div>
 
-            {/* ── Active Huddle Quick Bar ── */}
+            {}
             {active && (
                 <div
                     onClick={() => setSelectedHuddle(prev => prev || { title: "Instant Huddle", status: "live", participants })}
@@ -198,7 +195,7 @@ const MeetingsPanel = () => {
                 </div>
             )}
 
-            {/* ── Tabs ── */}
+            {}
             <div style={{ padding: '10px 12px 6px', flexShrink: 0 }}>
                 <div style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', gap: '2px', padding: '3px' }}>
                     {[
@@ -213,10 +210,10 @@ const MeetingsPanel = () => {
                 </div>
             </div>
 
-            {/* ── Scrollable Content ── */}
+            {}
             <div className="flex-1 overflow-y-auto custom-scrollbar pb-4 space-y-1">
 
-                {/* UPCOMING TAB */}
+                {}
                 {activeTab === "upcoming" && (
                     <>
                         {active && selectedHuddle && (
@@ -288,7 +285,7 @@ const MeetingsPanel = () => {
                             </>
                         )}
 
-                        {/* Empty state */}
+                        {}
                         {!active && activeWorkspaceHuddles.length === 0 && meetings.length === 0 && (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
                                 <div style={{ width: '44px', height: '44px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px' }}>
@@ -311,7 +308,7 @@ const MeetingsPanel = () => {
                     </>
                 )}
 
-                {/* HISTORY TAB */}
+                {}
                 {activeTab === "history" && (
                     <>
                         {huddleHistory.length === 0 ? (
@@ -334,7 +331,7 @@ const MeetingsPanel = () => {
                 )}
             </div>
 
-            {/* ── Footer Stats ── */}
+            {}
             <div style={{ marginTop: 'auto', padding: '12px 16px', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div style={{ padding: '10px 12px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ padding: '6px', background: 'rgba(184,149,106,0.15)', color: '#b8956a' }}>
@@ -357,7 +354,7 @@ const MeetingsPanel = () => {
                 </div>
             </div>
 
-            {/* Schedule Meeting Modal */}
+            {}
             {showScheduleModal && (
                 <ScheduleMeetingModal
                     onSchedule={handleScheduleMeeting}

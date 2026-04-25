@@ -32,7 +32,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
             <div style={{ border: '1px solid var(--border-default)', background: 'var(--bg-surface)', overflow: 'hidden' }}>
                 <div style={{ overflowX: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        {/* Header */}
+                        {}
                         <thead>
                             <tr style={{ background: 'var(--bg-hover)' }}>
                                 {data.headers.map((h, ci) => (
@@ -58,7 +58,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                         )}
                                     </th>
                                 ))}
-                                {/* Add column */}
+                                {}
                                 <th style={{ width: '36px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-hover)' }}>
                                     <button
                                         onClick={addCol}
@@ -73,7 +73,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             </tr>
                         </thead>
 
-                        {/* Body */}
+                        {}
                         <tbody>
                             {data.rows.map((row, ri) => (
                                 <tr key={ri} style={{ borderBottom: '1px solid var(--border-subtle)' }}
@@ -91,7 +91,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                                             />
                                         </td>
                                     ))}
-                                    {/* Row delete */}
+                                    {}
                                     <td style={{ width: '36px', padding: '4px' }}>
                                         {data.rows.length > 1 && (
                                             <button
@@ -112,7 +112,7 @@ const TableBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </table>
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', background: 'var(--bg-hover)', borderTop: '1px solid var(--border-subtle)' }}>
                     <button
                         onClick={addRow}

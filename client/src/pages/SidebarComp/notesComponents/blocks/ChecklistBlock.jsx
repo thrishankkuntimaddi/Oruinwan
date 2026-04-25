@@ -43,7 +43,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
         <div className="group relative mb-3">
             <div style={{ border: '1px solid var(--border-default)', background: 'var(--bg-surface)', overflow: 'hidden' }}>
 
-                {/* Progress header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px 8px' }}>
                     <div style={{ flex: 1, height: '3px', background: 'var(--bg-active)', overflow: 'hidden' }}>
                         <div style={{ height: '100%', background: pct === 100 ? '#34d399' : '#b8956a', width: `${pct}%`, transition: 'width 500ms ease' }} />
@@ -62,7 +62,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </button>
                 </div>
 
-                {/* Items */}
+                {}
                 <div style={{ padding: '0 10px 6px' }} ref={listRef}>
                     {items.map((item, idx) => (
                         <div key={item.id} className="group/item"
@@ -70,7 +70,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                             onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                         >
-                            {/* Checkbox */}
+                            {}
                             <button
                                 onClick={() => toggleItem(item.id)}
                                 style={{
@@ -115,7 +115,7 @@ const ChecklistBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     ))}
                 </div>
 
-                {/* Add item footer */}
+                {}
                 <button
                     onClick={addItem}
                     style={{

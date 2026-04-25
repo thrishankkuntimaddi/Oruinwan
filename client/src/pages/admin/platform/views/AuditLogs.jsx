@@ -60,7 +60,7 @@ const AuditLogs = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                     <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -72,7 +72,7 @@ const AuditLogs = () => {
                 <RefreshBtn onClick={fetchLogs} />
             </div>
 
-            {/* Filters */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '16px 20px' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '10px' }}>
                     <div style={{ position: 'relative' }}>
@@ -85,7 +85,7 @@ const AuditLogs = () => {
                     <input type="date" value={filters.dateTo} onChange={e => setFilters(p => ({ ...p, dateTo: e.target.value }))} style={inputSt} />
                 </div>
 
-                {/* Stats and export */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
                         Showing <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{filteredLogs.length}</span> of {logs.length} logs
@@ -97,7 +97,7 @@ const AuditLogs = () => {
                 </div>
             </div>
 
-            {/* Timeline */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                 <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Activity size={14} style={{ color: 'var(--text-muted)' }} />

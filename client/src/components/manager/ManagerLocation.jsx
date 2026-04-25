@@ -1,4 +1,3 @@
-// client/src/components/manager/ManagerLocation.jsx
 import React from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { MapPin, Navigation, Phone, Globe, Building } from 'lucide-react';
@@ -6,7 +5,7 @@ import { MapPin, Navigation, Phone, Globe, Building } from 'lucide-react';
 const ManagerLocation = () => {
     const { selectedDepartment } = useOutletContext();
 
-    // Placeholder data - in real app, this would come from department/location API
+    
     const locationDetails = {
         name: "Headquarters - Building A",
         address: "123 Tech Park Blvd, Suite 400",
@@ -18,7 +17,7 @@ const ManagerLocation = () => {
 
     return (
         <div className="h-full bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors duration-200">
-            {/* Header */}
+            {}
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
                 <div className="flex flex-col">
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Location</h1>
@@ -28,15 +27,15 @@ const ManagerLocation = () => {
                 </div>
             </div>
 
-            {/* Content */}
+            {}
             <div className="flex-1 overflow-y-auto p-8">
                 <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                    {/* Main Info Card */}
+                    {}
                     <div className="lg:col-span-2 space-y-6">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
                             <div className="h-48 bg-indigo-50 dark:bg-indigo-900/20 relative flex items-center justify-center">
-                                {/* Map Placeholder */}
+                                {}
                                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#4f46e5_1px,transparent_1px)] [background-size:16px_16px]"></div>
                                 <MapPin size={48} className="text-indigo-600 dark:text-indigo-400 relative z-10 animate-bounce" />
                                 <div className="absolute bottom-4 right-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur px-3 py-1 rounded text-xs font-bold text-gray-600 dark:text-gray-300 shadow-sm border border-gray-100 dark:border-gray-600">
@@ -78,7 +77,7 @@ const ManagerLocation = () => {
                         </div>
                     </div>
 
-                    {/* Sidebar Info */}
+                    {}
                     <div className="space-y-6">
                         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
                             <h3 className="font-bold text-gray-900 dark:text-white mb-4">Quick Details</h3>

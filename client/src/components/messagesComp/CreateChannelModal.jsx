@@ -9,19 +9,19 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
     const { showToast } = useToast();
     const [currentTab, setCurrentTab] = useState(1);
 
-    // Step 1: Details
+    
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
-    const [visibility, setVisibility] = useState('public'); // 'public' or 'private'
+    const [visibility, setVisibility] = useState('public'); 
     const [isDiscoverable, setIsDiscoverable] = useState(true);
 
-    // Step 2: Members
+    
     const [workspaceMembers, setWorkspaceMembers] = useState([]);
     const [selectedMemberIds, setSelectedMemberIds] = useState(new Set());
     const [searchQuery, setSearchQuery] = useState("");
     const [loadingMembers, setLoadingMembers] = useState(false);
 
-    // Fetch workspace members when entering step 2
+    
     useEffect(() => {
         const fetchMembers = async () => {
             setLoadingMembers(true);
@@ -65,14 +65,14 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
             return;
         }
 
-        // ✅ ENFORCE: Private channels MUST have at least 1 invited member
+        
         if (visibility === 'private' && selectedMemberIds.size === 0) {
             showToast("Private channels require at least one invited member", "error");
             return;
         }
 
         try {
-            // Ensure channelMembers is ALWAYS an array (never undefined)
+            
             const channelMembers = selectedMemberIds ? Array.from(selectedMemberIds) : [];
 
             const payload = {
@@ -80,7 +80,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 description,
                 isPrivate: visibility === 'private',
                 isDiscoverable: visibility === 'public' ? isDiscoverable : false,
-                members: channelMembers, // ✅ Backend expects 'members', not 'channelMembers'
+                members: channelMembers, 
                 workspaceId
             };
 
@@ -98,13 +98,13 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
         }
     };
 
-    // Filter members
+    
     const filteredMembers = workspaceMembers.filter(m =>
         m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.email && m.email.toLowerCase().includes(searchQuery.toLowerCase()))
     );
 
-    // Check if "Create Channel" should be enabled
+    
     const canCreate = visibility === 'public' || (visibility === 'private' && selectedMemberIds.size > 0);
 
     return (
@@ -129,7 +129,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
+                {}
                 <div style={{
                     padding: '20px 28px',
                     borderBottom: '1px solid var(--border-default)',
@@ -178,7 +178,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                     </button>
                 </div>
 
-                {/* Progress bar */}
+                {}
                 <div style={{ height: '2px', backgroundColor: 'var(--border-subtle)', flexShrink: 0 }}>
                     <div style={{
                         height: '100%',
@@ -188,15 +188,15 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                     }} />
                 </div>
 
-                {/* Content Area */}
+                {}
                 <div style={{ flex: 1, padding: '28px', overflowY: 'auto', minHeight: '360px' }}>
                     {currentTab === 1 ? (
-                        /* ── Step 1: Details + Visibility ── */
+                        
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
 
-                            {/* LEFT: Inputs */}
+                            {}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                {/* Channel Name */}
+                                {}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     <label style={{
                                         fontSize: '9px', fontWeight: 700,
@@ -244,7 +244,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     </p>
                                 </div>
 
-                                {/* Description */}
+                                {}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                     <label style={{
                                         fontSize: '9px', fontWeight: 700,
@@ -275,7 +275,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                 </div>
                             </div>
 
-                            {/* RIGHT: Visibility */}
+                            {}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 <label style={{
                                     fontSize: '9px', fontWeight: 700,
@@ -286,7 +286,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     Channel Visibility
                                 </label>
 
-                                {/* Public */}
+                                {}
                                 <div
                                     onClick={() => setVisibility('public')}
                                     style={{
@@ -361,7 +361,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                     )}
                                 </div>
 
-                                {/* Private */}
+                                {}
                                 <div
                                     onClick={() => setVisibility('private')}
                                     style={{
@@ -404,9 +404,9 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                             </div>
                         </div>
                     ) : (
-                        /* ── Step 2: Member Selection ── */
+                        
                         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: '16px' }}>
-                            {/* Header */}
+                            {}
                             <div>
                                 <h3 style={{
                                     fontSize: '14px', fontWeight: 600,
@@ -422,7 +422,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                 )}
                             </div>
 
-                            {/* Search + count row */}
+                            {}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ flex: 1, position: 'relative' }}>
                                     <Search size={14} style={{
@@ -462,7 +462,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                 </div>
                             </div>
 
-                            {/* Member grid */}
+                            {}
                             <div style={{ flex: 1, overflowY: 'auto' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                     {loadingMembers ? (
@@ -515,7 +515,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                     onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; } }}
                                                     onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'var(--bg-active)'; } }}
                                                 >
-                                                    {/* Avatar initial */}
+                                                    {}
                                                     <div style={{
                                                         width: '32px', height: '32px', borderRadius: '2px', flexShrink: 0,
                                                         backgroundColor: isSelected ? 'rgba(184,149,106,0.25)' : 'var(--bg-hover)',
@@ -527,7 +527,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                         {user.name.charAt(0).toUpperCase()}
                                                     </div>
 
-                                                    {/* Name + email */}
+                                                    {}
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{
                                                             fontSize: '13px', fontWeight: 500,
@@ -546,7 +546,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                                                         </div>
                                                     </div>
 
-                                                    {/* Checkbox */}
+                                                    {}
                                                     <div style={{
                                                         width: '18px', height: '18px', borderRadius: '2px', flexShrink: 0,
                                                         border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border-accent)'}`,
@@ -566,7 +566,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                     )}
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{
                     padding: '16px 28px',
                     borderTop: '1px solid var(--border-default)',

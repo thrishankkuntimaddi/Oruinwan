@@ -1,4 +1,3 @@
-// server/src/features/ai/automation/ai-automation.routes.js
 'use strict';
 
 const express    = require('express');
@@ -7,8 +6,6 @@ const auth       = require('../../../shared/middleware/auth');
 const automation = require('./ai-automation.service');
 const logger     = require('../../../../utils/logger');
 
-// POST /api/ai/command
-// Body: { command, workspaceId }
 router.post('/command', auth, async (req, res) => {
     try {
         const { command, workspaceId } = req.body;
@@ -23,8 +20,6 @@ router.post('/command', auth, async (req, res) => {
     }
 });
 
-// POST /api/ai/generate-tasks
-// Body: { text, workspaceId }
 router.post('/generate-tasks', auth, async (req, res) => {
     try {
         const { text, workspaceId } = req.body;

@@ -3,9 +3,6 @@ import { UserPlus, Hash, AlertCircle, Loader2 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
-/**
- * JoinChannelCTA — shown when a non-member views a public discoverable channel.
- */
 export default function JoinChannelCTA({ channel, onJoinSuccess }) {
     const [isJoining, setIsJoining] = useState(false);
     const [error, setError] = useState(null);
@@ -31,12 +28,12 @@ export default function JoinChannelCTA({ channel, onJoinSuccess }) {
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', backgroundColor: 'var(--bg-base)' }}>
             <div style={{ maxWidth: '360px', width: '100%', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
 
-                {/* Channel icon */}
+                {}
                 <div style={{ width: '64px', height: '64px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Hash size={28} style={{ color: 'var(--accent)' }} strokeWidth={2} />
                 </div>
 
-                {/* Channel name + description */}
+                {}
                 <div>
                     <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: '0 0 6px', fontFamily: 'var(--font)' }}>
                         #{channel.name}
@@ -48,14 +45,14 @@ export default function JoinChannelCTA({ channel, onJoinSuccess }) {
                     )}
                 </div>
 
-                {/* Info card */}
+                {}
                 <div style={{ width: '100%', padding: '12px 16px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.65 }}>
                         You are not a member of this channel. Join to start chatting and collaborating!
                     </p>
                 </div>
 
-                {/* Error */}
+                {}
                 {error && (
                     <div style={{ width: '100%', padding: '10px 14px', backgroundColor: 'rgba(224,82,82,0.08)', border: '1px solid rgba(224,82,82,0.3)', borderRadius: '2px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                         <AlertCircle size={16} style={{ color: 'var(--state-danger)', flexShrink: 0, marginTop: '1px' }} />
@@ -63,7 +60,7 @@ export default function JoinChannelCTA({ channel, onJoinSuccess }) {
                     </div>
                 )}
 
-                {/* Join button */}
+                {}
                 <button
                     onClick={handleJoin}
                     disabled={isJoining}

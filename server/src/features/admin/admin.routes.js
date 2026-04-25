@@ -1,4 +1,3 @@
-// TODO (Phase 2D): Extract inline admin route logic into admin.controller.js
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -9,8 +8,6 @@ const Broadcast = require('../../../models/Broadcast');
 const Billing = require('../../../models/Billing');
 const sendEmail = require('../../../utils/sendEmail');
 
-// TODO: platformController doesn't exist - need to create or remove these routes
-// const platformController = require('./platformController');
 const AuditLog = require('../../../models/AuditLog');
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
@@ -21,8 +18,6 @@ const Note = require('../../../models/Note');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 
-
-// Simple middleware to check for Super Admin
 const requireSuperAdmin = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.sub);
@@ -37,30 +32,29 @@ const requireSuperAdmin = async (req, res, next) => {
   }
 };
 
-// GET /api/admin/overview/stats - Dashboard statistics
 router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
   try {
     const totalCompanies = await Company.countDocuments({ verificationStatus: 'verified' });
     const pendingRequests = await Company.countDocuments({ verificationStatus: 'pending' });
 
-    // Get total active users across all companies
+    
     const activeUsers = await User.countDocuments({
       accountStatus: 'active',
       companyId: { $exists: true }
     });
 
-    // Get open tickets count
+    
     const openTickets = await Ticket.countDocuments({
       status: { $in: ['open', 'in-progress'] }
     });
 
-    // Get monthly revenue from billing
+    
     const billings = await Billing.find({ status: 'active' });
     const monthlyRevenue = billings
       .filter(b => b.billingCycle === 'monthly')
       .reduce((sum, b) => sum + b.amount, 0);
 
-    // Calculate growth rates (compare with last month)
+    
     const lastMonth = new Date();
     lastMonth.setMonth(lastMonth.getMonth() - 1);
 
@@ -89,7 +83,6 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/overview/activities - Recent activity feed
 router.get('/overview/activities', requireSuperAdmin, async (req, res) => {
   try {
     const activities = await AuditLog.find()
@@ -111,7 +104,6 @@ router.get('/overview/activities', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/pending-companies
 router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
   try {
     const companies = await Company.find({ verificationStatus: 'pending' })
@@ -128,7 +120,6 @@ router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// POST /api/admin/approve-company/:id
 router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { message } = req.body;
@@ -138,15 +129,15 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
     company.verificationStatus = 'verified';
     await company.save();
 
-    // Activate the admin user
+    
     const adminUser = await User.findOne({ companyId: company._id, companyRole: 'owner' });
     if (adminUser) {
       adminUser.accountStatus = 'active';
       await adminUser.save();
 
-      // Send approval email to PERSONAL email (not company email)
+      
       try {
-        // Use personalEmail field if available, otherwise fall back to email
+        
         const personalEmail = adminUser.personalEmail || adminUser.email;
 
         const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
@@ -162,11 +153,11 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
         console.log(`📧 Approval email sent to personal email: ${personalEmail}`);
       } catch (_emailError) {
         console.error('Failed to send approval email:', emailError.message);
-        // Don't fail the request if email fails
+        
       }
     }
 
-    // Audit Log
+    
     const auditUser = await User.findById(req.user.sub);
     await AuditLog.create({
       companyId: company._id,
@@ -177,7 +168,6 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
       description: `Company ${company.name} approved by ${auditUser ? auditUser.username : 'Admin'}`
     });
 
-
     res.json({ message: "Company Approved", company });
   } catch (err) {
 
@@ -185,11 +175,10 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// POST /api/admin/reject-company/:id
 router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { message, reason } = req.body;
-    const finalReason = message || reason; // Use message as primary rejection reason
+    const finalReason = message || reason; 
 
     const company = await Company.findById(req.params.id);
     if (!company) return res.status(404).json({ message: "Company not found" });
@@ -198,12 +187,12 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
     company.rejectionReason = finalReason;
     await company.save();
 
-    // Notify Admin via email to PERSONAL email
+    
     const adminUser = await User.findOne({ companyId: company._id, companyRole: 'owner' });
     if (adminUser) {
-      // Send rejection email to personal email (not company email)
+      
       try {
-        // Use personalEmail field if available, otherwise fall back to email
+        
         const personalEmail = adminUser.personalEmail || adminUser.email;
 
         const { companyRejectedTemplate } = require('../../../utils/emailTemplates');
@@ -217,11 +206,11 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
         });
       } catch (_emailError) {
         console.error('Failed to send rejection email:', emailError.message);
-        // Don't fail the request if email fails
+        
       }
     }
 
-    // Audit Log
+    
     const auditUser = await User.findById(req.user.sub);
     await AuditLog.create({
       companyId: company._id,
@@ -240,15 +229,6 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// ============================================================================
-// PLATFORM ADMIN FEATURES (Protected by requireSuperAdmin)
-// ============================================================================
-
-// TODO: These routes need platformController to be implemented
-// Audit Logs
-// router.get('/audit-logs', requireSuperAdmin, platformController.getAuditLogs);
-
-// Active Companies (Multi-Tenant View)
 router.get('/active-companies', requireSuperAdmin, async (req, res) => {
   try {
     const companies = await Company.find({ verificationStatus: 'verified' })
@@ -266,20 +246,6 @@ router.get('/active-companies', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// Support Tickets (Platform Admin View)
-// router.get('/tickets', requireSuperAdmin, platformController.getAllTickets);
-// router.put('/tickets/:id', requireSuperAdmin, platformController.updateTicket); // Reply/Status
-
-// Platform Chat (Platform Admin View)
-// router.get('/chat/session/:companyId', requireSuperAdmin, platformController.getPlatformSession);
-// router.get('/chat/session/:sessionId/messages', requireSuperAdmin, platformController.getSessionMessages);
-// router.post('/chat/session/:sessionId/messages', requireSuperAdmin, platformController.sendSessionMessage);
-
-// ================================================================================
-// SUPPORT TICKETS ROUTES
-// ================================================================================
-
-// GET /api/admin/tickets - List all tickets with filters
 router.get('/tickets', requireSuperAdmin, async (req, res) => {
   try {
     const { status, priority, companyId } = req.query;
@@ -302,7 +268,6 @@ router.get('/tickets', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/tickets/:id - Get single ticket details
 router.get('/tickets/:id', requireSuperAdmin, async (req, res) => {
   try {
     const ticket = await Ticket.findById(req.params.id)
@@ -321,7 +286,6 @@ router.get('/tickets/:id', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// PUT /api/admin/tickets/:id - Update ticket (status or add reply)
 router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { status, message } = req.body;
@@ -331,11 +295,11 @@ router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
-    // Update status if provided
+    
     if (status) {
       ticket.status = status;
 
-      // Log audit
+      
       await AuditLog.create({
         userId: req.user.sub,
         action: 'ticket_status_updated',
@@ -345,7 +309,7 @@ router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
       });
     }
 
-    // Add message if provided
+    
     if (message) {
       ticket.messages.push({
         sender: req.user.sub,
@@ -353,7 +317,7 @@ router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
         createdAt: new Date()
       });
 
-      // Log audit
+      
       await AuditLog.create({
         userId: req.user.sub,
         action: 'ticket_reply_added',
@@ -377,16 +341,11 @@ router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// ================================================================================
-// BROADCAST ROUTES
-// ================================================================================
-
-// POST /api/admin/broadcast/send - Send broadcast
 router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
   try {
     const { subject, message, targetType, targetCompanies } = req.body;
 
-    // Determine recipients based on targetType
+    
     let companies = [];
     switch (targetType) {
       case 'all':
@@ -405,7 +364,7 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
         return res.status(400).json({ message: 'Invalid target type' });
     }
 
-    // Create broadcast record
+    
     const broadcast = await Broadcast.create({
       subject,
       message,
@@ -416,11 +375,11 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
       status: 'sent'
     });
 
-    // TODO: Send emails to companies
-    // For now, we'll just create the record
-    // In production, you'd send emails here using sendEmail utility
+    
+    
+    
 
-    // Log audit
+    
     await AuditLog.create({
       userId: req.user.sub,
       action: 'broadcast_sent',
@@ -440,7 +399,6 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/broadcast/history - Get broadcast history
 router.get('/broadcast/history', requireSuperAdmin, async (req, res) => {
   try {
     const broadcasts = await Broadcast.find()
@@ -455,23 +413,13 @@ router.get('/broadcast/history', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// ================================================================================
-// DIRECT MESSAGES ROUTES
-// ================================================================================
-// PER-USER DM ROUTES (ChttrixAdmin ↔ individual company owner/admin)
-// ================================================================================
-
 const SupportMessage = require('../../../models/SupportMessage');
 const SupportTicket = require('../../../models/SupportTicket');
 const UserModel = require('../../../models/User');
 
-/**
- * GET /api/admin/dm-users
- * List all company owners and admins with their last message + unread count
- */
 router.get('/dm-users', requireSuperAdmin, async (req, res) => {
   try {
-    // Fetch all company users (owners + admins)
+    
     const users = await UserModel.find({
       companyId: { $exists: true, $ne: null },
       companyRole: { $in: ['owner', 'admin'] }
@@ -480,9 +428,9 @@ router.get('/dm-users', requireSuperAdmin, async (req, res) => {
       .populate('companyId', 'name')
       .lean();
 
-    // Enrich with last message + unread count per user
+    
     const enriched = await Promise.all(users.map(async (user) => {
-      // Find this user's support ticket
+      
       const ticket = await SupportTicket.findOne({
         creatorId: user._id,
         subject: 'Live Chat Support'
@@ -518,7 +466,7 @@ router.get('/dm-users', requireSuperAdmin, async (req, res) => {
       };
     }));
 
-    // Sort: users with messages first, then by latest message
+    
     enriched.sort((a, b) => {
       if (!a.lastMessage && !b.lastMessage) return 0;
       if (!a.lastMessage) return 1;
@@ -533,15 +481,11 @@ router.get('/dm-users', requireSuperAdmin, async (req, res) => {
   }
 });
 
-/**
- * GET /api/admin/dm/user/:userId
- * Get all messages in the 1:1 conversation between ChttrixAdmin and a specific company user
- */
 router.get('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Find the ticket created by this user
+    
     const ticket = await SupportTicket.findOne({
       creatorId: userId,
       subject: 'Live Chat Support'
@@ -566,10 +510,6 @@ router.get('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
   }
 });
 
-/**
- * POST /api/admin/dm/user/:userId
- * Platform admin sends a message to a specific company user
- */
 router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -579,13 +519,13 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
       return res.status(400).json({ message: 'Message content is required' });
     }
 
-    // Find the target user to get their companyId
+    
     const targetUser = await UserModel.findById(userId).select('companyId').lean();
     if (!targetUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Find or create this user's support ticket (scoped by creatorId)
+    
     let ticket = await SupportTicket.findOne({
       creatorId: userId,
       subject: 'Live Chat Support',
@@ -613,7 +553,7 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
 
     await newMessage.populate('sender', 'username email profilePicture roles');
 
-    // Log audit
+    
     await AuditLog.create({
       userId: req.user.sub,
       action: 'admin_message_sent',
@@ -622,7 +562,7 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
       description: `Platform admin sent support message to user`
     });
 
-    // Emit directly to the user's personal support room
+    
     if (req.app.get('io')) {
       req.app.get('io').to(`user-support:${userId}`).emit('platform-message', newMessage);
     }
@@ -634,11 +574,6 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// ================================================================================
-// BILLING ROUTES
-// ================================================================================
-
-// GET /api/admin/billing/overview - Get billing overview stats
 router.get('/billing/overview', requireSuperAdmin, async (req, res) => {
   try {
     const billings = await Billing.find({ status: 'active' });
@@ -646,19 +581,19 @@ router.get('/billing/overview', requireSuperAdmin, async (req, res) => {
     const totalRevenue = billings.reduce((sum, b) => sum + b.amount, 0);
     const avgPerCompany = billings.length > 0 ? totalRevenue / billings.length : 0;
 
-    // Calculate monthly revenue (assuming monthly billing for simplicity)
+    
     const monthlyRevenue = billings
       .filter(b => b.billingCycle === 'monthly')
       .reduce((sum, b) => sum + b.amount, 0);
 
-    // Projected revenue (next month, same as current for now)
+    
     const projectedRevenue = monthlyRevenue;
 
     res.json({
       totalRevenue,
       monthlyRevenue,
       avgPerCompany,
-      growthRate: 0, // TODO: Calculate from historical data
+      growthRate: 0, 
       projectedRevenue
     });
   } catch (err) {
@@ -667,7 +602,6 @@ router.get('/billing/overview', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// GET /api/admin/billing/companies - Get company billing data
 router.get('/billing/companies', requireSuperAdmin, async (req, res) => {
   try {
     const billings = await Billing.find()
@@ -692,16 +626,11 @@ router.get('/billing/companies', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// ================================================================================
-// SYSTEM HEALTH ROUTES
-// ================================================================================
-
-// GET /api/admin/health/metrics - Get system health metrics
 router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
   try {
     const os = require('os');
 
-    // Server metrics
+    
     const totalMem = os.totalmem();
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
@@ -714,10 +643,10 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
       return acc + ((total - idle) / total) * 100;
     }, 0) / cpus.length;
 
-    // Database stats
+    
     const dbStats = await mongoose.connection.db.stats();
 
-    // Get real database entity counts
+    
     const [
       totalUsers,
       activeUsers,
@@ -748,14 +677,14 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
       server: {
         cpuUsage: parseFloat(cpuUsage.toFixed(2)),
         memoryUsage: parseFloat(memoryUsage.toFixed(2)),
-        diskUsage: 0, // Placeholder - requires additional library for real disk usage
-        uptime: Math.floor(process.uptime() / 60) // in minutes
+        diskUsage: 0, 
+        uptime: Math.floor(process.uptime() / 60) 
       },
       database: {
         connections: mongoose.connection.readyState === 1 ? 1 : 0,
-        size: parseFloat((dbStats.dataSize / 1024 / 1024).toFixed(2)), // MB
+        size: parseFloat((dbStats.dataSize / 1024 / 1024).toFixed(2)), 
         collections: dbStats.collections || 0,
-        queryPerformance: 0 // Placeholder - would need query profiling setup
+        queryPerformance: 0 
       },
       api: {
         responseTime: {
@@ -783,7 +712,7 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
         tasks: totalTasks,
         notes: totalNotes
       },
-      errors: [] // Would pull from error logging system
+      errors: [] 
     });
   } catch (err) {
     console.error('Error fetching system health:', err);
@@ -791,30 +720,6 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// ============================================================================
-// COMPANY ADMIN ROUTES (Protected by requireCompanyAdmin)
-// ============================================================================
-
-
-
-
-
-// TODO: These routes need platformController to be implemented
-// Support Tickets (Company Admin View)
-// router.post('/tickets', requireAuth, requireAdmin, platformController.createTicket);
-
-// Platform Chat (Company Admin View) - Using same controller but standard auth
-// Logic in controller needs to handle ownership check if not Super Admin, OR we use middleware here
-// For simplicity, exposing the endpoints. Controller should verify access.
-// router.get('/support/chat/session/:companyId', requireAuth, requireAdmin, platformController.getPlatformSession);
-// router.get('/support/chat/session/:sessionId/messages', requireAuth, requireAdmin, platformController.getSessionMessages);
-// router.post('/support/chat/session/:sessionId/messages', requireAuth, requireAdmin, platformController.sendSessionMessage);
-
-// ============================================================================
-// PEOPLE MANAGEMENT ROUTES
-// ============================================================================
-
-// GET /api/admin/employees - Get all employees in company
 router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
   try {
     const userId = req.user.sub || req.user._id;
@@ -826,7 +731,7 @@ router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
 
     const employees = await User.find({
         companyId: user.companyId._id,
-        accountStatus: { $ne: 'removed' }, // hide soft-deleted employees
+        accountStatus: { $ne: 'removed' }, 
     })
         .populate('departments')
         .populate('managedDepartments')
@@ -840,7 +745,6 @@ router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// PUT /api/admin/employees/:id/suspend - Suspend employee
 router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { reason } = req.body;
@@ -851,7 +755,7 @@ router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res)
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    // Prevent suspending owners
+    
     if (employee.companyRole === 'owner') {
       return res.status(403).json({ message: 'Cannot suspend company owner' });
     }
@@ -870,7 +774,6 @@ router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res)
   }
 });
 
-// PUT /api/admin/employees/:id/activate - Activate suspended employee
 router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res) => {
   try {
     const employee = await User.findById(req.params.id);
@@ -892,7 +795,6 @@ router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res
   }
 });
 
-// DELETE /api/admin/employees/:id - Permanently remove employee from company
 router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const employee = await User.findById(req.params.id);
@@ -900,7 +802,7 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    // Prevent removing owners
+    
     if (employee.companyRole === 'owner') {
       return res.status(403).json({ message: 'Cannot remove company owner' });
     }
@@ -909,8 +811,8 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
     const Department = require('../../../models/Department');
     const Workspace = require('../../../models/Workspace');
 
-    // 1. Remove from all Department.members[] and Department.managers[]
-    // 2. Remove from all Workspace.members[]
+    
+    
     await Promise.all([
       Department.updateMany({ members: employeeId }, { $pull: { members: employeeId } }),
       Department.updateMany({ managers: employeeId }, { $pull: { managers: employeeId } }),
@@ -920,7 +822,7 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
       ),
     ]);
 
-    // 3. Hard delete the user document permanently
+    
     await User.findByIdAndDelete(employeeId);
 
     res.json({ message: 'Employee permanently removed from company' });
@@ -930,7 +832,6 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// PUT /api/admin/employees/:id/assign-department - Assign to department
 router.put('/employees/:id/assign-department', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { departmentIds } = req.body;
@@ -954,7 +855,6 @@ router.put('/employees/:id/assign-department', requireAuth, requireAdmin, async 
   }
 });
 
-// PUT /api/admin/employees/:id/change-role - Change employee role
 router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { role, managedDepartments } = req.body;
@@ -968,14 +868,14 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    // Prevent changing owner role
+    
     if (employee.companyRole === 'owner') {
       return res.status(403).json({ message: 'Cannot change owner role' });
     }
 
     employee.companyRole = role;
 
-    // If promoting to manager, set managed departments
+    
     if (role === 'manager' && managedDepartments) {
       employee.managedDepartments = managedDepartments;
     } else if (role !== 'manager') {
@@ -991,7 +891,6 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
   }
 });
 
-// GET /api/admin/departments/:id/workspaces - Get workspaces in a department
 router.get('/departments/:id/workspaces', requireAuth, requireAdmin, async (req, res) => {
   try {
     const Department = require('../../../models/Department');
@@ -1013,7 +912,6 @@ router.get('/departments/:id/workspaces', requireAuth, requireAdmin, async (req,
   }
 });
 
-// POST /api/admin/employees/:id/assign-workspace - Assign employee to workspaces
 router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { workspaceIds } = req.body;
@@ -1027,9 +925,9 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    // ARCH-FIX: was employee.assignedWorkspaces = workspaceIds (field removed — dual-write bug).
-    // Rebuild workspaces[] — preserve existing memberships for workspaces not in the new list,
-    // add new entries for workspaces that aren't already in the array.
+    
+    
+    
     const existingIds = employee.workspaces.map(w => w.workspace.toString());
     const newEntries = workspaceIds
       .filter(id => !existingIds.includes(id.toString()))

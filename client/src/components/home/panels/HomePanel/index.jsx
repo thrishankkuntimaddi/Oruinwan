@@ -10,7 +10,6 @@ import api, { API_BASE } from '@services/api';
 import { io } from "socket.io-client";
 import { useScheduledMeetings } from "../../../../hooks/useScheduledMeetings";
 
-// Import sub-components
 import WorkspaceHeader from "./WorkspaceHeader";
 import SectionHeader from "./SectionHeader";
 import ListItem from "./ListItem";
@@ -18,7 +17,6 @@ import WorkspaceModals from "./WorkspaceModals";
 import WorkspaceSettingsModal from "./WorkspaceSettingsModal";
 import DeleteWorkspaceModal from "./DeleteWorkspaceModal";
 import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
-
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
@@ -28,17 +26,17 @@ const HomePanel = ({ title }) => {
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
 
-    // Real-time scheduled meetings
+    
     const { meetings: scheduledMeetings, loading: meetingsLoading, createMeeting, cancelMeeting } = useScheduledMeetings(activeWorkspace?.id);
 
-    // Refresh contacts (channels) when active workspace changes
+    
     React.useEffect(() => {
         if (activeWorkspace?.id) {
             refreshContacts(activeWorkspace.id);
         }
     }, [activeWorkspace?.id, refreshContacts]);
 
-    // ✅ AUTO-REFRESH: Refresh contacts when tab becomes visible
+    
     React.useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && activeWorkspace?.id) {
@@ -50,18 +48,18 @@ const HomePanel = ({ title }) => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [activeWorkspace?.id, refreshContacts]);
 
-    // ✅ PERIODIC REFRESH: Poll every 30 seconds
+    
     React.useEffect(() => {
         if (!activeWorkspace?.id) return;
 
         const interval = setInterval(() => {
             refreshContacts(activeWorkspace.id);
-        }, 30000); // Every 30 seconds
+        }, 30000); 
 
         return () => clearInterval(interval);
     }, [activeWorkspace?.id, refreshContacts]);
 
-    // ✅ SOCKET LISTENER: Refresh when a new DM session is created
+    
     React.useEffect(() => {
         if (!accessToken || !activeWorkspace?.id) return;
 
@@ -71,7 +69,7 @@ const HomePanel = ({ title }) => {
         });
 
         socket.on("new-dm-session", (data) => {
-            // Refresh contacts to include the new DM
+            
             refreshContacts(activeWorkspace.id);
         });
 
@@ -80,8 +78,8 @@ const HomePanel = ({ title }) => {
         };
     }, [activeWorkspace?.id, accessToken, refreshContacts]);
 
-    // Fetch real users from API (currently unused, but available for future use)
-    // const { users } = useUsers(user?.companyId);
+    
+    
 
     const [expanded, setExpanded] = useState({
         favorites: true,
@@ -90,14 +88,14 @@ const HomePanel = ({ title }) => {
         schedules: true,
     });
 
-    // Schedule modal state
+    
     const [showScheduleModal, setShowScheduleModal] = useState(false);
     const [scheduleForm, setScheduleForm] = useState({ title: '', startDate: '', startHour: '09', startMin: '00', duration: 30, meetingLink: '' });
     const [schedulingLoading, setSchedulingLoading] = useState(false);
 
     const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Chttrix");
 
-    // Update workspace name when title prop changes
+    
     React.useEffect(() => {
         if (title) {
             setWorkspaceName(title);
@@ -121,15 +119,15 @@ const HomePanel = ({ title }) => {
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
     const [showNewDMModal, setShowNewDMModal] = useState(false);
 
-    // Selection Mode State
+    
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
 
-    // Workspace members for DM creation
+    
 
     const [workspaceMembers, setWorkspaceMembers] = useState([]);
 
-    // Fetch workspace members for DM creation
+    
     React.useEffect(() => {
         const fetchWorkspaceMembers = async () => {
             if (!activeWorkspace?.id) return;
@@ -145,16 +143,16 @@ const HomePanel = ({ title }) => {
         fetchWorkspaceMembers();
     }, [activeWorkspace?.id]);
 
-    // No more MOCK_USERS - using real data from useUsers hook
+    
 
     const handleStartDM = (selectedUser) => {
         if (!activeWorkspace?.id) return;
 
-        // Extract user ID from various possible structures
+        
         const userId = selectedUser.id || selectedUser._id || selectedUser.user?._id;
         const userName = selectedUser.username || selectedUser.name || selectedUser.user?.username;
 
-        // Find if we already have a DM with this user in the current workspace
+        
         const existingDM = items.find(i =>
             i.type === 'dm' &&
             (i.userId === userId || i.label === userName)
@@ -163,7 +161,7 @@ const HomePanel = ({ title }) => {
         if (existingDM) {
             navigate(`/workspace/${activeWorkspace.id}/home/dm/${existingDM.id}`);
         } else {
-            // Navigate to "new" DM route with the target user's ID
+            
             navigate(`/workspace/${activeWorkspace.id}/home/dm/new/${userId}`);
         }
         setShowNewDMModal(false);
@@ -194,7 +192,7 @@ const HomePanel = ({ title }) => {
             setNewName("");
             showToast(response.data.message || "Workspace renamed successfully");
 
-            // Refresh contacts so sidebar reflects the new workspace name without a page reload
+            
             if (activeWorkspace?.id) refreshContacts(activeWorkspace.id);
         } catch (error) {
             console.error("Error renaming workspace:", error);
@@ -206,7 +204,7 @@ const HomePanel = ({ title }) => {
         setShowInviteModal(false);
         setInviteEmail("");
         setSelectedRole("member");
-        setInviteLink(""); // Clear the link when closing
+        setInviteLink(""); 
     }, []);
 
     const handleGenerateLink = useCallback(async () => {
@@ -271,7 +269,7 @@ const HomePanel = ({ title }) => {
         }
     }, [activeWorkspace?.id, inviteEmail, selectedRole, showToast, handleCloseInvite]);
 
-    // --- Real-time Link Refresh Logic ---
+    
     React.useEffect(() => {
         if (!activeWorkspace?.id || !showInviteModal || !accessToken) return;
 
@@ -289,7 +287,7 @@ const HomePanel = ({ title }) => {
         });
 
         socket.on("workspace-joined", (data) => {
-            // If the invite modal is open AND a link was generated, refresh it automatically
+            
             if (inviteLink) {
                 handleGenerateLink();
                 showToast(`🔔 ${data.username} joined! Link refreshed.`, "success");
@@ -301,7 +299,6 @@ const HomePanel = ({ title }) => {
         };
     }, [activeWorkspace?.id, showInviteModal, inviteLink, handleGenerateLink, showToast, accessToken]);
 
-
     const handleDeleteSelected = () => {
         selectedItems.forEach(id => deleteItem(id));
         setSelectedItems(new Set());
@@ -309,7 +306,7 @@ const HomePanel = ({ title }) => {
         setShowSelectionDeleteConfirm(false);
     };
 
-    // ── Schedule Meeting Handler ──────────────────────────────────────
+    
     const handleScheduleMeeting = useCallback(async (e) => {
         e.preventDefault();
         if (!scheduleForm.title.trim()) { showToast('Title is required', 'error'); return; }
@@ -344,7 +341,7 @@ const HomePanel = ({ title }) => {
         }
     }, [cancelMeeting, showToast]);
 
-    // ── Helper: format relative time ─────────────────────────────────
+    
     const formatRelativeTime = (date) => {
         const now = new Date();
         const d = new Date(date);
@@ -355,7 +352,7 @@ const HomePanel = ({ title }) => {
         if (diffMins < 60) return `in ${diffMins}m`;
         if (diffHours < 24) return `in ${diffHours}h`;
         if (diffDays === 1) return 'tomorrow';
-        // If within a week show day name
+        
         if (diffDays < 7) return d.toLocaleDateString('en-US', { weekday: 'short' });
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
@@ -369,7 +366,7 @@ const HomePanel = ({ title }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', position: 'relative' }}>
-            {/* Workspace Header with Dropdown */}
+            {}
             <WorkspaceHeader
                 workspaceName={workspaceName}
                 showWorkspaceMenu={showWorkspaceMenu}
@@ -383,11 +380,10 @@ const HomePanel = ({ title }) => {
                 setNewName={setNewName}
             />
 
-
-            {/* Content */}
+            {}
             <div className="flex-1 overflow-y-auto custom-scrollbar px-0 pb-2 pt-2 space-y-0.5">
 
-                {/* Selection Mode Header */}
+                {}
                 {isSelectionMode && (
                     <div style={{ padding: '6px 14px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
                         <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedItems.size} selected</span>
@@ -411,7 +407,7 @@ const HomePanel = ({ title }) => {
                     </div>
                 )}
 
-                {/* Favorites */}
+                {}
                 {favorites.length > 0 && (
                     <>
                         <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />
@@ -432,7 +428,7 @@ const HomePanel = ({ title }) => {
                     </>
                 )}
 
-                {/* Channels */}
+                {}
                 <SectionHeader
                     label="Channels"
                     isOpen={expanded.channels}
@@ -442,7 +438,7 @@ const HomePanel = ({ title }) => {
                         const isAdmin = userRole === 'admin' || userRole === 'owner';
                         const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
 
-                        // Only pass the function if creation is allowed
+                        
                         return canCreate ? () => setShowCreateChannelModal(true) : undefined;
                     })()}
                 />
@@ -461,7 +457,7 @@ const HomePanel = ({ title }) => {
                     </div>
                 )}
 
-                {/* Direct Messages */}
+                {}
                 <SectionHeader
                     label="Direct Messages"
                     isOpen={expanded.dms}
@@ -482,7 +478,7 @@ const HomePanel = ({ title }) => {
                         ))}
                     </div>
                 )}
-                {/* Upcoming Schedules */}
+                {}
                 <SectionHeader
                     label="Upcoming Schedules"
                     isOpen={expanded.schedules}
@@ -505,7 +501,7 @@ const HomePanel = ({ title }) => {
                                     onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                 >
-                                    {/* Icon */}
+                                    {}
                                     <div style={{ width: '24px', height: '24px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                         {meeting.status === 'live' ? (
                                             <span style={{ position: 'relative', display: 'flex', width: '8px', height: '8px' }}>
@@ -517,7 +513,7 @@ const HomePanel = ({ title }) => {
                                         )}
                                     </div>
 
-                                    {/* Details */}
+                                    {}
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, lineHeight: 1.3 }}>
                                             {meeting.title}
@@ -529,7 +525,7 @@ const HomePanel = ({ title }) => {
                                         </p>
                                     </div>
 
-                                    {/* Actions */}
+                                    {}
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '2px', opacity: 0, transition: '150ms ease' }} className="group-hover:opacity-100">
                                         {meeting.meetingLink && (
                                             <a href={meeting.meetingLink} target="_blank" rel="noopener noreferrer" title="Open meeting link"
@@ -556,14 +552,14 @@ const HomePanel = ({ title }) => {
                 )}
             </div>
 
-            {/* Schedule Meeting Modal */}
+            {}
             {showScheduleModal && (
                 <div
                     style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', fontFamily: 'var(--font)' }}
                     onClick={e => { if (e.target === e.currentTarget) setShowScheduleModal(false); }}
                 >
                     <div style={{ position: 'relative', width: '100%', maxWidth: '340px', margin: '0 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
-                        {/* Header */}
+                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                             <Calendar size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                             <h2 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flex: 1, margin: 0 }}>Schedule Meeting</h2>
@@ -575,9 +571,9 @@ const HomePanel = ({ title }) => {
                             </button>
                         </div>
 
-                        {/* Form */}
+                        {}
                         <form onSubmit={handleScheduleMeeting} style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {/* Shared input/label style */}
+                            {}
                             <div>
                                 <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>
                                     Title <span style={{ color: 'var(--state-danger)' }}>*</span>
@@ -668,7 +664,7 @@ const HomePanel = ({ title }) => {
                 </div>
             )}
 
-            {/* Confirmation Modal for Selection Delete */}
+            {}
 
             <ConfirmationModal
                 isOpen={showSelectionDeleteConfirm}
@@ -679,7 +675,7 @@ const HomePanel = ({ title }) => {
                 confirmText="Delete Items"
             />
 
-            {/* Workspace Modals (Rename & Invite) */}
+            {}
             <WorkspaceModals
                 showRenameModal={showRenameModal}
                 setShowRenameModal={setShowRenameModal}
@@ -701,7 +697,7 @@ const HomePanel = ({ title }) => {
                 activeWorkspace={activeWorkspace}
             />
 
-            {/* Workspace Settings Modal */}
+            {}
             <WorkspaceSettingsModal
                 showSettingsModal={showSettingsModal}
                 setShowSettingsModal={setShowSettingsModal}
@@ -712,7 +708,7 @@ const HomePanel = ({ title }) => {
                 setShowDeleteConfirm={setShowDeleteConfirm}
             />
 
-            {/* Delete Confirmation Modal */}
+            {}
             <DeleteWorkspaceModal
                 showDeleteConfirm={showDeleteConfirm}
                 setShowDeleteConfirm={setShowDeleteConfirm}
@@ -722,12 +718,12 @@ const HomePanel = ({ title }) => {
                 setShowSettingsModal={setShowSettingsModal}
             />
 
-            {/* Create Channel Modal */}
+            {}
             {showCreateChannelModal && (
                 <CreateChannelModal
                     onClose={() => setShowCreateChannelModal(false)}
                     onCreated={(channel) => {
-                        // Add the new channel to the list
+                        
                         addItem({
                             id: channel._id,
                             type: 'channel',
@@ -745,7 +741,7 @@ const HomePanel = ({ title }) => {
                 />
             )}
 
-            {/* New DM Modal */}
+            {}
             <NewDMModal
                 showNewDMModal={showNewDMModal}
                 setShowNewDMModal={setShowNewDMModal}

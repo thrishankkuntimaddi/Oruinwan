@@ -1,7 +1,3 @@
-// server/src/features/company-updates/updates.controller.js
-//
-// Phase 5 — Company Updates Feed — thin HTTP handlers.
-
 const { validationResult } = require('express-validator');
 const updatesService = require('./updates.service');
 
@@ -21,10 +17,6 @@ function handleError(res, err) {
     return res.status(err.status || 500).json({ success: false, error: err.message });
 }
 
-/**
- * GET /api/company/updates
- * List company updates. All active members can read.
- */
 exports.getUpdates = async (req, res) => {
     if (validationGuard(req, res)) return;
     try {
@@ -36,10 +28,6 @@ exports.getUpdates = async (req, res) => {
     }
 };
 
-/**
- * POST /api/company/updates
- * Post a new company update. Manager+ only.
- */
 exports.postUpdate = async (req, res) => {
     if (validationGuard(req, res)) return;
     try {
@@ -66,11 +54,6 @@ exports.postUpdate = async (req, res) => {
     }
 };
 
-
-/**
- * DELETE /api/company/updates/:id
- * Soft-delete. Poster or admin.
- */
 exports.deleteUpdate = async (req, res) => {
     try {
         const requesterId = req.user.sub || req.user._id;
@@ -90,10 +73,6 @@ exports.deleteUpdate = async (req, res) => {
     }
 };
 
-/**
- * POST /api/company/updates/:id/react
- * Toggle emoji reaction.
- */
 exports.addReaction = async (req, res) => {
     if (validationGuard(req, res)) return;
     try {
@@ -114,10 +93,6 @@ exports.addReaction = async (req, res) => {
     }
 };
 
-/**
- * POST /api/company/updates/:id/read
- * Mark an update as read for the current user.
- */
 exports.markAsRead = async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;

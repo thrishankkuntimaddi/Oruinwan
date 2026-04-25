@@ -50,7 +50,7 @@ const CompanyProfile = () => {
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* Basic Information */}
+                {}
                 <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
                     <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>Basic Information</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -93,7 +93,7 @@ const CompanyProfile = () => {
                     </div>
                 </div>
 
-                {/* Contact Information */}
+                {}
                 <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
                     <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>Contact Information</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -126,7 +126,7 @@ const CompanyProfile = () => {
                     </div>
                 </div>
 
-                {/* Save Button */}
+                {}
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                     <SaveBtn saving={saving} />
                 </div>

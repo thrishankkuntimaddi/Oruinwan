@@ -1,10 +1,6 @@
 import React from 'react';
 import { ChevronLeft, Sun, Moon, Monitor as MonitorIcon } from 'lucide-react';
 
-/**
- * PreferencesView Component
- * User preferences: theme selection and notification settings
- */
 const PreferencesView = ({ theme, setTheme, onBack }) => {
     return (
         <div className="w-72 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col animate-fade-in">

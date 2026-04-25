@@ -50,7 +50,7 @@ const CompanyConfirmation = () => {
     return (
         <div className="h-screen w-full bg-slate-100 dark:bg-[#060a14] flex overflow-hidden font-sans">
 
-            {/* ── Theme toggle ── */}
+            {}
             <button
                 onClick={toggleTheme}
                 className="absolute top-4 right-4 z-50 w-9 h-9 rounded-xl bg-white dark:bg-slate-800 shadow border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:scale-105 transition-transform"
@@ -58,19 +58,19 @@ const CompanyConfirmation = () => {
                 {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
             </button>
 
-            {/* ════════════════ LEFT PANEL ════════════════ */}
+            {}
             <div className="hidden lg:flex w-[40%] shrink-0 bg-[#0e1220] flex-col h-full relative overflow-hidden">
 
-                {/* Decorative blobs */}
+                {}
                 <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-indigo-600/15 blur-3xl pointer-events-none" />
                 <div className="absolute bottom-0 right-0 w-72 h-72 rounded-full bg-purple-600/10 blur-3xl pointer-events-none" />
-                {/* Subtle grid */}
+                {}
                 <div className="absolute inset-0 opacity-[0.025]"
                     style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,1) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,1) 1px,transparent 1px)', backgroundSize: '36px 36px' }} />
 
                 <div className="relative z-10 flex flex-col h-full p-8">
 
-                    {/* Logo — real image + wordmark */}
+                    {}
                     <div className="flex items-center gap-3 mb-8">
                         <img
                             src="/chttrix-logo.jpg"
@@ -81,7 +81,7 @@ const CompanyConfirmation = () => {
                         <span className="text-2xl font-black text-white tracking-tight">Chttrix</span>
                     </div>
 
-                    {/* Company card */}
+                    {}
                     <div className="p-5 rounded-2xl bg-white/[0.04] border border-white/10 mb-4">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500/30 to-purple-600/30 border border-white/10 flex items-center justify-center text-xl font-black text-white">
@@ -105,7 +105,7 @@ const CompanyConfirmation = () => {
                         </div>
                     </div>
 
-                    {/* Enterprise Trial badge */}
+                    {}
                     <div className="p-4 rounded-xl bg-amber-500/8 border border-amber-500/20 mb-6">
                         <div className="flex items-center gap-1.5 mb-1">
                             <Star size={12} className="text-amber-400 fill-amber-400" />
@@ -115,7 +115,7 @@ const CompanyConfirmation = () => {
                         <p className="text-[11px] text-slate-400">All features unlocked — no credit card required</p>
                     </div>
 
-                    {/* What's included — pushed to fill remaining space */}
+                    {}
                     <div className="flex-1 flex flex-col justify-end">
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">What's included</p>
                         <div className="space-y-2.5">
@@ -133,16 +133,16 @@ const CompanyConfirmation = () => {
                 </div>
             </div>
 
-            {/* ════════════════ RIGHT PANEL ════════════════ */}
+            {}
             <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-8 lg:px-14 py-8">
                 <div className="w-full max-w-lg">
 
-                    {/* Mobile logo */}
+                    {}
                     <div className="flex items-center gap-2 mb-6 lg:hidden">
                         <img src="/chttrix-logo.jpg" alt="Chttrix" className="h-8 rounded-md" onError={e => e.target.style.display = 'none'} />
                     </div>
 
-                    {/* Verified badge */}
+                    {}
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400 rounded-full text-[11px] font-bold uppercase tracking-wider mb-5">
                         <CheckCircle size={11} strokeWidth={3} /> Company Verified
                     </span>
@@ -154,7 +154,7 @@ const CompanyConfirmation = () => {
                         Review and accept our terms to activate your workspace and deploy your team.
                     </p>
 
-                    {/* Terms Box */}
+                    {}
                     <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-sm overflow-hidden mb-4">
                         <div className="flex items-center gap-2.5 px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
                             <Shield size={14} className="text-indigo-500" />
@@ -175,7 +175,7 @@ const CompanyConfirmation = () => {
                             ))}
                         </div>
 
-                        {/* Checkbox */}
+                        {}
                         <label className="flex items-center gap-3 px-4 py-3 border-t border-slate-100 dark:border-slate-800 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-all duration-200
                                 ${accepted ? 'bg-indigo-600 border-indigo-600 scale-110' : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'}`}>
@@ -188,7 +188,7 @@ const CompanyConfirmation = () => {
                         </label>
                     </div>
 
-                    {/* Summary row */}
+                    {}
                     <div className="flex gap-3 mb-5">
                         {[
                             { val: 'Verified', label: 'Status' },
@@ -202,7 +202,7 @@ const CompanyConfirmation = () => {
                         ))}
                     </div>
 
-                    {/* CTA */}
+                    {}
                     <button
                         onClick={handleConfirm}
                         disabled={isLoading || !accepted}

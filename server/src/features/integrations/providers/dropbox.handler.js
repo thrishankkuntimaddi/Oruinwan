@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/dropbox.handler.js
 async function verify(config) {
   if (!config.accessToken) throw Object.assign(new Error('Dropbox: accessToken required'), { statusCode: 400 });
   return config;

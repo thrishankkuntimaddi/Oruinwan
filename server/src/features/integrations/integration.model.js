@@ -1,4 +1,3 @@
-// server/src/features/integrations/integration.model.js
 const mongoose = require('mongoose');
 
 const integrationSchema = new mongoose.Schema({
@@ -12,17 +11,17 @@ const integrationSchema = new mongoose.Schema({
     type: String,
     required: true,
     enum: [
-      // Developer
+      
       'github', 'gitlab', 'bitbucket', 'linear', 'jira', 'cicd',
-      // Productivity
+      
       'google_drive', 'onedrive', 'dropbox', 'notion', 'confluence',
-      // Communication
+      
       'slack', 'zoom', 'google_meet', 'teams',
-      // Automation
+      
       'zapier', 'make', 'n8n', 'webhook'
     ]
   },
-  // Encrypted config (tokens, keys, URLs) – store as opaque object
+  
   config: {
     type: mongoose.Schema.Types.Mixed,
     default: {}
@@ -32,11 +31,11 @@ const integrationSchema = new mongoose.Schema({
     enum: ['connected', 'disconnected', 'error'],
     default: 'disconnected'
   },
-  // Last event activity
+  
   lastEventAt: {
     type: Date
   },
-  // Human-readable label for the connected account/org
+  
   label: {
     type: String,
     default: ''
@@ -45,7 +44,7 @@ const integrationSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  // Community: allow this configured integration to be reused / discovered by other workspaces
+  
   isPublic: {
     type: Boolean,
     default: false
@@ -54,7 +53,6 @@ const integrationSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// One integration per type per workspace
 integrationSchema.index({ workspaceId: 1, type: 1 }, { unique: true });
 
 module.exports = mongoose.model('Integration', integrationSchema);

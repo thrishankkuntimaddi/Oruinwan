@@ -70,13 +70,13 @@ export default function ContactInfoModal({ chat, onClose }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: FONT,
         }}>
-            {/* Backdrop */}
+            {}
             <div
                 style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)' }}
                 onClick={onClose}
             />
 
-            {/* Modal */}
+            {}
             <div style={{
                 position: 'relative', zIndex: 10,
                 width: '360px',
@@ -87,7 +87,7 @@ export default function ContactInfoModal({ chat, onClose }) {
                 overflow: 'hidden',
                 animation: 'fadeIn 180ms ease',
             }}>
-                {/* Close Button */}
+                {}
                 <CloseBtn onClick={onClose} />
 
                 {loading ? (
@@ -100,13 +100,13 @@ export default function ContactInfoModal({ chat, onClose }) {
                     </div>
                 ) : (
                     <>
-                        {/* Profile Header */}
+                        {}
                         <div style={{
                             padding: '16px',
                             borderBottom: '1px solid var(--border-default)',
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                {/* Avatar */}
+                                {}
                                 <div style={{ position: 'relative', flexShrink: 0 }}>
                                     {displayData.profilePicture ? (
                                         <img
@@ -126,7 +126,7 @@ export default function ContactInfoModal({ chat, onClose }) {
                                             </span>
                                         </div>
                                     )}
-                                    {/* Status dot */}
+                                    {}
                                     <span style={{
                                         position: 'absolute', bottom: 1, right: 1,
                                         width: '12px', height: '12px', borderRadius: '50%',
@@ -134,7 +134,7 @@ export default function ContactInfoModal({ chat, onClose }) {
                                         border: '2px solid var(--bg-surface)',
                                     }} />
                                 </div>
-                                {/* Name + status */}
+                                {}
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <h2 style={{ margin: 0, fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>
                                         {displayName}
@@ -146,7 +146,7 @@ export default function ContactInfoModal({ chat, onClose }) {
                             </div>
                         </div>
 
-                        {/* Info Rows */}
+                        {}
                         <div>
                             <InfoRow icon={<Mail size={15} />} label="Email"   value={displayEmail} />
                             <InfoRow icon={<Phone size={15} />} label="Phone"   value={displayPhone} />

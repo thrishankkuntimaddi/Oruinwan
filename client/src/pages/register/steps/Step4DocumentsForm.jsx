@@ -1,8 +1,6 @@
-// Step4DocumentsForm.jsx — Monolith Flow Design System
 import React from 'react';
 import { FileText, UploadCloud, AlertCircle } from 'lucide-react';
 
-// Ignore legacy theme prop
 const Step4DocumentsForm = ({ formData, onFileChange, errors, theme }) => (
     <div style={{ maxWidth: '560px', margin: '0 auto' }}>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '32px' }}>

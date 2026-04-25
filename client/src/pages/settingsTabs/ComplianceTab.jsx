@@ -137,7 +137,7 @@ const ComplianceTab = ({ user }) => {
                 </div>
             )}
 
-            {/* Export */}
+            {}
             <Card title="Export My Data" subtitle="GDPR Article 20 — Right to data portability">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
                     <div style={{ flex: 1 }}>
@@ -155,7 +155,7 @@ const ComplianceTab = ({ user }) => {
                 </div>
             </Card>
 
-            {/* Legal Hold */}
+            {}
             <Card title="Legal Hold" subtitle="Compliance status of this account">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, backgroundColor: 'var(--bg-active)', border: `1px solid ${legalHold ? 'rgba(224,82,82,0.3)' : 'var(--border-default)'}`, borderRadius: 2 }}>
                     <div style={{ width: 32, height: 32, borderRadius: 2, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: legalHold ? 'rgba(224,82,82,0.12)' : 'var(--bg-hover)' }}>
@@ -179,7 +179,7 @@ const ComplianceTab = ({ user }) => {
                 )}
             </Card>
 
-            {/* Retention */}
+            {}
             <Card title="Message Retention" subtitle="Automatically delete your sent messages after N days">
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, maxWidth: 360 }}>
                     <div style={{ flex: 1 }}>
@@ -201,7 +201,7 @@ const ComplianceTab = ({ user }) => {
                 <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, ...S.font }}>Leave empty to disable. Messages are deleted in nightly batches.</p>
             </Card>
 
-            {/* Audit Log */}
+            {}
             <Card title="Audit Log" subtitle="Your recent account activity">
                 {logsLoading ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 0' }}>
@@ -244,7 +244,7 @@ const ComplianceTab = ({ user }) => {
                 )}
             </Card>
 
-            {/* Delete Account */}
+            {}
             <Card title="Delete Account" subtitle="GDPR Article 17 — Right to erasure">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
                     <div style={{ flex: 1 }}>
@@ -259,7 +259,7 @@ const ComplianceTab = ({ user }) => {
                 </div>
             </Card>
 
-            {/* Delete Modal */}
+            {}
             {showDeleteModal && (
                 <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 16 }}>
                     <div style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid rgba(224,82,82,0.4)', borderRadius: 2, padding: 24, maxWidth: 400, width: '100%' }}>

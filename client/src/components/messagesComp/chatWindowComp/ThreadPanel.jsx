@@ -12,28 +12,26 @@ import { getAvatarUrl } from "../../../utils/avatarUtils";
 export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "", style = {} }) {
     const { showToast } = useToast();
 
-    // We use a local state for the parent message in case we fetch a fresher version,
-    // but we initialize it with the prop passed from the parent.
+    
+    
     const [parentMessageState, setParentMessageState] = useState(parentMessage);
     const [replies, setReplies] = useState([]);
     const [newReply, setNewReply] = useState("");
     const [loading, setLoading] = useState(false);
     const [sending, setSending] = useState(false);
     const [parentExpanded, setParentExpanded] = useState(false);
-    // Bootstrap follow status from getThread response (avoids extra round-trip)
+    
     const [initialFollowStatus, setInitialFollowStatus] = useState({ following: false, followerCount: 0 });
     const repliesEndRef = useRef(null);
 
-
-
     const formatTime = (iso) => fmtTime(iso);
 
-    // Thread follow state — bootstrapped from getThread response
+    
     const messageId = parentMessage._id || parentMessage.id;
     const { following, followerCount, toggle: toggleFollow, loading: followLoading, markAsFollowing } =
         useThreadFollow(messageId, initialFollowStatus);
 
-    // Update local state if prop changes
+    
     useEffect(() => {
         setParentMessageState(parentMessage);
     }, [parentMessage]);
@@ -49,12 +47,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             const token = localStorage.getItem("accessToken");
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-            // Use _id as primary, id as fallback
+            
             const messageId = parentMessage._id || parentMessage.id;
 
             const res = await api.get(`/api/v2/messages/thread/${messageId}`);
 
-            // ✅ Use channelId from props
+            
             console.log(`[THREAD][FETCH][DECRYPT] Loaded ${res.data.replies?.length || 0} replies for thread ${messageId}`);
             console.log(`[THREAD][FETCH][DECRYPT] Decrypting with context:`, {
                 channelId,
@@ -62,7 +60,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 replyCount: res.data.replies?.length || 0
             });
 
-            // Decrypt parent message if returned
+            
             let decryptedParent = res.data.parent;
             if (res.data.parent && channelId) {
                 try {
@@ -79,17 +77,17 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 }
             }
 
-            // Decrypt all replies
+            
             let decryptedReplies = res.data.replies || [];
             if (decryptedReplies.length > 0 && channelId) {
-                // ✅ NORMALIZE: Add id field for batchDecryptMessages compatibility
+                
                 const normalizedReplies = decryptedReplies.map(reply => ({
                     ...reply,
-                    id: reply._id || reply.id,  // Required by batchDecryptMessages
-                    isThreadEncrypted: false  // Thread replies use conversation key, not thread key
+                    id: reply._id || reply.id,  
+                    isThreadEncrypted: false  
                 }));
 
-                // ✅ FILTER: Only decrypt valid encrypted replies
+                
                 const validReplies = normalizedReplies.filter((reply, idx) => {
                     const isValid = reply?._id &&
                         reply.payload?.ciphertext &&
@@ -115,17 +113,17 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                             validReplies.map(r => r._id)
                         );
 
-                        // Thread replies do NOT use userJoinedAt filtering — access is inherited from the parent message
+                        
                         decryptedReplies = await batchDecryptMessages(
-                            validReplies,  // ✅ Only valid replies
+                            validReplies,  
                             channelId,
                             conversationType,
-                            null  // Threads don't filter by joinedAt
+                            null  
                         );
                         console.log(`[THREAD][DECRYPT][SUCCESS] Decrypted ${decryptedReplies.length} replies successfully`);
                     } catch (err) {
                         console.error('[THREAD][FETCH][DECRYPT] Failed to decrypt replies:', err);
-                        // Fall back to original array if decrypt fails
+                        
                         decryptedReplies = validReplies;
                     }
                 } else {
@@ -138,10 +136,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 console.log(`[THREAD][DECRYPT][SKIP] Missing channelId, cannot decrypt`);
             }
 
-            // Update state with decrypted data
+            
             if (decryptedParent) setParentMessageState(decryptedParent);
             setReplies(decryptedReplies);
-            // Bootstrap follow status from the API response (no extra round-trip)
+            
             if (res.data.followStatus) {
                 setInitialFollowStatus(res.data.followStatus);
             }
@@ -152,22 +150,22 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         }
     }, [parentMessage._id, parentMessage.id, channelId, conversationType]);
 
-    // Load thread on mount
+    
     useEffect(() => {
         loadThread();
     }, [loadThread]);
 
-    // Listen for new replies
+    
     useEffect(() => {
         if (!socket) return;
 
         const handleNewReply = async (data) => {
-            // Backend emits 'thread-reply' with { parentId, reply, clientTempId }
+            
             const reply = data.reply || data.message || data;
             const replyParentId = reply.parentId || data.parentId || reply.replyTo;
             const messageId = parentMessage._id || parentMessage.id;
 
-            // ✅ Extract clientTempId from data payload (sent by backend)
+            
             const socketClientTempId = data.clientTempId || reply.clientTempId;
 
             console.log(`[THREAD][REALTIME] Received thread reply:`, {
@@ -180,24 +178,24 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 isEncrypted: !!reply.payload?.ciphertext
             });
 
-            // Only process if reply belongs to THIS thread
+            
             if (replyParentId !== messageId) {
                 console.log(`[THREAD][REALTIME] Parent mismatch, ignoring`);
                 return;
             }
 
-            // ✅ NORMALIZE: Add id field for batchDecryptMessages compatibility
+            
             const normalizedReply = {
                 ...reply,
-                id: reply._id || reply.id,  // Required by batchDecryptMessages
-                isThreadEncrypted: false,  // Thread replies use conversation key, not thread key
-                clientTempId: socketClientTempId // ✅ Attach clientTempId for reconciliation
+                id: reply._id || reply.id,  
+                isThreadEncrypted: false,  
+                clientTempId: socketClientTempId 
             };
 
-            // ✅ DECRYPT realtime reply before adding to state
+            
             let decryptedReply = normalizedReply;
 
-            // ✅ VALIDATE reply before attempting decrypt
+            
             const canDecrypt = normalizedReply?._id &&
                 normalizedReply.payload?.ciphertext &&
                 normalizedReply.payload?.messageIv &&
@@ -207,18 +205,18 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 try {
                     const messageId = parentMessage._id || parentMessage.id;
                     console.log(`[THREAD][DECRYPT][INPUT] Realtime reply ${normalizedReply._id} valid, decrypting with parent ${messageId}...`);
-                    // Thread replies do NOT use userJoinedAt filtering — access is inherited from the parent message
+                    
                     const decrypted = await batchDecryptMessages(
                         [normalizedReply],
                         channelId,
                         conversationType,
-                        null  // Threads don't filter by joinedAt
+                        null  
                     );
                     decryptedReply = decrypted[0] || normalizedReply;
                     console.log(`[THREAD][REALTIME][DECRYPT] Successfully decrypted reply`);
                 } catch (err) {
                     console.error('[THREAD][REALTIME][DECRYPT] Failed to decrypt reply:', err);
-                    // Fall back to encrypted version (will show ciphertext in UI)
+                    
                 }
             } else {
                 console.log(`[THREAD][DECRYPT][SKIP] Reply cannot be decrypted:`, {
@@ -230,13 +228,13 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             }
 
             setReplies((prev) => {
-                // 1. Check strict duplicate by ID
+                
                 if (prev.find((r) => r._id === decryptedReply._id)) {
                     console.log(`[THREAD][REALTIME] Reply already exists (duplicate), skipping`);
                     return prev;
                 }
 
-                // 2. Check for matching optimistic message using clientTempId (most reliable)
+                
                 const optimisticMatchIndex = decryptedReply.clientTempId
                     ? prev.findIndex(r => r._id === decryptedReply.clientTempId || r.clientTempId === decryptedReply.clientTempId)
                     : -1;
@@ -252,7 +250,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     return newReplies;
                 }
 
-                // 3. No optimistic match - this is a reply from another user
+                
                 console.log(`[THREAD][REALTIME] Adding new reply from other user`);
                 return [...prev, decryptedReply];
             });
@@ -265,7 +263,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         };
     }, [socket, parentMessage._id, parentMessage.id, channelId, conversationType]);
 
-    // Scroll to bottom on new reply
+    
     useEffect(() => {
         repliesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [replies]);
@@ -281,7 +279,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             const headers = token ? { Authorization: `Bearer ${token}` } : {};
             const messageId = parentMessage._id || parentMessage.id;
 
-            // ✅ Use channelId from props
+            
             console.log(`[THREAD][SEND][E2EE] Encrypting reply for parent ${messageId}`);
             console.log(`[THREAD][SEND][CTX] Using channel context:`, {
                 channelId,
@@ -289,7 +287,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 parentId: messageId
             });
 
-            // Encrypt the reply using the same flow as normal messages
+            
             const encryptedPayload = await encryptMessageForSending(
                 replyText,
                 channelId,
@@ -305,12 +303,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
             console.log(`[THREAD][SEND][E2EE] Encryption successful, sending to backend`);
 
-            // Optimistic update (with plaintext for UI display)
+            
             const tempId = "temp-" + Date.now();
             const optimisticReply = {
                 _id: tempId,
-                payload: { text: replyText }, // Plaintext for UI (will be replaced)
-                text: replyText, // Fallback for compatibility
+                payload: { text: replyText }, 
+                text: replyText, 
                 sender: { _id: currentUserId, username: "You", profilePicture: null },
                 senderId: currentUserId,
                 createdAt: new Date().toISOString(),
@@ -319,7 +317,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             };
             setReplies((prev) => [...prev, optimisticReply]);
 
-            // Send encrypted payload to backend
+            
             const res = await api.post(`/api/v2/messages/thread/${messageId}`, {
                     ciphertext: encryptedPayload.ciphertext,
                     messageIv: encryptedPayload.messageIv,
@@ -329,7 +327,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
             console.log(`[THREAD][SEND][E2EE] Reply created successfully: ${res.data.reply._id}`);
 
-            // ✅ DECRYPT server response before replacing optimistic reply
+            
             console.log(`[THREAD][NORMALIZE] Normalizing server response:`, {
                 replyId: res.data.reply._id,
                 hasCiphertext: !!res.data.reply.payload?.ciphertext,
@@ -337,17 +335,17 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 isEncrypted: res.data.reply.payload?.isEncrypted
             });
 
-            // ✅ NORMALIZE: Add id field for batchDecryptMessages compatibility
+            
             const normalizedServerReply = {
                 ...res.data.reply,
-                id: res.data.reply._id || res.data.reply.id,  // Required by batchDecryptMessages
-                isThreadEncrypted: false  // Thread replies use conversation key, not thread key
+                id: res.data.reply._id || res.data.reply.id,  
+                isThreadEncrypted: false  
             };
 
-            // Decrypt the reply from server
+            
             let decryptedServerReply = normalizedServerReply;
 
-            // ✅ VALIDATE server response before attempting decrypt
+            
             const serverReplyValid = normalizedServerReply?._id &&
                 normalizedServerReply.payload?.ciphertext &&
                 normalizedServerReply.payload?.messageIv &&
@@ -357,18 +355,18 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 try {
                     const messageId = parentMessage._id || parentMessage.id;
                     console.log(`[THREAD][DECRYPT][INPUT] Server response valid, decrypting ${normalizedServerReply._id} with parent ${messageId}`);
-                    // Thread replies do NOT use userJoinedAt filtering — access is inherited from the parent message
+                    
                     const decrypted = await batchDecryptMessages(
                         [normalizedServerReply],
                         channelId,
                         conversationType,
-                        null  // Threads don't filter by joinedAt
+                        null  
                     );
                     decryptedServerReply = decrypted[0] || normalizedServerReply;
                     console.log(`[THREAD][DECRYPT][SUCCESS] Server reply decrypted successfully`);
                 } catch (err) {
                     console.error('[THREAD][DECRYPT] Failed to decrypt server reply:', err);
-                    // Fall back to encrypted version
+                    
                 }
             } else {
                 console.log(`[THREAD][DECRYPT][SKIP] Server reply cannot be decrypted:`, {
@@ -379,12 +377,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 });
             }
 
-            // Replace temp with DECRYPTED real message
+            
             setReplies((prev) =>
                 prev.map((r) => (r._id === tempId ? decryptedServerReply : r))
             );
 
-            // Auto-follow: instantly reflect follow state after sending a reply
+            
             markAsFollowing();
         } catch (err) {
             console.error("[THREAD][SEND][E2EE] Send reply failed:", err);
@@ -393,9 +391,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             setSending(false);
         }
     };
-    // Removed manual handleKeyDown as FooterInput handles it
+    
 
-    // Close on Escape key
+    
     useEffect(() => {
         const handleEsc = (e) => {
             if (e.key === "Escape") onClose();
@@ -420,7 +418,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             fontFamily: FONT,
             ...style,
         }}>
-            {/* Critical Error: Missing channelId */}
+            {}
             {!channelId ? (
                 <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
                     <div style={{ textAlign: 'center' }}>
@@ -441,7 +439,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 </div>
             ) : (
                 <>
-                    {/* Header */}
+                    {}
                     {showHeader && (
                         <div style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -455,7 +453,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>#{parentMessageState?.channelId?.name || 'discussion'}</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-                                {/* Follow / Unfollow toggle */}
+                                {}
                                 <button
                                     onClick={toggleFollow}
                                     disabled={followLoading}
@@ -512,10 +510,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                         </div>
                     ) : (
                         <>
-                            {/* Content Area */}
+                            {}
                             <div style={{ flex: 1, overflowY: 'auto', backgroundColor: 'var(--bg-surface)', display: 'flex', flexDirection: 'column' }}>
 
-                                {/* Parent Message */}
+                                {}
                                 {parentMessageState && (
                                     <div style={{
                                         padding: '12px 16px',
@@ -584,7 +582,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                     </div>
                                 )}
 
-                                {/* Replies List */}
+                                {}
                                 <div style={{ flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '6px' }}>
                                     {replies.length === 0 ? (
                                         <div style={{ textAlign: 'center', padding: '40px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
@@ -607,7 +605,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
                                             return (
                                                 <div key={reply._id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                                                    {/* Avatar */}
+                                                    {}
                                                     <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                         <img
                                                             src={senderPic}
@@ -637,7 +635,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                 </div>
                             </div>
 
-                            {/* Input Area */}
+                            {}
                             <FooterInput
                                 newMessage={newReply}
                                 setNewMessage={setNewReply}
@@ -661,4 +659,3 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         </div>
     );
 }
-

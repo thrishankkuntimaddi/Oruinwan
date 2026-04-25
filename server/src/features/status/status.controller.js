@@ -1,22 +1,5 @@
-// server/src/features/status/status.controller.js
-/**
- * Status Controller - HTTP Request/Response Layer
- * 
- * Thin wrapper for system health status endpoint.
- * 
- * @module features/status/status.controller
- */
-
 const statusService = require('./status.service');
 
-// ============================================================================
-// CONTROLLERS
-// ============================================================================
-
-/**
- * GET /api/v2/status/health
- * Get system health status
- */
 async function getSystemHealth(req, res) {
     try {
         const result = await statusService.getSystemHealth();
@@ -32,10 +15,6 @@ async function getSystemHealth(req, res) {
         });
     }
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     getSystemHealth

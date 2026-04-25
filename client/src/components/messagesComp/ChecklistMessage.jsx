@@ -1,20 +1,11 @@
-// client/src/components/messagesComp/ChecklistMessage.jsx
-// Phase-8: Interactive checklist inside a message bubble
 import React, { useState, useCallback } from 'react';
 import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
-/**
- * ChecklistMessage
- * Props:
- *  messageId  — message._id
- *  checklist  — array of { _id, text, checked, checkedBy, checkedAt, order }
- *  disabled   — if true, render read-only
- */
 export default function ChecklistMessage({ messageId, checklist: initialChecklist = [], disabled = false }) {
   const [items, setItems] = useState(initialChecklist);
-  const [loading, setLoading] = useState(null); // index currently toggling
+  const [loading, setLoading] = useState(null); 
 
   const toggle = useCallback(async (idx) => {
     if (disabled || loading !== null) return;
@@ -25,10 +16,10 @@ export default function ChecklistMessage({ messageId, checklist: initialChecklis
     setLoading(idx);
     try {
       const res = await api.post(`/api/v2/messages/${messageId}/checklist/${idx}`, {});
-      // Server returns updated checklist
+      
       if (res.data?.checklist) setItems(res.data.checklist);
     } catch {
-      // Rollback on error
+      
       setItems(items);
     } finally {
       setLoading(null);
@@ -40,7 +31,7 @@ export default function ChecklistMessage({ messageId, checklist: initialChecklis
 
   return (
     <div style={{ fontFamily: 'Inter, sans-serif', minWidth: 200, maxWidth: 360 }}>
-      {/* Progress bar */}
+      {}
       {items.length > 0 && (
         <div style={{ marginBottom: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -59,7 +50,7 @@ export default function ChecklistMessage({ messageId, checklist: initialChecklis
         </div>
       )}
 
-      {/* Items */}
+      {}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {items.map((item, idx) => (
           <label

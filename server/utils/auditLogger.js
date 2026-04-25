@@ -1,21 +1,5 @@
-// server/utils/auditLogger.js
-
 const AuditLog = require("../models/AuditLog");
 
-/**
- * Comprehensive audit logging for compliance and security
- * @param {Object} params
- * @param {string} params.userId - User who performed action
- * @param {string} params.action - Action type (e.g., "user.created", "channel.deleted")
- * @param {string} params.resource - Resource type (e.g., "User", "Channel", "Workspace")
- * @param {string} params.resourceId - ID of affected resource
- * @param {string} params.companyId - Company ID (null for personal users)
- * @param {Object} params.details - Detailed information about the action
- * @param {string} params.description - Human-readable description
- * @param {Object} params.req - Express request object (for IP/UA)
- * @param {string} params.status - 'success' | 'failure' | 'pending'
- * @param {string} params.errorMessage - Error message if failed
- */
 exports.logAudit = async ({
     userId,
     action,
@@ -53,30 +37,18 @@ exports.logAudit = async ({
         return auditEntry;
     } catch (err) {
         console.error("❌ Error creating audit log:", err);
-        // Don't fail the request if audit logging fails
+        
     }
 };
 
-/**
- * Log successful action
- */
 exports.logSuccess = (params) => {
     return exports.logAudit({ ...params, status: "success" });
 };
 
-/**
- * Log failed action
- */
 exports.logFailure = (params) => {
     return exports.logAudit({ ...params, status: "failure" });
 };
 
-/**
- * Get audit logs for a company
- * @param {string} companyId
- * @param {Object} options - Query options
- * @returns {Promise<Array>}
- */
 exports.getCompanyAuditLogs = async (companyId, options = {}) => {
     try {
         const {
@@ -112,12 +84,6 @@ exports.getCompanyAuditLogs = async (companyId, options = {}) => {
     }
 };
 
-/**
- * Get audit logs for a specific user
- * @param {string} userId
- * @param {number} limit
- * @returns {Promise<Array>}
- */
 exports.getUserAuditLogs = async (userId, limit = 50) => {
     try {
         return await AuditLog.find({ userId })
@@ -131,13 +97,6 @@ exports.getUserAuditLogs = async (userId, limit = 50) => {
     }
 };
 
-/**
- * Get audit logs for a specific resource
- * @param {string} resource - Resource type
- * @param {string} resourceId - Resource ID
- * @param {number} limit
- * @returns {Promise<Array>}
- */
 exports.getResourceAuditLogs = async (resource, resourceId, limit = 50) => {
     try {
         return await AuditLog.find({ resource, resourceId })
@@ -151,13 +110,6 @@ exports.getResourceAuditLogs = async (resource, resourceId, limit = 50) => {
     }
 };
 
-/**
- * Get audit statistics for a company
- * @param {string} companyId
- * @param {Date} startDate
- * @param {Date} endDate
- * @returns {Promise<Object>}
- */
 exports.getAuditStats = async (companyId, startDate, endDate) => {
     try {
         const query = { companyId };
@@ -168,10 +120,10 @@ exports.getAuditStats = async (companyId, startDate, endDate) => {
         }
 
         const [total, byAction, byStatus, byUser] = await Promise.all([
-            // Total count
+            
             AuditLog.countDocuments(query),
 
-            // Count by action
+            
             AuditLog.aggregate([
                 { $match: query },
                 { $group: { _id: "$action", count: { $sum: 1 } } },
@@ -179,13 +131,13 @@ exports.getAuditStats = async (companyId, startDate, endDate) => {
                 { $limit: 10 }
             ]),
 
-            // Count by status
+            
             AuditLog.aggregate([
                 { $match: query },
                 { $group: { _id: "$status", count: { $sum: 1 } } }
             ]),
 
-            // Top users by activity
+            
             AuditLog.aggregate([
                 { $match: query },
                 { $group: { _id: "$userId", count: { $sum: 1 } } },
@@ -206,11 +158,6 @@ exports.getAuditStats = async (companyId, startDate, endDate) => {
     }
 };
 
-/**
- * Clean up old audit logs (for data retention compliance)
- * @param {number} days - Delete logs older than this many days
- * @returns {Promise<number>} - Number of deleted logs
- */
 exports.cleanupOldLogs = async (days = 365) => {
     try {
         const cutoffDate = new Date();

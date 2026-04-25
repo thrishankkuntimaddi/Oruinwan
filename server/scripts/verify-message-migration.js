@@ -1,8 +1,3 @@
-/**
- * Verification script for Message Routes Canonicalization
- * Tests that routes are now using the canonical messages controller
- */
-
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:5000/api';
@@ -16,7 +11,7 @@ async function testMessageRoutes() {
             method: 'POST',
             endpoint: '/messages/dm/send',
             data: { ciphertext: 'test', messageIv: 'test', isEncrypted: true },
-            expectedStatus: 401, // No auth token
+            expectedStatus: 401, 
             expectLog: 'sendDirectMessage'
         },
         {
@@ -66,7 +61,7 @@ async function testMessageRoutes() {
                 method: test.method,
                 url: `${BASE_URL}${test.endpoint}`,
                 data: test.data,
-                validateStatus: () => true // Don't throw on any status
+                validateStatus: () => true 
             };
 
             const response = await axios(config);

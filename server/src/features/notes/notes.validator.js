@@ -1,27 +1,7 @@
-// server/src/features/notes/notes.validator.js
-/**
- * Notes Validator - Input Validation Layer
- * 
- * Schema validation for note operations.
- * NO business logic - only input sanitization and schema validation.
- * 
- * @module features/notes/notes.validator
- */
-
-// ============================================================================
-// VALIDATION RULES
-// ============================================================================
-
-/**
- * Validate note creation data
- * 
- * @param {Object} data - Note data to validate
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateCreateNote(data) {
     const errors = [];
 
-    // Required fields
+    
     if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
         errors.push('Title is required and must be a non-empty string');
     }
@@ -30,7 +10,7 @@ function validateCreateNote(data) {
         errors.push('Title must not exceed 500 characters');
     }
 
-    // Content validation
+    
     if (data.content && typeof data.content !== 'string') {
         errors.push('Content must be a string');
     }
@@ -39,7 +19,7 @@ function validateCreateNote(data) {
         errors.push('Content must not exceed 500000 characters');
     }
 
-    // Type validation — must match Note model enum
+    
     if (data.type) {
         const validTypes = ['note', 'meeting', 'documentation', 'brainstorm', 'sop', 'projectspec', 'techdesign', 'announcement'];
         if (!validTypes.includes(data.type)) {
@@ -47,17 +27,17 @@ function validateCreateNote(data) {
         }
     }
 
-    // Workspace is always required
+    
     if (!data.workspaceId) {
         errors.push('Workspace ID is required');
     }
 
-    // sharedWith validation
+    
     if (data.sharedWith && !Array.isArray(data.sharedWith)) {
         errors.push('sharedWith must be an array');
     }
 
-    // tags validation
+    
     if (data.tags && !Array.isArray(data.tags)) {
         errors.push('tags must be an array');
     }
@@ -68,16 +48,10 @@ function validateCreateNote(data) {
     };
 }
 
-/**
- * Validate note update data
- * 
- * @param {Object} data - Update data to validate
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateUpdateNote(data) {
     const errors = [];
 
-    // Title validation (if provided)
+    
     if (data.title !== undefined) {
         if (typeof data.title !== 'string' || data.title.trim().length === 0) {
             errors.push('Title must be a non-empty string');
@@ -87,7 +61,7 @@ function validateUpdateNote(data) {
         }
     }
 
-    // Content validation (if provided)
+    
     if (data.content !== undefined) {
         if (typeof data.content !== 'string') {
             errors.push('Content must be a string');
@@ -97,27 +71,27 @@ function validateUpdateNote(data) {
         }
     }
 
-    // sharedWith validation (if provided)
+    
     if (data.sharedWith !== undefined && !Array.isArray(data.sharedWith)) {
         errors.push('sharedWith must be an array');
     }
 
-    // isPublic validation (if provided)
+    
     if (data.isPublic !== undefined && typeof data.isPublic !== 'boolean') {
         errors.push('isPublic must be a boolean');
     }
 
-    // isPinned validation (if provided)
+    
     if (data.isPinned !== undefined && typeof data.isPinned !== 'boolean') {
         errors.push('isPinned must be a boolean');
     }
 
-    // isArchived validation (if provided)
+    
     if (data.isArchived !== undefined && typeof data.isArchived !== 'boolean') {
         errors.push('isArchived must be a boolean');
     }
 
-    // tags validation (if provided)
+    
     if (data.tags !== undefined && !Array.isArray(data.tags)) {
         errors.push('tags must be an array');
     }
@@ -128,12 +102,6 @@ function validateUpdateNote(data) {
     };
 }
 
-/**
- * Validate share note data
- * 
- * @param {Object} data - Share data
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateShareNote(data) {
     const errors = [];
 
@@ -147,12 +115,6 @@ function validateShareNote(data) {
     };
 }
 
-/**
- * Validate attachment data
- * 
- * @param {Object} data - Attachment data
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateAttachment(data) {
     const errors = [];
 
@@ -186,10 +148,6 @@ function validateAttachment(data) {
         errors: errors.length > 0 ? errors : undefined
     };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     validateCreateNote,

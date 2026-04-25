@@ -1,4 +1,3 @@
-// Careers.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import PublicPageShell from '../components/layout/PublicPageShell';
 import { Briefcase, MapPin, Clock, ArrowRight, Sparkles, Users, Globe, ChevronDown, ChevronUp } from 'lucide-react';
@@ -24,7 +23,7 @@ export default function Careers() {
 
     return (
         <PublicPageShell title="Careers">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 64px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
@@ -48,7 +47,7 @@ export default function Careers() {
                 </div>
             </div>
 
-            {/* Perks */}
+            {}
             <div style={{ padding: '64px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '32px' }}>Why Chttrix</p>
@@ -67,7 +66,7 @@ export default function Careers() {
                 </div>
             </div>
 
-            {/* Open Roles */}
+            {}
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '64px 24px' }}>
                 <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Open Positions</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>

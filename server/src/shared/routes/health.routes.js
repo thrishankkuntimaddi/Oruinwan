@@ -1,19 +1,13 @@
 'use strict';
-// server/src/shared/routes/health.routes.js
-//
-// Health check endpoint for production monitoring.
-// Migrated from server.js inline handler (Phase 4 cleanup).
-// NO behavior change — same response shape as before.
 
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
 const logger = require('../../../utils/logger');
 
-// GET /api/health
 router.get('/', async (req, res) => {
   try {
-    // Check MongoDB connection status
+    
     const dbStatus = mongoose.connection.readyState;
     const dbStatusMap = {
       0: 'disconnected',

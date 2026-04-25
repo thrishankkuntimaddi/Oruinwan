@@ -5,7 +5,6 @@ import { useWorkspace } from "../../contexts/WorkspaceContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings, Puzzle, ChevronDown } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 
-// Icon map shared for workspace icons
 const ICON_MAP_LG = {
     rocket: <Rocket size={18} />, briefcase: <Briefcase size={18} />, zap: <Zap size={18} />,
     palette: <Palette size={18} />, microscope: <Microscope size={18} />, globe: <Globe size={18} />,
@@ -62,7 +61,7 @@ const IconSidebar = ({ onProfileClick }) => {
         ...((user?.companyRole === 'manager' || (user?.managedDepartments && user.managedDepartments.length > 0)) ? [{ icon: <Briefcase size={19} strokeWidth={2} />, path: "/manager/dashboard/overview", label: "Manager", absolute: true }] : []),
     ];
 
-    // ── Shared style helpers ──────────────────────────────────────────
+    
     const btnBase = {
         width: '36px', height: '36px', borderRadius: '2px', display: 'flex',
         alignItems: 'center', justifyContent: 'center', background: 'none',
@@ -79,7 +78,7 @@ const IconSidebar = ({ onProfileClick }) => {
             position: 'relative', flexShrink: 0, fontFamily: 'var(--font)',
         }}>
 
-            {/* Workspace switcher badge */}
+            {}
             <div style={{ position: 'relative', marginBottom: '10px' }} ref={menuRef}>
                 <button
                     onClick={() => setShowWorkspaceMenu(s => !s)}
@@ -95,7 +94,7 @@ const IconSidebar = ({ onProfileClick }) => {
                 >
                     {ICON_MAP_LG[activeWorkspace?.icon] || ICON_MAP_LG.rocket}
 
-                    {/* Chevron badge */}
+                    {}
                     <div style={{
                         position: 'absolute', bottom: '-3px', right: '-3px',
                         width: '12px', height: '12px', borderRadius: '50%',
@@ -106,7 +105,7 @@ const IconSidebar = ({ onProfileClick }) => {
                     </div>
                 </button>
 
-                {/* Workspace Switcher Dropdown */}
+                {}
                 {showWorkspaceMenu && (
                     <div style={{
                         position: 'absolute', left: '46px', top: 0, width: '220px',
@@ -114,7 +113,7 @@ const IconSidebar = ({ onProfileClick }) => {
                         borderRadius: '2px', zIndex: 100, overflow: 'hidden',
                         animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)',
                     }}>
-                        {/* Header */}
+                        {}
                         <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                             <button
                                 onClick={() => { navigate("/workspaces"); setShowWorkspaceMenu(false); }}
@@ -127,7 +126,7 @@ const IconSidebar = ({ onProfileClick }) => {
                             </button>
                         </div>
 
-                        {/* Workspace list */}
+                        {}
                         <div style={{ padding: '4px 0' }}>
                             <div style={{ padding: '4px 12px', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Switch to</div>
                             {workspaces.map(ws => (
@@ -152,7 +151,7 @@ const IconSidebar = ({ onProfileClick }) => {
                 )}
             </div>
 
-            {/* Nav Icons */}
+            {}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '2px', width: '100%', alignItems: 'center', overflowY: 'auto', padding: '2px 0' }} className="no-scrollbar">
                 {navItems.map((item) => {
                     const targetPath = item.absolute
@@ -169,13 +168,13 @@ const IconSidebar = ({ onProfileClick }) => {
                                 onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; } }}
                                 title={item.label}
                             >
-                                {/* Active indicator bar */}
+                                {}
                                 {active && (
                                     <div style={{ position: 'absolute', left: 0, top: '20%', height: '60%', width: '2px', background: 'var(--accent)', borderRadius: '0 2px 2px 0' }} />
                                 )}
                                 {item.icon}
                             </button>
-                            {/* Tooltip */}
+                            {}
                             <div style={{
                                 position: 'absolute', left: '44px', top: '50%', transform: 'translateY(-50%)',
                                 background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
@@ -191,9 +190,9 @@ const IconSidebar = ({ onProfileClick }) => {
                 })}
             </div>
 
-            {/* Bottom: Settings + Profile */}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center', paddingTop: '8px' }}>
-                {/* Settings */}
+                {}
                 <div style={{ position: 'relative' }} className="group">
                     <button
                         onClick={() => navigate("/settings", { state: { from: location.pathname } })}
@@ -216,7 +215,7 @@ const IconSidebar = ({ onProfileClick }) => {
                     </div>
                 </div>
 
-                {/* Profile */}
+                {}
                 <div onClick={onProfileClick} style={{ cursor: 'pointer', transition: 'opacity 150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
                     onMouseLeave={e => e.currentTarget.style.opacity = '1'}

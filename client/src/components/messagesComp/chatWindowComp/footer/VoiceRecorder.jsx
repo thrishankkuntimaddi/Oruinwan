@@ -1,10 +1,9 @@
-// VoiceRecorder — Monolith Flow Design System
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import api from '@services/api';
 import { Mic, Square, Send, Trash2, X, Loader2 } from 'lucide-react';
 
 export default function VoiceRecorder({ onSend, onCancel }) {
-  const [phase, setPhase] = useState('idle'); // idle | recording | preview | uploading
+  const [phase, setPhase] = useState('idle'); 
   const [seconds, setSeconds] = useState(0);
   const [blobUrl, setBlobUrl] = useState(null);
   const [error, setError] = useState(null);
@@ -107,7 +106,7 @@ export default function VoiceRecorder({ onSend, onCancel }) {
           <span style={{ fontSize: '13px', fontVariantNumeric: 'tabular-nums', color: 'var(--text-primary)', minWidth: '40px', fontWeight: 500 }}>
             {fmt(seconds)}
           </span>
-          {/* Waveform */}
+          {}
           <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flex: 1 }}>
             {[3, 6, 9, 7, 4, 8, 5, 6, 3].map((h, i) => (
               <div key={i} style={{

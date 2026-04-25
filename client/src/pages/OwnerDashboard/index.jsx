@@ -114,7 +114,7 @@ const OwnerDashboard = () => {
             background: 'var(--bg-base)',
             fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
         }}>
-            {/* Header */}
+            {}
             <header style={{
                 height: '64px',
                 padding: '0 32px',
@@ -199,11 +199,11 @@ const OwnerDashboard = () => {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }} className="custom-scrollbar">
                 {loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', maxWidth: '1280px', margin: '0 auto' }}>
-                        {/* Org Overview skeleton */}
+                        {}
                         <div>
                             <div className="sk" style={{ height: '10px', width: '120px', marginBottom: '12px' }} />
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
@@ -229,7 +229,7 @@ const OwnerDashboard = () => {
                                 ))}
                             </div>
                         </div>
-                        {/* Activity Health skeleton */}
+                        {}
                         <div>
                             <div className="sk" style={{ height: '10px', width: '110px', marginBottom: '12px' }} />
                             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
@@ -247,7 +247,7 @@ const OwnerDashboard = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Quick Links skeleton */}
+                        {}
                         <div>
                             <div className="sk" style={{ height: '10px', width: '80px', marginBottom: '12px' }} />
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
@@ -265,7 +265,7 @@ const OwnerDashboard = () => {
                         <OrganizationOverview data={overviewData} />
                         <ActivityHealth data={activityData} />
 
-                        {/* Quick Links */}
+                        {}
                         <section>
                             <div style={{ marginBottom: '16px' }}>
                                 <h3 style={{

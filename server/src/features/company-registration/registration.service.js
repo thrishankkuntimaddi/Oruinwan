@@ -1,13 +1,3 @@
-/**
- * Registration Service - Company Registration & Provisioning
- * 
- * Handles company registration workflow, document processing, verification,
- * and resource provisioning (workspaces, departments, channels).
- * This is the most complex service extracted from companyController.js
- * 
- * @module features/company-registration/registration.service
- */
-
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
@@ -20,21 +10,11 @@ const _sendEmail = require('../../../utils/sendEmail');
 const { logAction } = require('../../../utils/historyLogger');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 
-/**
- * Validate domain format
- * @param {string} domain - Domain to  validate
- * @returns {boolean} Valid or not
- */
 function isValidDomain(domain) {
     const domainRegex = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/i;
     return domainRegex.test(domain);
 }
 
-/**
- * Process uploaded documents (base64 to file system)
- * @param {Array} documents - Array of {name, content} with base64 content
- * @returns {Promise<Array>} Processed documents with file paths
- */
 async function processDocuments(documents) {
     const processedDocuments = [];
 
@@ -45,7 +25,7 @@ async function processDocuments(documents) {
     for (const doc of documents) {
         if (doc.content && doc.name) {
             try {
-                // Strip base64 header
+                
                 const base64Data = doc.content.replace(/^data:([A-Za-z-+/]+);base64,/, '');
                 const buffer = Buffer.from(base64Data, 'base64');
 
@@ -73,11 +53,6 @@ async function processDocuments(documents) {
     return processedDocuments;
 }
 
-/**
- * Register new company (pending verification)
- * @param {Object} params - Registration parameters
- * @returns {Promise<Object>} Created company and admin user
- */
 async function registerCompany(params) {
     const {
         companyName,
@@ -96,12 +71,12 @@ async function registerCompany(params) {
         req
     } = params;
 
-    // Validation
+    
     if (!companyName || !adminName || !adminEmail || !adminPassword) {
         throw new Error('Company name, admin name, email, and password are required');
     }
 
-    // Check existing personal email
+    
     if (personalEmail) {
         const existingOwner = await User.findOne({
             $or: [
@@ -118,7 +93,7 @@ async function registerCompany(params) {
         }
     }
 
-    // Check existing phone
+    
     if (phone) {
         const existingPhoneUser = await User.findOne({ phone, companyRole: 'owner' });
         const existingCompanyPhone = await Company.findOne({ ownerPhone: phone });
@@ -128,18 +103,18 @@ async function registerCompany(params) {
         }
     }
 
-    // Check existing admin email
+    
     const existingUser = await User.findOne({ email: adminEmail });
     if (existingUser) {
         throw new Error('Admin email already in use');
     }
 
-    // Validate domain
+    
     if (domain && !isValidDomain(domain)) {
         throw new Error('Invalid domain format');
     }
 
-    // Check domain availability
+    
     if (domain) {
         const existingCompany = await Company.findOne({ domain });
         if (existingCompany) {
@@ -147,10 +122,10 @@ async function registerCompany(params) {
         }
     }
 
-    // Process documents
+    
     const processedDocuments = await processDocuments(documents);
 
-    // Create company (pending verification)
+    
     const company = new Company({
         name: companyName,
         domain: domain || null,
@@ -171,7 +146,7 @@ async function registerCompany(params) {
 
     await company.save();
 
-    // Create admin user (pending status)
+    
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
     const adminUser = new User({
@@ -181,7 +156,7 @@ async function registerCompany(params) {
         passwordHash,
         userType: 'company',
         companyId: company._id,
-        companyRole: (role || 'owner').toLowerCase(), // Convert to lowercase to match enum
+        companyRole: (role || 'owner').toLowerCase(), 
         phone: phone || null,
         phoneCode: params.phoneCode || '+91',
         profile: {
@@ -198,19 +173,19 @@ async function registerCompany(params) {
     try {
         await adminUser.save();
     } catch (err) {
-        // Cleanup company if user creation fails
+        
         await Company.findByIdAndDelete(company._id);
         throw new Error(`Failed to create admin user: ${err.message}`);
     }
 
-    // Link admin to company
+    
     company.admins.push({
         user: adminUser._id,
         role: 'owner'
     });
     await company.save();
 
-    // Log action
+    
     await logAction({
         userId: adminUser._id,
         action: 'company_registration_requested',
@@ -225,10 +200,6 @@ async function registerCompany(params) {
     return { company, adminUser };
 }
 
-/**
- * Create workspace with default channels
- * Helper function for provisioning
- */
 async function createWorkspaceWithChannels({ company, adminUser, deptName, deptId, isDefault, workspaceName }) {
     const ws = new Workspace({
         company: company._id,
@@ -241,7 +212,7 @@ async function createWorkspaceWithChannels({ company, adminUser, deptName, deptI
     });
     await ws.save();
 
-    // Create default channels
+    
     const channelsToCreate = ['general', 'announcements'];
     const createdChanIds = [];
     const creationDate = new Date();
@@ -267,7 +238,7 @@ async function createWorkspaceWithChannels({ company, adminUser, deptName, deptI
     ws.defaultChannels = createdChanIds;
     await ws.save();
 
-    // Bootstrap conversation keys for E2EE
+    
     for (const chanId of createdChanIds) {
         try {
             await conversationKeysService.bootstrapConversationKey({
@@ -285,12 +256,6 @@ async function createWorkspaceWithChannels({ company, adminUser, deptName, deptI
     return ws;
 }
 
-/**
- * Provision company resources after verification approval
- * Creates departments, workspaces, and channels
- * @param {Object} params - Provisioning parameters
- * @returns {Promise<Object>} Provisioned resources
- */
 async function provisionCompanyResources({ company, adminUser }) {
     const metadata = company.metadata || {};
     const {
@@ -302,7 +267,7 @@ async function provisionCompanyResources({ company, adminUser }) {
     const createdDepartmentIds = [];
     const workspaceName = requestedWorkspaceName || `${company.name} Workspace`;
 
-    // Create requested departments (without auto-workspaces)
+    
     for (const deptName of requestedDepartments) {
         const dept = new Department({
             name: deptName,
@@ -315,7 +280,7 @@ async function provisionCompanyResources({ company, adminUser }) {
         createdDepartmentIds.push(dept._id);
     }
 
-    // Create DEFAULT workspace for entire company
+    
     const defaultWorkspace = await createWorkspaceWithChannels({
         company,
         adminUser,
@@ -323,16 +288,16 @@ async function provisionCompanyResources({ company, adminUser }) {
         workspaceName
     });
 
-    // Link default workspace to company
+    
     company.defaultWorkspace = defaultWorkspace._id;
 
-    // Update admin user with workspace and departments
+    
     adminUser.workspaces = [{
         workspace: defaultWorkspace._id,
         role: 'owner'
     }];
     adminUser.departments = createdDepartmentIds;
-    adminUser.accountStatus = 'active'; // Activate account
+    adminUser.accountStatus = 'active'; 
 
     await adminUser.save();
     await company.save();
@@ -344,9 +309,6 @@ async function provisionCompanyResources({ company, adminUser }) {
     };
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
 module.exports = {
     isValidDomain,
     processDocuments,

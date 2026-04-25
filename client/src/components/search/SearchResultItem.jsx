@@ -1,13 +1,6 @@
-// client/src/components/search/SearchResultItem.jsx
-/**
- * SearchResultItem — Renders a single search result row.
- * Handles all types: message, file, user, channel, task, note, knowledge.
- */
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// ── Highlight matched text ────────────────────────────────────────────────────
 function HighlightText({ text, highlight }) {
     if (!text) return null;
     if (!highlight || !highlight.trim()) return <span>{text}</span>;
@@ -25,7 +18,6 @@ function HighlightText({ text, highlight }) {
     );
 }
 
-// ── Type icons ────────────────────────────────────────────────────────────────
 const TYPE_ICON = {
     message:   '💬',
     file:      '📎',
@@ -85,7 +77,6 @@ function formatBytes(bytes) {
     return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 export default function SearchResultItem({ result, query, onClick, compact = false }) {
     const navigate = useNavigate();
 
@@ -97,7 +88,7 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
 
     const handleClick = () => {
         if (onClick) return onClick(result);
-        // Default navigation by type
+        
         switch (type) {
             case 'channel':   navigate(`/workspace?channel=${result.id}`); break;
             case 'task':      navigate(`/workspace?task=${result.id}`);    break;
@@ -110,12 +101,12 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
 
     return (
         <div className={`search-result-item search-result-${type} ${compact ? 'compact' : ''}`} onClick={handleClick}>
-            {/* Left: icon */}
+            {}
             <div className="search-result-icon">
                 <span className="search-result-type-icon">{type === 'knowledge' ? (result.icon || '📚') : icon}</span>
             </div>
 
-            {/* Center: main content */}
+            {}
             <div className="search-result-content">
                 <div className="search-result-header">
                     <span className="search-result-title">
@@ -128,7 +119,7 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
                     {!compact && <span className="search-result-type-badge">{typeLabel}</span>}
                 </div>
 
-                {/* Subtitle / preview */}
+                {}
                 {!compact && (
                     <div className="search-result-meta">
                         {type === 'message' && result.sender && (
@@ -184,12 +175,12 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
                 )}
             </div>
 
-            {/* Right: timestamp */}
+            {}
             {result.createdAt && (
                 <div className="search-result-time">{formatDate(result.createdAt)}</div>
             )}
 
-            {/* Avatar for users */}
+            {}
             {(type === 'contact' || type === 'user') && (
                 <div className="search-result-avatar">
                     {result.profilePicture

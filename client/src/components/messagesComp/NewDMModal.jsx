@@ -69,7 +69,7 @@ export default function NewDMModal({ onClose, onStart }) {
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', zIndex: 70, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '480px', maxHeight: '600px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-        {/* Header */}
+        {}
         <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <h3 style={{ fontSize: '16px', fontWeight: 700, color: T.text, fontFamily: T.font, margin: 0 }}>New Message</h3>
@@ -85,7 +85,7 @@ export default function NewDMModal({ onClose, onStart }) {
           </button>
         </div>
 
-        {/* Search */}
+        {}
         <div style={{ padding: '12px 16px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
           <div style={{ position: 'relative' }}>
             <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: T.muted }} />
@@ -102,7 +102,7 @@ export default function NewDMModal({ onClose, onStart }) {
           </div>
         </div>
 
-        {/* User List */}
+        {}
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {loading && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 0', gap: '10px' }}>
@@ -137,7 +137,7 @@ export default function NewDMModal({ onClose, onStart }) {
                   onMouseEnter={e => e.currentTarget.style.background = T.accentBg}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
-                  {/* Avatar */}
+                  {}
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <img
                       src={getAvatarUrl(u)}
@@ -152,7 +152,7 @@ export default function NewDMModal({ onClose, onStart }) {
                     }} />
                   </div>
 
-                  {/* Info */}
+                  {}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '13px', fontWeight: 600, color: T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: T.font }}>
@@ -170,7 +170,7 @@ export default function NewDMModal({ onClose, onStart }) {
                     )}
                   </div>
 
-                  {/* Action */}
+                  {}
                   <button
                     onClick={(e) => { e.stopPropagation(); onStart(u); }}
                     style={{ flexShrink: 0, padding: '4px 10px', background: T.accent, border: 'none', color: '#000', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: T.font, transition: 'opacity 150ms ease', opacity: 0 }}

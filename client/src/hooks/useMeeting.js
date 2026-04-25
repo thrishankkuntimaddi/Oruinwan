@@ -1,23 +1,16 @@
-// client/src/hooks/useMeeting.js
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '@services/api';
 import { useSocket } from '../contexts/SocketContext';
 
 const API = '/api/v2/meetings';
 
-/**
- * Hook for meeting data + realtime socket integration.
- *
- * @param {string} meetingId  - The meeting document _id
- * @param {string} workspaceId
- */
 export function useMeeting(meetingId, workspaceId) {
     const { socket } = useSocket();
     const [meeting, setMeeting] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // ── Fetch ────────────────────────────────────────────────────────────────
+    
     const fetchMeeting = useCallback(async () => {
         if (!meetingId) return;
         setLoading(true);
@@ -33,14 +26,14 @@ export function useMeeting(meetingId, workspaceId) {
 
     useEffect(() => { fetchMeeting(); }, [fetchMeeting]);
 
-    // ── Join ─────────────────────────────────────────────────────────────────
+    
     const joinMeeting = useCallback(async () => {
         const { data } = await api.post(`${API}/${meetingId}/join`, {});
         setMeeting(data.meeting);
         socket?.emit('meeting:join', { meetingId });
     }, [meetingId, socket]);
 
-    // ── End ──────────────────────────────────────────────────────────────────
+    
     const endMeeting = useCallback(async (recordingUrl) => {
         const { data } = await api.patch(
             `${API}/${meetingId}/end`,
@@ -49,7 +42,7 @@ export function useMeeting(meetingId, workspaceId) {
         setMeeting(data.meeting);
     }, [meetingId]);
 
-    // ── Agenda ───────────────────────────────────────────────────────────────
+    
     const updateAgenda = useCallback(async (agenda) => {
         const { data } = await api.patch(
             `${API}/${meetingId}/agenda`,
@@ -58,7 +51,7 @@ export function useMeeting(meetingId, workspaceId) {
         setMeeting(data.meeting);
     }, [meetingId]);
 
-    // ── Transcript ───────────────────────────────────────────────────────────
+    
     const updateTranscript = useCallback(async (transcript) => {
         const { data } = await api.patch(
             `${API}/${meetingId}/transcript`,
@@ -67,7 +60,7 @@ export function useMeeting(meetingId, workspaceId) {
         setMeeting(data.meeting);
     }, [meetingId]);
 
-    // ── AI Summary ───────────────────────────────────────────────────────────
+    
     const generateSummary = useCallback(async () => {
         const { data } = await api.post(
             `${API}/${meetingId}/summarize`,
@@ -77,7 +70,7 @@ export function useMeeting(meetingId, workspaceId) {
         return data.summary;
     }, [meetingId]);
 
-    // ── Action Items ─────────────────────────────────────────────────────────
+    
     const addActionItem = useCallback(async ({ text, assignedTo, status }) => {
         const { data } = await api.post(
             `${API}/${meetingId}/action-items`,
@@ -94,7 +87,7 @@ export function useMeeting(meetingId, workspaceId) {
         setMeeting(data.meeting);
     }, [meetingId]);
 
-    // ── Suggest Time ─────────────────────────────────────────────────────────
+    
     const suggestTime = useCallback(async (participantIds = [], durationMinutes = 30) => {
         const { data } = await api.post(
             `${API}/suggest-time`,
@@ -103,7 +96,7 @@ export function useMeeting(meetingId, workspaceId) {
         return data;
     }, []);
 
-    // ── Socket: meeting room events ───────────────────────────────────────────
+    
     useEffect(() => {
         if (!socket || !meetingId) return;
 
@@ -135,18 +128,15 @@ export function useMeeting(meetingId, workspaceId) {
         setMeeting };
 }
 
-/**
- * Hook for shared notes realtime sync.
- */
 export function useSharedNotes(meetingId, initialNotes = '') {
     const { socket } = useSocket();
     const [notes, setNotes] = useState(initialNotes);
     const debounceRef = useRef(null);
 
-    // Sync initialNotes when meeting loads
+    
     useEffect(() => { setNotes(initialNotes); }, [initialNotes]);
 
-    // Listen for remote updates
+    
     useEffect(() => {
         if (!socket || !meetingId) return;
         const onUpdate = (data) => {
@@ -160,7 +150,7 @@ export function useSharedNotes(meetingId, initialNotes = '') {
 
     const handleNotesChange = useCallback((value) => {
         setNotes(value);
-        // Debounce socket emit 500 ms
+        
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             socket?.emit('meeting:notes_update', { meetingId, content: value });

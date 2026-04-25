@@ -1,18 +1,12 @@
-// server/src/features/security/gdpr.controller.js
-// GDPR & Compliance: user data export, right-to-be-forgotten, legal holds, workspace export.
-
 'use strict';
 
 const User = require('../../../models/User');
 const AuditLog = require('../../../models/AuditLog');
 
-// ── Helper: safely require optional models ────────────────────────────────────
 function tryRequire(path) {
   try { return require(path); } catch { return null; }
 }
 
-// ── GET /api/compliance/export-user ──────────────────────────────────────────
-// GDPR Article 20: Right to data portability. Returns all data for current user.
 exports.exportUser = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -22,7 +16,7 @@ exports.exportUser = async (req, res) => {
 
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    // Gather associated data from other models (best-effort)
+    
     const Task = tryRequire('../tasks/task.model');
     const Note = tryRequire('../../../models/Note');
 
@@ -41,7 +35,7 @@ exports.exportUser = async (req, res) => {
       auditLogs,
     };
 
-    // Audit the export itself
+    
     await AuditLog.create({
       userId,
       action: 'compliance.export_user',
@@ -63,9 +57,6 @@ exports.exportUser = async (req, res) => {
   }
 };
 
-// ── DELETE /api/compliance/delete-user ───────────────────────────────────────
-// GDPR Article 17: Right to erasure ("right to be forgotten").
-// Blocked if user is under legal hold.
 exports.deleteUser = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -79,7 +70,7 @@ exports.deleteUser = async (req, res) => {
       });
     }
 
-    // Audit before deleting (write to a preserved compliance log)
+    
     await AuditLog.create({
       userId,
       action: 'compliance.delete_user',
@@ -92,7 +83,7 @@ exports.deleteUser = async (req, res) => {
       severity: 'critical',
     });
 
-    // Anonymize instead of hard-delete to preserve referential integrity
+    
     await User.findByIdAndUpdate(userId, {
       email: `deleted_${userId}@deleted.chttrix`,
       username: `[Deleted User]`,
@@ -119,8 +110,6 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-// ── GET /api/compliance/export ────────────────────────────────────────────────
-// Workspace-level export: messages, tasks, files metadata (admin only).
 exports.exportWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.query;
@@ -162,8 +151,6 @@ exports.exportWorkspace = async (req, res) => {
   }
 };
 
-// ── GET /api/compliance/legal-hold/:userId ─────────────────────────────────
-// Get legal hold status for a user (admin only).
 exports.getLegalHold = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -185,8 +172,6 @@ exports.getLegalHold = async (req, res) => {
   }
 };
 
-// ── PATCH /api/compliance/legal-hold/:userId ──────────────────────────────────
-// Set or unset legal hold on a user (admin only).
 exports.setLegalHold = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -224,8 +209,6 @@ exports.setLegalHold = async (req, res) => {
   }
 };
 
-// ── GET /api/compliance/audit-logs ───────────────────────────────────────────
-// Returns audit logs for the current user (own events), or all logs for admins.
 exports.getAuditLogs = async (req, res) => {
   try {
     const { page = 1, limit = 50, action, from, to } = req.query;
@@ -257,8 +240,6 @@ exports.getAuditLogs = async (req, res) => {
   }
 };
 
-// ── GET /api/compliance/retention-policy ─────────────────────────────────────
-// Get current user's retention policy.
 exports.getRetentionPolicy = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub).select('retentionDays').lean();
@@ -268,8 +249,6 @@ exports.getRetentionPolicy = async (req, res) => {
   }
 };
 
-// ── PATCH /api/compliance/retention-policy ────────────────────────────────────
-// Update workspace/user retention policy (admin only).
 exports.setRetentionPolicy = async (req, res) => {
   try {
     const { retentionDays } = req.body;

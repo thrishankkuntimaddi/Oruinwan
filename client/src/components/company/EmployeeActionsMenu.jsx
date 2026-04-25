@@ -1,11 +1,9 @@
-// client/src/components/company/EmployeeActionsMenu.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { MoreVertical, UserX, UserCheck, Trash2, Building, Award } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '@services/api';
 
-// viewerRole: the companyRole of the currently logged-in user
 const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole = 'member' }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [menuPos, setMenuPos] = useState({ top: 0, right: 0, openUpward: false });
@@ -20,7 +18,7 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
     const [loading, setLoading] = useState(false);
     const btnRef = useRef(null);
 
-    // Close on scroll or resize
+    
     useEffect(() => {
         if (!isOpen) return;
         const close = () => setIsOpen(false);
@@ -35,12 +33,12 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
     const viewerIsAdminOrAbove = viewerRole === 'owner' || viewerRole === 'admin';
     const viewerIsOwner = viewerRole === 'owner';
 
-    // Target-based guards
+    
     const canSuspend = employee.companyRole !== 'owner' && employee.accountStatus === 'active' && viewerIsAdminOrAbove;
     const canActivate = employee.accountStatus === 'suspended' && viewerIsAdminOrAbove;
     const canRemove = employee.companyRole !== 'owner' && employee.accountStatus !== 'removed' && viewerIsAdminOrAbove;
 
-    // Viewer can change roles only if they are admin/owner AND the target is not an equal/higher rank
+    
     const targetRank = { owner: 3, admin: 2, manager: 1, member: 0, guest: 0 };
     const viewerRank = targetRank[viewerRole] ?? 0;
     const employeeRank = targetRank[employee.companyRole] ?? 0;
@@ -162,11 +160,11 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
                     onClick={() => {
                         if (btnRef.current) {
                             const rect = btnRef.current.getBoundingClientRect();
-                            const MENU_HEIGHT = 220; // estimated
+                            const MENU_HEIGHT = 220; 
                             const spaceBelow = window.innerHeight - rect.bottom;
                             const openUpward = spaceBelow < MENU_HEIGHT;
                             setMenuPos({
-                                // position from right edge of viewport
+                                
                                 right: window.innerWidth - rect.right,
                                 top: openUpward ? undefined : rect.bottom + 6,
                                 bottom: openUpward ? window.innerHeight - rect.top + 6 : undefined,
@@ -182,15 +180,15 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
                 </button>
             </div>
 
-            {/* Portal dropdown — rendered at document.body to escape overflow-hidden */}
+            {}
             {isOpen && ReactDOM.createPortal(
                 <>
-                    {/* Backdrop */}
+                    {}
                     <div
                         className="fixed inset-0 z-[9998]"
                         onClick={() => setIsOpen(false)}
                     />
-                    {/* Menu */}
+                    {}
                     <div
                         style={{
                             position: 'fixed',
@@ -277,7 +275,7 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
                 document.body
             )}
 
-            {/* Suspend Modal */}
+            {}
             {showSuspendModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
@@ -321,7 +319,7 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
                 </div>
             )}
 
-            {/* Remove Modal */}
+            {}
             {showRemoveModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
@@ -350,7 +348,7 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
                 </div>
             )}
 
-            {/* Department Assignment Modal */}
+            {}
             {showDepartmentModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
@@ -392,7 +390,7 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
                 </div>
             )}
 
-            {/* Role Change Modal */}
+            {}
             {showRoleModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md p-6">
@@ -414,7 +412,7 @@ const EmployeeActionsMenu = ({ employee, departments = [], onUpdate, viewerRole 
                             <option value="member">Employee</option>
                             <option value="guest">Guest</option>
                             <option value="manager">Manager</option>
-                            {/* Only owners can promote to admin; admins cannot create peer admins */}
+                            {}
                             {viewerIsOwner && <option value="admin">Admin</option>}
                         </select>
                         </div>

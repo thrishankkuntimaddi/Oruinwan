@@ -1,4 +1,3 @@
-// server/controllers/channelController.js
 'use strict';
 
 const Channel = require('./channel.model.js');
@@ -12,14 +11,6 @@ const { _emitToWorkspace, _emitToChannel, _emitToUser, _emitToUsers } = require(
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 const logger = require('../../shared/utils/logger');
 
-/**
- * Check if a user is the owner of the workspace that contains a channel.
- * workspaceOwner sits above channelAdmin in the hierarchy.
- *
- * @param {string} userId
- * @param {string|ObjectId} workspaceId
- * @returns {Promise<boolean>}
- */
 async function isWorkspaceOwner(userId, workspaceId) {
   if (!workspaceId) return false;
   const ws = await Workspace.findById(workspaceId).select('members').lean();
@@ -30,11 +21,6 @@ async function isWorkspaceOwner(userId, workspaceId) {
   );
 }
 
-/**
- * Create channel (public or private).
- * Body: { name, description?, isPrivate?, memberIds?: [id,...] }
- * Creator becomes createdBy and is added to members.
- */
 exports.createChannel = async (req, res) => {
   logger.debug('createChannel invoked');
   try {
@@ -49,15 +35,15 @@ exports.createChannel = async (req, res) => {
       return res.status(400).json({ message: "Channel name required" });
     }
 
-    // Normalize members: include creator
+    
     const distinctMemberIds = Array.from(new Set([userId, ...(memberIds || [])].map(String)));
 
-    // ENFORCE MIN 3 RULE
+    
     if (distinctMemberIds.length < 3) {
       return res.status(400).json({ message: "At least 3 members are required to create a channel." });
     }
 
-    // New format: members: [{ user, joinedAt }]
+    
     const members = distinctMemberIds.map(id => ({
       user: id,
       joinedAt: new Date()
@@ -70,7 +56,7 @@ exports.createChannel = async (req, res) => {
       members,
       createdBy: userId,
       isPrivate,
-      isDiscoverable: isPrivate ? false : isDiscoverable, // Private channels cannot be discoverable
+      isDiscoverable: isPrivate ? false : isDiscoverable, 
     });
 
     try {
@@ -86,10 +72,10 @@ exports.createChannel = async (req, res) => {
     } catch (keyError) {
       logger.error({ err: keyError, channelId: channel._id }, '[PHASE 5] Failed to generate conversation key');
 
-      // Rollback channel creation
+      
       await Channel.findByIdAndDelete(channel._id);
 
-      // Check for specific error types
+      
       if (keyError.message && keyError.message.includes('IDENTITY_KEY_REQUIRED')) {
         return res.status(400).json({
           message: 'Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.',
@@ -116,7 +102,7 @@ exports.createChannel = async (req, res) => {
 
     const io = req.app?.get("io");
     if (io) {
-      // Notify only invited members if private, or the whole workspace room if public
+      
       if (isPrivate) {
         distinctMemberIds.forEach(mId => {
           io.to(`user_${mId}`).emit("channel-created", payload);
@@ -126,7 +112,7 @@ exports.createChannel = async (req, res) => {
       }
     }
 
-    // ── System message: "John created #general" ──────────────────────────
+    
     try {
       const creator = await User.findById(userId).select('username').lean();
       const systemMsg = await Message.create({
@@ -150,7 +136,7 @@ exports.createChannel = async (req, res) => {
     } catch (sysErr) {
       logger.error({ err: sysErr }, '[SYSTEM MSG] Failed to create channel_created system message');
     }
-    // ─────────────────────────────────────────────────────────────────────
+    
 
     return res.status(201).json({ channel: payload });
   } catch (err) {
@@ -158,15 +144,6 @@ exports.createChannel = async (req, res) => {
   }
 };
 
-/**
- * Get channels for a specific workspace that the user is a member of
- * Query param: workspaceId (required)
- * 
- * Returns:
- * 1. Default channels (always visible)
- * 2. Public + discoverable channels (visible to all)
- * 3. Channels where user is a member (private or public non-discoverable)
- */
 exports.getMyChannels = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -176,16 +153,16 @@ exports.getMyChannels = async (req, res) => {
       return res.status(400).json({ message: "Workspace ID is required" });
     }
 
-    // Find channels that meet ANY of these criteria:
-    // 1. Is a default channel (general, announcements)
-    // 2. Is public AND discoverable
-    // 3. User is a member
+    
+    
+    
+    
     const channels = await Channel.find({
       workspace: workspaceId,
       $or: [
-        { isDefault: true },                                    // Rule 1: Default channels
-        { isPrivate: false, isDiscoverable: true },            // Rule 2: Public + discoverable
-        { 'members.user': userId }                              // Rule 3: User is member
+        { isDefault: true },                                    
+        { isPrivate: false, isDiscoverable: true },            
+        { 'members.user': userId }                              
       ]
     })
       .select("-__v")
@@ -197,12 +174,6 @@ exports.getMyChannels = async (req, res) => {
   }
 };
 
-/**
- * ── COMMUNITY: Get all externally-public channels ──────────────────────────
- * GET /channels/public
- * No authentication required — channels marked isPublic:true are externally accessible.
- * Paginated: ?page=1&limit=20
- */
 exports.getPublicChannelList = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -219,7 +190,7 @@ exports.getPublicChannelList = async (req, res) => {
       Channel.countDocuments({ isPublic: true, isArchived: false })
     ]);
 
-    // Add member count to each channel
+    
     const enriched = channels.map(ch => ({
       ...ch,
       memberCount: ch.memberCount || 0
@@ -231,11 +202,6 @@ exports.getPublicChannelList = async (req, res) => {
   }
 };
 
-/**
- * ── COMMUNITY: Get single public channel (read-only metadata) ──────────────
- * GET /channels/:id/public
- * No authentication required. Returns channel info only (no messages).
- */
 exports.getPublicChannelById = async (req, res) => {
   try {
     const channel = await Channel.findById(req.params.id)
@@ -252,12 +218,6 @@ exports.getPublicChannelById = async (req, res) => {
   }
 };
 
-/**
- * ── COMMUNITY: Toggle channel public status ─────────────────────────────────
- * PATCH /channels/:id/make-public
- * Body: { isPublic: Boolean }
- * Only channel admins or workspace owners may toggle.
- */
 exports.togglePublicChannel = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -271,12 +231,12 @@ exports.togglePublicChannel = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // Only channel admins or workspace owners can change public status
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can change public status" });
     }
 
-    // Private channels cannot be made public without first setting isPrivate=false
+    
     if (isPublic && channel.isPrivate) {
       return res.status(400).json({ message: "Make the channel non-private before sharing publicly" });
     }
@@ -298,10 +258,6 @@ exports.togglePublicChannel = async (req, res) => {
   }
 };
 
-/**
- * Get all public channels — LEGACY ALIAS (kept for backward compat)
- * @deprecated Use getPublicChannelList instead
- */
 exports.getPublicChannels = async (req, res) => {
   try {
     const channels = await Channel.find({ isPrivate: false })
@@ -314,11 +270,6 @@ exports.getPublicChannels = async (req, res) => {
   }
 };
 
-/**
- * Invite / add a member to a channel
- * POST /channels/:id/invite  { userId }
- * Only channel members (or createdBy) can invite (simple rule).
- */
 exports.inviteToChannel = async (req, res) => {
   logger.debug('inviteToChannel invoked');
   try {
@@ -329,30 +280,30 @@ exports.inviteToChannel = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // ✅ PERMISSION CHECK: Enforce privacy rules
+    
     if (channel.isPrivate) {
-      // For private channels, only channel admins (creator + promoted admins) can invite
+      
       if (!channel.isAdmin(userId)) {
         return res.status(403).json({
           message: "Only channel admins can invite members to private channels"
         });
       }
     } else {
-      // For public channels, any member can invite
+      
       const isUserMember = isMember(channel.members, userId);
       if (!isUserMember) {
         return forbidden(res, "Not a channel member");
       }
     }
 
-    // Check if invitee is already a member
+    
     const isAlreadyMember = isMember(channel.members, inviteeId);
 
     if (isAlreadyMember) {
       return res.status(400).json({ message: "User already a member" });
     }
 
-    // 🔧 FIX: Convert all existing members to new format before adding new member
+    
     channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
 
     channel.members.push({
@@ -360,7 +311,7 @@ exports.inviteToChannel = async (req, res) => {
       joinedAt: new Date()
     });
 
-    // 🎯 OWNER PROTECTION: If the invited user is the channel creator, restore them as admin
+    
     const isChannelCreator = String(channel.createdBy) === String(inviteeId);
     if (isChannelCreator && !channel.admins.some(adminId => String(adminId) === String(inviteeId))) {
       channel.admins.push(inviteeId);
@@ -369,7 +320,7 @@ exports.inviteToChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
-    // 🔐 PHASE 4: Distribute conversation key to new member
+    
     try {
       const hasKeys = await conversationKeysService.hasConversationKeys(channelId, 'channel');
 
@@ -390,7 +341,7 @@ exports.inviteToChannel = async (req, res) => {
       logger.error({ err: keyError.message, channelName: channel.name }, '[PHASE 4] Key distribution failed (non-blocking)');
     }
 
-    // optional: emit socket event to channel room or to invitee
+    
     const io = req.app?.get("io");
     if (io) {
       io.to(`channel:${channelId}`).emit("channel-member-added", {
@@ -400,7 +351,7 @@ exports.inviteToChannel = async (req, res) => {
       io.to(`user_${inviteeId}`).emit("invited-to-channel", { channelId, channelName: channel.name });
     }
 
-    // ── System message: "Alice invited Bob to #design" ─────────────────
+    
     try {
       const [inviter, invitee] = await Promise.all([
         User.findById(userId).select('username').lean(),
@@ -427,7 +378,7 @@ exports.inviteToChannel = async (req, res) => {
     } catch (sysErr) {
       logger.error({ err: sysErr }, '[SYSTEM MSG] member_invited failed');
     }
-    // ────────────────────────────────────────────────────────────────────
+    
 
     return res.json({ channelId, userId: inviteeId });
   } catch (err) {
@@ -435,11 +386,6 @@ exports.inviteToChannel = async (req, res) => {
   }
 };
 
-/**
- * Remove a member from a channel
- * DELETE /channels/:id/member  { userId }
- * Only creator or admins (simple: creator) may remove
- */
 exports.removeChannelMember = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -449,17 +395,17 @@ exports.removeChannelMember = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // Only channel admins or workspace owners can remove members
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can remove members" });
     }
 
-    // Workspace owners cannot be removed by channel admins
+    
     if (await isWorkspaceOwner(victimId, channel.workspace) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Workspace owners cannot be removed from channels" });
     }
 
-    // Channel admins cannot remove other channel admins (must demote first)
+    
     if (channel.isAdmin(victimId) && String(channel.createdBy) !== String(userId)
       && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Cannot remove an admin. Demote them first." });
@@ -483,10 +429,6 @@ exports.removeChannelMember = async (req, res) => {
   }
 };
 
-/**
- * Join a public channel
- * POST /channels/:id/join
- */
 exports.joinChannel = async (req, res) => {
   logger.debug('joinChannel invoked');
   try {
@@ -498,7 +440,7 @@ exports.joinChannel = async (req, res) => {
 
     if (channel.isPrivate) return res.status(403).json({ message: "Cannot join private channel without an invitation" });
 
-    // Public non-discoverable channels also require an invitation
+    
     if (!channel.isDiscoverable && !channel.isDefault) {
       return res.status(403).json({
         message: "This channel is not open for self-service joining. Ask an admin to invite you.",
@@ -506,11 +448,11 @@ exports.joinChannel = async (req, res) => {
       });
     }
 
-    // Check if already member
+    
     const isAlreadyMember = isMember(channel.members, userId);
 
     if (!isAlreadyMember) {
-      // 🔧 FIX: Convert all existing members to new format before adding new member
+      
       channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
 
       channel.members.push({
@@ -520,7 +462,7 @@ exports.joinChannel = async (req, res) => {
       await saveWithRetry(channel);
     }
 
-    // 🔐 E2EE: Distribute conversation key to new member if encryption exists
+    
     try {
       const hasKeys = await conversationKeysService.hasConversationKeys(channelId, 'channel');
 
@@ -542,13 +484,13 @@ exports.joinChannel = async (req, res) => {
       logger.error({ err: keyError.message }, '[E2EE] Key distribution failed (non-blocking)');
     }
 
-    // optional socket: join user to room on server side handled by socket connection when client emits join-channel
+    
     const io = req.app?.get("io");
     if (io) {
       io.to(`channel:${channelId}`).emit("channel-member-joined", { channelId, userId });
     }
 
-    // ── System message: "John joined #general" ─────────────────────────
+    
     try {
       const joiner = await User.findById(userId).select('username').lean();
       const systemMsg = await Message.create({
@@ -569,7 +511,7 @@ exports.joinChannel = async (req, res) => {
     } catch (sysErr) {
       logger.error({ err: sysErr }, '[SYSTEM MSG] member_joined (joinChannel) failed');
     }
-    // ────────────────────────────────────────────────────────────────────
+    
 
     return res.json({ channelId, joined: true });
   } catch (err) {
@@ -577,11 +519,6 @@ exports.joinChannel = async (req, res) => {
   }
 };
 
-/**
- * Set channel topic / description (creator only for simplicity)
- * PUT /channels/:id
- * Body: { name?, description?, isPrivate? }
- */
 exports.updateChannel = async (req, res) => {
   logger.debug('updateChannel invoked');
   try {
@@ -592,7 +529,7 @@ exports.updateChannel = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // only creator can update (simple rule)
+    
     if (String(channel.createdBy) !== String(userId)) {
       return res.status(403).json({ message: "Only creator can update channel" });
     }
@@ -614,10 +551,6 @@ exports.updateChannel = async (req, res) => {
   }
 };
 
-/**
- * Get members of channel
- * GET /channels/:id/members?limit=50&offset=0
- */
 exports.getChannelMembers = async (req, res) => {
   try {
     const { id } = req.params;
@@ -631,7 +564,7 @@ exports.getChannelMembers = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Map all members to include user data + admin flag
+    
     const allMembers = channel.members.map(m => {
       const isAdmin = channel.admins.some(adminId => adminId.toString() === m.user._id.toString());
       return {
@@ -658,11 +591,7 @@ exports.getChannelMembers = async (req, res) => {
     return handleError(res, err, "GET CHANNEL MEMBERS ERROR");
   }
 };
-/**
- * Exit from a channel
- * POST /channels/:id/exit
- * Members can exit unless they're the only admin
- */
+
 exports.exitChannel = async (req, res) => {
   logger.debug('exitChannel invoked');
   try {
@@ -674,7 +603,7 @@ exports.exitChannel = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Cannot exit default channels (general, announcements) - they are mandatory
+    
     if (channel.isDefault) {
       return res.status(403).json({
         message: "Cannot exit default channels",
@@ -682,7 +611,7 @@ exports.exitChannel = async (req, res) => {
       });
     }
 
-    // Check if user is a member
+    
     const isUserMember = channel.members.some(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
       return memberId === userId.toString();
@@ -692,8 +621,8 @@ exports.exitChannel = async (req, res) => {
       return badRequest(res, "You are not a member of this channel");
     }
 
-    // Check if user is the ONLY admin and there are OTHER members
-    // If they're the only member, let them exit (channel will auto-delete)
+    
+    
     if (channel.isOnlyAdmin(userId) && channel.members.length > 1) {
       return res.status(403).json({
         message: "You must assign another admin before exiting",
@@ -701,26 +630,26 @@ exports.exitChannel = async (req, res) => {
       });
     }
 
-    // Get username for system message
+    
     const exitingUser = await User.findById(userId).select('username');
     const username = exitingUser?.username || 'User';
 
-    // Remove user from members
+    
     channel.members = channel.members.filter(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
       return memberId !== userId.toString();
     });
 
-    // Remove from admins if they were admin
+    
     channel.admins = channel.admins.filter(adminId => adminId.toString() !== userId.toString());
 
-    // Check if channel is now empty
+    
     if (channel.members.length === 0) {
-      // Delete channel and all its messages
+      
       await Message.deleteMany({ channel: channelId });
       await channel.deleteOne();
 
-      // Emit deletion event
+      
       const io = req.app?.get("io");
       if (io) {
         io.to(`channel:${channelId}`).emit('channel-deleted', {
@@ -738,7 +667,7 @@ exports.exitChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
-    // Create system message
+    
     const systemMessage = await Message.create({
       channel: channelId,
       workspace: channel.workspace,
@@ -753,12 +682,12 @@ exports.exitChannel = async (req, res) => {
       },
     });
 
-    // Emit socket events
+    
     const io = req.app?.get("io");
     if (io) {
-      // Timeline event — picked up by useChatSocket new-message handler
+      
       io.to(`channel:${channelId}`).emit('new-message', systemMessage);
-      // Presence/sidebar event — triggers member list refresh on clients
+      
       io.to(`channel:${channelId}`).emit('member-left', {
         channelId,
         userId,
@@ -775,12 +704,6 @@ exports.exitChannel = async (req, res) => {
   }
 };
 
-/**
- * Assign another member as admin
- * POST /channels/:id/assign-admin
- * Body: { userId }
- * Only current admins can assign new admins
- */
 exports.assignAdmin = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -796,28 +719,28 @@ exports.assignAdmin = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if requester is a channel admin or workspace owner
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can assign admins" });
     }
 
-    // Check if target user is a channel member
+    
     const _isTargetMember = isMember(channel.members, targetUserId);
 
     if (!_isTargetMember) {
       return res.status(400).json({ message: "User is not a member of this channel" });
     }
 
-    // Check if target is already an admin
+    
     if (channel.isAdmin(targetUserId)) {
       return res.status(400).json({ message: "User is already an admin" });
     }
 
-    // Add to admins
+    
     channel.admins.push(targetUserId);
     await saveWithRetry(channel);
 
-    // Get usernames for system message
+    
     const [requesterUser, targetUser] = await Promise.all([
       User.findById(userId).select('username'),
       User.findById(targetUserId).select('username')
@@ -826,7 +749,7 @@ exports.assignAdmin = async (req, res) => {
     const requesterName = requesterUser?.username || 'Admin';
     const targetName = targetUser?.username || 'User';
 
-    // Create system message
+    
     const systemMessage = await Message.create({
       channel: channelId,
       workspace: channel.workspace,
@@ -843,12 +766,12 @@ exports.assignAdmin = async (req, res) => {
       sender: userId
     });
 
-    // Emit socket event
+    
     const io = req.app?.get("io");
     if (io) {
-      // Emit new-message so the system pill appears in the chat stream
+      
       io.to(`channel:${channelId}`).emit('new-message', systemMessage);
-      // Also emit admin-assigned for sidebar/permission refresh
+      
       io.to(`channel:${channelId}`).emit('admin-assigned', {
         channelId,
         assignerId: userId,
@@ -865,12 +788,6 @@ exports.assignAdmin = async (req, res) => {
   }
 };
 
-/**
- * Permanently delete a channel
- * DELETE /channels/:id
- * Only admins can delete channels
- * All messages are deleted as well
- */
 exports.deleteChannel = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -881,12 +798,12 @@ exports.deleteChannel = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if channel is a default channel
+    
     if (channel.isDefault) {
       return res.status(403).json({ message: "Cannot delete default channels" });
     }
 
-    // Check if user is a channel admin or workspace owner
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can delete channels" });
     }
@@ -894,13 +811,13 @@ exports.deleteChannel = async (req, res) => {
     const channelName = channel.name;
     const workspaceId = channel.workspace;
 
-    // Delete all messages in the channel
+    
     const deletedMessages = await Message.deleteMany({ channel: channelId });
 
-    // Delete the channel
+    
     await channel.deleteOne();
 
-    // Emit socket event to all members
+    
     const io = req.app?.get("io");
     if (io) {
       io.to(`channel:${channelId}`).emit('channel-deleted', {
@@ -920,10 +837,7 @@ exports.deleteChannel = async (req, res) => {
     return handleError(res, err, "DELETE CHANNEL ERROR");
   }
 };
-/**
- * Get detailed channel information with members
- * GET /channels/:id/details
- */
+
 exports.getChannelDetails = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -939,7 +853,7 @@ exports.getChannelDetails = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if user is a member
+    
     const isUserMember = channel.members.some(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
       return memberId === userId.toString();
@@ -949,7 +863,7 @@ exports.getChannelDetails = async (req, res) => {
       return forbidden(res, "You are not a member of this channel");
     }
 
-    // Format response
+    
     const response = {
       id: channel._id,
       name: channel.name,
@@ -973,11 +887,6 @@ exports.getChannelDetails = async (req, res) => {
   }
 };
 
-/**
- * Update channel info (name/description)
- * PUT /channels/:id/info
- * Only admins can update
- */
 exports.updateChannelInfo = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -989,12 +898,12 @@ exports.updateChannelInfo = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if user is a channel admin or workspace owner
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can update channel info" });
     }
 
-    // Cannot rename default channels
+    
     if (channel.isDefault && name && name !== channel.name) {
       return res.status(403).json({ message: "Cannot rename default channels" });
     }
@@ -1002,7 +911,7 @@ exports.updateChannelInfo = async (req, res) => {
     const oldName = channel.name;
     const oldDesc = channel.description;
 
-    // Update fields
+    
     if (name && name.trim()) {
       channel.name = name.trim().toLowerCase();
     }
@@ -1015,7 +924,7 @@ exports.updateChannelInfo = async (req, res) => {
     const io = req.app?.get("io");
     const user = await User.findById(userId).select('username').lean();
 
-    // System message: channel renamed
+    
     if (name && name.trim().toLowerCase() !== oldName) {
       const systemMsg = await Message.create({
         channel: channelId,
@@ -1034,7 +943,7 @@ exports.updateChannelInfo = async (req, res) => {
       if (io) io.to(`channel:${channelId}`).emit('new-message', systemMsg);
     }
 
-    // System message: description changed
+    
     if (description !== undefined && description !== oldDesc) {
       const systemMsg = await Message.create({
         channel: channelId,
@@ -1053,7 +962,7 @@ exports.updateChannelInfo = async (req, res) => {
       if (io) io.to(`channel:${channelId}`).emit('new-message', systemMsg);
     }
 
-    // Always emit channel-updated for sidebar/header refresh
+    
     if (io) {
       io.to(`channel:${channelId}`).emit('channel-updated', {
         channelId,
@@ -1075,11 +984,6 @@ exports.updateChannelInfo = async (req, res) => {
   }
 };
 
-/**
- * Demote admin to regular member
- * POST /channels/:id/demote-admin
- * Body: { userId }
- */
 exports.demoteAdmin = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -1095,31 +999,31 @@ exports.demoteAdmin = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if requester is a channel admin or workspace owner
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can demote admins" });
     }
 
-    // Cannot demote the creator
+    
     if (String(channel.createdBy) === String(targetUserId)) {
       return res.status(403).json({ message: "Cannot demote the channel creator" });
     }
 
-    // Check if target is actually an admin
+    
     if (!channel.isAdmin(targetUserId)) {
       return res.status(400).json({ message: "User is not an admin" });
     }
 
-    // Cannot demote yourself if you're the only admin
+    
     if (String(userId) === String(targetUserId) && channel.admins.length === 1) {
       return res.status(403).json({ message: "Cannot demote yourself as the only admin" });
     }
 
-    // Remove from admins
+    
     channel.admins = channel.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
     await saveWithRetry(channel);
 
-    // Get usernames for system message
+    
     const [requesterUser, targetUser] = await Promise.all([
       User.findById(userId).select('username'),
       User.findById(targetUserId).select('username')
@@ -1128,7 +1032,7 @@ exports.demoteAdmin = async (req, res) => {
     const requesterName = requesterUser?.username || 'Admin';
     const targetName = targetUser?.username || 'User';
 
-    // Create system message
+    
     const systemMessage = await Message.create({
       channel: channelId,
       workspace: channel.workspace,
@@ -1145,12 +1049,12 @@ exports.demoteAdmin = async (req, res) => {
       sender: userId
     });
 
-    // Emit socket event
+    
     const io = req.app?.get("io");
     if (io) {
-      // Emit new-message so the system pill appears in the chat stream
+      
       io.to(`channel:${channelId}`).emit('new-message', systemMessage);
-      // Also emit admin-demoted for sidebar/permission refresh
+      
       io.to(`channel:${channelId}`).emit('admin-demoted', {
         channelId,
         demoterId: userId,
@@ -1168,11 +1072,6 @@ exports.demoteAdmin = async (req, res) => {
   }
 };
 
-/**
- * Remove member from channel
- * POST /channels/:id/remove-member
- * Body: { userId }
- */
 exports.removeMember = async (req, res) => {
   console.log('🔄 [CHANNEL:MODULAR] Function invoked: removeMember');
   try {
@@ -1189,17 +1088,17 @@ exports.removeMember = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if requester is an admin
+    
     if (!channel.isAdmin(userId)) {
       return res.status(403).json({ message: "Only admins can remove members" });
     }
 
-    // Cannot remove the creator
+    
     if (String(channel.createdBy) === String(targetUserId)) {
       return res.status(403).json({ message: "Cannot remove the channel creator" });
     }
 
-    // Check if target is a member
+    
     const isMember = channel.members.some(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
       return memberId === targetUserId.toString();
@@ -1209,26 +1108,26 @@ exports.removeMember = async (req, res) => {
       return res.status(400).json({ message: "User is not a member of this channel" });
     }
 
-    // Get target username before removing
+    
     const targetUser = await User.findById(targetUserId).select('username');
     const targetName = targetUser?.username || 'User';
 
-    // Remove from members
+    
     channel.members = channel.members.filter(m => {
       const memberId = m.user?._id ? m.user._id.toString() : m.user.toString();
       return memberId !== targetUserId.toString();
     });
 
-    // Also remove from admins if they were admin
+    
     channel.admins = channel.admins.filter(adminId => adminId.toString() !== targetUserId.toString());
 
     await saveWithRetry(channel);
 
-    // Get remover username
+    
     const removerUser = await User.findById(userId).select('username');
     const removerName = removerUser?.username || 'Admin';
 
-    // Create system message
+    
     const systemMessage = await Message.create({
       channel: channelId,
       workspace: channel.workspace,
@@ -1246,19 +1145,19 @@ exports.removeMember = async (req, res) => {
       sender: userId
     });
 
-    // Emit socket events
+    
     const io = req.app?.get("io");
     if (io) {
-      // Emit new-message so the system pill appears in the chat stream
+      
       io.to(`channel:${channelId}`).emit('new-message', systemMessage);
-      // Also emit member-removed for sidebar refresh
+      
       io.to(`channel:${channelId}`).emit('member-removed', {
         channelId,
         removerId: userId,
         removedUserId: targetUserId,
       });
 
-      // Notify removed user specifically
+      
       io.to(`user_${targetUserId}`).emit('removed-from-channel', {
         channelId,
         channelName: channel.name,
@@ -1276,11 +1175,6 @@ exports.removeMember = async (req, res) => {
   }
 };
 
-/**
- * Toggle channel privacy (Public <-> Private)
- * PATCH /api/channels/:id/privacy
- * Only admins can toggle
- */
 exports.toggleChannelPrivacy = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -1292,13 +1186,13 @@ exports.toggleChannelPrivacy = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if user is admin
-    // Check if user is a channel admin or workspace owner
+    
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can change channel privacy" });
     }
 
-    // Cannot change privacy of default channels
+    
     if (channel.isDefault) {
       return res.status(403).json({ message: "Cannot change privacy of default channels" });
     }
@@ -1307,7 +1201,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
     channel.isPrivate = isPrivate;
     await saveWithRetry(channel);
 
-    // Create system message
+    
     const _user = await User.findById(userId).select('username');
     await Message.create({
       channel: channelId,
@@ -1323,7 +1217,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
       sender: userId
     });
 
-    // Emit socket event
+    
     const io = req.app?.get("io");
     if (io) {
       io.to(`channel:${channelId}`).emit('channel-privacy-changed', {
@@ -1345,11 +1239,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-/**
- * Clear all messages in a channel
- * DELETE /api/channels/:id/messages
- * Only admins can clear messages
- */
+
 exports.clearChannelMessages = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -1360,16 +1250,16 @@ exports.clearChannelMessages = async (req, res) => {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // Check if user is an admin
-    // Check if user is a channel admin or workspace owner
+    
+    
     if (!channel.isAdmin(userId) && !await isWorkspaceOwner(userId, channel.workspace)) {
       return res.status(403).json({ message: "Only channel admins or workspace owners can clear channel messages" });
     }
 
-    // Delete all messages in the channel
+    
     const result = await Message.deleteMany({ channel: channelId });
 
-    // Create system message about the action
+    
     const user = await User.findById(userId).select('username').lean();
     const systemMsg = await Message.create({
       channel: channelId,
@@ -1384,12 +1274,12 @@ exports.clearChannelMessages = async (req, res) => {
       },
     });
 
-    // Emit socket events
+    
     const io = req.app?.get("io");
     if (io) {
-      // Timeline event — shows "Admin cleared message history" in chat
+      
       io.to(`channel:${channelId}`).emit('new-message', systemMsg);
-      // Client cache clear — instructs clients to wipe local message list
+      
       io.to(`channel:${channelId}`).emit('messages-cleared', {
         channelId,
         clearedBy: userId,
@@ -1408,28 +1298,24 @@ exports.clearChannelMessages = async (req, res) => {
   }
 };
 
-/**
- * Join channel via link (with workspace validation)
- * POST /api/channels/:id/join-via-link
- */
 exports.joinChannelViaLink = async (req, res) => {
   try {
     const channelId = req.params.id;
     const userId = req.user?.sub;
 
-    // 1. Find channel and populate workspace
+    
     const channel = await Channel.findById(channelId).populate('workspace');
     if (!channel) {
 
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // 2. Block private channels from being joined via link
+    
     if (channel.isPrivate) {
       return res.status(403).json({ message: "Cannot join private channel via link" });
     }
 
-    // 3. Check if user is workspace member
+    
     const workspace = channel.workspace;
     const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(userId));
 
@@ -1441,7 +1327,7 @@ exports.joinChannelViaLink = async (req, res) => {
       });
     }
 
-    // 3. Check if already a member
+    
     const isChannelMember = channel.members.some(m => {
       const memberId = m.user ? m.user.toString() : m.toString();
       return memberId === userId.toString();
@@ -1459,13 +1345,13 @@ exports.joinChannelViaLink = async (req, res) => {
       });
     }
 
-    // 4. Add user to channel
+    
     channel.members.push({
       user: userId,
       joinedAt: new Date()
     });
 
-    // 🎯 OWNER PROTECTION: If the rejoining user is the channel creator, restore them as admin
+    
     const isChannelCreator = String(channel.createdBy) === String(userId);
     if (isChannelCreator && !channel.admins.some(adminId => String(adminId) === String(userId))) {
       channel.admins.push(userId);
@@ -1474,7 +1360,7 @@ exports.joinChannelViaLink = async (req, res) => {
 
     await saveWithRetry(channel);
 
-    // 🔐 PHASE 4: Distribute conversation key to new member
+    
     try {
       const hasKeys = await conversationKeysService.hasConversationKeys(channelId, 'channel');
 
@@ -1492,11 +1378,11 @@ exports.joinChannelViaLink = async (req, res) => {
         }
       }
     } catch (keyError) {
-      // Non-blocking: log error but don't fail the join
+      
       console.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
     }
 
-    // 5. Emit socket event
+    
     const io = req.app.get("io");
     if (io) {
       io.to(`workspace_${workspace._id}`).emit("channel-member-added", {
@@ -1505,7 +1391,7 @@ exports.joinChannelViaLink = async (req, res) => {
       });
     }
 
-    // ── System message: "John joined #general" ─────────────────────────
+    
     try {
       const joiner = await User.findById(userId).select('username').lean();
       const systemMsg = await Message.create({
@@ -1525,7 +1411,7 @@ exports.joinChannelViaLink = async (req, res) => {
     } catch (sysErr) {
       console.error('[SYSTEM MSG] member_joined (joinChannelViaLink) failed:', sysErr);
     }
-    // ────────────────────────────────────────────────────────────────────
+    
 
     return res.json({
       message: "Successfully joined channel",
@@ -1540,11 +1426,7 @@ exports.joinChannelViaLink = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
-/**
- * Add a new tab to a channel
- * POST /channels/:id/tabs
- * Body: { name, type, content }
- */
+
 exports.addTab = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -1556,7 +1438,7 @@ exports.addTab = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // Check if user is a member
+    
     const isMember = channel.members.some(m => {
       const memberId = m.user ? m.user.toString() : m.toString();
       return memberId === userId.toString();
@@ -1566,7 +1448,7 @@ exports.addTab = async (req, res) => {
       return res.status(403).json({ message: "Not a member of this channel" });
     }
 
-    // Check tab limit (max 5 tabs per channel)
+    
     if (channel.tabs && channel.tabs.length >= 5) {
       return res.status(400).json({ message: "Maximum 5 canvases allowed per channel" });
     }
@@ -1586,7 +1468,7 @@ exports.addTab = async (req, res) => {
     channel.tabs.push(newTab);
     await saveWithRetry(channel);
 
-    // The newly created tab will have an _id assigned by Mongoose
+    
     const createdTab = channel.tabs[channel.tabs.length - 1];
 
     const io = req.app?.get("io");
@@ -1604,11 +1486,6 @@ exports.addTab = async (req, res) => {
   }
 };
 
-/**
- * Update a tab content or name
- * PUT /channels/:id/tabs/:tabId
- * Body: { name?, content?, emoji?, coverColor?, wordCount? }
- */
 exports.updateTab = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -1621,7 +1498,7 @@ exports.updateTab = async (req, res) => {
     const tab = channel.tabs.id(tabId);
     if (!tab) return res.status(404).json({ message: "Tab not found" });
 
-    // Check if user is a member
+    
     const isMember = channel.members.some(m => {
       const memberId = m.user ? m.user.toString() : m.toString();
       return memberId === userId.toString();
@@ -1638,13 +1515,13 @@ exports.updateTab = async (req, res) => {
     if (coverColor !== undefined) tab.coverColor = coverColor;
     if (wordCount !== undefined) tab.wordCount = wordCount;
 
-    // Always track edit metadata
+    
     tab.lastEditedBy = userId;
     tab.lastEditedAt = new Date();
 
     await saveWithRetry(channel);
 
-    // Re-populate lastEditedBy for the socket payload
+    
     const populatedChannel = await Channel.findById(channelId)
       .select('tabs')
       .populate('tabs.lastEditedBy', 'username profilePicture');
@@ -1674,10 +1551,6 @@ exports.updateTab = async (req, res) => {
   }
 };
 
-/**
- * Delete a tab
- * DELETE /channels/:id/tabs/:tabId
- */
 exports.deleteTab = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -1686,11 +1559,11 @@ exports.deleteTab = async (req, res) => {
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // Only generic tabs can be deleted, not built-in ones (if any)
+    
     const tab = channel.tabs.id(tabId);
     if (!tab) return res.status(404).json({ message: "Tab not found" });
 
-    // Check if user is creator of tab or channel admin
+    
     const isAdmin = channel.isAdmin(userId);
     const isCreator = String(tab.createdBy) === String(userId);
 
@@ -1716,10 +1589,6 @@ exports.deleteTab = async (req, res) => {
   }
 };
 
-/**
- * Get all tabs for a channel
- * GET /channels/:id/tabs
- */
 exports.getTabs = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -1728,7 +1597,7 @@ exports.getTabs = async (req, res) => {
     const channel = await Channel.findById(channelId).select("tabs members isPrivate");
     if (!channel) return res.status(404).json({ message: "Channel not found" });
 
-    // Check membership
+    
     const isMember = channel.members.some(m => {
       const memberId = m.user ? m.user.toString() : m.toString();
       return memberId === userId.toString();
@@ -1745,17 +1614,6 @@ exports.getTabs = async (req, res) => {
   }
 };
 
-/**
- * Join a public discoverable channel (self-service)
- * POST /api/channels/:id/join-discoverable
- * 
- * This endpoint allows workspace members to self-join public discoverable channels.
- * GUARDS:
- * 1. Channel must be public (!isPrivate)
- * 2. Channel must be discoverable (isDiscoverable === true)
- * 3. User must be workspace member
- * 4. User must NOT already be channel member
- */
 exports.joinDiscoverableChannel = async (req, res) => {
   console.log('🔄 [CHANNEL:MODULAR] Function invoked: joinDiscoverableChannel');
   try {
@@ -1764,13 +1622,13 @@ exports.joinDiscoverableChannel = async (req, res) => {
     const mongoose = require('mongoose');
     const Workspace = require('../../../models/Workspace');
 
-    // Step 1: Fetch channel
+    
     const channel = await Channel.findById(channelId);
     if (!channel) {
       return res.status(404).json({ message: "Channel not found" });
     }
 
-    // GUARD 1: Must be public
+    
     if (channel.isPrivate) {
       console.log(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is private`);
       return res.status(403).json({
@@ -1779,7 +1637,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
       });
     }
 
-    // GUARD 2: Must be discoverable
+    
     if (!channel.isDiscoverable) {
       console.log(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is not discoverable`);
       return res.status(403).json({
@@ -1788,7 +1646,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
       });
     }
 
-    // GUARD 3: User must be workspace member
+    
     const workspace = await Workspace.findById(channel.workspace);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
@@ -1807,7 +1665,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
       });
     }
 
-    // GUARD 4: User must NOT already be a channel member
+    
     const isChannelMember = channel.members.some(m => {
       const memberId = m.user ? m.user.toString() : m.toString();
       return memberId === userId.toString();
@@ -1821,7 +1679,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
       });
     }
 
-    // ALL GUARDS PASSED - Add user to channel
+    
     console.log(`✅ [CHANNEL:JOIN_DISCOVERABLE] Adding user ${userId} to channel ${channelId}`);
 
     channel.members.push({
@@ -1831,8 +1689,8 @@ exports.joinDiscoverableChannel = async (req, res) => {
 
     await saveWithRetry(channel);
 
-    // PHASE 4: Distribute existing conversation key to new member
-    // This reuses existing Phase 4 logic - NO CHANGES to key distribution
+    
+    
     try {
       await conversationKeysService.distributeKeyToNewMember(
         channelId,
@@ -1842,14 +1700,14 @@ exports.joinDiscoverableChannel = async (req, res) => {
       console.log(`✅ [CHANNEL:JOIN_DISCOVERABLE] Distributed key to user ${userId} for channel ${channelId}`);
     } catch (keyError) {
       console.error(`❌ [CHANNEL:JOIN_DISCOVERABLE] Key distribution failed:`, keyError.message);
-      // Non-blocking - user is still added to members
+      
     }
 
-    // Socket events are handled by existing server-side listeners
-    // DO NOT add direct io.emit() calls here to avoid duplication
+    
+    
 
-    // ── System message: "John joined #general" ─────────────────────────
-    // (This is a system timeline event, distinct from channel-member-added socket)
+    
+    
     try {
       const joiner = await User.findById(userId).select('username').lean();
       const systemMsg = await Message.create({
@@ -1870,7 +1728,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
     } catch (sysErr) {
       console.error('[SYSTEM MSG] member_joined (joinDiscoverableChannel) failed:', sysErr);
     }
-    // ────────────────────────────────────────────────────────────────────
+    
 
     return res.json({
       message: "Successfully joined channel",

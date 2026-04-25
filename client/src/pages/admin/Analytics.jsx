@@ -116,7 +116,7 @@ const Analytics = () => {
 
     return (
         <div style={{ flex: 1, background: T.bg, overflowY: 'auto', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }} className="custom-scrollbar">
-            {/* Header */}
+            {}
             <div style={{ background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '16px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div>
                     <h1 style={{ fontSize: '18px', fontWeight: 600, color: T.primary, letterSpacing: '-0.015em', marginBottom: '2px' }}>Analytics</h1>
@@ -126,7 +126,7 @@ const Analytics = () => {
             </div>
 
             <div style={{ padding: '24px 28px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Key Metrics */}
+                {}
                 <section>
                     <SectionTitle text="Key Metrics" />
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
@@ -137,7 +137,7 @@ const Analytics = () => {
                     </div>
                 </section>
 
-                {/* Activity Overview */}
+                {}
                 <section>
                     <SectionTitle text="Activity Overview" />
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
@@ -147,7 +147,7 @@ const Analytics = () => {
                     </div>
                 </section>
 
-                {/* Daily Activity Chart */}
+                {}
                 {dailyActivity.length > 0 && (
                     <section style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '20px' }}>
                         <h2 style={{ fontSize: '14px', fontWeight: 600, color: T.primary, marginBottom: '2px' }}>Daily Message Activity</h2>
@@ -164,7 +164,7 @@ const Analytics = () => {
                     </section>
                 )}
 
-                {/* Top Workspaces */}
+                {}
                 {wsActivity.length > 0 && (
                     <section style={{ background: T.surface, border: `1px solid ${T.border}`, padding: '20px' }}>
                         <h2 style={{ fontSize: '14px', fontWeight: 600, color: T.primary, marginBottom: '2px' }}>Most Active Workspaces</h2>
@@ -188,7 +188,7 @@ const Analytics = () => {
                     </section>
                 )}
 
-                {/* Department Overview */}
+                {}
                 {deptBreakdown.length > 0 && (
                     <section>
                         <SectionTitle text="Department Overview" />
@@ -226,7 +226,7 @@ const Analytics = () => {
                     </section>
                 )}
 
-                {/* Top Contributors */}
+                {}
                 {topUsers.length > 0 && (
                     <section>
                         <SectionTitle text="Top Contributors" />

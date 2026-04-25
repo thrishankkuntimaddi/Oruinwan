@@ -1,30 +1,13 @@
-// server/src/features/ai/ai-core.service.js
-/**
- * AI Core — Central Hub
- *
- * Single facade consumed by all AI sub-modules (assistant, knowledge,
- * automation, insights).  Delegates to the existing ai.summarizer.service.js
- * which already has Gemini integration + TTL caching.
- *
- * Exports:
- *   summarize(text, opts)           – generic document summary
- *   extractTasks(text)              – action items as string[]
- *   answerQuestion(query, context)  – grounded Q&A
- *   generateReplies(context)        – 3 smart reply suggestions
- */
-
 'use strict';
 
 const { summarizeDocument, semanticSearch, cacheStats, clearCache } = require('./ai.summarizer.service');
 const crypto = require('crypto');
 
-// ─── Re-export base helpers ──────────────────────────────────────────────────
 exports.summarize       = summarizeDocument;
 exports.semanticSearch  = semanticSearch;
 exports.cacheStats      = cacheStats;
 exports.clearCache      = clearCache;
 
-// ─── Shared cache (mirrors pattern in ai.summarizer.service) ─────────────────
 const _cache = new Map();
 
 function _cacheKey(...parts) {
@@ -40,7 +23,6 @@ function _cacheSet(key, value, ttlMs = 300_000) {
     _cache.set(key, { value, expiresAt: Date.now() + ttlMs });
 }
 
-// ─── Gemini client (lazy) ─────────────────────────────────────────────────────
 let _model = null;
 function _getModel() {
     if (!_model) {
@@ -51,12 +33,6 @@ function _getModel() {
     return _model;
 }
 
-// ─── extractTasks ─────────────────────────────────────────────────────────────
-/**
- * Extract action items from text.
- * @param   {string} text
- * @returns {Promise<{ items: string[], fallback: boolean }>}
- */
 async function extractTasks(text) {
     if (!text || !text.trim()) return { items: [], fallback: false };
 
@@ -67,7 +43,7 @@ async function extractTasks(text) {
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY;
     if (!apiKey) {
-        // Static fallback — try regex heuristics
+        
         const lines = truncated.split(/[\n.!?]+/).filter(l => /\b(will|should|must|need to|todo|review|fix|create|update|complete|finish|send|schedule|assign)\b/i.test(l)).slice(0, 5).map(l => l.trim()).filter(Boolean);
         return { items: lines.length ? lines : ['No action items detected'], fallback: true };
     }
@@ -95,13 +71,6 @@ async function extractTasks(text) {
 }
 exports.extractTasks = extractTasks;
 
-// ─── answerQuestion ───────────────────────────────────────────────────────────
-/**
- * Answer a user question using provided context documents.
- * @param   {string}   query
- * @param   {Array<{title:string, content:string}>} contextDocs
- * @returns {Promise<{ answer: string, fallback: boolean }>}
- */
 async function answerQuestion(query, contextDocs = []) {
     if (!query) return { answer: 'Please provide a question.', fallback: true };
 
@@ -139,12 +108,6 @@ async function answerQuestion(query, contextDocs = []) {
 }
 exports.answerQuestion = answerQuestion;
 
-// ─── generateReplies ──────────────────────────────────────────────────────────
-/**
- * Generate 3 short smart reply suggestions for a conversation.
- * @param   {Array<{sender:string, text:string}>} messages  Last few messages
- * @returns {Promise<{ suggestions: string[], fallback: boolean }>}
- */
 async function generateReplies(messages = []) {
     const FALLBACKS = [
         ['👍 Got it!', 'Thanks for the update!', 'Will do!'],

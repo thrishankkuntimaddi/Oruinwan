@@ -1,5 +1,4 @@
 'use strict';
-// server/src/features/collaboration/collaboration.routes.js
 
 const express = require('express');
 const router = express.Router();
@@ -10,9 +9,6 @@ const logger = require('../../../utils/logger');
 
 router.use(requireAuth);
 
-// ─── Whiteboard ───────────────────────────────────────────────────────────────
-
-// GET /api/v2/collaboration/whiteboard/:meetingId
 router.get('/whiteboard/:meetingId', async (req, res) => {
     try {
         const wb = await Whiteboard.findOne({ meetingId: req.params.meetingId }).lean();
@@ -23,8 +19,6 @@ router.get('/whiteboard/:meetingId', async (req, res) => {
     }
 });
 
-// POST /api/v2/collaboration/whiteboard/:meetingId
-// Body: { workspaceId, strokes: [...] }  — replaces all strokes (full snapshot)
 router.post('/whiteboard/:meetingId', async (req, res) => {
     try {
         const { workspaceId, strokes = [] } = req.body;
@@ -40,9 +34,6 @@ router.post('/whiteboard/:meetingId', async (req, res) => {
     }
 });
 
-// ─── Brainstorm Board ─────────────────────────────────────────────────────────
-
-// GET /api/v2/collaboration/brainstorm/:meetingId
 router.get('/brainstorm/:meetingId', async (req, res) => {
     try {
         const board = await Brainstorm.findOne({ meetingId: req.params.meetingId }).lean();
@@ -53,8 +44,6 @@ router.get('/brainstorm/:meetingId', async (req, res) => {
     }
 });
 
-// POST /api/v2/collaboration/brainstorm/:meetingId — add a sticky note item
-// Body: { workspaceId, text, position?, color? }
 router.post('/brainstorm/:meetingId', async (req, res) => {
     try {
         const { workspaceId, text, position, color } = req.body;
@@ -75,7 +64,7 @@ router.post('/brainstorm/:meetingId', async (req, res) => {
 
         const newItem = board.items[board.items.length - 1];
 
-        // Broadcast to meeting room
+        
         req.io.to(`meeting:${req.params.meetingId}`).emit('brainstorm:update', {
             meetingId: req.params.meetingId,
             action: 'add',
@@ -89,8 +78,6 @@ router.post('/brainstorm/:meetingId', async (req, res) => {
     }
 });
 
-// PATCH /api/v2/collaboration/brainstorm/:meetingId/:itemId — move or update item
-// Body: { position?, text?, color? }
 router.patch('/brainstorm/:meetingId/:itemId', async (req, res) => {
     try {
         const setPayload = {};
@@ -124,7 +111,6 @@ router.patch('/brainstorm/:meetingId/:itemId', async (req, res) => {
     }
 });
 
-// DELETE /api/v2/collaboration/brainstorm/:meetingId/:itemId
 router.delete('/brainstorm/:meetingId/:itemId', async (req, res) => {
     try {
         await Brainstorm.findOneAndUpdate(

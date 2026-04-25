@@ -1,12 +1,3 @@
-/**
- * ContactMessage.jsx — Phase 7.4
- *
- * Renders a shared contact card.
- * Reads msg.contact (embedded in the message document).
- *
- * Props:
- *   msg.contact  — { name, email, phone, avatar }
- */
 import React from 'react';
 import { Mail, Phone, UserCircle } from 'lucide-react';
 
@@ -25,7 +16,7 @@ export default function ContactMessage({ msg }) {
             padding: '12px',
             maxWidth: '280px',
         }}>
-            {/* Header row */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
                 {avatar ? (
                     <img
@@ -69,7 +60,7 @@ export default function ContactMessage({ msg }) {
                 </div>
             </div>
 
-            {/* Detail rows */}
+            {}
             <div style={{
                 borderTop: '1px solid var(--border-subtle)',
                 paddingTop: '10px',

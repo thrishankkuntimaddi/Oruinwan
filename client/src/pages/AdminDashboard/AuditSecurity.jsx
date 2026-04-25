@@ -24,7 +24,7 @@ const AuditSecurity = ({ data }) => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1px', background: 'var(--border-subtle)' }}>
-                {/* Security Stats */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', padding: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
                         <Shield size={14} style={{ color: 'var(--accent)' }} />
@@ -41,7 +41,7 @@ const AuditSecurity = ({ data }) => {
                     </div>
                 </div>
 
-                {/* Audit Log Feed */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', padding: '24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

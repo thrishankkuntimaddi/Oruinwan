@@ -1,12 +1,6 @@
 import React from 'react';
 import { X, BookOpen, Command, Bug, Sparkles, MessageCircle, ArrowRight } from 'lucide-react';
 
-/**
- * HelpModalsContainer — All help modal variants.
- * Pure presentational component — no state or form submission logic.
- */
-
-/* ── Shared style tokens ── */
 const inp = {
     width: '100%', padding: '9px 11px', background: 'var(--bg-input)',
     border: '1px solid var(--border-default)', borderRadius: '2px',
@@ -42,7 +36,7 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: 'var(--font)' }}>
             <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '100%', maxWidth: '480px', overflow: 'hidden', position: 'relative' }}>
-                {/* Close */}
+                {}
                 <button onClick={onClose} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', padding: '4px', borderRadius: '2px', transition: '150ms ease', zIndex: 10 }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
                     onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
@@ -50,7 +44,7 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                     <X size={16} />
                 </button>
 
-                {/* ── Academy ── */}
+                {}
                 {activeModal === 'academy' && (
                     <>
                         {modalHeader(<BookOpen size={16} />, 'Chttrix Academy', 'Master your workflow with these guides')}
@@ -79,7 +73,7 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                     </>
                 )}
 
-                {/* ── Shortcuts ── */}
+                {}
                 {activeModal === 'shortcuts' && (
                     <>
                         {modalHeader(<Command size={16} />, 'Keyboard Shortcuts', 'Speed up your workflow')}
@@ -98,7 +92,7 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                     </>
                 )}
 
-                {/* ── Bug Report ── */}
+                {}
                 {activeModal === 'bug' && (
                     <>
                         {modalHeader(<Bug size={16} />, 'Report a Bug', "Found something broken? Let us know")}
@@ -115,7 +109,7 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                     </>
                 )}
 
-                {/* ── What's New ── */}
+                {}
                 {activeModal === 'whatsnew' && (
                     <>
                         {modalHeader(<Sparkles size={16} />, "What's New", 'Latest updates and improvements')}
@@ -140,7 +134,7 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                     </>
                 )}
 
-                {/* ── Contact ── */}
+                {}
                 {activeModal === 'contact' && (
                     <>
                         {modalHeader(<MessageCircle size={16} />, 'Contact Support', "We're here to help with any questions")}

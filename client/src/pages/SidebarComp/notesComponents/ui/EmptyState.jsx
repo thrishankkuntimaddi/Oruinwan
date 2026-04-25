@@ -16,7 +16,7 @@ const EmptyState = ({ loading }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-base)' }}>
-            {/* Ambient glow */}
+            {}
             <div style={{ position: 'absolute', width: '280px', height: '280px', background: '#b8956a', opacity: 0.03, borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
             <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                 <div style={{ width: '72px', height: '72px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>

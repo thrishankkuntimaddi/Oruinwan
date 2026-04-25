@@ -41,7 +41,7 @@ const FilesPanel = () => {
 
   return (
     <div style={S.panel}>
-      {/* Header */}
+      {}
       <div style={S.header}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <span style={S.label}>
@@ -60,14 +60,14 @@ const FilesPanel = () => {
             ><Upload size={12} /></button>
           </div>
         </div>
-        {/* Search */}
+        {}
         <div style={{ position: 'relative' }}>
           <Search size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search files..." style={S.input} />
         </div>
       </div>
 
-      {/* Tag filters */}
+      {}
       {allTags.length > 0 && (
         <div style={{ padding: '8px 12px', display: 'flex', flexWrap: 'wrap', gap: '4px', borderBottom: '1px solid var(--border-subtle)' }}>
           {[null, ...allTags.slice(0, 8)].map((tag, i) => (
@@ -79,7 +79,7 @@ const FilesPanel = () => {
         </div>
       )}
 
-      {/* File list */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>

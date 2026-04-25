@@ -1,5 +1,3 @@
-// client/src/pages/dashboards/EmployeeDashboard.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -46,7 +44,7 @@ const EmployeeDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
+            {}
             <div className="bg-white border-b border-gray-200">
                 <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
@@ -73,11 +71,11 @@ const EmployeeDashboard = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
+            {}
             <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {loading ? (
                     <div className="py-6 animate-pulse space-y-4">
-                        {/* Stat cards */}
+                        {}
                         <div className="grid grid-cols-3 gap-4">
                             {[1, 2, 3].map(i => (
                                 <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -86,7 +84,7 @@ const EmployeeDashboard = () => {
                                 </div>
                             ))}
                         </div>
-                        {/* List skeletons */}
+                        {}
                         <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
                             {[75, 55, 85, 60].map((w, i) => (
                                 <div key={i} className="flex items-center gap-3">
@@ -101,7 +99,7 @@ const EmployeeDashboard = () => {
                     </div>
                 ) : (
                     <div className="space-y-8">
-                        {/* Stats */}
+                        {}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <StatsWidget
                                 icon={CheckSquare}
@@ -126,7 +124,7 @@ const EmployeeDashboard = () => {
                             />
                         </div>
 
-                        {/* My Work */}
+                        {}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                             <DashboardCard title="My Tasks" icon={CheckSquare}>
                                 {personalData.myTasks?.length > 0 ? (

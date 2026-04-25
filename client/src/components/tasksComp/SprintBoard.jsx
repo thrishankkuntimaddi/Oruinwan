@@ -1,9 +1,3 @@
-// client/src/components/tasksComp/SprintBoard.jsx
-/**
- * SprintBoard — Groups tasks by sprint with a sprint selector dropdown.
- * Fetches sprints from GET /api/sprints?workspaceId=...
- * Uses the same `api` axios instance (auto-includes auth token + baseURL).
- */
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Activity, Calendar, Clock } from 'lucide-react';
 import api from '@services/api';
@@ -95,7 +89,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setOpen(false);
@@ -110,13 +104,13 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
     api.get(`/api/sprints?workspaceId=${workspaceId}`)
       .then(res => setSprints(res.data.sprints || []))
       .catch(err => {
-        // Sprints may not exist yet — not an error
+        
         if (err.response?.status !== 404) {
           showToast('Could not load sprints', 'error');
         }
       })
       .finally(() => setLoading(false));
-  }, [workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [workspaceId]); 
 
   const filteredTasks = selectedSprint === 'all'
     ? tasks
@@ -130,19 +124,19 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
     ? `All Tasks (${tasks.length})`
     : activeSprint?.name || 'Sprint';
 
-  // Stats for the current sprint
+  
   const doneCount = filteredTasks.filter(t => t.status === 'Completed').length;
   const inProgressCount = filteredTasks.filter(t => t.status === 'In Progress').length;
   const blockedCount = filteredTasks.filter(t => t.status === 'Blocked').length;
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: T.bg }}>
-      {/* Toolbar */}
+      {}
       <div style={{ flexShrink: 0, background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '10px', fontFamily: T.font }}>
         <Activity size={14} style={{ color: T.accent }} />
         <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Sprint</span>
 
-        {/* Sprint selector dropdown */}
+        {}
         <div style={{ position: 'relative' }} ref={dropdownRef}>
           <button
             onClick={() => setOpen(v => !v)}
@@ -207,7 +201,7 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
           )}
         </div>
 
-        {/* Stats strip */}
+        {}
         {filteredTasks.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '8px' }}>
             {[
@@ -226,9 +220,9 @@ export default function SprintBoard({ tasks = [], workspaceId, onTaskClick }) {
         )}
       </div>
 
-      {/* Task list */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', background: T.bg }}>
-        {/* Table header */}
+        {}
         <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '12px', padding: '7px 16px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, color: T.muted, fontFamily: T.font, zIndex: 10 }}>
           <span style={{ width: '8px' }} />
           <span style={{ flex: 1 }}>Summary</span>

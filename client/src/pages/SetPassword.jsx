@@ -1,4 +1,3 @@
-// SetPassword.jsx — Monolith Flow Design System (OAuth first-login)
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Shield, Key, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -77,20 +76,20 @@ const SetPassword = () => {
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif', padding: '24px' }}>
-            {/* Ambient glow */}
+            {}
             <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
             <div style={{ position: 'fixed', bottom: '-20%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(155,142,207,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
             <div style={{ width: '100%', maxWidth: '420px', animation: 'slideUp 300ms cubic-bezier(0.16,1,0.3,1)' }}>
-                {/* Logo */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
                     <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
                     <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Chttrix</span>
                 </div>
 
-                {/* Card */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '32px' }}>
-                    {/* Icon */}
+                    {}
                     <div style={{ width: '44px', height: '44px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
                         <Shield size={22} style={{ color: 'var(--accent)' }} />
                     </div>
@@ -101,7 +100,7 @@ const SetPassword = () => {
                     </p>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {/* New Password */}
+                        {}
                         <div>
                             <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
                             <div style={{ position: 'relative' }}>
@@ -117,7 +116,7 @@ const SetPassword = () => {
                             </div>
                         </div>
 
-                        {/* Inline requirements */}
+                        {}
                         {password.length > 0 && (
                             <div style={{ padding: '12px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
                                 <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Requirements</p>
@@ -132,7 +131,7 @@ const SetPassword = () => {
                             </div>
                         )}
 
-                        {/* Confirm Password */}
+                        {}
                         <div>
                             <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
                             <div style={{ position: 'relative' }}>
@@ -154,7 +153,7 @@ const SetPassword = () => {
                             )}
                         </div>
 
-                        {/* Skip toggle */}
+                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: skipMode ? 'rgba(184,149,106,0.06)' : 'var(--bg-active)', border: `1px solid ${skipMode ? 'var(--border-accent)' : 'var(--border-subtle)'}`, cursor: 'pointer', transition: 'all 150ms ease' }}
                             onClick={() => setSkipMode(!skipMode)}>
                             <div style={{ width: '16px', height: '16px', border: `1px solid ${skipMode ? 'var(--accent)' : 'var(--border-default)'}`, background: skipMode ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
@@ -166,7 +165,7 @@ const SetPassword = () => {
                             </div>
                         </div>
 
-                        {/* Action button */}
+                        {}
                         {skipMode ? (
                             <button onClick={handleSkip} disabled={loading}
                                 style={{ padding: '10px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, transition: 'all 150ms ease' }}>

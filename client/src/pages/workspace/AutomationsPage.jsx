@@ -1,10 +1,3 @@
-/**
- * AutomationsPage.jsx
- *
- * Workspace automation list page.
- * Shows all automations with enable/disable toggle, edit, delete.
- */
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +6,6 @@ import {
   updateAutomation
 } from '../../services/automationsService';
 
-// ─── Trigger label map ────────────────────────────────────────────────────────
 const TRIGGER_LABELS = {
   'message.sent':      { label: 'Message sent',     icon: '💬', color: '#6366f1' },
   'task.created':      { label: 'Task created',     icon: '📋', color: '#10b981' },
@@ -34,8 +26,6 @@ const ACTION_LABELS = {
   post_to_slack:      { label: 'Post to Slack',      icon: '💼' },
   trigger_ci_pipeline:{ label: 'Trigger CI',         icon: '⚙️' },
 };
-
-// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AutomationsPage() {
   const { workspaceId } = useParams();
@@ -101,7 +91,7 @@ export default function AutomationsPage() {
 
   return (
     <div style={styles.page}>
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {}
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>⚡ Automations</h1>
@@ -118,7 +108,7 @@ export default function AutomationsPage() {
         </button>
       </div>
 
-      {/* ── States ─────────────────────────────────────────────────────────── */}
+      {}
       {loading && (
         <div style={styles.centered}>
           <div style={styles.spinner} />
@@ -149,7 +139,7 @@ export default function AutomationsPage() {
         </div>
       )}
 
-      {/* ── Automation List ─────────────────────────────────────────────────── */}
+      {}
       {!loading && !error && automations.length > 0 && (
         <div style={styles.list}>
           {automations.map(automation => {
@@ -163,7 +153,7 @@ export default function AutomationsPage() {
                   borderLeft: `4px solid ${trig.color}`
                 }}
               >
-                {/* Left: info */}
+                {}
                 <div style={styles.cardLeft}>
                   <div style={styles.cardHeader}>
                     <span style={{ ...styles.triggerBadge, background: trig.color + '22', color: trig.color }}>
@@ -181,7 +171,7 @@ export default function AutomationsPage() {
                     <p style={styles.cardDesc}>{automation.description}</p>
                   )}
 
-                  {/* Actions list */}
+                  {}
                   <div style={styles.actionsList}>
                     {(automation.actions || []).map((action, i) => (
                       <span key={i} style={styles.actionChip}>
@@ -190,7 +180,7 @@ export default function AutomationsPage() {
                     ))}
                   </div>
 
-                  {/* Meta */}
+                  {}
                   <div style={styles.meta}>
                     <span>Runs: {automation.runCount || 0}</span>
                     {automation.lastRunAt && (
@@ -207,9 +197,9 @@ export default function AutomationsPage() {
                   </div>
                 </div>
 
-                {/* Right: controls */}
+                {}
                 <div style={styles.cardRight}>
-                  {/* Toggle */}
+                  {}
                   <button
                     title={automation.isActive ? 'Disable' : 'Enable'}
                     onClick={() => handleToggle(automation)}
@@ -222,7 +212,7 @@ export default function AutomationsPage() {
                     {togglingId === automation._id ? '...' : automation.isActive ? 'ON' : 'OFF'}
                   </button>
 
-                  {/* Edit */}
+                  {}
                   <button
                     title="Edit"
                     onClick={() =>
@@ -233,7 +223,7 @@ export default function AutomationsPage() {
                     ✏️
                   </button>
 
-                  {/* Delete */}
+                  {}
                   <button
                     title="Delete"
                     onClick={() => handleDelete(automation)}
@@ -252,7 +242,6 @@ export default function AutomationsPage() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = {
   page: {
     minHeight: '100vh',

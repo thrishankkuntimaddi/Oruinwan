@@ -1,19 +1,11 @@
-// client/src/components/messagesComp/chatWindowComp/ScreenRecorder.jsx
-// Phase-8: Screen recording capture and upload
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-// refactor(consistency): use canonical api.js (handles auth tokens + 401 refresh; FormData uploads still work)
+
 import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
-/**
- * ScreenRecorder
- * Props:
- *  onSend(attachmentObj) — { type: 'screen_recording', url, name, mimeType, size }
- *  onCancel()
- */
 export default function ScreenRecorder({ onSend, onCancel }) {
-  const [phase, setPhase]   = useState('idle'); // idle | recording | preview | uploading
+  const [phase, setPhase]   = useState('idle'); 
   const [seconds, setSeconds] = useState(0);
   const [blobUrl, setBlobUrl] = useState(null);
   const [error, setError]   = useState(null);
@@ -55,7 +47,7 @@ export default function ScreenRecorder({ onSend, onCancel }) {
         setPhase('preview');
       };
 
-      // Auto-stop if user stops sharing from browser UI
+      
       stream.getVideoTracks()[0].addEventListener('ended', () => {
         if (recorder.state !== 'inactive') recorder.stop();
         clearInterval(timerRef.current);
@@ -69,7 +61,7 @@ export default function ScreenRecorder({ onSend, onCancel }) {
       if (err.name !== 'NotAllowedError') {
         setError('Screen capture failed: ' + err.message);
       }
-      // User cancelled screen picker — silently return to idle
+      
     }
   }, []);
 

@@ -1,37 +1,30 @@
-// server/controllers/internalMessagingController.js
-// Handles internal messaging between Managers and Company Admins
-
 const InternalMessage = require('../../../models/InternalMessage');
 const User = require('../../../models/User');
 const _Department = require('../../../models/Department');
 
-/**
- * Send a message (manager to admin or admin to manager)
- * POST /api/internal/messages
- */
 exports.sendMessage = async (req, res) => {
     try {
         const { recipientId, content, departmentId } = req.body;
 
-        // Validate user authentication
+        
         if (!req.user || !req.user.sub) {
             return res.status(401).json({ message: 'Authentication required' });
         }
 
         const senderId = req.user.sub;
 
-        // Validate required fields
+        
         if (!recipientId || !content || !content.trim()) {
             return res.status(400).json({ message: 'Recipient and content are required' });
         }
 
-        // Get recipient to determine message type
+        
         const recipient = await User.findById(recipientId);
         if (!recipient) {
             return res.status(404).json({ message: 'Recipient not found' });
         }
 
-        // Verify both users are in same company
+        
         const senderCompanyId = typeof req.user.companyId === 'object'
             ? req.user.companyId._id
             : req.user.companyId;
@@ -43,7 +36,7 @@ exports.sendMessage = async (req, res) => {
             return res.status(403).json({ message: 'Cannot message users from other companies' });
         }
 
-        // Determine message type
+        
         const senderIsAdmin = ['owner', 'admin'].includes(req.user.companyRole);
         const recipientIsAdmin = ['owner', 'admin'].includes(recipient.companyRole);
 
@@ -66,7 +59,7 @@ exports.sendMessage = async (req, res) => {
             type: messageType
         });
 
-        // Create message
+        
         const message = await InternalMessage.create({
             companyId: senderCompanyId,
             sender: senderId,
@@ -82,10 +75,10 @@ exports.sendMessage = async (req, res) => {
             { path: 'recipient', select: 'username email profilePicture companyRole' }
         ]);
 
-        // Emit socket event
+        
         if (req.app.get('io')) {
             const io = req.app.get('io');
-            // Send to recipient's room
+            
             io.to(`user-${recipientId}`).emit('internal-message', message);
         }
 
@@ -101,10 +94,6 @@ exports.sendMessage = async (req, res) => {
     }
 };
 
-/**
- * Get conversation between current user and another user
- * GET /api/internal/messages/conversation/:userId
- */
 exports.getConversation = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -122,7 +111,7 @@ exports.getConversation = async (req, res) => {
             limit
         );
 
-        // Mark unread messages as read
+        
         const unreadMessages = messages.filter(
             msg => msg.recipient.toString() === currentUserId.toString() && !msg.read
         );
@@ -138,17 +127,13 @@ exports.getConversation = async (req, res) => {
     }
 };
 
-/**
- * Get admin inbox (all conversations with managers)
- * GET /api/internal/messages/inbox
- */
 exports.getAdminInbox = async (req, res) => {
     try {
         if (!req.user || !req.user.sub) {
             return res.status(401).json({ message: 'Authentication required' });
         }
 
-        // Verify user is admin
+        
         if (!['owner', 'admin'].includes(req.user.companyRole)) {
             return res.status(403).json({ message: 'Admin access required' });
         }
@@ -170,10 +155,6 @@ exports.getAdminInbox = async (req, res) => {
     }
 };
 
-/**
- * Get manager's inbox (conversations with admins)
- * GET /api/internal/messages/manager-inbox
- */
 exports.getManagerInbox = async (req, res) => {
     try {
         if (!req.user || !req.user.sub) {
@@ -182,7 +163,7 @@ exports.getManagerInbox = async (req, res) => {
 
         const currentUserId = req.user.sub;
 
-        // Get latest messages from admins
+        
         const messages = await InternalMessage.find({
             recipient: currentUserId,
             isFromAdmin: true
@@ -200,10 +181,6 @@ exports.getManagerInbox = async (req, res) => {
     }
 };
 
-/**
- * Mark message as read
- * PATCH /api/internal/messages/:messageId/read
- */
 exports.markAsRead = async (req, res) => {
     try {
         const { messageId } = req.params;
@@ -219,7 +196,7 @@ exports.markAsRead = async (req, res) => {
             return res.status(404).json({ message: 'Message not found' });
         }
 
-        // Verify user is the recipient
+        
         if (message.recipient.toString() !== currentUserId.toString()) {
             return res.status(403).json({ message: 'Cannot mark other users\' messages as read' });
         }
@@ -233,10 +210,6 @@ exports.markAsRead = async (req, res) => {
     }
 };
 
-/**
- * Get unread count for current user
- * GET /api/internal/messages/unread-count
- */
 exports.getUnreadCount = async (req, res) => {
     try {
         if (!req.user || !req.user.sub) {

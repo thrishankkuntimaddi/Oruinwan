@@ -1,4 +1,3 @@
-// server/src/features/files/FileVersion.js
 const mongoose = require('mongoose');
 
 const fileVersionSchema = new mongoose.Schema({

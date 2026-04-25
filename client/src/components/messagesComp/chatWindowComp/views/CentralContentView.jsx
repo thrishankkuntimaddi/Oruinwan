@@ -9,23 +9,18 @@ import CanvasTab from '../tabs/CanvasTab.jsx';
 import ChannelJoinPrompt from '../states/ChannelJoinPrompt.jsx';
 import CanvasDashboardView from './CanvasDashboardView.jsx';
 
-/**
- * CentralContentView Component
- * Routes between chat, tasks, threads, canvas views based on activeTab
- * Pure presentational component - all logic delegated to parent via props
- */
 const CentralContentView = ({
-    // Tab routing
+    
     activeTab,
     tabs,
 
-    // Membership & access
+    
     isMember,
     isDiscoverablePublicChannel,
     isJoining,
     canInteract,
 
-    // Chat/conversation props
+    
     chat,
     conversation,
     enhancedActions,
@@ -34,7 +29,7 @@ const CentralContentView = ({
     userJoinedAt,
     currentUserId,
 
-    // Thread state
+    
     threadCounts,
     replyingTo,
     onCancelReply,
@@ -42,14 +37,14 @@ const CentralContentView = ({
     onThreadOpen,
     onThreadClose,
 
-    // Message input
+    
     newMessage,
     onMessageChange,
     onSend,
     onAttach,
     onSendAttachment,
-    onCreatePoll,          // Phase 7.3
-    // Phase 7.5 — link preview
+    onCreatePoll,          
+    
     linkPreview,
     linkPreviewLoading,
     onDismissPreview,
@@ -64,17 +59,17 @@ const CentralContentView = ({
     muted,
     setNewMessage,
 
-    // Channel join handlers
+    
     onJoinChannel,
     onIgnore,
 
-    // Socket
+    
     rawSocket,
     socket,
     workspaceId,
     showThreadsOnly = false,
 
-    // Canvas/dashboard handlers
+    
     dashboardView,
     dashboardSearch,
     onDashboardViewChange,
@@ -86,20 +81,20 @@ const CentralContentView = ({
     onShareTab,
     onOpenCanvas,
 
-    // Reply callback — set by ChatWindowV2 via enhancedActions
+    
     onReply,
 
-    // Bookmarks panel
+    
     showBookmarks = false,
     onCloseBookmarks,
 
-    // Phase 2/4 — feature flags (optional, default off for DMs)
+    
     showScreenRecord = false,
     showSmartReply = false,
 }) => {
     return (
         <div className="chat-content" style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0, backgroundColor: 'var(--bg-primary)' }}>
-            {/* Access-gate UI: non-member, discoverable public channel */}
+            {}
             {!isMember && isDiscoverablePublicChannel ? (
                 <ChannelJoinPrompt
                     chatName={chat?.name}
@@ -109,9 +104,9 @@ const CentralContentView = ({
                 />
             ) : activeTab === 'chat' ? (
                 <>
-                    {/* Main Stream - flex column */}
+                    {}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, minWidth: 0 }}>
-                        {/* Conversation Stream - scrollable */}
+                        {}
                         <ConversationStream
                             events={conversation.events}
                             systemEvents={chat.systemEvents || []}
@@ -137,7 +132,7 @@ const CentralContentView = ({
                             isPrivate={chat?.isPrivate || false}
                         />
 
-                        {/* Footer - fixed at bottom */}
+                        {}
                         <FooterInput
                             newMessage={newMessage}
                             onChange={onMessageChange}
@@ -176,7 +171,7 @@ const CentralContentView = ({
                     </div>
                 </>
             ) : activeTab === 'tasks' ? (
-                // Tasks Tab — flex-1 so it matches chat content height
+                
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>
                     <TasksTab
                         channelId={chat.id}
@@ -187,14 +182,14 @@ const CentralContentView = ({
                     />
                 </div>
             ) : activeTab === 'threads' ? (
-                // Threads Tab
+                
                 <ThreadsTab
                     channelId={chat.id}
                     currentUserId={currentUserId}
                     socket={rawSocket}
                 />
             ) : activeTab === 'canvas' ? (
-                // Canvas Dashboard
+                
                 <CanvasDashboardView
                     tabs={tabs}
                     dashboardView={dashboardView}
@@ -209,7 +204,7 @@ const CentralContentView = ({
                     channelName={chat?.name}
                 />
             ) : (
-                // Canvas Tab View (Dynamic Tabs)
+                
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', minHeight: 0 }}>
                     {tabs.find(t => t._id === activeTab) ? (
                         <CanvasTab
@@ -229,7 +224,7 @@ const CentralContentView = ({
                 </div>
             )}
 
-            {/* Thread Panel (if active and in chat tab) */}
+            {}
             {activeTab === 'chat' && activeThread && (
                 <ThreadPanel
                     parentMessage={activeThread}
@@ -242,7 +237,7 @@ const CentralContentView = ({
                 />
             )}
 
-            {/* Bookmarks Panel — inline flex sibling (same pattern as ThreadPanel) */}
+            {}
             {activeTab === 'chat' && showBookmarks && (
                 <BookmarksPanel
                     open={showBookmarks}

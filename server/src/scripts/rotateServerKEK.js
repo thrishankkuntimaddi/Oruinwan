@@ -1,42 +1,17 @@
-// server/src/scripts/rotateServerKEK.js
-
-/**
- * Server KEK Rotation Script
- * 
- * PHASE 4D: Safe KEK rotation for OAuth users
- * 
- * Purpose:
- * - Re-wrap UMEKs with new KEK version
- * - Does NOT touch identity keys
- * - Does NOT touch password users
- * - Batch processing with rate limiting
- * 
- * Usage:
- * node server/src/scripts/rotateServerKEK.js --from-version=1 --to-version=2 [--batch-size=10] [--delay=100]
- */
-
 const mongoose = require('mongoose');
 const UserCryptoState = require('../models/UserCryptoState');
 const kekManager = require('../services/kekManager.service');
 const securityAudit = require('../services/securityAudit.service');
 const crypto = require('crypto');
 
-// Configuration
 const BATCH_SIZE = parseInt(process.env.KEK_ROTATION_BATCH_SIZE || '10');
 const DELAY_MS = parseInt(process.env.KEK_ROTATION_DELAY_MS || '100');
 
-/**
- * Rotate KEK for a single user
- * @param {Object} cryptoState - User crypto state
- * @param {number} fromVersion - Old KEK version
- * @param {number} toVersion - New KEK version
- * @returns {Promise<boolean>}
- */
 async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
     try {
         const userId = cryptoState.userId;
 
-        // Step 1: Unwrap UMEK with old KEK
+        
         const oldKEK = kekManager.getKEKForUnwrap(fromVersion);
         const envelopeBuffer = Buffer.from(cryptoState.umekEnvelope, 'base64');
         const iv = envelopeBuffer.slice(0, 12);
@@ -51,7 +26,7 @@ async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
             decipher.final()
         ]);
 
-        // Step 2: Re-wrap UMEK with new KEK
+        
         const newKEK = kekManager.getKEKForUnwrap(toVersion);
         const newIv = crypto.randomBytes(12);
         const cipher = crypto.createCipheriv('aes-256-gcm', newKEK, newIv);
@@ -64,7 +39,7 @@ async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
         const newAuthTag = cipher.getAuthTag();
         const newEnvelope = Buffer.concat([newIv, newAuthTag, newEncrypted]).toString('base64');
 
-        // Step 3: Update crypto state
+        
         cryptoState.umekEnvelope = newEnvelope;
         cryptoState.kekVersion = toVersion;
         cryptoState.updatedAt = new Date();
@@ -80,9 +55,6 @@ async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
     }
 }
 
-/**
- * Main rotation logic
- */
 async function rotateServerKEK(options = {}) {
     const {
         fromVersion = 1,
@@ -101,7 +73,7 @@ async function rotateServerKEK(options = {}) {
     console.log(`Dry Run: ${dryRun ? 'YES' : 'NO'}`);
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-    // Validate KEKs exist
+    
     if (!kekManager.kekVersionExists(fromVersion)) {
         throw new Error(`Old KEK version ${fromVersion} not found`);
     }
@@ -110,7 +82,7 @@ async function rotateServerKEK(options = {}) {
         throw new Error(`New KEK version ${toVersion} not found`);
     }
 
-    // Log audit event: rotation started
+    
     try {
         await securityAudit.logSecurityEvent({
             userId: 'SYSTEM',
@@ -125,12 +97,12 @@ async function rotateServerKEK(options = {}) {
         console.warn('⚠️ Failed to log audit event (non-critical)');
     }
 
-    // Find all SERVER_KEK users with old version
+    
     const query = {
         umekProtectionType: 'SERVER_KEK',
         $or: [
             { kekVersion: fromVersion },
-            { kekVersion: null }  // Legacy users (default to v1)
+            { kekVersion: null }  
         ]
     };
 
@@ -147,7 +119,7 @@ async function rotateServerKEK(options = {}) {
         return { success: true, rotated: 0, failed: 0 };
     }
 
-    // Process in batches
+    
     let processed = 0;
     let succeeded = 0;
     let failed = 0;
@@ -169,7 +141,7 @@ async function rotateServerKEK(options = {}) {
                 failed++;
             }
 
-            // Rate limiting
+            
             if (delayMs > 0) {
                 await new Promise(resolve => setTimeout(resolve, delayMs));
             }
@@ -178,7 +150,7 @@ async function rotateServerKEK(options = {}) {
         processed += users.length;
     }
 
-    // Log audit event: rotation completed
+    
     try {
         await securityAudit.logSecurityEvent({
             userId: 'SYSTEM',
@@ -205,7 +177,6 @@ async function rotateServerKEK(options = {}) {
     return { success: failed === 0, rotated: succeeded, failed };
 }
 
-// CLI execution
 if (require.main === module) {
     const args = process.argv.slice(2);
     const options = {};
@@ -221,7 +192,7 @@ if (require.main === module) {
         }
     });
 
-    // Connect to MongoDB
+    
     mongoose.connect(process.env.MONGO_URI, {
         useNewUrlParser: true,
         useUnifiedTopology: true
@@ -234,7 +205,7 @@ if (require.main === module) {
         } catch (error) {
             console.error('❌ Rotation failed:', error);
 
-            // Log failure audit event
+            
             try {
                 await securityAudit.logSecurityEvent({
                     userId: 'SYSTEM',
@@ -245,7 +216,7 @@ if (require.main === module) {
                     }
                 });
             } catch (_auditError) {
-                // Silent fail
+                
             }
 
             process.exit(1);

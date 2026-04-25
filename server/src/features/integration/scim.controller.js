@@ -1,20 +1,3 @@
-// server/src/features/integration/scim.controller.js
-//
-// Phase 4 — Enterprise Integration Layer
-// SCIM 2.0 provisioning endpoints.
-//
-// Auth: Bearer token (ScimToken model — SHA-256 hash stored, raw token shown once).
-// All endpoints are company-scoped via the token's companyId.
-//
-// SCIM operations map to:
-//   POST   /api/scim/users         → create user (accountStatus:'invited', send invite email)
-//   PATCH  /api/scim/users/:id     → update user (name, title, dept, role)
-//   DELETE /api/scim/users/:id     → deactivate user (accountStatus:'suspended')
-//
-// Role ceiling: SCIM cannot assign 'owner'. Ceiling checked against ASSIGNABLE_ROLES.
-// Department: name (from SCIM schemas) resolved to ObjectId via dept map.
-// Cross-company: All lookups include companyId guard.
-
 const crypto = require('crypto');
 const User = require('../../../models/User');
 const ScimToken = require('../../../models/ScimToken');
@@ -22,14 +5,6 @@ const Department = require('../../../models/Department');
 const { ASSIGNABLE_ROLES } = require('../onboarding/onboarding.service');
 const { logSecurityEvent } = require('../security/security.service');
 
-// ============================================================================
-// SCIM AUTH MIDDLEWARE
-// ============================================================================
-
-/**
- * Validate SCIM Bearer token on every request.
- * Attaches req.scimCompanyId and req.scimToken on success.
- */
 async function scimAuth(req, res, next) {
     const auth = req.headers['authorization'] || '';
     if (!auth.startsWith('Bearer ')) {
@@ -48,17 +23,13 @@ async function scimAuth(req, res, next) {
         return res.status(401).json({ schemas: ['urn:ietf:params:scim:api:messages:2.0:Error'], status: 401, detail: 'SCIM token has expired' });
     }
 
-    // Update last-used timestamp (fire-and-forget)
+    
     ScimToken.findByIdAndUpdate(token._id, { lastUsedAt: new Date() }).catch(() => { });
 
     req.scimCompanyId = token.companyId;
     req.scimToken = token;
     next();
 }
-
-// ============================================================================
-// SCIM RESPONSE HELPERS
-// ============================================================================
 
 function scimUserResponse(user) {
     return {
@@ -91,10 +62,6 @@ function scimError(res, status, detail) {
     });
 }
 
-// ============================================================================
-// RESOLVE DEPARTMENT
-// ============================================================================
-
 async function resolveDeptId(deptName, companyId) {
     if (!deptName) return null;
     const dept = await Department.findOne({
@@ -105,20 +72,10 @@ async function resolveDeptId(deptName, companyId) {
     return dept ? dept._id : null;
 }
 
-// ============================================================================
-// SCIM ROLE NORMALISATION
-// ============================================================================
-
-// S-06 SECURITY FIX: Explicitly block owner-role provisioning via SCIM.
-// The SCIM_ROLE_MAP below would silently demote 'owner' to 'admin', but we
-// reject early so the attempt is audited and the caller receives a clear error
-// rather than silent demotion (which could mask IdP misconfiguration).
 const SCIM_BLOCKED_ROLES = ['owner'];
 
-// Map common SCIM titles/groups → companyRoles
-// Falls back to 'member' if unmapped
 const SCIM_ROLE_MAP = {
-    owner: 'admin',   // Fallback (should not reach here after SCIM_BLOCKED_ROLES check)
+    owner: 'admin',   
     admin: 'admin',
     manager: 'manager',
     member: 'member',
@@ -130,24 +87,8 @@ function normaliseRole(scimRole) {
     return SCIM_ROLE_MAP[r] || 'member';
 }
 
-// ============================================================================
-// POST /api/scim/users — Provision a new user
-// ============================================================================
-
 exports.scimAuth = scimAuth;
 
-/**
- * SCIM User Provisioning — Create
- *
- * SCIM payload shape (RFC 7643):
- *   userName        → email
- *   name.givenName  → firstName
- *   name.familyName → lastName
- *   title           → jobTitle
- *   roles[0].value  → companyRole (subject to ceiling)
- *   groups[0].value → department name
- *   externalId      → scimExternalId (IdP user ID)
- */
 exports.createUser = async (req, res) => {
     try {
         const companyId = req.scimCompanyId;
@@ -163,8 +104,8 @@ exports.createUser = async (req, res) => {
 
         if (!email) return scimError(res, 400, 'userName (email) is required');
 
-        // S-06 SECURITY FIX: Hard-reject owner role before normalisation.
-        // This prevents IdP misconfiguration from silently creating owner accounts.
+        
+        
         const rawScimRole = (body.roles?.[0]?.value || '').toLowerCase();
         if (SCIM_BLOCKED_ROLES.includes(rawScimRole)) {
             logSecurityEvent({
@@ -176,33 +117,33 @@ exports.createUser = async (req, res) => {
             return scimError(res, 400, `Role '${rawScimRole}' cannot be provisioned via SCIM. Maximum assignable role is 'admin'.`);
         }
 
-        // Role ceiling — SCIM acts with 'admin' ceiling
+        
         const companyRole = normaliseRole(rawScimRole);
         if (!ASSIGNABLE_ROLES['admin'].includes(companyRole) && companyRole !== 'admin') {
             return scimError(res, 400, `Role '${companyRole}' cannot be assigned via SCIM`);
         }
 
-        // Duplicate check
+        
         const existing = await User.findOne({ email }).lean();
         if (existing) {
             if (existing.companyId?.toString() === companyId.toString()) {
-                // Return existing user (idempotent)
+                
                 return res.status(200).json(scimUserResponse(existing));
             }
             return scimError(res, 409, 'User with this email exists in another company');
         }
 
-        // Department resolution
+        
         const deptId = await resolveDeptId(deptName, companyId);
         const departmentIds = deptId ? [deptId] : [];
 
-        // Use onboarding service for consistent invite flow
+        
         const { onboardIndividual } = require('../onboarding/onboarding.service');
 
         const result = await onboardIndividual({
             companyId,
-            requesterRole: 'admin',   // SCIM always uses admin ceiling
-            invitedBy: null,      // system-initiated
+            requesterRole: 'admin',   
+            invitedBy: null,      
             email,
             firstName,
             lastName,
@@ -212,7 +153,7 @@ exports.createUser = async (req, res) => {
             jobTitle,
         });
 
-        // Attach scimExternalId
+        
         if (extId) {
             await User.findByIdAndUpdate(result.userId, { scimExternalId: extId });
         }
@@ -234,18 +175,6 @@ exports.createUser = async (req, res) => {
     }
 };
 
-// ============================================================================
-// PATCH /api/scim/users/:id — Update user attributes
-// ============================================================================
-
-/**
- * SCIM User Update — PATCH (RFC 7644 § 3.5.2)
- *
- * Supported Operations:
- *   replace: title, name, roles
- *   replace: departments (group membership)
- *   replace: active (false → suspend, true → reactivate)
- */
 exports.updateUser = async (req, res) => {
     try {
         const companyId = req.scimCompanyId;
@@ -263,7 +192,7 @@ exports.updateUser = async (req, res) => {
 
             if (op.op === 'replace' || op.op === 'Replace') {
 
-                // Display name / title
+                
                 if (path === 'title' || typeof val?.title === 'string') {
                     user.jobTitle = val?.title || val;
                 }
@@ -271,16 +200,16 @@ exports.updateUser = async (req, res) => {
                     user.username = val?.name?.formatted || val;
                 }
 
-                // Active flag → suspend / reactivate
+                
                 if (path === 'active' || typeof val?.active === 'boolean') {
                     const active = typeof val === 'boolean' ? val : val?.active;
                     user.accountStatus = active ? 'active' : 'suspended';
                 }
 
-                // Role — with S-06 owner block
+                
                 if (path === 'roles' && Array.isArray(val)) {
                     const rawRole = (val[0]?.value || '').toLowerCase();
-                    // S-06 SECURITY FIX: Block owner role assignment in updates too
+                    
                     if (SCIM_BLOCKED_ROLES.includes(rawRole)) {
                         logSecurityEvent({
                             companyId,
@@ -296,7 +225,7 @@ exports.updateUser = async (req, res) => {
                     }
                 }
 
-                // Department via groups
+                
                 if (path === 'groups' && Array.isArray(val)) {
                     const deptId = await resolveDeptId(val[0]?.display, companyId);
                     if (deptId && !user.departments.map(String).includes(String(deptId))) {
@@ -316,15 +245,6 @@ exports.updateUser = async (req, res) => {
     }
 };
 
-// ============================================================================
-// DELETE /api/scim/users/:id — Deactivate (soft-delete)
-// ============================================================================
-
-/**
- * SCIM deprovision = suspend (not hard-delete).
- * Sets accountStatus:'suspended', preserves all data.
- * Full delete requires manual admin action.
- */
 exports.deactivateUser = async (req, res) => {
     try {
         const companyId = req.scimCompanyId;
@@ -352,10 +272,6 @@ exports.deactivateUser = async (req, res) => {
     }
 };
 
-// ============================================================================
-// GET /api/scim/users/:id — Retrieve a user (SCIM READ)
-// ============================================================================
-
 exports.getUser = async (req, res) => {
     try {
         const user = await User.findOne({
@@ -369,10 +285,6 @@ exports.getUser = async (req, res) => {
         return scimError(res, 500, err.message);
     }
 };
-
-// ============================================================================
-// GET /api/scim/users — List users (SCIM LIST with filtering)
-// ============================================================================
 
 exports.listUsers = async (req, res) => {
     try {
@@ -400,17 +312,13 @@ exports.listUsers = async (req, res) => {
     }
 };
 
-// ============================================================================
-// POST /api/company/scim/tokens — Issue a token (admin console)
-// ============================================================================
-
 exports.issueToken = async (req, res) => {
     try {
         const { label = 'SCIM Token', provider = 'generic' } = req.body;
-        const companyId = req.companyId; // set by requireCompanyMember
+        const companyId = req.companyId; 
 
-        // Generate raw token
-        const rawToken = crypto.randomBytes(40).toString('hex'); // 80-char hex
+        
+        const rawToken = crypto.randomBytes(40).toString('hex'); 
         const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
         const tokenDoc = await ScimToken.create({
@@ -419,15 +327,15 @@ exports.issueToken = async (req, res) => {
             tokenHash,
             label,
             provider,
-            expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
+            expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), 
         });
 
-        // Return raw token ONCE — never retrievable again
+        
         return res.status(201).json({
             success: true,
             tokenId: tokenDoc._id,
             label: tokenDoc.label,
-            token: rawToken,   // ← raw, shown ONCE
+            token: rawToken,   
             expiresAt: tokenDoc.expiresAt,
             warning: 'Save this token immediately. It will NOT be shown again.',
         });
@@ -437,10 +345,6 @@ exports.issueToken = async (req, res) => {
         return res.status(500).json({ success: false, error: err.message });
     }
 };
-
-// ============================================================================
-// DELETE /api/company/scim/tokens/:tokenId — Revoke a token
-// ============================================================================
 
 exports.revokeToken = async (req, res) => {
     try {
@@ -457,14 +361,10 @@ exports.revokeToken = async (req, res) => {
     }
 };
 
-// ============================================================================
-// GET /api/company/scim/tokens — List tokens for admin console
-// ============================================================================
-
 exports.listTokens = async (req, res) => {
     try {
         const tokens = await ScimToken.find({ companyId: req.companyId })
-            .select('-tokenHash') // never expose hash
+            .select('-tokenHash') 
             .sort({ createdAt: -1 })
             .lean();
 

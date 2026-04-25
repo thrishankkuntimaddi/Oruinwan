@@ -1,41 +1,30 @@
-// client/src/hooks/useMessageActions.js
-// Centralize all message actions (send, react, delete, pin, forward)
-
 import { useCallback, useRef, useEffect } from 'react';
 import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext'; // ✅ FIX 6: Import useAuth
+import { useAuth } from '../contexts/AuthContext'; 
 import api from '@services/api';
 import { encryptMessageForSending } from '../services/messageEncryptionService';
 
-/**
- * Provides message action methods
- * @param {string} conversationId - Channel ID or DM Session ID
- * @param {string} conversationType - "channel" | "dm"
- * @param {string} workspaceId - Workspace ID (for DMs)
- * @param {Array} channelMembers - Array of channel members (reactive)
- * @returns {object} Message action methods
- */
 export function useMessageActions(conversationId, conversationType, workspaceId = null, channelMembers = []) {
     const { socket } = useSocket();
-    const { user, encryptionReady } = useAuth(); // ✅ FIX 6: Get encryption ready flag
+    const { user, encryptionReady } = useAuth(); 
 
-    // 🔧 FIX: Use ref to store latest channelMembers (avoid stale closure)
+    
     const channelMembersRef = useRef(channelMembers);
 
-    // Update ref whenever channelMembers changes
+    
     useEffect(() => {
         channelMembersRef.current = channelMembers;
     }, [channelMembers]);
 
-    // Generate temporary ID for optimistic UI
+    
     const generateTempId = useCallback(() => {
         return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     }, []);
 
-    // Send message
+    
     const sendMessage = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, linkPreview = null }) => {
 
-        // ⚠️ CRITICAL FIX 6: Block send if encryption not ready
+        
         if (!encryptionReady) {
             console.error('🛑 [E2EE] Message send BLOCKED - Encryption not ready yet');
             return {
@@ -45,9 +34,9 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             };
         }
 
-        // Phase 7.1: Attachment messages (image/video/file/voice) bypass text & E2EE validation
+        
         const isAttachmentMessage = ['image', 'video', 'file', 'voice'].includes(type) && attachment;
-        // Phase 7.4: Contact messages bypass E2EE (structured, not sensitive text)
+        
         const isContactMessage = type === 'contact' && contact;
 
         if (!conversationId || (!text?.trim() && attachments.length === 0 && !isAttachmentMessage && !isContactMessage)) {
@@ -57,7 +46,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
         const tempId = generateTempId();
 
-        // ── CONTACT PATH (Phase 7.4): skip E2EE ──────────────────────────────
+        
         if (isContactMessage) {
             try {
                 const payload = conversationType === 'channel'
@@ -89,12 +78,12 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             }
         }
 
-        // ── ATTACHMENT PATH (Phase 7.1): skip E2EE, send structured payload ──
+        
         if (isAttachmentMessage) {
             try {
-                // Normalise attachment to AttachmentSchema shape
+                
                 const attachmentDoc = {
-                    type: attachment.type,   // 'image' | 'video' | 'file' | 'voice'
+                    type: attachment.type,   
                     url: attachment.url,
                     name: attachment.name,
                     size: attachment.size,
@@ -130,7 +119,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             }
         }
 
-        // ── TEXT PATH (existing E2EE flow) ────────────────────────────────────
+        
         let optimisticMessage = {
             _id: tempId,
             type: 'message',
@@ -210,7 +199,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     replyTo,
                     quotedMessageId,
                     clientTempId: tempId,
-                    // Phase 7.5 — link preview
+                    
                     linkPreview: linkPreview || undefined,
                 });
             } else if (conversationType === 'dm') {
@@ -224,7 +213,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     replyTo,
                     quotedMessageId,
                     clientTempId: tempId,
-                    // Phase 7.5 — link preview
+                    
                     linkPreview: linkPreview || undefined,
                 });
             }
@@ -258,17 +247,16 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 }
             };
         }
-    }, [conversationId, conversationType, workspaceId, user, socket, encryptionReady, generateTempId]); // ✅ FIX 6: Add encryptionReady
+    }, [conversationId, conversationType, workspaceId, user, socket, encryptionReady, generateTempId]); 
 
-
-    // Add reaction
+    
     const addReaction = useCallback(async (messageId, emoji) => {
         if (!messageId || !emoji) return { success: false };
 
         try {
             const response = await api.post(`/api/v2/messages/${messageId}/react`, { emoji });
 
-            // Emit via socket for real-time update
+            
             if (socket?.connected) {
                 socket.emit('reaction:add', {
                     channelId: conversationId,
@@ -285,7 +273,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         }
     }, [conversationId, user, socket]);
 
-    // Remove reaction
+    
     const removeReaction = useCallback(async (messageId, emoji) => {
         if (!messageId || !emoji) return { success: false };
 
@@ -294,7 +282,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 data: { emoji }
             });
 
-            // Emit via socket for real-time update
+            
             if (socket?.connected) {
                 socket.emit('reaction:remove', {
                     channelId: conversationId,
@@ -311,13 +299,13 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         }
     }, [conversationId, user, socket]);
 
-    // Delete message
-    // scope: 'me' (hide for current user only) | 'everyone' (delete for all, sender only)
+    
+    
     const deleteMessage = useCallback(async (messageId, scope = 'everyone') => {
         if (!messageId) return { success: false };
 
         try {
-            // Pass socket id so server can send 'message:hidden' back to just this client
+            
             const headers = {};
             if (socket?.id) {
                 headers['x-socket-id'] = socket.id;
@@ -335,14 +323,14 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         }
     }, [conversationId, socket]);
 
-    // Pin message
+    
     const pinMessage = useCallback(async (messageId) => {
         if (!messageId) return { success: false };
 
         try {
             const response = await api.post(`/api/v2/messages/${messageId}/pin`);
 
-            // Emit via socket for real-time update
+            
             if (socket?.connected) {
                 socket.emit('message:pin', {
                     channelId: conversationId,
@@ -357,14 +345,14 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         }
     }, [conversationId, socket]);
 
-    // Unpin message
+    
     const unpinMessage = useCallback(async (messageId) => {
         if (!messageId) return { success: false };
 
         try {
             const response = await api.post(`/api/v2/messages/${messageId}/pin`, { pin: false });
 
-            // Emit via socket for real-time update
+            
             if (socket?.connected) {
                 socket.emit('message:unpin', {
                     channelId: conversationId,
@@ -379,14 +367,14 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         }
     }, [conversationId, socket]);
 
-    // Forward message
+    
     const forwardMessage = useCallback(async (messageId, targets) => {
         if (!messageId || !targets?.length) return { success: false };
 
         try {
             const response = await api.post('/api/v2/messages/forward', {
                 messageId,
-                targets // [{ type: 'channel', id: '...' }, { type: 'dm', id: '...' }]
+                targets 
             });
 
             return { success: true, forwardedCount: response.data.forwardedCount };
@@ -396,7 +384,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         }
     }, []);
 
-    // Edit message (future feature)
+    
     const editMessage = useCallback(async (messageId, newText) => {
         if (!messageId || !newText?.trim()) return { success: false };
 
@@ -405,7 +393,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 text: newText
             });
 
-            // Emit via socket for real-time update
+            
             if (socket?.connected) {
                 socket.emit('message:edit', {
                     channelId: conversationId,
@@ -433,5 +421,3 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         generateTempId
     };
 }
-
-

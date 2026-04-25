@@ -58,7 +58,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
         width: '420px', maxHeight: '85vh',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Header */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '32px', height: '32px', background: 'rgba(184,149,106,0.12)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -76,7 +76,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
           ><X size={14} /></button>
         </div>
 
-        {/* Visibility toggle */}
+        {}
         <div style={{ padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
           <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: '10px', fontFamily: 'monospace' }}>Visibility</p>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -99,7 +99,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
           </div>
         </div>
 
-        {/* Member search + list */}
+        {}
         {!isPublic && (
           <>
             <div style={{ padding: '12px 18px 8px', flexShrink: 0 }}>
@@ -175,7 +175,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
           </div>
         )}
 
-        {/* Footer */}
+        {}
         <div style={{ padding: '12px 18px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '8px', flexShrink: 0 }}>
           <button onClick={onClose}
             style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}

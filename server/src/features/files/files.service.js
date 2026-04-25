@@ -1,10 +1,3 @@
-// server/src/features/files/files.service.js
-/**
- * Files Service — Business Logic Layer
- * Handles all file management operations: upload, versioning, tagging, sharing, commenting.
- * Uses GCS for storage in production; falls back to local disk in dev when GCS is unavailable.
- */
-
 const WorkspaceFile = require('./WorkspaceFile');
 const FileVersion = require('./FileVersion');
 const FileComment = require('./FileComment');
@@ -13,14 +6,8 @@ const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
 
-// ── Storage abstraction — GCS with local-disk fallback ────────────────────────
-
-/**
- * Upload a file to GCS, falling back to local disk if GCS is unavailable.
- * Returns the same shape as uploadToGCS so the rest of the service is unaffected.
- */
 async function uploadStorage(multerFile, folder) {
-    // Attempt GCS if bucket name is configured
+    
     if (process.env.GCS_BUCKET_NAME) {
         try {
             const { uploadToGCS } = require('../../modules/uploads/upload.service');
@@ -30,7 +17,7 @@ async function uploadStorage(multerFile, folder) {
         }
     }
 
-    // ── Local-disk fallback ───────────────────────────────────────────────────
+    
     const localDir = path.join(__dirname, '../../../uploads/files');
     if (!fs.existsSync(localDir)) fs.mkdirSync(localDir, { recursive: true });
 
@@ -39,8 +26,8 @@ async function uploadStorage(multerFile, folder) {
     const filePath = path.join(localDir, fileName);
     fs.writeFileSync(filePath, multerFile.buffer);
 
-    // Prefix with BACKEND_URL if set so cross-origin clients receive an absolute URL.
-    // Falls back to relative path for local-only dev environments.
+    
+    
     const baseUrl = process.env.BACKEND_URL || '';
     return {
         url: `${baseUrl}/uploads/files/${fileName}`,
@@ -51,32 +38,21 @@ async function uploadStorage(multerFile, folder) {
             : multerFile.mimetype.startsWith('video/') ? 'video'
             : multerFile.mimetype.startsWith('audio/') ? 'voice'
             : 'file',
-        gcsPath: `local/${fileName}`, // sentinel — not a real GCS path
+        gcsPath: `local/${fileName}`, 
     };
 }
-
-// ── helpers ───────────────────────────────────────────────────────────────────
 
 function assertAccess(file, userId, minRole = 'view') {
     const roles = ['view', 'edit', 'download'];
     const minIdx = roles.indexOf(minRole);
     if (!file) throw Object.assign(new Error('File not found'), { statusCode: 404 });
-    if (file.createdBy.toString() === userId.toString()) return; // owner always has full access
+    if (file.createdBy.toString() === userId.toString()) return; 
     const perm = file.permissions.find(p => p.user.toString() === userId.toString());
     if (!perm || roles.indexOf(perm.role) < minIdx) {
         throw Object.assign(new Error('Access denied'), { statusCode: 403 });
     }
 }
 
-// ── service methods ───────────────────────────────────────────────────────────
-
-/**
- * Upload a new file to a workspace.
- * @param {string} userId
- * @param {string} workspaceId
- * @param {object} multerFile - multer file object (buffer in memory)
- * @param {object} opts - { description, folderId, tags }
- */
 async function uploadFile(userId, workspaceId, multerFile, opts = {}) {
     const gcsResult = await uploadStorage(multerFile, `workspaces/${workspaceId}/files`);
 
@@ -98,9 +74,6 @@ async function uploadFile(userId, workspaceId, multerFile, opts = {}) {
     return file;
 }
 
-/**
- * List files in a workspace with optional filters.
- */
 async function getFiles(userId, workspaceId, filters = {}) {
     const query = { workspaceId, isDeleted: false };
 
@@ -123,9 +96,6 @@ async function getFiles(userId, workspaceId, filters = {}) {
     return { files };
 }
 
-/**
- * Get a single file's metadata.
- */
 async function getFile(userId, fileId) {
     const file = await WorkspaceFile.findById(fileId)
         .populate('createdBy', 'username firstName lastName avatarUrl profilePicture')
@@ -134,9 +104,6 @@ async function getFile(userId, fileId) {
     return { file };
 }
 
-/**
- * Update file metadata (name, description, folderId).
- */
 async function updateFile(userId, fileId, updates) {
     const file = await WorkspaceFile.findById(fileId);
     assertAccess(file, userId, 'edit');
@@ -149,14 +116,11 @@ async function updateFile(userId, fileId, updates) {
     return { file };
 }
 
-/**
- * Upload a new version of a file.
- */
 async function createVersion(userId, fileId, multerFile, changeNote = '') {
     const file = await WorkspaceFile.findById(fileId);
     assertAccess(file, userId, 'edit');
 
-    // Save current version to history
+    
     await FileVersion.create({
         fileId,
         versionNumber: file.currentVersion,
@@ -168,7 +132,7 @@ async function createVersion(userId, fileId, multerFile, changeNote = '') {
         changeNote: changeNote || `Version ${file.currentVersion}`,
     });
 
-    // Upload new version to GCS
+    
     const gcsResult = await uploadStorage(multerFile, `workspaces/${file.workspaceId}/files/versions`);
 
     file.url = gcsResult.url;
@@ -181,9 +145,6 @@ async function createVersion(userId, fileId, multerFile, changeNote = '') {
     return { file, version: file.currentVersion };
 }
 
-/**
- * Get version history for a file.
- */
 async function getVersions(userId, fileId) {
     const file = await WorkspaceFile.findById(fileId).lean();
     if (!file || file.isDeleted) throw Object.assign(new Error('File not found'), { statusCode: 404 });
@@ -196,9 +157,6 @@ async function getVersions(userId, fileId) {
     return { versions, currentVersion: file.currentVersion };
 }
 
-/**
- * Restore a previous file version (swap to it).
- */
 async function restoreVersion(userId, fileId, versionId) {
     const file = await WorkspaceFile.findById(fileId);
     assertAccess(file, userId, 'edit');
@@ -208,7 +166,7 @@ async function restoreVersion(userId, fileId, versionId) {
         throw Object.assign(new Error('Version not found'), { statusCode: 404 });
     }
 
-    // Save current as a version
+    
     await FileVersion.create({
         fileId,
         versionNumber: file.currentVersion,
@@ -230,9 +188,6 @@ async function restoreVersion(userId, fileId, versionId) {
     return { file };
 }
 
-/**
- * Add a comment to a file.
- */
 async function addComment(userId, fileId, content, parentId = null) {
     const file = await WorkspaceFile.findById(fileId).lean();
     if (!file || file.isDeleted) throw Object.assign(new Error('File not found'), { statusCode: 404 });
@@ -249,9 +204,6 @@ async function addComment(userId, fileId, content, parentId = null) {
     return { comment };
 }
 
-/**
- * Get comments for a file (threaded).
- */
 async function getComments(userId, fileId) {
     const comments = await FileComment.find({ fileId, isDeleted: false })
         .populate('author', 'username firstName lastName avatarUrl profilePicture')
@@ -260,9 +212,6 @@ async function getComments(userId, fileId) {
     return { comments };
 }
 
-/**
- * Share a file — set role-based permissions.
- */
 async function shareFile(userId, fileId, permissions) {
     const file = await WorkspaceFile.findById(fileId);
     if (!file || file.isDeleted) throw Object.assign(new Error('File not found'), { statusCode: 404 });
@@ -270,7 +219,7 @@ async function shareFile(userId, fileId, permissions) {
         throw Object.assign(new Error('Only file owner can share'), { statusCode: 403 });
     }
 
-    // Upsert permissions
+    
     permissions.forEach(({ user, role }) => {
         const existing = file.permissions.find(p => p.user.toString() === user.toString());
         if (existing) {
@@ -283,9 +232,6 @@ async function shareFile(userId, fileId, permissions) {
     return { file };
 }
 
-/**
- * Update file tags.
- */
 async function tagFile(userId, fileId, tags) {
     const file = await WorkspaceFile.findById(fileId);
     assertAccess(file, userId, 'edit');
@@ -294,9 +240,6 @@ async function tagFile(userId, fileId, tags) {
     return { file };
 }
 
-/**
- * Soft-delete a file.
- */
 async function deleteFile(userId, fileId) {
     const file = await WorkspaceFile.findById(fileId);
     if (!file || file.isDeleted) throw Object.assign(new Error('File not found'), { statusCode: 404 });

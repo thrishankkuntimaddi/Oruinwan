@@ -5,7 +5,7 @@ import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
 import api from '@services/api';
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
-import { useSocket } from "../../../contexts/SocketContext"; // ✅ Use global socket
+import { useSocket } from "../../../contexts/SocketContext"; 
 import CreateChannelModal from "../../messagesComp/CreateChannelModal";
 
 const ChannelsPanel = ({ title, isMobile = false }) => {
@@ -13,43 +13,43 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
     const { workspaceId, id: channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
     const { showToast } = useToast();
-    const { socket, addChannelListener } = useSocket(); // ✅ Use global socket
+    const { socket, addChannelListener } = useSocket(); 
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    // Selection Mode State
+    
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedItems, setSelectedItems] = useState(new Set());
 
-    // Real channels from backend - NO FILTERING NEEDED
+    
     const [channels, setChannels] = useState([]);
     const [isLoadingChannels, setIsLoadingChannels] = useState(true);
 
-    // Fetch workspace-specific channels (✅ CORRECT ENDPOINT)
+    
     useEffect(() => {
         const fetchChannels = async () => {
             if (!workspaceId) return;
 
             try {
                 setIsLoadingChannels(true);
-                // ✅ CORRECT: Use workspace-specific endpoint
+                
                 const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
 
-                // ✅ NO FILTERING NEEDED - Backend already returns only this workspace's channels
+                
                 const mappedChannels = response.data.channels.map(ch => ({
                     id: ch._id,
                     type: 'channel',
                     label: ch.name,
-                    path: `/workspace/${workspaceId}/channel/${ch._id}`, // ✅ CORRECT PATH
+                    path: `/workspace/${workspaceId}/channel/${ch._id}`, 
                     isFavorite: ch.isDefault || false,
                     isPrivate: ch.isPrivate || false,
                     isDefault: ch.isDefault || false,
-                    isDiscoverable: ch.isDiscoverable ?? true, // Default to true for backward compatibility
-                    isMember: ch.isMember ?? false, // Is current user a member
+                    isDiscoverable: ch.isDiscoverable ?? true, 
+                    isMember: ch.isMember ?? false, 
                     description: ch.description || '',
-                    canDelete: !ch.isDefault, // ✅ Default channels cannot be deleted
+                    canDelete: !ch.isDefault, 
                     workspaceId: ch.workspace
                 }));
 
@@ -64,11 +64,11 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         fetchChannels();
     }, [workspaceId]);
 
-    // ✅ AUTO-REFRESH: Refetch when tab becomes visible
+    
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && workspaceId) {
-                // Refetch channels when user returns to tab
+                
                 const refetch = async () => {
                     try {
                         const response = await api.get(`/api/workspaces/${workspaceId}/channels`);
@@ -97,21 +97,20 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
     }, [workspaceId]);
 
-    // NOTE: Polling removed — real-time updates are handled by socket events below
-    // (channel-created, invited-to-channel, removed-from-channel) and the
-    // visibilitychange listener above covers tab-focus recovery.
+    
+    
+    
 
-
-    // ✅ REAL-TIME UPDATES: Listen for channel events via global socket
+    
     useEffect(() => {
         if (!socket || !workspaceId) return;
 
-        // Register channel event handler
+        
         const handleChannelEvent = (eventType, data) => {
 
             switch (eventType) {
                 case 'channel-created':
-                    // Check if channel belongs to current workspace
+                    
                     if (data.workspace === workspaceId) {
                         const newChannel = {
                             id: data._id,
@@ -125,7 +124,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                             canDelete: true
                         };
                         setChannels(prev => {
-                            // Avoid duplicates
+                            
                             if (prev.some(ch => ch.id === newChannel.id)) return prev;
                             return [...prev, newChannel];
                         });
@@ -134,7 +133,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     break;
 
                 case 'invited-to-channel':
-                    // Fetch full channel details
+                    
                     api.get(`/api/channels/${data.channelId}`)
                         .then(response => {
                             const channel = response.data.channel;
@@ -161,16 +160,16 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 case 'removed-from-channel':
                     setChannels(prev => prev.filter(ch => ch.id !== data.channelId));
                     showToast('You have been removed from a channel', 'info');
-                    // If currently viewing the removed channel, navigate away
+                    
                     if (data.channelId === channelId) {
                         navigate(`/workspace/${workspaceId}`);
                     }
                     break;
 
                 case 'member-left':
-                    // Handles the current user leaving via exitChannel API
-                    // (socket echoes 'member-left' after server processes exit)
-                    if (String(data.userId) === String(channelId)) break; // wrong event shape guard
+                    
+                    
+                    if (String(data.userId) === String(channelId)) break; 
                     setChannels(prev => prev.filter(ch => ch.id !== data.channelId));
                     if (data.channelId === channelId) {
                         navigate(`/workspace/${workspaceId}`);
@@ -182,7 +181,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
             }
         };
 
-        // Register with global socket context
+        
         const unsubscribe = addChannelListener(handleChannelEvent);
 
         return () => {
@@ -190,10 +189,10 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         };
     }, [socket, workspaceId, channelId, navigate, showToast, addChannelListener]);
 
-    // ✅ Delete channels via backend API
+    
     const handleDeleteSelected = async () => {
         try {
-            // Filter out default channels (they cannot be deleted)
+            
             const deletableChannels = Array.from(selectedItems).filter(id => {
                 const channel = channels.find(ch => ch.id === id);
                 return channel && !channel.isDefault;
@@ -205,19 +204,19 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 return;
             }
 
-            // ✅ Check if currently viewing a deleted channel BEFORE making changes
+            
             const isViewingDeletedChannel = channelId && deletableChannels.includes(channelId);
 
-            // ✅ Call backend DELETE endpoint for each channel
+            
             const deletePromises = deletableChannels.map(id =>
                 api.delete(`/api/channels/${id}`)
             );
 
             await Promise.all(deletePromises);
 
-            // ✅ Navigate away BEFORE updating state if viewing a deleted channel
+            
             if (isViewingDeletedChannel) {
-                // Find first non-deleted channel or go to workspace home
+                
                 const remainingChannels = channels.filter(ch => !deletableChannels.includes(ch.id));
                 if (remainingChannels.length > 0) {
                     navigate(remainingChannels[0].path);
@@ -226,15 +225,15 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 }
             }
 
-            // Remove deleted channels from frontend state
+            
             setChannels(prev => prev.filter(ch => !deletableChannels.includes(ch.id)));
 
-            // Reset selection state
+            
             setSelectedItems(new Set());
             setIsSelectionMode(false);
             setShowDeleteConfirm(false);
 
-            // Show success message
+            
             const count = deletableChannels.length;
             showToast(
                 `Successfully deleted ${count} channel${count > 1 ? 's' : ''}`,
@@ -254,7 +253,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         (channel.label || '').toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // ✅ Default channels first, then user-created
+    
     const sortedChannels = filteredChannels.sort((a, b) => {
         if (a.isDefault && !b.isDefault) return -1;
         if (!a.isDefault && b.isDefault) return 1;
@@ -343,10 +342,9 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         );
     };
 
-
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {/* Header */}
+            {}
             <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0, borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <h2 style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.2', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -383,7 +381,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 </div>
             </div>
 
-            {/* Search */}
+            {}
             <div style={{ padding: '12px 16px 8px' }}>
                 <div style={{ position: 'relative' }}>
                     <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={14} />
@@ -397,7 +395,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 </div>
             </div>
 
-            {/* Selection Mode Header */}
+            {}
             {isSelectionMode && (
                 <div style={{ padding: '8px 16px', background: 'rgba(184,149,106,0.08)', borderBottom: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: '#b8956a', fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedItems.size} selected</span>
@@ -415,7 +413,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 </div>
             )}
 
-            {/* Channel List */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '8px 4px' }}>
                 <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '4px 16px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
                     {activeWorkspace?.name || 'Workspace'} Channels
@@ -463,7 +461,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 )}
             </div>
 
-            {/* Confirmation Modal */}
+            {}
             <ConfirmationModal
                 isOpen={showDeleteConfirm}
                 onClose={() => setShowDeleteConfirm(false)}
@@ -473,12 +471,12 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 confirmText="Delete Channels"
             />
 
-            {/* Create Channel Modal */}
+            {}
             {showCreateChannelModal && (
                 <CreateChannelModal
                     onClose={() => setShowCreateChannelModal(false)}
                     onCreated={(channel) => {
-                        // Append to channels list
+                        
                         const newChannel = {
                             id: channel._id,
                             type: 'channel',
@@ -488,14 +486,14 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                             isPrivate: channel.isPrivate,
                             isDefault: false,
                             isDiscoverable: channel.isDiscoverable ?? true,
-                            isMember: true, // Creator is always a member
+                            isMember: true, 
                             description: channel.description || '',
                             canDelete: true,
                             createdBy: channel.createdBy
                         };
                         setChannels(prev => [...prev, newChannel]);
 
-                        // Navigate to new channel
+                        
                         navigate(`/workspace/${workspaceId}/channel/${channel._id}`);
                     }}
                     workspaceId={workspaceId}

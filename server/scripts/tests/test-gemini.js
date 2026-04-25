@@ -5,12 +5,11 @@ const apiKey = process.env.GEMINI_API_KEY;
 console.log(`🔑 API Key found: ${apiKey ? 'YES' : 'NO'}`);
 console.log(`📏 API Key length: ${apiKey?.length}`);
 
-// Test with correct model name
 async function testAPI() {
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Try gemini-pro first (stable model)
+        
         console.log('\n🧪 Testing with model: gemini-pro');
         const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
@@ -26,7 +25,7 @@ async function testAPI() {
         console.error('❌ Error:', error.message);
         console.error('📊 Status:', error.status);
 
-        // Try alternative model
+        
         if (error.status === 404) {
             console.log('\n🔄 Trying alternative model: gemini-1.5-pro');
             try {

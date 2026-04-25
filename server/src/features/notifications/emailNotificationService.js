@@ -1,17 +1,5 @@
-/**
- * emailNotificationService.js
- *
- * Lightweight nodemailer wrapper for sending notification emails.
- * In development (no SMTP config), uses Ethereal test account so
- * the server never crashes. Preview URL is logged to console.
- *
- * ENV VARS (optional):
- *   SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
- */
-
 const nodemailer = require('nodemailer');
 const logger = require('../../../utils/logger');
-
 
 let _transporter = null;
 
@@ -32,7 +20,7 @@ async function getTransporter() {
         });
         logger.info('[EmailService] Using configured SMTP transport');
     } else {
-        // Development fallback: Ethereal test account
+        
         const testAccount = await nodemailer.createTestAccount();
         _transporter = nodemailer.createTransport({
             host: 'smtp.ethereal.email',
@@ -49,14 +37,6 @@ async function getTransporter() {
     return _transporter;
 }
 
-/**
- * Send an email notification.
- * @param {Object} opts
- * @param {string} opts.to - Recipient email address
- * @param {string} opts.subject - Email subject
- * @param {string} opts.html - HTML body
- * @param {string} [opts.text] - Plain text fallback
- */
 async function sendEmailNotification({ to, subject, html, text }) {
     if (!to) {
         logger.warn('[EmailService] sendEmailNotification called without recipient');
@@ -72,12 +52,12 @@ async function sendEmailNotification({ to, subject, html, text }) {
             to,
             subject,
             html,
-            text: text || html.replace(/<[^>]*>/g, ''), // strip HTML for plain text fallback
+            text: text || html.replace(/<[^>]*>/g, ''), 
         });
 
         logger.info(`[EmailService] Email sent to ${to} | id: ${info.messageId}`);
 
-        // Log Ethereal preview URL in dev
+        
         const previewUrl = nodemailer.getTestMessageUrl(info);
         if (previewUrl) {
             logger.info(`[EmailService] Preview: ${previewUrl}`);

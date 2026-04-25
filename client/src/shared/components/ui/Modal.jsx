@@ -1,12 +1,6 @@
-// Modal.jsx — Monolith Flow Design System
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 
-/**
- * Monolith Flow base modal shell.
- * Props: isOpen, onClose, title, children, footer,
- *        size (sm|md|lg|xl), dismissable (default true)
- */
 const WIDTHS = { sm: '420px', md: '560px', lg: '760px', xl: '960px' };
 
 const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', dismissable = true }) => {
@@ -28,7 +22,7 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', dismissa
                 onClick={e => e.stopPropagation()}
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: WIDTHS[size] || WIDTHS.md, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.5)', animation: 'slideUp 220ms cubic-bezier(0.16,1,0.3,1)' }}
             >
-                {/* Header */}
+                {}
                 {title && (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>{title}</h3>
@@ -38,12 +32,12 @@ const Modal = ({ isOpen, onClose, title, children, footer, size = 'md', dismissa
                     </div>
                 )}
 
-                {/* Body */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '18px' }} className="custom-scrollbar">
                     {children}
                 </div>
 
-                {/* Footer */}
+                {}
                 {footer && (
                     <div style={{ padding: '12px 18px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)', flexShrink: 0 }}>
                         {footer}

@@ -1,6 +1,3 @@
-// server/src/features/integrations/providers/google-drive.handler.js
-// Google Drive — attach file references (metadata only, no full sync)
-
 async function verify(config) {
   if (!config.accessToken && !config.refreshToken) {
     throw Object.assign(new Error('Google Drive: accessToken or refreshToken required'), { statusCode: 400 });
@@ -8,10 +5,6 @@ async function verify(config) {
   return config;
 }
 
-/**
- * Attach a Google Drive file reference to the workspace.
- * Returns a file reference object — we never download the actual file.
- */
 function attachFile({ fileId, fileName, mimeType, webViewLink }) {
   return {
     source: 'google_drive',
@@ -24,7 +17,7 @@ function attachFile({ fileId, fileName, mimeType, webViewLink }) {
 }
 
 async function handleWebhook(payload, headers, integration) {
-  // Google Drive push notifications use X-Goog-Resource-State header
+  
   const state = headers['x-goog-resource-state'];
   const results = [];
 

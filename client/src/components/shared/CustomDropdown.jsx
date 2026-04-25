@@ -8,7 +8,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, icon: Icon, lab
 
     const selectedOption = options.find(opt => opt.value === value);
 
-    // Close dropdown when clicking outside
+    
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -20,7 +20,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, icon: Icon, lab
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Keyboard navigation
+    
     useEffect(() => {
         if (!isOpen) {
             setSelectedIndex(-1);
@@ -47,7 +47,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, icon: Icon, lab
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, selectedIndex, options, onChange]);
 
-    // Auto-scroll to selected item
+    
     useEffect(() => {
         if (selectedIndex >= 0 && dropdownRef.current) {
             const listItem = dropdownRef.current.querySelector(`[data-index="${selectedIndex}"]`);
@@ -70,7 +70,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, icon: Icon, lab
                 </label>
             )}
             <div className="relative" ref={dropdownRef}>
-                {/* Trigger Button */}
+                {}
                 <button
                     type="button"
                     onClick={() => setIsOpen(!isOpen)}
@@ -89,7 +89,7 @@ const CustomDropdown = ({ options, value, onChange, placeholder, icon: Icon, lab
                     />
                 </button>
 
-                {/* Dropdown List */}
+                {}
                 {isOpen && (
                     <div className="absolute z-50 w-full mt-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden animate-slideDown">
                         <div className="max-h-60 overflow-y-auto custom-scrollbar">

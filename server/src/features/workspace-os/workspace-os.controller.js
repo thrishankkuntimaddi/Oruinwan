@@ -1,4 +1,3 @@
-// server/src/features/workspace-os/workspace-os.controller.js
 'use strict';
 
 const workspaceOsService = require('./workspace-os.service');
@@ -8,9 +7,6 @@ const { handleError } = require('../../../utils/responseHelpers');
 const getIp = req => req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.ip;
 const getUa = req => req.headers['user-agent'] || '';
 
-/**
- * POST /api/workspace-os/:id/clone
- */
 exports.cloneWorkspace = async (req, res) => {
     try {
         const sourceId = req.params.id;
@@ -18,7 +14,7 @@ exports.cloneWorkspace = async (req, res) => {
         const { name, includeMembers } = req.body;
         const companyId = req.companyId || req.user?._dbUser?.companyId || null;
 
-        // Verify caller is in the source workspace
+        
         const source = await Workspace.findById(sourceId).lean();
         if (!source) return res.status(404).json({ message: 'Source workspace not found' });
 
@@ -35,7 +31,7 @@ exports.cloneWorkspace = async (req, res) => {
             userAgent: getUa(req)
         });
 
-        // Realtime: notify workspace members
+        
         const io = req.app?.get('io');
         if (io && source.company) {
             io.to(`company:${source.company}`).emit('workspace:cloned', {
@@ -62,9 +58,6 @@ exports.cloneWorkspace = async (req, res) => {
     }
 };
 
-/**
- * GET /api/workspace-os/:id/export
- */
 exports.exportWorkspace = async (req, res) => {
     try {
         const workspaceId = req.params.id;
@@ -83,9 +76,6 @@ exports.exportWorkspace = async (req, res) => {
     }
 };
 
-/**
- * POST /api/workspace-os/import
- */
 exports.importWorkspace = async (req, res) => {
     try {
         const userId = req.user?.sub;
@@ -114,16 +104,13 @@ exports.importWorkspace = async (req, res) => {
     }
 };
 
-/**
- * GET /api/workspace-os/:id/analytics
- */
 exports.getWorkspaceAnalytics = async (req, res) => {
     try {
         const workspaceId = req.params.id;
         const userId = req.user?.sub;
-        const range = Math.min(parseInt(req.query.range) || 30, 90); // cap at 90 days
+        const range = Math.min(parseInt(req.query.range) || 30, 90); 
 
-        // Verify membership (already done by middleware, but keep for safety)
+        
         const workspace = await Workspace.findById(workspaceId).select('members company').lean();
         if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 

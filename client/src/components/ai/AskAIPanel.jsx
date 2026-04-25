@@ -1,4 +1,3 @@
-// client/src/components/ai/AskAIPanel.jsx
 import React, { useState } from 'react';
 
 async function apiPost(path, body, token) {
@@ -36,7 +35,7 @@ const RefBadge = ({ ref: r }) => (
 );
 
 export default function AskAIPanel({ workspaceId, token, onClose }) {
-    const [tab, setTab]         = useState('ask');   // 'ask' | 'meetings'
+    const [tab, setTab]         = useState('ask');   
     const [question, setQ]      = useState('');
     const [answer, setAnswer]   = useState(null);
     const [references, setRefs] = useState([]);
@@ -73,14 +72,14 @@ export default function AskAIPanel({ workspaceId, token, onClose }) {
 
     return (
         <div style={panelStyle}>
-            {/* Header */}
+            {}
             <div style={{ display:'flex', alignItems:'center', gap:8, padding:'14px 16px', borderBottom:'1px solid rgba(99,102,241,0.15)', background:'rgba(99,102,241,0.06)' }}>
                 <span style={{fontSize:18}}>🧠</span>
                 <h3 style={{margin:0, fontSize:15, fontWeight:700, color:'#e2e8f0', flex:1}}>Ask AI</h3>
                 {onClose && <button onClick={onClose} style={{background:'none', border:'none', color:'#94a3b8', cursor:'pointer', fontSize:18}}>×</button>}
             </div>
 
-            {/* Tabs */}
+            {}
             <div style={{ display:'flex', borderBottom:'1px solid rgba(99,102,241,0.1)' }}>
                 {[['ask','💬 Ask Anything'],['meetings','📅 Past Meetings']].map(([t,l]) => (
                     <button key={t} onClick={() => { setTab(t); setAnswer(null); setRefs([]); setMeetings([]); }} style={{
@@ -94,9 +93,9 @@ export default function AskAIPanel({ workspaceId, token, onClose }) {
                 ))}
             </div>
 
-            {/* Body */}
+            {}
             <div style={{ flex:1, overflowY:'auto', padding:16, display:'flex', flexDirection:'column', gap:12 }}>
-                {/* Quick suggestions */}
+                {}
                 {!answer && !loading && (
                     <div>
                         <p style={{margin:'0 0 8px 0', fontSize:12, color:'#64748b', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em'}}>Try asking</p>
@@ -113,13 +112,13 @@ export default function AskAIPanel({ workspaceId, token, onClose }) {
                     </div>
                 )}
 
-                {/* Error */}
+                {}
                 {error && <div style={{ background:'rgba(239,68,68,0.12)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:8, padding:'10px 12px', fontSize:13, color:'#fca5a5' }}>⚠️ {error}</div>}
 
-                {/* Loading */}
+                {}
                 {loading && <Spinner />}
 
-                {/* Answer */}
+                {}
                 {answer && (
                     <div style={{ background:'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))', border:'1px solid rgba(99,102,241,0.25)', borderRadius:10, padding:'12px 14px' }}>
                         <p style={{margin:'0 0 6px 0', fontSize:11, fontWeight:700, color:'#818cf8', textTransform:'uppercase', letterSpacing:'0.05em'}}>🧠 AI Answer</p>
@@ -133,7 +132,7 @@ export default function AskAIPanel({ workspaceId, token, onClose }) {
                     </div>
                 )}
 
-                {/* Meeting results */}
+                {}
                 {meetings.length > 0 && (
                     <div>
                         <p style={{margin:'0 0 6px 0', fontSize:12, color:'#64748b', fontWeight:600}}>Relevant Meetings</p>
@@ -153,7 +152,7 @@ export default function AskAIPanel({ workspaceId, token, onClose }) {
                 )}
             </div>
 
-            {/* Input */}
+            {}
             <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(99,102,241,0.15)', background:'rgba(99,102,241,0.04)' }}>
                 <div style={{ display:'flex', gap:8 }}>
                     <input

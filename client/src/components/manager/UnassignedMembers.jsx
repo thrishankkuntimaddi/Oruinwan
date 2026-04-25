@@ -1,4 +1,3 @@
-// UnassignedMembers — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { UserPlus, Search, AlertTriangle, CheckCircle2, Briefcase } from 'lucide-react';
@@ -27,7 +26,7 @@ export default function UnassignedMembers() {
         m.email?.toLowerCase().includes(search.toLowerCase())
     );
 
-    // ── Loading skeleton ─────────────────────────────────────────
+    
     if (loading) return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
@@ -61,7 +60,7 @@ export default function UnassignedMembers() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -71,9 +70,9 @@ export default function UnassignedMembers() {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
-                {/* Alert banner */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', background: unassigned.length > 0 ? 'rgba(184,149,106,0.06)' : 'rgba(90,186,138,0.06)', border: `1px solid ${unassigned.length > 0 ? 'var(--accent)' : 'var(--state-success)'}`, marginBottom: '16px' }}>
                     {unassigned.length > 0
                         ? <AlertTriangle size={16} style={{ color: 'var(--accent)', flexShrink: 0 }} />
@@ -90,14 +89,14 @@ export default function UnassignedMembers() {
                     </div>
                 </div>
 
-                {/* Search */}
+                {}
                 <div style={{ position: 'relative', maxWidth: '480px', marginBottom: '16px' }}>
                     <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input type="text" placeholder="Search unassigned members..." value={search} onChange={e => setSearch(e.target.value)}
                         style={{ ...inputSt, paddingLeft: '30px' }} />
                 </div>
 
-                {/* Table */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>

@@ -1,14 +1,5 @@
-// client/src/hooks/useTranslation.js
-// Centralized translation state + cache for the entire message list.
-// A single instance of this hook lives in MessagesContainer and props are
-// passed down — no global context, no unnecessary re-renders.
-
 import { useReducer, useRef, useCallback } from 'react';
 import api from '@services/api';
-
-// ── State shape ────────────────────────────────────────────────────────────
-// translationMap: Map<string, TranslationEntry>
-// TranslationEntry: { status: 'loading'|'done'|'error', translatedText, language, detectedLang }
 
 const INITIAL_STATE = { translationMap: new Map() };
 
@@ -38,38 +29,34 @@ function reducer(state, action) {
     return { translationMap: next };
 }
 
-// ── Hook ──────────────────────────────────────────────────────────────────
 export function useTranslation() {
     const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
 
-    // Cache: msgId:langCode → { translatedText, detectedLang }
+    
     const cacheRef = useRef(new Map());
-    // Pending guards — prevents duplicate in-flight requests
+    
     const pendingRef = useRef(new Set());
 
-    /** Returns the current translation entry for a message, or null. */
+    
     const getTranslation = useCallback((msgId) => {
         return state.translationMap.get(msgId) ?? null;
     }, [state.translationMap]);
 
-    /**
-     * Request a translation for `text` into `langCode`.
-     * Uses the cache (msgId:langCode) to skip duplicate API calls.
-     */
+    
     const requestTranslation = useCallback(async (msgId, text, langCode) => {
         if (!msgId || !text || !langCode) return;
 
         const cacheKey = `${msgId}:${langCode}`;
         const pendingKey = `${msgId}:${langCode}`;
 
-        // Cache hit → apply immediately
+        
         if (cacheRef.current.has(cacheKey)) {
             const cached = cacheRef.current.get(cacheKey);
             dispatch({ type: 'SET_DONE', msgId, language: langCode, ...cached });
             return;
         }
 
-        // Already in-flight → skip
+        
         if (pendingRef.current.has(pendingKey)) return;
 
         pendingRef.current.add(pendingKey);
@@ -85,7 +72,7 @@ export function useTranslation() {
             const translatedText = res.data?.translated ?? text;
             const detectedLang = res.data?.detectedLang ?? null;
 
-            // Store in cache
+            
             cacheRef.current.set(cacheKey, { translatedText, detectedLang });
 
             dispatch({ type: 'SET_DONE', msgId, language: langCode, translatedText, detectedLang });
@@ -96,7 +83,7 @@ export function useTranslation() {
         }
     }, []);
 
-    /** Reset a message back to its original text. */
+    
     const clearTranslation = useCallback((msgId) => {
         dispatch({ type: 'CLEAR', msgId });
     }, []);

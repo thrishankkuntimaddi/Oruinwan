@@ -17,7 +17,7 @@ const RequireDepartmentManager = ({ children }) => {
 
     if (!user) return <Navigate to="/login" replace />;
 
-    // Owners and Admins also have access to manager features
+    
     const isSuperUser = ['owner', 'admin'].includes(user.companyRole) || user.isCoOwner;
     const isManager = user.companyRole === 'manager';
 

@@ -1,4 +1,3 @@
-// Step2AdministratorForm.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import { User, Mail, Phone, Briefcase, ChevronDown, CheckCircle2, AlertCircle } from 'lucide-react';
 import CustomDropdown from '../../../components/shared/CustomDropdown';
@@ -45,7 +44,6 @@ const VerifyBtn = ({ status, onClick }) => {
     );
 };
 
-// Accept and ignore theme prop — always dark
 const Step2AdministratorForm = ({
     formData, onChange, onRoleChange, errors,
     validationStatus, verificationStatus,
@@ -63,9 +61,9 @@ const Step2AdministratorForm = ({
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                {/* Name + Role row */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {/* Admin Name */}
+                    {}
                     <div>
                         <Label>Your Full Name</Label>
                         <div style={{ position: 'relative' }}>
@@ -77,7 +75,7 @@ const Step2AdministratorForm = ({
                         <ErrMsg msg={errors.adminName} />
                     </div>
 
-                    {/* Role */}
+                    {}
                     <div>
                         <Label>Role</Label>
                         <div style={{ position: 'relative' }}>
@@ -91,7 +89,7 @@ const Step2AdministratorForm = ({
                     </div>
                 </div>
 
-                {/* Other role */}
+                {}
                 {formData.role === 'Other' && (
                     <div>
                         <Label>Specify Role</Label>
@@ -104,7 +102,7 @@ const Step2AdministratorForm = ({
 
                 <div style={{ height: '1px', background: 'var(--bg-hover)' }} />
 
-                {/* Personal Email */}
+                {}
                 <div>
                     <Label>
                         Personal Email <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(For account recovery)</span>
@@ -121,11 +119,11 @@ const Step2AdministratorForm = ({
                     <ErrMsg msg={errors.personalEmail} />
                 </div>
 
-                {/* Phone Number */}
+                {}
                 <div>
                     <Label>Phone Number</Label>
                     <div style={{ display: 'flex', gap: '8px' }}>
-                        {/* Country code */}
+                        {}
                         <div style={{ position: 'relative', width: '120px', flexShrink: 0 }}>
                             <select name="phoneCode" value={formData.phoneCode} onChange={onChange}
                                 style={{ width: '100%', padding: '10px 28px 10px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', appearance: 'none' }}>
@@ -134,7 +132,7 @@ const Step2AdministratorForm = ({
                             <ChevronDown size={11} style={{ position: 'absolute', right: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                         </div>
 
-                        {/* Phone input */}
+                        {}
                         <div style={{ position: 'relative', flex: 1 }}>
                             <Phone size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                             <input name="phone" value={formData.phone} onChange={onChange} placeholder="000-000-0000"

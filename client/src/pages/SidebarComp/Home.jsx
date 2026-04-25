@@ -6,7 +6,6 @@ import api from '@services/api';
 import { useSocket } from "../../contexts/SocketContext";
 import EmptyState from "./states/EmptyState";
 
-
 const Home = () => {
   const { workspaceId, id, dmId } = useParams();
   const location = useLocation();
@@ -19,15 +18,14 @@ const Home = () => {
   useEffect(() => {
     const detectChat = async () => {
 
-
-      // Reset activeChat when route changes to prevent stale data
+      
       setActiveChat(null);
       setIsLoading(true);
       try {
-        // 1. Check if it's a channel route
+        
         if (location.pathname.includes("/channel/") && id) {
           try {
-            // Members get full details (createdAt, creatorName, admins etc.)
+            
             const res = await api.get(`/api/channels/${id}/details`);
             const channelData = res.data.channel || res.data;
 
@@ -52,8 +50,8 @@ const Home = () => {
               });
             }
           } catch (detailsErr) {
-            // 403 = non-member trying to view a discoverable public channel
-            // Fall back to workspace channels list (always accessible) for basic info
+            
+            
             if (detailsErr?.response?.status === 403 || detailsErr?.response?.status === 404) {
               try {
                 const listRes = await api.get(`/api/workspaces/${workspaceId}/channels`);
@@ -72,7 +70,7 @@ const Home = () => {
                     description: channel.description,
                     isDefault: channel.isDefault,
                     workspaceRole: activeWorkspace?.role,
-                    isMember: false, // ← triggers JoinChannelCTA in CentralContentView
+                    isMember: false, 
                   });
                 } else {
                   setActiveChat(null);
@@ -81,32 +79,31 @@ const Home = () => {
                 setActiveChat(null);
               }
             } else {
-              // Unexpected error — show empty state
+              
               setActiveChat(null);
             }
           }
           return;
         }
 
-        // 2. Check if it's a DM route (handles both /dm/:id and /dm/new/:dmId)
+        
         if (location.pathname.includes("/dm/") && (id || dmId)) {
-          const targetId = dmId || id; // Use dmId for new DMs, id for existing DMs
+          const targetId = dmId || id; 
 
           if (targetId) {
 
-
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // DM E2EE FIX: Always resolve to DM session ID before opening ChatWindow
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // PROBLEM: targetId might be a user ID or DM session ID (ambiguous)
-            // SOLUTION: Call resolve endpoint which finds or creates DM with encryption keys
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            
+            
+            
+            
+            
 
             let resolvedDMSessionId = null;
             let otherUserId = null;
             let isAlreadySessionId = false;
 
-            // First check if targetId is already a valid DM session ID
+            
             try {
               const dmRes = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
               const dmSessions = dmRes.data.sessions || [];
@@ -118,13 +115,13 @@ const Home = () => {
                 isAlreadySessionId = true;
               }
             } catch (err) {
-              // Could not fetch DM sessions for validation
+              
             }
 
-            // Only try to resolve if it's not already a session ID
+            
             if (!isAlreadySessionId) {
               try {
-                // Try to resolve as user ID → DM session ID
+                
                 const resolveRes = await api.get(
                   `/api/v2/messages/workspace/${workspaceId}/dm/resolve/${targetId}`
                 );
@@ -134,14 +131,14 @@ const Home = () => {
                   otherUserId = resolveRes.data.otherUserId;
                 }
               } catch (resolveErr) {
-                // If resolve fails, targetId might be an invalid ID
+                
                 console.error('[Home] ❌ Could not resolve DM');
                 setActiveChat(null);
                 return;
               }
             }
 
-            // Now fetch member info for display
+            
             const res = await api.get(`/api/workspaces/${workspaceId}/members`);
             const members = res.data.members || [];
 
@@ -150,21 +147,21 @@ const Home = () => {
               String(m.user?._id || m.user?.id) === String(otherUserId)
             );
 
-            // Extract user data from nested structure if needed
+            
             const userData = member?.user || member;
             const memberName = userData?.username || userData?.name || userData?.email?.split('@')[0];
             const memberPicture = userData?.profilePicture || userData?.avatar;
 
-            // Determine status
+            
             let status = "offline";
             if (userData?.isOnline) {
               status = userData.userStatus || "active";
             }
 
-            // ✅ CRITICAL: Always pass DM SESSION ID, never user ID
+            
             const chatObject = {
-              id: resolvedDMSessionId,  // ✅ DM session ID (not user ID)
-              userId: otherUserId,       // Store other user's ID for display
+              id: resolvedDMSessionId,  
+              userId: otherUserId,       
               name: memberName || "Unknown User",
               image: memberPicture,
               status: status,
@@ -174,13 +171,12 @@ const Home = () => {
               workspaceRole: activeWorkspace?.role
             };
 
-
             setActiveChat(chatObject);
 
-            // ✅ CRITICAL: ALWAYS prefetch encryption key for DMs
-            // This prevents 404 errors when opening any DM (new or existing)
+            
+            
             try {
-              // Small delay to allow backend to commit encryption keys (for new DMs)
+              
               if (!isAlreadySessionId) {
                 await new Promise(resolve => setTimeout(resolve, 500));
               }
@@ -188,14 +184,14 @@ const Home = () => {
               const conversationKeyService = (await import('../../services/conversationKeyService')).default;
               await conversationKeyService.getConversationKey(resolvedDMSessionId, 'dm');
             } catch (keyErr) {
-              // Don't block - ChatWindow will handle retry/creation
+              
             }
 
-            // ✅ CRITICAL FIX: Redirect URL ONLY if we resolved a user ID to a session ID
-            // Don't redirect if targetId was already a valid session ID
+            
+            
             if (!isAlreadySessionId && targetId !== resolvedDMSessionId) {
               navigate(`/workspace/${workspaceId}/dm/${resolvedDMSessionId}`, { replace: true });
-              return; // Exit early to prevent setting activeChat with old data
+              return; 
             }
           }
           return;
@@ -212,12 +208,12 @@ const Home = () => {
     detectChat();
   }, [location.pathname, id, dmId, workspaceId, activeWorkspace?.role, navigate]);
 
-  // Handle real-time status updates for the active chat header
+  
   useEffect(() => {
     if (!socket || !activeChat || activeChat.type !== 'dm') return;
 
     const handleStatusChange = ({ userId, status }) => {
-      // If the update is for the user currently filling the active chat window
+      
       if (String(activeChat.userId) === String(userId)) {
         setActiveChat(prev => ({ ...prev, status: status }));
       }
@@ -240,7 +236,7 @@ const Home = () => {
 
       {isLoading ? (
         <div className="skel-shimmer" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg-base, #0c0c0c)', padding: '16px', gap: '20px' }}>
-          {/* Header skeleton */}
+          {}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingBottom: '14px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(184,149,106,0.15)', flexShrink: 0 }} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -249,7 +245,7 @@ const Home = () => {
             </div>
           </div>
 
-          {/* Message skeletons */}
+          {}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '22px', overflow: 'hidden' }}>
             {[
               { aw: 100, l1: '65%', l2: null },
@@ -272,7 +268,7 @@ const Home = () => {
             ))}
           </div>
 
-          {/* Input skeleton */}
+          {}
           <div style={{ height: '42px', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)' }} />
         </div>
       ) : activeChat ? (
@@ -282,7 +278,7 @@ const Home = () => {
             setActiveChat(null);
             sessionStorage.removeItem('activeChat');
           }}
-          contacts={[]} // Pass contacts if available
+          contacts={[]} 
           onDeleteChat={() => {
             setActiveChat(null);
             sessionStorage.removeItem('activeChat');

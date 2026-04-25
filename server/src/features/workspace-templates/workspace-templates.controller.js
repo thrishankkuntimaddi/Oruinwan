@@ -1,15 +1,8 @@
-// server/src/features/workspace-templates/workspace-templates.controller.js
 const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
 const Workspace = require('../../../models/Workspace');
 const Channel = require('../channels/channel.model');
 const { handleError } = require('../../../utils/responseHelpers');
 
-/**
- * GET /api/workspace-templates
- * List all templates visible to the current user:
- *   - All public platform templates (company: null, isPublic: true)
- *   - All templates belonging to this user's company
- */
 exports.listTemplates = async (req, res) => {
   try {
     const userId = req.user?.sub;
@@ -34,10 +27,6 @@ exports.listTemplates = async (req, res) => {
   }
 };
 
-/**
- * POST /api/workspace-templates
- * Create a new workspace template (from scratch or from an existing workspace).
- */
 exports.createTemplate = async (req, res) => {
   try {
     const userId = req.user?.sub;
@@ -53,7 +42,7 @@ exports.createTemplate = async (req, res) => {
       settings,
       featureToggles,
       isPublic,
-      fromWorkspaceId // optional: snapshot an existing workspace structure
+      fromWorkspaceId 
     } = req.body;
 
     if (!name) return res.status(400).json({ message: 'Template name is required' });
@@ -61,12 +50,12 @@ exports.createTemplate = async (req, res) => {
     let channels = defaultChannels || [];
     let templateSettings = settings || {};
 
-    // If cloning from an existing workspace
+    
     if (fromWorkspaceId) {
       const source = await Workspace.findById(fromWorkspaceId);
       if (!source) return res.status(404).json({ message: 'Source workspace not found' });
 
-      // Tenant-safety check
+      
       if (companyId && String(source.company) !== String(companyId)) {
         return res.status(403).json({ message: 'Access denied to source workspace' });
       }
@@ -105,10 +94,6 @@ exports.createTemplate = async (req, res) => {
   }
 };
 
-/**
- * GET /api/workspace-templates/:id
- * Get a single template.
- */
 exports.getTemplate = async (req, res) => {
   try {
     const template = await WorkspaceTemplate.findById(req.params.id)
@@ -131,10 +116,6 @@ exports.getTemplate = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/workspace-templates/:id
- * Update a workspace template (company admin only, own templates).
- */
 exports.updateTemplate = async (req, res) => {
   try {
     const companyId = req.user?._dbUser?.companyId || null;
@@ -160,10 +141,6 @@ exports.updateTemplate = async (req, res) => {
   }
 };
 
-/**
- * DELETE /api/workspace-templates/:id
- * Soft-delete a workspace template.
- */
 exports.deleteTemplate = async (req, res) => {
   try {
     const companyId = req.user?._dbUser?.companyId || null;
@@ -183,15 +160,6 @@ exports.deleteTemplate = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COMMUNITY: Public template marketplace
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * GET /api/workspace-templates/public
- * No authentication required — returns all platform-level public templates.
- * Paginated: ?page=1&limit=20
- */
 exports.listPublicTemplates = async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -224,11 +192,6 @@ exports.listPublicTemplates = async (req, res) => {
   }
 };
 
-/**
- * POST /api/workspace-templates/:id/import
- * Auth required. Clones a public template's channel structure into the caller's target workspace.
- * Body: { workspaceId }
- */
 exports.importTemplate = async (req, res) => {
   try {
     const userId = req.user?.sub;
@@ -243,19 +206,19 @@ exports.importTemplate = async (req, res) => {
       return res.status(404).json({ message: 'Template not found' });
     }
 
-    // Allow import of: platform public templates OR own company templates
+    
     const companyId = req.user?._dbUser?.companyId || null;
     const isOwn = template.company && companyId && String(template.company) === String(companyId);
     if (!template.isPublic && !isOwn) {
       return res.status(403).json({ message: 'Template is not publicly available' });
     }
 
-    // Verify caller is a member of the target workspace
+    
     const Workspace = require('../../../models/Workspace');
     const ws = await Workspace.findOne({ _id: workspaceId, 'members.user': userId }).lean();
     if (!ws) return res.status(403).json({ message: 'You are not a member of the target workspace' });
 
-    // Create channels from template's defaultChannels list
+    
     let createdCount = 0;
     if (template.defaultChannels && template.defaultChannels.length > 0) {
       const workspaceCompanyId = ws.company || null;
@@ -278,13 +241,13 @@ exports.importTemplate = async (req, res) => {
             createdCount++;
           }
         } catch (chErr) {
-          // Non-fatal: skip duplicate/error channel
+          
           console.error('[TEMPLATE IMPORT] Channel create error:', chErr.message);
         }
       }
     }
 
-    // Increment usage count on the template (non-blocking)
+    
     WorkspaceTemplate.findByIdAndUpdate(template._id, { $inc: { usageCount: 1 } }).catch(() => {});
 
     return res.json({
@@ -295,4 +258,3 @@ exports.importTemplate = async (req, res) => {
     return handleError(res, err, 'IMPORT TEMPLATE ERROR');
   }
 };
-

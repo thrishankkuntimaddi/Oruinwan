@@ -1,5 +1,3 @@
-// client/src/pages/LoginPageComp/OAuthPasswordSetup.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Check, Shield, ArrowRight } from 'lucide-react';
@@ -18,12 +16,12 @@ const OAuthPasswordSetup = () => {
     const [provider, setProvider] = useState('OAuth');
 
     useEffect(() => {
-        // Check if user is supposed to be here
+        
         const setupRequired = localStorage.getItem("oauthPasswordSetupRequired");
         const oauthProvider = localStorage.getItem("oauthProvider");
 
         if (!setupRequired) {
-            // Redirect away if they shouldn't be here
+            
             navigate("/workspaces");
             return;
         }
@@ -33,7 +31,7 @@ const OAuthPasswordSetup = () => {
         }
     }, [navigate]);
 
-    // Password strength indicators
+    
     const hasMinLength = password.length >= 8;
     const passwordsMatch = password && password === confirmPassword;
 
@@ -52,11 +50,11 @@ const OAuthPasswordSetup = () => {
 
             showToast('Password set successfully! You can now login with email & password.', 'success');
 
-            // Clear the setup flags
+            
             localStorage.removeItem("oauthPasswordSetupRequired");
             localStorage.removeItem("oauthProvider");
 
-            // Wait a moment then redirect
+            
             setTimeout(() => {
                 navigate('/workspaces');
             }, 1500);
@@ -75,14 +73,14 @@ const OAuthPasswordSetup = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                {/* Header */}
+                {}
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white text-center">
                     <Shield className="w-16 h-16 mx-auto mb-4" />
                     <h1 className="text-3xl font-bold mb-2">Secure Your Account</h1>
                     <p className="text-indigo-100">Set up a backup password for {provider} login</p>
                 </div>
 
-                {/* Content */}
+                {}
                 <div className="p-8">
                     <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
                         <p className="text-sm text-indigo-900 dark:text-indigo-200 font-medium">
@@ -95,7 +93,7 @@ const OAuthPasswordSetup = () => {
                         </ul>
                     </div>
 
-                    {/* Password Field */}
+                    {}
                     <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             New Password
@@ -119,7 +117,7 @@ const OAuthPasswordSetup = () => {
                         </div>
                     </div>
 
-                    {/* Confirm Password Field */}
+                    {}
                     <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             Confirm Password
@@ -143,7 +141,7 @@ const OAuthPasswordSetup = () => {
                         </div>
                     </div>
 
-                    {/* Password Requirements */}
+                    {}
                     {password && (
                         <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700">
                             <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Password Requirements:</p>
@@ -162,7 +160,7 @@ const OAuthPasswordSetup = () => {
                         </div>
                     )}
 
-                    {/* Set Password Button */}
+                    {}
                     <button
                         onClick={handleSetPassword}
                         disabled={!isPasswordValid || loading}

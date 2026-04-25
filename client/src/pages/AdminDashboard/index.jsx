@@ -136,7 +136,7 @@ const AdminDashboard = () => {
             background: 'var(--bg-base)',
             fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
         }}>
-            {/* Header */}
+            {}
             <header style={{
                 height: '64px',
                 padding: '0 32px',
@@ -184,7 +184,7 @@ const AdminDashboard = () => {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }} className="custom-scrollbar">
                 {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '80px 0' }}>

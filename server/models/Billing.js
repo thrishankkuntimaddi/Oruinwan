@@ -9,7 +9,7 @@ const billingSchema = new mongoose.Schema({
     },
     plan: {
         type: String,
-        enum: ['free', 'starter', 'professional', 'enterprise'], // Aligned with Company.js
+        enum: ['free', 'starter', 'professional', 'enterprise'], 
         default: 'free'
     },
     amount: {
@@ -45,7 +45,6 @@ const billingSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for queries
 billingSchema.index({ status: 1 });
 
 module.exports = mongoose.model('Billing', billingSchema);

@@ -1,6 +1,3 @@
-// src/components/messageComp/chatWindow/helpers/helpers.js
-// small helper utilities for ChatWindow
-
 export const formatTime = (iso) =>
   new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -37,7 +34,6 @@ export const groupByDate = (messages) => {
   return groups;
 };
 
-// file picker helper
 export const pickFile = (accept) =>
   new Promise((resolve) => {
     const input = document.createElement("input");

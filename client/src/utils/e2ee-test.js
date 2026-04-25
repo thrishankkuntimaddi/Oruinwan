@@ -1,12 +1,3 @@
-/**
- * E2EE Quick Validation Script
- * 
- * Tests the complete encryption/decryption flow
- * Run in browser console after logging in
- */
-
-// ============ STEP 1: Test Crypto Utilities ============
-
 async function testCrypto() {
     const {
         generateWorkspaceKey,
@@ -16,16 +7,16 @@ async function testCrypto() {
 
     console.log('1️⃣ Testing crypto utilities...');
 
-    // Generate test key
+    
     const testKey = await generateWorkspaceKey();
     console.log('✅ Generated workspace key');
 
-    // Test encryption
+    
     const plaintext = "Hello, this is a test message! 🎉";
     const encrypted = await encryptMessage(plaintext, testKey);
     console.log('✅ Encrypted:', encrypted.ciphertext.substring(0, 20) + '...');
 
-    // Test decryption
+    
     const decrypted = await decryptMessage(
         encrypted.ciphertext,
         encrypted.iv,
@@ -42,7 +33,6 @@ async function testCrypto() {
     }
 }
 
-// ============ STEP 2: Test Key Management ============
 async function testKeyManagement() {
     const { getEnrolledWorkspaces, hasWorkspaceKey } = await import('./services/keyManagement.js');
 
@@ -61,11 +51,10 @@ async function testKeyManagement() {
     return true;
 }
 
-// ============ STEP 3: Test Message Encryption Flow ============
 async function testMessageFlow() {
     console.log('3️⃣ Testing message encryption flow...');
 
-    // Check if workspace key is available
+    
     const workspaces = JSON.parse(sessionStorage.getItem('e2ee_workspace_keys') || '{}');
     console.log('Available workspace keys:', Object.keys(workspaces));
 
@@ -78,7 +67,6 @@ async function testMessageFlow() {
     return true;
 }
 
-// ============ STEP 4: Database Check (requires server access) ============
 function testDatabaseStorage() {
     console.log('4️⃣ Database storage check...');
     console.log('To verify encrypted messages in database, run in MongoDB:');
@@ -86,7 +74,6 @@ function testDatabaseStorage() {
     console.log('Expected: ciphertext and messageIv fields should be populated\n');
 }
 
-// ============ RUN ALL TESTS ============
 async function runAllTests() {
     console.log('╔══════════════════════════════════════════╗');
     console.log('║  E2EE Implementation Validation Suite   ║');
@@ -111,7 +98,6 @@ async function runAllTests() {
     }
 }
 
-// Auto-run when script is loaded
 if (typeof window !== 'undefined') {
     runAllTests();
 }

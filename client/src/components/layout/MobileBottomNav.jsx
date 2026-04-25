@@ -10,7 +10,6 @@ const TABS = [
     { id: 'settings', Icon: Settings,    label: 'Settings', path: null     },
 ];
 
-// Routes that are "under" the Home tab (navigated from MobileHomePage)
 const HOME_SUB_PATHS = ['/channels', '/channel/', '/messages', '/dm/', '/files', '/knowledge', '/updates', '/huddles', '/apps'];
 
 const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
@@ -20,13 +19,13 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
 
     const isActive = (tab) => {
         if (tab.id === 'ai') return showAI;
-        if (showAI) return false; // AI is open → only AI tab is active
+        if (showAI) return false; 
         if (tab.id === 'settings') return path.startsWith('/settings');
         if (!tab.path || !workspaceId) return false;
 
         const root = `/workspace/${workspaceId}${tab.path}`;
         if (tab.id === 'home') {
-            // Home tab stays active when navigating into Channels/DMs/Files etc.
+            
             return path === root || HOME_SUB_PATHS.some(p => path.includes(p));
         }
         return path === root || path.startsWith(root + '/');
@@ -34,7 +33,7 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
 
     const handleTab = (tab) => {
         if (tab.id === 'ai') { onAIToggle(); return; }
-        // Dismiss AI panel first (handles same-route case where navigation won't remount MainLayout)
+        
         if (showAI) onAIToggle();
         if (tab.id === 'settings') { navigate('/settings'); return; }
         if (tab.path && workspaceId) navigate(`/workspace/${workspaceId}${tab.path}`);
@@ -73,7 +72,7 @@ const MobileBottomNav = ({ workspaceId, showAI, onAIToggle }) => {
                                 WebkitTapHighlightColor: 'transparent',
                             }}
                         >
-                            {/* Active indicator */}
+                            {}
                             <div style={{
                                 position: 'absolute', top: 0, left: '50%',
                                 transform: 'translateX(-50%)',

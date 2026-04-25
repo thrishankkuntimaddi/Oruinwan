@@ -1,15 +1,12 @@
-// server/config/multer.config.js
 const multer = require('multer');
 
-// Define file size limits by category (in bytes)
 const FILE_SIZE_LIMITS = {
-    image: 5 * 1024 * 1024,      // 5MB
-    video: 50 * 1024 * 1024,     // 50MB
-    audio: 10 * 1024 * 1024,     // 10MB
-    document: 10 * 1024 * 1024   // 10MB
+    image: 5 * 1024 * 1024,      
+    video: 50 * 1024 * 1024,     
+    audio: 10 * 1024 * 1024,     
+    document: 10 * 1024 * 1024   
 };
 
-// Allowed MIME types by category
 const ALLOWED_TYPES = {
     image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
     video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
@@ -17,7 +14,6 @@ const ALLOWED_TYPES = {
     document: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain']
 };
 
-// Determine file category from MIME type
 const getFileCategory = (mimetype) => {
     if (ALLOWED_TYPES.image.includes(mimetype)) return 'images';
     if (ALLOWED_TYPES.video.includes(mimetype)) return 'videos';
@@ -26,7 +22,6 @@ const getFileCategory = (mimetype) => {
     return null;
 };
 
-// File filter to validate file types
 const fileFilter = (req, file, cb) => {
     const category = getFileCategory(file.mimetype);
     if (!category) {
@@ -35,18 +30,14 @@ const fileFilter = (req, file, cb) => {
     cb(null, true);
 };
 
-// Use memory storage — files are uploaded to GCS, never written to local disk.
-// This is required for containerised / serverless environments (Cloud Run, etc.)
-// where the local filesystem is ephemeral and disappears on every deploy/restart.
 const uploadNoteAttachment = multer({
     storage: multer.memoryStorage(),
     fileFilter: fileFilter,
     limits: {
-        fileSize: 50 * 1024 * 1024 // 50MB max (per-category validated below)
+        fileSize: 50 * 1024 * 1024 
     }
 });
 
-// Validate file size based on category
 const validateFileSize = (file) => {
     const category = getFileCategory(file.mimetype);
     if (!category) return false;

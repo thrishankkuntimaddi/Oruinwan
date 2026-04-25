@@ -9,7 +9,6 @@ import { useNotifications } from '../contexts/NotificationsContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import NotificationPreferences from '../components/shared/NotificationPreferences';
 
-// ── Design tokens ──────────────────────────────────────────────────────────
 const T = {
     bg:          'var(--bg-base)',
     surface:     'var(--bg-surface)',
@@ -23,7 +22,6 @@ const T = {
     font:        'Inter, system-ui, sans-serif',
 };
 
-// ── Type metadata (icon colors preserved for semantic meaning) ─────────────
 const TYPE_META = {
     mention:          { label: 'Mention',     Icon: AtSign,       dot: '#a78bfa', tabKey: 'mentions' },
     dm:               { label: 'Message',     Icon: MessageCircle,dot: '#38bdf8', tabKey: 'messages' },
@@ -106,7 +104,7 @@ export default function NotificationsPage() {
         if (!items.length) return null;
         return (
             <div key={label} style={{ marginBottom: '24px' }}>
-                {/* Day separator */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', padding: '0 2px' }}>
                     <span style={{ fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font, whiteSpace: 'nowrap' }}>{label}</span>
                     <div style={{ flex: 1, height: '1px', background: T.border }} />
@@ -135,12 +133,12 @@ export default function NotificationsPage() {
                                     position: 'relative',
                                 }}
                             >
-                                {/* Unread left accent */}
+                                {}
                                 {!n.read && (
                                     <span style={{ position: 'absolute', left: 0, top: '10px', bottom: '10px', width: '2px', background: T.accent }} />
                                 )}
 
-                                {/* Icon */}
+                                {}
                                 <div style={{
                                     flexShrink: 0, width: '34px', height: '34px',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -150,7 +148,7 @@ export default function NotificationsPage() {
                                     <Icon size={15} style={{ color: dot }} />
                                 </div>
 
-                                {/* Content */}
+                                {}
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
@@ -175,7 +173,7 @@ export default function NotificationsPage() {
                                             </p>
                                         </div>
 
-                                        {/* Actions — visible on hover */}
+                                        {}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', opacity: isHovered ? 1 : 0, transition: 'opacity 150ms ease', flexShrink: 0 }}>
                                             {n.link && (
                                                 <button
@@ -211,7 +209,7 @@ export default function NotificationsPage() {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: T.bg, fontFamily: T.font }}>
 
-            {/* ── Page Header ── */}
+            {}
             <div style={{ flexShrink: 0, background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '16px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '760px', margin: '0 auto' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -264,7 +262,7 @@ export default function NotificationsPage() {
                 </div>
             </div>
 
-            {/* ── Filter Tabs ── */}
+            {}
             <div style={{ flexShrink: 0, background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '0 24px' }}>
                 <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', gap: '0', overflowX: 'auto' }}>
                     {TABS.map(tab => {
@@ -296,7 +294,7 @@ export default function NotificationsPage() {
                 </div>
             </div>
 
-            {/* ── Feed ── */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto' }}>
                 {activeTab === 'settings' ? (
                     <div style={{ maxWidth: '760px', margin: '0 auto', padding: '32px 24px' }}>

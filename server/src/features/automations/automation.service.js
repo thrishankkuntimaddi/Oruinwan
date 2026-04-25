@@ -1,29 +1,9 @@
-/**
- * automation.service.js
- *
- * Core Workflow Automation Service.
- * Implements:
- *   - CRUD operations (admin-only writes)
- *   - Condition evaluation engine
- *   - Action execution fanout
- *   - Event processing pipeline
- *   - Scheduled automation runner
- *
- * Design principles:
- *   - Async / non-blocking: processEvent never throws into the event emitter
- *   - Lightweight in-memory cache for active automations per workspace
- *   - All action handlers are isolated — one failure doesn't block others
- *   - Extensible: add new action types in the ACTION_HANDLERS map below
- */
-
 const logger = require('../../../utils/logger');
 const Automation = require('./automation.model');
 const AutomationRun = require('./automationRun.model');
 
-// ─── In-memory cache ──────────────────────────────────────────────────────────
-// Maps workspaceId+triggerType → Automation[] (cleared on any write)
 const _cache = new Map();
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000; 
 const _cacheTimestamps = new Map();
 
 function _cacheKey(workspaceId, triggerType) {
@@ -45,7 +25,7 @@ async function _getCachedAutomations(workspaceId, triggerType) {
     if (ts && Date.now() - ts < CACHE_TTL_MS && _cache.has(key)) {
         return _cache.get(key);
     }
-    // Re-fetch
+    
     const results = await Automation.find({
         workspaceId,
         'trigger.type': triggerType,
@@ -57,16 +37,10 @@ async function _getCachedAutomations(workspaceId, triggerType) {
     return results;
 }
 
-// ─── Condition Evaluation ─────────────────────────────────────────────────────
-
-/**
- * Evaluate a single condition against eventData.
- * Supports dot-notation field paths (e.g. "trigger.config.repo").
- */
 function _evaluateCondition(condition, eventData) {
     const { field, operator, value } = condition;
 
-    // Resolve nested field value
+    
     const actual = field.split('.').reduce((obj, key) => {
         return obj && obj[key] !== undefined ? obj[key] : undefined;
     }, eventData);
@@ -84,20 +58,11 @@ function _evaluateCondition(condition, eventData) {
     }
 }
 
-/**
- * Return true only if ALL conditions pass (empty conditions = always true).
- */
 function _evaluateConditions(automation, eventData) {
     if (!automation.conditions || automation.conditions.length === 0) return true;
     return automation.conditions.every(c => _evaluateCondition(c, eventData));
 }
 
-// ─── Template variable interpolation ─────────────────────────────────────────
-
-/**
- * Replace {{key}} tokens in a string using eventData values.
- * Supports flat and one-level dot-notation: {{event.title}}, {{task.title}}.
- */
 function _interpolate(template, data) {
     if (!template || typeof template !== 'string') return template;
     return template.replace(/\{\{([^}]+)\}\}/g, (_, path) => {
@@ -115,12 +80,6 @@ function _interpolateConfig(config, data) {
     return result;
 }
 
-// ─── Action Handlers ──────────────────────────────────────────────────────────
-
-/**
- * Each handler receives (config, eventData, io) and returns a result or throws.
- * Add new action types here to extend the system.
- */
 const ACTION_HANDLERS = {
 
     async send_message(config, eventData, io) {
@@ -131,7 +90,7 @@ const ACTION_HANDLERS = {
         const msg = await Message.create({
             workspace: eventData.workspaceId,
             channel:   channelId,
-            sender:    null, // system message
+            sender:    null, 
             text:      `🤖 **Automation:** ${text}`
         });
         if (io) io.to(`channel:${channelId}`).emit('new-message', msg);
@@ -151,7 +110,7 @@ const ACTION_HANDLERS = {
             assignedTo: assignedToIds,
             source:     'automation',
             visibility: 'workspace',
-            createdBy:  null // system
+            createdBy:  null 
         });
         if (io) io.to(`workspace_${eventData.workspaceId}`).emit('task-created', task);
         return { taskId: task._id };
@@ -221,8 +180,6 @@ const ACTION_HANDLERS = {
     }
 };
 
-// ─── Execute All Actions ──────────────────────────────────────────────────────
-
 async function executeActions(automation, eventData, io) {
     const results = [];
     for (const action of automation.actions) {
@@ -243,20 +200,10 @@ async function executeActions(automation, eventData, io) {
     return results;
 }
 
-// ─── Process Event ─────────────────────────────────────────────────────────────
-
-/**
- * Main entry point — called by event hooks.
- * Fully async & non-blocking: errors are swallowed to protect caller.
- *
- * @param {string} triggerType  - e.g. 'task.created'
- * @param {Object} eventData    - { workspaceId, ...contextFields }
- * @param {Object} io           - Socket.io server instance
- */
 async function processEvent(triggerType, eventData, io) {
     if (!eventData || !eventData.workspaceId) return;
 
-    // Run fully async — don't block the event emitter
+    
     setImmediate(async () => {
         try {
             const automations = await _getCachedAutomations(
@@ -290,7 +237,7 @@ async function processEvent(triggerType, eventData, io) {
                     logger.error(`[Automation] Automation "${automation.name}" failed:`, err.message);
                 }
 
-                // Persist run log + update telemetry (fire-and-forget)
+                
                 Promise.all([
                     AutomationRun.create({
                         automationId: automation._id,
@@ -314,14 +261,12 @@ async function processEvent(triggerType, eventData, io) {
     });
 }
 
-// ─── CRUD Operations ──────────────────────────────────────────────────────────
-
 const MAX_AUTOMATIONS_PER_WORKSPACE = 50;
 
 async function createAutomation(userId, data) {
     const { workspaceId, name, description, trigger, conditions, actions, schedule, templateId } = data;
 
-    // Limit per workspace
+    
     const count = await Automation.countDocuments({ workspaceId, deleted: { $ne: true } });
     if (count >= MAX_AUTOMATIONS_PER_WORKSPACE) {
         const err = new Error(`Workspace limit of ${MAX_AUTOMATIONS_PER_WORKSPACE} automations reached`);
@@ -419,13 +364,6 @@ async function deleteAutomation(automationId, workspaceId) {
     logger.info(`[Automation] Soft-deleted "${automation.name}" (${automationId})`);
 }
 
-// ─── Scheduled Automation Runner ──────────────────────────────────────────────
-
-/**
- * Called by the cron job.
- * Finds all automations with trigger.type === 'scheduled' that are due to run
- * based on their schedule.expression (e.g. '30m', '1h', '24h').
- */
 async function runScheduledAutomations(io) {
     try {
         const scheduled = await Automation.find({
@@ -459,7 +397,6 @@ async function runScheduledAutomations(io) {
     }
 }
 
-/** Parse interval strings like '30m', '2h', '24h' to milliseconds. */
 function _parseInterval(expression) {
     if (!expression) return null;
     const match = expression.match(/^(\d+)(m|h|d)$/i);
@@ -468,8 +405,6 @@ function _parseInterval(expression) {
     const multipliers = { m: 60_000, h: 3_600_000, d: 86_400_000 };
     return parseInt(amount, 10) * (multipliers[unit.toLowerCase()] || 0);
 }
-
-// ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
     processEvent,

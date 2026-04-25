@@ -1,21 +1,15 @@
-// client/src/components/messagesComp/MessageDiffViewer.jsx
-// Phase-8: Modal showing edit history with diff highlighting
 import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { X, History } from 'lucide-react';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
-/**
- * Simple word-level diff between two strings.
- * Returns array of { text, type: 'same' | 'added' | 'removed' }
- */
 function simpleDiff(oldText = '', newText = '') {
   const oldWords = oldText.split(/\s+/).filter(Boolean);
   const newWords = newText.split(/\s+/).filter(Boolean);
   const result = [];
 
-  // Naive LCS-based diff — good enough for message edits
+  
   let i = 0, j = 0;
   while (i < oldWords.length || j < newWords.length) {
     if (i >= oldWords.length) {
@@ -48,7 +42,7 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
   }, [messageId]);
 
   const versionsToShow = [...history, { version: (history.length || 0) + 1, text: currentText, isCurrent: true }];
-  const sel = selectedVersion ?? versionsToShow.length - 1; // default to latest
+  const sel = selectedVersion ?? versionsToShow.length - 1; 
 
   const diffWords = sel > 0 && versionsToShow[sel - 1]?.text && versionsToShow[sel]?.text
     ? simpleDiff(versionsToShow[sel - 1].text, versionsToShow[sel].text)
@@ -73,7 +67,7 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
         maxHeight: '80vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 20px 60px rgba(0,0,0,0.55)',
       }}>
-        {/* Header */}
+        {}
         <div style={{
           padding: '14px 20px',
           borderBottom: '1px solid var(--border-default)',
@@ -111,7 +105,7 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
           </div>
         ) : (
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            {/* Version sidebar */}
+            {}
             <div style={{
               width: '140px', flexShrink: 0,
               borderRight: '1px solid var(--border-default)',
@@ -143,7 +137,7 @@ export default function MessageDiffViewer({ messageId, currentText, onClose }) {
               ))}
             </div>
 
-            {/* Diff view */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
               {versionsToShow[sel]?.isEncrypted ? (
                 <p style={{

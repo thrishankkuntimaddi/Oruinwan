@@ -1,7 +1,6 @@
 import React from 'react';
 import { Trash2, Info, AlertTriangle, CheckCircle, XCircle, Lightbulb } from 'lucide-react';
 
-// All callout variants use dark surface with colored left bar — no light-mode bg classes
 const CALLOUT_TYPES = {
     info: {
         label: 'Info',
@@ -68,10 +67,10 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 background: style.bg, border: `1px solid ${style.border}`,
                 transition: 'all 150ms ease', paddingLeft: '20px',
             }}>
-                {/* Accent left bar */}
+                {}
                 <div style={{ position: 'absolute', left: 0, top: '10px', bottom: '10px', width: '3px', background: style.bar }} />
 
-                {/* Icon button */}
+                {}
                 <button
                     onClick={cycleVariant}
                     style={{
@@ -87,7 +86,7 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     <Icon size={14} strokeWidth={2} />
                 </button>
 
-                {/* Content */}
+                {}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', color: style.labelColor, fontFamily: 'monospace' }}>
                         {style.label}
@@ -101,7 +100,7 @@ const CalloutBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     />
                 </div>
 
-                {/* Delete */}
+                {}
                 <button
                     onClick={() => onRemoveBlock(block.id)}
                     style={{ alignSelf: 'flex-start', padding: '5px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', opacity: 0, transition: 'all 150ms ease' }}

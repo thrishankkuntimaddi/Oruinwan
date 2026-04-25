@@ -5,50 +5,106 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <!--
       Content-Security-Policy:
-      - default-src 'self' — restricts most resources to same origin
-      - frame-src http://localhost:5173 — allows the iframe to load the web client
-      - script-src 'none' — no inline or external scripts in this shell page
-      This file is a temporary shell and will be replaced once the web build is bundled.
+      This page is the OFFLINE FALLBACK — shown when the Chttrix web client
+      cannot be reached (server down, no network). It contains no external
+      resources. script-src 'unsafe-inline' is intentionally allowed here
+      only because this page is a fully local fallback with no remote assets.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; frame-src http://localhost:5173; script-src 'none';"
+      content="default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:;"
     />
-    <title>Chttrix</title>
+    <title>Chttrix — Offline</title>
     <style>
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        width: 100%; height: 100%;
+        background: #0f172a;
+        color: #f1f5f9;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+        /* Enable native window drag from the title bar area */
+        -webkit-app-region: drag;
       }
 
-      html,
-      body {
-        width: 100%;
+      .shell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         height: 100%;
-        overflow: hidden;
-        background: #0f1117; /* matches the Chttrix dark theme */
+        gap: 20px;
+        /* Interactive elements must opt OUT of drag */
+        -webkit-app-region: no-drag;
       }
 
-      iframe#app-frame {
-        display: block;
-        width: 100%;
-        height: 100%;
+      .logo {
+        width: 72px; height: 72px;
+        border-radius: 20px;
+        background: #6366f1;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 32px; font-weight: 800; color: #fff;
+        box-shadow: 0 8px 32px rgba(99,102,241,0.4);
+        animation: pulse 2.4s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 8px 32px rgba(99,102,241,0.4); }
+        50%       { box-shadow: 0 8px 48px rgba(99,102,241,0.7); }
+      }
+
+      .title   { font-size: 22px; font-weight: 700; color: #f1f5f9; }
+      .message { font-size: 14px; color: #94a3b8; text-align: center; max-width: 320px; line-height: 1.6; }
+
+      .retry-btn {
+        margin-top: 8px;
+        padding: 10px 28px;
+        background: #6366f1;
+        color: #fff;
         border: none;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .retry-btn:hover { opacity: 0.85; }
+      .retry-btn:active { opacity: 0.7; }
+
+      .status {
+        position: fixed;
+        bottom: 20px;
+        font-size: 12px;
+        color: #475569;
+        letter-spacing: 0.5px;
       }
     </style>
   </head>
   <body>
-    <!--
-      Temporary renderer shell.
-      Loads the Chttrix web application inside a full-viewport iframe.
-      This file will be superseded once the bundled web build is embedded directly.
-    -->
-    <iframe
-      id="app-frame"
-      src="http://localhost:5173"
-      title="Chttrix Web Client"
-      allow="clipboard-read; clipboard-write; microphone; camera"
-    ></iframe>
+    <div class="shell">
+      <div class="logo">C</div>
+      <p class="title">Chttrix</p>
+      <p class="message">
+        Could not connect to the Chttrix workspace.<br/>
+        Please check your network connection and try again.
+      </p>
+      <button class="retry-btn" onclick="retry()">Retry</button>
+    </div>
+    <p class="status">Chttrix Desktop</p>
+
+    <script>
+      function retry() {
+        // Ask the main process to show the window and reload the main URL
+        if (window.electronAPI && window.electronAPI.showWindow) {
+          window.electronAPI.showWindow();
+        }
+        location.reload();
+      }
+
+      // Auto-retry after 10 seconds
+      setTimeout(retry, 10000);
+    </script>
   </body>
 </html>

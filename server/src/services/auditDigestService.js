@@ -1,21 +1,6 @@
-/**
- * PHASE 1 AUDIT: Hourly digest of key distribution health
- * 
- * This service provides a high-level health check to measure INV-001 violations:
- * ∀ user ∈ channel.members ⇒ user ∈ conversationKey.encryptedKeys[]
- * 
- * READ-ONLY: No writes, no mutations, no repairs
- */
-
 const Channel = require("../features/channels/channel.model.js");
 const ConversationKey = require('../../models/ConversationKey');
 
-/**
- * Generate audit digest report comparing membership vs key access
- * 
- * Measures the gap between channel.members[] and encryptedKeys[]
- * WITHOUT making any changes to data
- */
 async function generateAuditDigest() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
     console.log('📊 [AUDIT][PHASE1][DIGEST] Key Distribution Health Report');
@@ -23,7 +8,7 @@ async function generateAuditDigest() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     try {
-        // Get all channels (read-only)
+        
         const channels = await Channel.find({}).select('_id members workspace name').lean();
         const totalChannels = channels.length;
 
@@ -41,14 +26,14 @@ async function generateAuditDigest() {
         const criticalChannels = [];
 
         for (const channel of channels) {
-            // Find conversation key (read-only)
+            
             const conversationKey = await ConversationKey.findOne({
                 conversationId: channel._id,
                 conversationType: 'channel'
             }).lean();
 
             if (!conversationKey) {
-                // CRITICAL: Channel exists but no conversation key
+                
                 unhealthyChannels++;
                 criticalChannels.push({
                     channelId: channel._id,
@@ -64,20 +49,20 @@ async function generateAuditDigest() {
             const gap = memberCount - keyCount;
 
             if (gap === 0) {
-                // Perfect: All members have keys
+                
                 healthyChannels++;
             } else if (gap > 0) {
-                // CRITICAL FIX: Distinguish between violation and deferred distribution
-                // keyCount === 0 means identity keys not yet uploaded (EXPECTED during bootstrap)
-                // keyCount > 0 but gap > 0 means real violation (some users missing keys)
+                
+                
+                
 
                 if (keyCount === 0 && memberCount > 0) {
-                    // DEFERRED DISTRIBUTION: Awaiting identity key upload (NOT a violation)
-                    healthyChannels++; // Don't count as unhealthy during bootstrap
-                    continue; // Skip to next channel
+                    
+                    healthyChannels++; 
+                    continue; 
                 }
 
-                // Real violation: Some users have keys, others don't
+                
                 partialChannels++;
                 totalGaps += gap;
                 gapDetails.push({
@@ -89,13 +74,13 @@ async function generateAuditDigest() {
                     gapPercent: Math.round((gap / memberCount) * 100)
                 });
             }
-            // Note: gap < 0 (more keys than members) is possible if members were removed
-            // but we don't track that as a violation in Phase 1
+            
+            
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // SUMMARY METRICS
-        // ═══════════════════════════════════════════════════════════════
+        
+        
+        
         const healthPercent = Math.round((healthyChannels / totalChannels) * 100);
         const partialPercent = Math.round((partialChannels / totalChannels) * 100);
         const unhealthyPercent = Math.round((unhealthyChannels / totalChannels) * 100);
@@ -107,13 +92,13 @@ async function generateAuditDigest() {
         console.log(`   ├─ No conversation key: ${unhealthyChannels} (${unhealthyPercent}%)`);
         console.log(`   └─ Total users affected: ${totalGaps}`);
 
-        // ═══════════════════════════════════════════════════════════════
-        // GAP DETAILS (TOP 10)
-        // ═══════════════════════════════════════════════════════════════
+        
+        
+        
         if (gapDetails.length > 0) {
             console.log(`\n⚠️ [AUDIT][PHASE1][DIGEST] INV-001 Violations Detected:`);
 
-            // Sort by gap size (descending)
+            
             gapDetails.sort((a, b) => b.gap - a.gap);
 
             const topGaps = gapDetails.slice(0, 10);
@@ -132,9 +117,9 @@ async function generateAuditDigest() {
             console.log(`\n✅ No INV-001 violations detected across ${healthyChannels} healthy channels`);
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // CRITICAL ISSUES (No conversation key)
-        // ═══════════════════════════════════════════════════════════════
+        
+        
+        
         if (criticalChannels.length > 0) {
             console.log(`\n🚨 [AUDIT][PHASE1][DIGEST] CRITICAL: Channels without encryption keys:`);
 
@@ -150,9 +135,9 @@ async function generateAuditDigest() {
             }
         }
 
-        // ═══════════════════════════════════════════════════════════════
-        // HEALTH SCORE
-        // ═══════════════════════════════════════════════════════════════
+        
+        
+        
         const overallHealthScore = Math.round((healthyChannels / totalChannels) * 100);
         console.log(`\n📊 [AUDIT][PHASE1][DIGEST] Overall Health Score: ${overallHealthScore}%`);
 

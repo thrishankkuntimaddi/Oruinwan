@@ -1,4 +1,3 @@
-// client/src/components/messagesComp/MessageList.jsx
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import api from '@services/api';
 import { io } from "socket.io-client";
@@ -11,7 +10,6 @@ import { AuthContext } from "../../contexts/AuthContext";
 import { SocketContext } from "../../contexts/SocketContext";
 import { API_BASE } from '@services/api';
 import { channelService } from "../../services/channelService";
-
 
 import { Button, Input, Avatar, Badge } from "../../shared/components/ui";
 
@@ -28,9 +26,7 @@ export default function MessageList({ onSelectChat }) {
   const { workspaceId } = useParams();
   const socketRef = useRef(null);
 
-  /* -------------------------------------------------
-     GET MY USER ID FROM TOKEN
-  ------------------------------------------------- */
+  
   function getMyId() {
     try {
       const t = localStorage.getItem("accessToken");
@@ -43,29 +39,27 @@ export default function MessageList({ onSelectChat }) {
   }
   const myId = getMyId();
 
-  /* -------------------------------------------------
-     LOAD INITIAL CHAT LIST + ALL USERS (Slack-style)
-  ------------------------------------------------- */
+  
   const loadAllChats = useCallback(async () => {
     try {
       const token = localStorage.getItem("accessToken");
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
 
-      // Fetch existing chats (DMs & Channels with history)
+      
       const chatsRes = await api.get(`/api/chat/list`);
       const existingChats = chatsRes.data.chats || [];
 
-      // Fetch joined channels via canonical endpoint
+      
       const channelsRes = workspaceId
         ? await channelService.getMyChannels(workspaceId)
         : { data: { channels: [] } };
       const myChannels = channelsRes.data.channels || [];
 
-      // Fetch all users in workspace
+      
       const usersRes = await api.get(`/api/auth/users`);
       const allUsers = usersRes.data.users || [];
 
-      // 1. Process Channels
+      
       const channelMap = new Map();
       existingChats
         .filter(c => c.type === "channel")
@@ -86,7 +80,7 @@ export default function MessageList({ onSelectChat }) {
         };
       });
 
-      // 2. Process DMs
+      
       const dmMap = new Map();
       existingChats
         .filter(c => c.type === "dm")
@@ -111,7 +105,7 @@ export default function MessageList({ onSelectChat }) {
           };
         });
 
-      // 3. Combine and Sort
+      
       const sortedChannels = mergedChannels.sort((a, b) => {
         const timeA = new Date(a.lastMessageAt || 0);
         const timeB = new Date(b.lastMessageAt || 0);
@@ -137,18 +131,16 @@ export default function MessageList({ onSelectChat }) {
     loadAllChats();
   }, [loadAllChats]);
 
-  /* -------------------------------------------------
-     SOCKET: LISTEN FOR NEW MESSAGES (Using shared socket from context)
-  ------------------------------------------------- */
+  
   const { socket: sharedSocket, isConnected, addMessageListener, addChannelListener } = useContext(SocketContext);
 
   useEffect(() => {
     if (!sharedSocket || !isConnected) return;
 
-    // Use the shared socket from context
+    
     socketRef.current = sharedSocket;
 
-    // Subscribe to message events via SocketContext
+    
     const unsubscribeMessages = addMessageListener((eventName, data) => {
       if (eventName === 'new-message') {
         const { message } = data;
@@ -168,14 +160,14 @@ export default function MessageList({ onSelectChat }) {
             ? message.sender._id
             : message.sender;
 
-        // Prefer decryptedContent (set by MessageEvent after E2EE decryption) over raw text
+        
         const rawPreview =
           message.decryptedContent ||
           message.text ||
           (message.attachments?.length
             ? `[${message.attachments[0].type}]`
             : "");
-        // Never show the encrypted placeholder string in the sidebar
+        
         const previewText =
           rawPreview && !rawPreview.startsWith("\u{1F512}") ? rawPreview : "";
 
@@ -188,21 +180,21 @@ export default function MessageList({ onSelectChat }) {
           );
 
           if (idx >= 0) {
-            // update
+            
             arr[idx].lastMessage = previewText;
             arr[idx].lastMessageAt = now;
 
-            // unread
+            
             if (senderId !== myId) {
               arr[idx].unreadCount = (arr[idx].unreadCount || 0) + 1;
             }
 
-            // move to top
+            
             const updated = arr.splice(idx, 1)[0];
             return [updated, ...arr];
           }
 
-          // new chat
+          
           const newItem = {
             type,
             id: chatId,
@@ -217,12 +209,12 @@ export default function MessageList({ onSelectChat }) {
       }
     });
 
-    // Subscribe to channel events via SocketContext
+    
     const unsubscribeChannels = addChannelListener((eventName, data) => {
       if (eventName === 'channel-created') {
         const channel = data.channel || data;
         setItems((prev) => {
-          // avoid duplicates
+          
           if (prev.some((it) => String(it.id) === String(channel._id))) return prev;
           return [
             {
@@ -239,7 +231,7 @@ export default function MessageList({ onSelectChat }) {
         });
       } else if (eventName === 'invited-to-channel') {
         const { channelId, channelName } = data;
-        // User was invited to a channel, add it to their list
+        
         setItems((prev) => {
           if (prev.some((it) => String(it.id) === String(channelId))) return prev;
           return [
@@ -257,21 +249,19 @@ export default function MessageList({ onSelectChat }) {
         });
       } else if (eventName === 'removed-from-channel') {
         const { channelId } = data;
-        // User was removed from a channel, remove it from their list
+        
         setItems((prev) => prev.filter((it) => !(it.type === "channel" && String(it.id) === String(channelId))));
       }
     });
 
     return () => {
-      // Clean up listeners
+      
       if (unsubscribeMessages) unsubscribeMessages();
       if (unsubscribeChannels) unsubscribeChannels();
     };
   }, [sharedSocket, isConnected, myId, addMessageListener, addChannelListener]);
 
-  /* -------------------------------------------------
-     FILTER RESULTS
-  ------------------------------------------------- */
+  
   const filtered = items.filter((item) => {
     const txt = (item.name + " " + (item.lastMessage || "")).toLowerCase();
     if (!txt.includes(searchQuery.toLowerCase())) return false;
@@ -281,9 +271,7 @@ export default function MessageList({ onSelectChat }) {
     return false;
   });
 
-  /* -------------------------------------------------
-     TIME FORMAT
-  ------------------------------------------------- */
+  
   function fmtShort(ts) {
     if (!ts) return "";
     const d = new Date(ts);
@@ -297,13 +285,11 @@ export default function MessageList({ onSelectChat }) {
     return d.toLocaleDateString();
   }
 
-  /* -------------------------------------------------
-     RENDER
-  ------------------------------------------------- */
+  
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
 
-      {/* Search */}
+      {}
       <div style={{ padding: '10px 16px' }}>
         <Input
           placeholder="Search"
@@ -315,7 +301,7 @@ export default function MessageList({ onSelectChat }) {
         />
       </div>
 
-      {/* Channel Actions */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', padding: '6px 16px' }}>
         <Button
           size="xs"
@@ -342,7 +328,7 @@ export default function MessageList({ onSelectChat }) {
         </Button>
       </div>
 
-      {/* Modals */}
+      {}
       {showCreate && (
         <CreateChannelModal
           onClose={() => setShowCreate(false)}
@@ -373,19 +359,18 @@ export default function MessageList({ onSelectChat }) {
         />
       )}
 
-
       {showJoin && (
         <JoinChannelModal
           currentUserId={myId}
           onClose={() => setShowJoin(false)}
           onJoined={() => {
-            // Reload chat list after joining
+            
             loadAllChats();
           }}
         />
       )}
 
-      {/* Tabs */}
+      {}
       <div style={{
         display: 'flex',
         borderBottom: '1px solid var(--border-default)',
@@ -413,16 +398,16 @@ export default function MessageList({ onSelectChat }) {
         ))}
       </div>
 
-      {/* List */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {(() => {
-          // Separate items into sections
+          
           const channels = filtered.filter(item => item.type === "channel");
           const dms = filtered.filter(item => item.type === "dm");
 
           return (
             <>
-              {/* Channels Section */}
+              {}
               {channels.length > 0 && (
                 <>
                   <div style={{
@@ -460,7 +445,7 @@ export default function MessageList({ onSelectChat }) {
                 </>
               )}
 
-              {/* Direct Messages Section */}
+              {}
               {dms.length > 0 && (
                 <>
                   <div style={{
@@ -483,7 +468,7 @@ export default function MessageList({ onSelectChat }) {
                 </>
               )}
 
-              {/* Empty State */}
+              {}
               {filtered.length === 0 && (
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -503,7 +488,7 @@ export default function MessageList({ onSelectChat }) {
     </div>
   );
 
-  // Helper component for chat list items
+  
   function ChatListItem({ item }) {
     return (
       <div
@@ -516,7 +501,7 @@ export default function MessageList({ onSelectChat }) {
         onClick={async () => {
           onSelectChat(item);
 
-          // reset unread server-side (only if there's message history)
+          
           if (!item.isUserEntry) {
             try {
               const token = localStorage.getItem("accessToken");
@@ -530,7 +515,7 @@ export default function MessageList({ onSelectChat }) {
             }
           }
 
-          // reset local
+          
           setItems((prev) =>
             prev.map((i) =>
               i.type === item.type && String(i.id) === String(item.id)
@@ -540,7 +525,7 @@ export default function MessageList({ onSelectChat }) {
           );
         }}
       >
-        {/* Avatar */}
+        {}
         {item.type === "dm" ? (
           <Avatar
             src={item.profilePicture}
@@ -560,7 +545,7 @@ export default function MessageList({ onSelectChat }) {
           </div>
         )}
 
-        {/* Text */}
+        {}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
             <p style={{

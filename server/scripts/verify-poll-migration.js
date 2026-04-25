@@ -1,18 +1,10 @@
 #!/usr/bin/env node
-/**
- * PHASE 2A-4: Polls Canonicalization Verification Script
- * 
- * Purpose: Verify that all 6 poll routes are routed to canonical controller
- * Expected: All routes return 401 Unauthorized (since no auth token provided)
- * Success: Server doesn't crash, logs show [POLLS:MODULAR] prefix
- */
 
 const axios = require('axios');
 
 const BASE_URL = process.env.API_URL || 'http://localhost:5001';
 const API_PREFIX = '/api/polls';
 
-// Color codes
 const RED = '\x1b[31m';
 const GREEN = '\x1b[32m';
 const YELLOW = '\x1b[33m';
@@ -67,7 +59,7 @@ async function runTest(test) {
         const config = {
             method: test.method,
             url,
-            validateStatus: () => true // Accept any status
+            validateStatus: () => true 
         };
 
         if (test.body) {
@@ -118,10 +110,10 @@ async function main() {
     for (const test of tests) {
         const result = await runTest(test);
         results.push(result);
-        console.log(''); // Blank line between tests
+        console.log(''); 
     }
 
-    // Summary
+    
     console.log(`${YELLOW}═══════════════════════════════════════════════════════════${RESET}`);
     console.log(`${YELLOW}SUMMARY${RESET}\n`);
 
@@ -153,7 +145,6 @@ async function main() {
     }
 }
 
-// Check if server is running
 axios.get(`${BASE_URL}/health`)
     .then(() => {
         console.log(`${GREEN}✅ Server is running at ${BASE_URL}${RESET}\n`);

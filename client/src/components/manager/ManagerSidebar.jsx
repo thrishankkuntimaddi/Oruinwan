@@ -1,4 +1,3 @@
-// ManagerSidebar — Monolith Flow Design System
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -56,7 +55,7 @@ export default function ManagerSidebar({ onNavigate }) {
             position: 'sticky', top: 0,
             fontFamily: 'Inter, system-ui, sans-serif',
         }}>
-            {/* Logo */}
+            {}
             <div style={{
                 height: '56px', padding: '0 16px', display: 'flex', alignItems: 'center',
                 gap: '10px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0,
@@ -68,7 +67,7 @@ export default function ManagerSidebar({ onNavigate }) {
                 </div>
             </div>
 
-            {/* Nav */}
+            {}
             <nav style={{ flex: 1, overflowY: 'auto', padding: '12px 8px' }} className="custom-scrollbar">
                 {NAV_GROUPS.map(grp => (
                     <div key={grp.group} style={{ marginBottom: '20px' }}>
@@ -83,7 +82,7 @@ export default function ManagerSidebar({ onNavigate }) {
                 ))}
             </nav>
 
-            {/* User footer */}
+            {}
             <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px', position: 'relative', flexShrink: 0 }}>
                 {showMenu && (
                     <div style={{

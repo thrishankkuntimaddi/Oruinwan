@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/notion.handler.js
 async function verify(config) {
   if (!config.token) throw Object.assign(new Error('Notion: integration token required'), { statusCode: 400 });
   return config;

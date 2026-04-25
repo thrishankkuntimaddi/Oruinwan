@@ -1,18 +1,9 @@
-// server/src/features/reminders/reminders.routes.js
-// Phase 1 — Message Reminders REST API
-// POST /api/messages/:id/remind  — set a reminder for a message
-// GET  /api/reminders            — list my active reminders
-// DELETE /api/reminders/:id      — cancel a reminder
-
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const MessageReminder = require('../messages/MessageReminder');
 const Message = require('../messages/message.model');
 
-// ─── Create/update a reminder ─────────────────────────────────────────────────
-// POST /api/messages/:id/remind
-// Body: { remindAt: ISO8601 string, note?: string }
 router.post('/messages/:id/remind', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -29,7 +20,7 @@ router.post('/messages/:id/remind', requireAuth, async (req, res) => {
     const message = await Message.findById(messageId).select('_id');
     if (!message) return res.status(404).json({ message: 'Message not found' });
 
-    // Upsert: one reminder per (userId, messageId) — replaces previous
+    
     const reminder = await MessageReminder.findOneAndUpdate(
       { userId, messageId },
       { remindAt: remindDate, note: note.trim(), delivered: false, deliveredAt: null },
@@ -43,8 +34,6 @@ router.post('/messages/:id/remind', requireAuth, async (req, res) => {
   }
 });
 
-// ─── List my pending reminders ────────────────────────────────────────────────
-// GET /api/reminders
 router.get('/reminders', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -67,14 +56,12 @@ router.get('/reminders', requireAuth, async (req, res) => {
   }
 });
 
-// ─── Cancel a reminder ────────────────────────────────────────────────────────
-// DELETE /api/reminders/:id
 router.delete('/reminders/:id', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
     const reminder = await MessageReminder.findOneAndDelete({
       _id: req.params.id,
-      userId // Security: only the owner can cancel
+      userId 
     });
 
     if (!reminder) return res.status(404).json({ message: 'Reminder not found' });

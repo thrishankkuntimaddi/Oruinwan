@@ -1,4 +1,3 @@
-// ReactionPicker — Monolith Flow Design System
 import React, { useState, useRef, useEffect } from "react";
 import EmojiPicker from "emoji-picker-react";
 
@@ -18,7 +17,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
 
     return (
         <div ref={ref} style={{ position: 'relative' }} onClick={e => e.stopPropagation()}>
-            {/* Quick strip */}
+            {}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: '2px',
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
@@ -40,7 +39,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
                         {emoji}
                     </button>
                 ))}
-                {/* Full picker toggle */}
+                {}
                 <button
                     onClick={() => setShowFull(s => !s)}
                     title="More reactions"
@@ -56,7 +55,7 @@ export default function ReactionPicker({ onSelect, onClose }) {
                 </button>
             </div>
 
-            {/* Full emoji picker */}
+            {}
             {showFull && (
                 <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', right: 0, zIndex: 50, borderRadius: '2px', overflow: 'hidden', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
                     <EmojiPicker

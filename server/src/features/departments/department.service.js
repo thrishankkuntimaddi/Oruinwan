@@ -1,21 +1,8 @@
-// server/src/features/departments/department.service.js
-//
-// Phase 2 + Phase 4 — Department Management System
-// Business logic layer — no HTTP references.
-// Channels, Tasks, Messages, Notes, Huddles are NOT touched.
-
 const Department = require('../../../models/Department');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Channel = require('../channels/channel.model.js');
 
-// ============================================================================
-// READ
-// ============================================================================
-
-/**
- * Get all active departments for a company.
- */
 async function getDepartments(companyId) {
     const depts = await Department.find({ company: companyId, isActive: true })
         .populate('head', 'username email profilePicture')
@@ -29,16 +16,13 @@ async function getDepartments(companyId) {
         .sort({ name: 1 })
         .lean();
 
-    // Safety: strip any null slots Mongoose inserts when match filters someone out
+    
     return depts.map(d => ({
         ...d,
         members: (d.members || []).filter(Boolean),
     }));
 }
 
-/**
- * Get a single department — enforces company isolation.
- */
 async function getDepartmentById(departmentId, companyId) {
     const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true })
         .populate('head', 'username email profilePicture')
@@ -57,21 +41,13 @@ async function getDepartmentById(departmentId, companyId) {
         throw err;
     }
 
-    // Strip null slots Mongoose inserts when match filters someone out
+    
     dept.members = (dept.members || []).filter(Boolean);
     return dept;
 }
 
-// ============================================================================
-// CREATE
-// ============================================================================
-
-/**
- * Create a department and bootstrap its default Workspace, Channels, and
- * encryption keys (exact logic preserved from original departments.routes.js).
- */
 async function createDepartment({ companyId, name, description, head, parentDepartment, creatorId }) {
-    // Guard: unique name within company
+    
     const existing = await Department.findOne({ company: companyId, name: new RegExp(`^${name.trim()}$`, 'i'), isActive: true });
     if (existing) {
         const err = new Error(`A department named "${name}" already exists.`);
@@ -79,7 +55,7 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         throw err;
     }
 
-    // 1. Create Department
+    
     const department = await Department.create({
         company: companyId,
         name: name.trim(),
@@ -89,11 +65,11 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         members: head ? [head] : [],
     });
 
-    // 2. Create Default Workspace for this Department
+    
     const workspaceMembers = [];
     if (head) {
         workspaceMembers.push({ user: head, role: 'owner' });
-        // If head !== creatorId, admin is also added as member
+        
         if (String(head) !== String(creatorId)) {
             workspaceMembers.push({ user: creatorId, role: 'admin' });
         }
@@ -112,7 +88,7 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         settings: { isPrivate: false, allowMemberInvite: true },
     });
 
-    // 3. Create Default Channels (general + announcements)
+    
     const channelNames = ['general', 'announcements'];
     const createdChannelIds = [];
     const now = new Date();
@@ -130,11 +106,11 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         createdChannelIds.push(channel._id);
     }
 
-    // 4. Link channels → workspace
+    
     workspace.defaultChannels = createdChannelIds;
     await workspace.save();
 
-    // 5. Bootstrap encryption keys for default channels
+    
     const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
     const memberIds = workspaceMembers.map(m => m.user.toString());
 
@@ -152,9 +128,9 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         }
     }
 
-    // 6. Link workspace → department + set as defaultWorkspaceId
+    
     department.workspaces.push(workspace._id);
-    department.defaultWorkspaceId = workspace._id; // Phase 4: auto-membership hook
+    department.defaultWorkspaceId = workspace._id; 
     await department.save();
 
     return Department.findById(department._id)
@@ -164,13 +140,6 @@ async function createDepartment({ companyId, name, description, head, parentDepa
         .lean();
 }
 
-// ============================================================================
-// UPDATE
-// ============================================================================
-
-/**
- * PATCH department — company-isolated. Only allowed fields updated.
- */
 async function updateDepartment(departmentId, companyId, updates) {
     const allowed = ['name', 'description', 'head', 'managers', 'parentDepartment', 'isActive'];
     const sanitized = {};
@@ -202,14 +171,6 @@ async function updateDepartment(departmentId, companyId, updates) {
     return dept;
 }
 
-// ============================================================================
-// DELETE
-// ============================================================================
-
-/**
- * Soft-delete a department and clean up User.departments[] and
- * User.managedDepartments[] references bidirectionally.
- */
 async function deleteDepartment(departmentId, companyId) {
     const dept = await Department.findOne({ _id: departmentId, company: companyId });
     if (!dept) {
@@ -218,11 +179,11 @@ async function deleteDepartment(departmentId, companyId) {
         throw err;
     }
 
-    // Soft delete
+    
     dept.isActive = false;
     await dept.save();
 
-    // Cleanup: remove reference from all users
+    
     await Promise.all([
         User.updateMany({ departments: departmentId }, { $pull: { departments: departmentId } }),
         User.updateMany({ managedDepartments: departmentId }, { $pull: { managedDepartments: departmentId } }),
@@ -231,19 +192,6 @@ async function deleteDepartment(departmentId, companyId) {
     return { deleted: true, departmentId };
 }
 
-// ============================================================================
-// MEMBER ASSIGNMENT
-// ============================================================================
-
-/**
- * Bulk add or remove members from a department.
- * Bidirectionally syncs User.departments[].
- *
- * @param {string}   departmentId
- * @param {string}   companyId
- * @param {string[]} userIds      - Array of User ObjectId strings
- * @param {'add'|'remove'} action
- */
 async function assignMembers(departmentId, companyId, userIds, action) {
     const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true });
     if (!dept) {
@@ -252,7 +200,7 @@ async function assignMembers(departmentId, companyId, userIds, action) {
         throw err;
     }
 
-    // Verify all users belong to this company
+    
     const users = await User.find({ _id: { $in: userIds }, companyId }).select('_id').lean();
     if (users.length !== userIds.length) {
         const err = new Error('One or more users not found or do not belong to this company.');
@@ -261,23 +209,23 @@ async function assignMembers(departmentId, companyId, userIds, action) {
     }
 
     if (action === 'add') {
-        // Add to department.members (deduplicated)
+        
         await Department.findByIdAndUpdate(departmentId, {
             $addToSet: { members: { $each: userIds } },
         });
-        // Sync: add departmentId to each user's departments[]
+        
         await User.updateMany(
             { _id: { $in: userIds } },
             { $addToSet: { departments: departmentId } }
         );
 
-        // Phase 4 — Hybrid Workspace Assignment:
-        // Auto-join each user to the department's defaultWorkspace.
-        // Uses $addToSet so existing members are not duplicated.
+        
+        
+        
         if (dept.defaultWorkspaceId) {
             const now = new Date();
 
-            // Add each user to Workspace.members[] if not already present
+            
             for (const uid of userIds) {
                 await Workspace.findByIdAndUpdate(
                     dept.defaultWorkspaceId,
@@ -289,7 +237,7 @@ async function assignMembers(departmentId, companyId, userIds, action) {
                 );
             }
 
-            // Sync: add workspace entry to each User.workspaces[] if not already present
+            
             for (const uid of userIds) {
                 const alreadyMember = await User.exists({
                     _id: uid,
@@ -309,18 +257,18 @@ async function assignMembers(departmentId, companyId, userIds, action) {
             }
         }
     } else {
-        // Remove from department.members
+        
         await Department.findByIdAndUpdate(departmentId, {
             $pull: { members: { $in: userIds } },
         });
-        // Sync: remove departmentId from each user's departments[]
+        
         await User.updateMany(
             { _id: { $in: userIds } },
             { $pull: { departments: departmentId } }
         );
-        // Phase 4 NOTE: workspace membership is NOT auto-removed on department removal.
-        // Per spec: "Users can still be invited to additional workspaces manually."
-        // Workspace membership must be managed explicitly via workspace APIs.
+        
+        
+        
     }
 
     return Department.findById(departmentId)
@@ -329,19 +277,6 @@ async function assignMembers(departmentId, companyId, userIds, action) {
         .lean();
 }
 
-// ============================================================================
-// SET DEFAULT WORKSPACE (Phase 4)
-// ============================================================================
-
-/**
- * Change or clear the defaultWorkspaceId for a department.
- * The new workspace must belong to the same company.
- * Allows admin to re-point auto-membership to a different workspace.
- *
- * @param {string}      departmentId
- * @param {string}      companyId
- * @param {string|null} workspaceId  - pass null to clear
- */
 async function setDefaultWorkspace(departmentId, companyId, workspaceId) {
     const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true });
     if (!dept) {
@@ -357,7 +292,7 @@ async function setDefaultWorkspace(departmentId, companyId, workspaceId) {
             err.status = 404;
             throw err;
         }
-        // Ensure workspace is in the department's workspaces list
+        
         if (!dept.workspaces.map(w => w.toString()).includes(workspaceId.toString())) {
             dept.workspaces.push(workspaceId);
         }
@@ -370,10 +305,6 @@ async function setDefaultWorkspace(departmentId, companyId, workspaceId) {
         .populate('defaultWorkspaceId', 'name type')
         .lean();
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     getDepartments,

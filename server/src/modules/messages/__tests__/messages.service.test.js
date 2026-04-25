@@ -1,22 +1,12 @@
-// server/src/modules/messages/__tests__/messages.service.test.js
-/**
- * Messages Service - Unit Tests
- *
- * Tests for message creation, retrieval, and DM session management.
- * Updated for Phase-8: reflects E2EE enforcement, nested payload shape,
- * and chained populate in fetchMessages.
- */
-
 const messagesService = require('../messages.service');
 const Message = require('../../../features/messages/message.model.js');
 const DMSession = require('../../../../models/DMSession');
 const Workspace = require('../../../../models/Workspace');
 
-// Mock dependencies — paths must match exactly what the service requires
 jest.mock('../../../features/messages/message.model.js');
 jest.mock('../../../../models/DMSession');
 jest.mock('../../../../models/Workspace');
-// Additional modules loaded lazily inside service — mock to avoid real DB calls
+
 jest.mock('../../conversations/conversationKeys.service', () => ({
     bootstrapConversationKey: jest.fn().mockResolvedValue({ success: true }),
 }));
@@ -32,7 +22,7 @@ describe('Messages Service', () => {
                 messagesService.createMessage({
                     type: 'message',
                     sender: 'user123',
-                    text: 'Hello world',        // no ciphertext → should throw
+                    text: 'Hello world',        
                     workspace: 'ws123',
                     channel: 'ch123'
                 })
@@ -63,7 +53,7 @@ describe('Messages Service', () => {
                 channel: 'ch123'
             });
 
-            // Service stores E2EE fields inside nested payload object
+            
             expect(Message.create).toHaveBeenCalledWith(
                 expect.objectContaining({
                     payload: expect.objectContaining({
@@ -136,7 +126,7 @@ describe('Messages Service', () => {
 
             DMSession.findOne = jest.fn().mockResolvedValue(null);
             Workspace.findById = jest.fn().mockResolvedValue(mockWorkspace);
-            // Service uses findOneAndUpdate with {upsert:true, new:true} — not create()
+            
             DMSession.findOneAndUpdate = jest.fn().mockResolvedValue(mockNewSession);
 
             const result = await messagesService.findOrCreateDMSession('user1', 'user2', 'ws123');
@@ -154,15 +144,15 @@ describe('Messages Service', () => {
                 { _id: 'msg2', text: 'World', toObject: () => ({ _id: 'msg2', text: 'World' }) },
             ];
 
-            // fetchMessages: find().sort().limit().populate*4 — resolves as Mongoose docs (no .lean())
-            // The last .populate() call must be the one that resolves with the docs array
+            
+            
             let populateCallCount = 0;
             const mockQuery = {
                 sort: jest.fn().mockReturnThis(),
                 limit: jest.fn().mockReturnThis(),
                 populate: jest.fn().mockImplementation(() => {
                     populateCallCount++;
-                    // Service calls populate 4 times; last one resolves the array
+                    
                     if (populateCallCount < 4) return mockQuery;
                     return Promise.resolve([...rawMessages]);
                 }),
@@ -170,7 +160,7 @@ describe('Messages Service', () => {
 
             Message.find = jest.fn().mockReturnValue(mockQuery);
             Message.countDocuments = jest.fn().mockResolvedValue(10);
-            // aggregate used for reply counts — return empty
+            
             Message.aggregate = jest.fn().mockResolvedValue([]);
 
             const result = await messagesService.fetchMessages(
@@ -179,7 +169,7 @@ describe('Messages Service', () => {
             );
 
             expect(result.messages).toHaveLength(2);
-            expect(result.hasMore).toBe(false); // 2 = limit, hasMore=true only when length > limit
+            expect(result.hasMore).toBe(false); 
         });
     });
 

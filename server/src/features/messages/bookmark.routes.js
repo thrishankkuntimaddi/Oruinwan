@@ -1,14 +1,8 @@
-// server/src/features/messages/bookmark.routes.js
-// Phase 1 — Message Bookmarks
-// POST /api/messages/:id/bookmark  — toggle bookmark (add/remove)
-// GET  /api/messages/bookmarks     — list all messages bookmarked by me
-
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const Message = require('./message.model');
 
-// ─── Toggle bookmark ────────────────────────────────────────────────────────
 router.post('/:id/bookmark', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -20,13 +14,13 @@ router.post('/:id/bookmark', requireAuth, async (req, res) => {
     const isBookmarked = message.bookmarkedBy.some(id => id.toString() === userId.toString());
 
     if (isBookmarked) {
-      // Remove bookmark
+      
       await Message.findByIdAndUpdate(messageId, {
         $pull: { bookmarkedBy: userId }
       });
       return res.json({ bookmarked: false });
     } else {
-      // Add bookmark
+      
       await Message.findByIdAndUpdate(messageId, {
         $addToSet: { bookmarkedBy: userId }
       });
@@ -38,7 +32,6 @@ router.post('/:id/bookmark', requireAuth, async (req, res) => {
   }
 });
 
-// ─── List my bookmarked messages ─────────────────────────────────────────────
 router.get('/bookmarks', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;

@@ -1,9 +1,3 @@
-/**
- * HuddleParticipants.jsx — Phase 7.7
- *
- * Renders the row of participant avatars inside the HuddleOverlay.
- * Shows initials + muted indicator per participant.
- */
 import React from 'react';
 import { MicOff } from 'lucide-react';
 
@@ -27,18 +21,18 @@ export default function HuddleParticipants({ participants = [] }) {
 
                 return (
                     <div key={p.userId} className="flex flex-col items-center gap-0.5" title={label}>
-                        {/* Avatar */}
+                        {}
                         <div className="relative">
                             <div className={`w-8 h-8 rounded-full ${color} flex items-center justify-center text-white text-[11px] font-bold ring-2 ring-white/20`}>
                                 {getInitials(label)}
                             </div>
-                            {/* Muted indicator */}
+                            {}
                             {p.audioEnabled === false && (
                                 <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-red-500 rounded-full flex items-center justify-center ring-1 ring-white">
                                     <MicOff size={8} className="text-white" />
                                 </div>
                             )}
-                            {/* Speaking ring (active audio) */}
+                            {}
                             {p.audioEnabled !== false && (
                                 <div className="absolute inset-0 rounded-full ring-2 ring-green-400/60 animate-pulse pointer-events-none" />
                             )}

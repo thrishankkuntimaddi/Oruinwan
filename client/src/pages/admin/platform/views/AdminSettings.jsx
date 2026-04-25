@@ -22,9 +22,9 @@ const AdminSettings = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Manage your administrative profile and contact details visible to company admins.</p>
             </div>
 
-            {/* Profile Card */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', overflow: 'hidden' }}>
-                {/* Avatar Row */}
+                {}
                 <div style={{ padding: '24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <div style={{ position: 'relative', cursor: 'pointer' }} title="Upload avatar">
                         <div style={{ width: '64px', height: '64px', background: 'var(--bg-active)', border: '2px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: 700, color: 'var(--accent)' }}>
@@ -46,9 +46,9 @@ const AdminSettings = () => {
                     </div>
                 </div>
 
-                {/* Fields */}
+                {}
                 <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    {/* Public Details */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <SectionHeader icon={User} label="Public Details" />
                         <Field label="Display Name" name="displayName" value={profile.displayName} onChange={handleChange} />
@@ -62,7 +62,7 @@ const AdminSettings = () => {
                         </div>
                     </div>
 
-                    {/* Contact Info */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <SectionHeader icon={Mail} label="Contact Information" />
                         <div>
@@ -83,13 +83,13 @@ const AdminSettings = () => {
                     </div>
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)', display: 'flex', justifyContent: 'flex-end' }}>
                     <SaveBtn onClick={handleSave} />
                 </div>
             </div>
 
-            {/* Super Admin Banner */}
+            {}
             <div style={{ border: '1px solid var(--border-accent)', background: 'var(--bg-surface)', padding: '24px', display: 'flex', alignItems: 'flex-start', gap: '14px', position: 'relative', overflow: 'hidden' }}>
                 <Shield size={20} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '2px' }} />
                 <div>

@@ -9,7 +9,6 @@ import { useToast } from '../../contexts/ToastContext';
 import api from '@services/api';
 import OnboardingWizard from '../../components/admin/onboarding/OnboardingWizard';
 
-// ─── Role badge ────────────────────────────────────────────────────────────────
 const roleBadgeSt = {
     admin: { color: 'var(--state-danger)', border: 'var(--state-danger)' },
     manager: { color: 'var(--accent)', border: 'var(--accent)' },
@@ -25,7 +24,6 @@ const RoleBadge = ({ role }) => {
     );
 };
 
-// ─── Bulk Import Modal ────────────────────────────────────────────────────────
 const BulkImportModal = ({ onClose }) => {
     const { user } = useAuth();
     const { showToast } = useToast();
@@ -145,10 +143,10 @@ const BulkImportModal = ({ onClose }) => {
 
     return (
         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', maxWidth: '600px', width: '100%', position: 'relative', overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Accent bar */}
+            {}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
 
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', marginTop: '2px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {phase === 'preview' && (
@@ -173,10 +171,10 @@ const BulkImportModal = ({ onClose }) => {
             </div>
 
             <div style={{ padding: '20px' }}>
-                {/* UPLOAD */}
+                {}
                 {phase === 'upload' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* Template download */}
+                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderLeft: '2px solid var(--state-success)' }}>
                             <div style={{ width: '36px', height: '36px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <FileSpreadsheet size={18} style={{ color: 'var(--state-success)' }} />
@@ -188,7 +186,7 @@ const BulkImportModal = ({ onClose }) => {
                             <DlBtn onClick={downloadTemplate} />
                         </div>
 
-                        {/* Column guide */}
+                        {}
                         <div style={{ background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                             <button onClick={() => setShowColGuide(v => !v)}
                                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '9px 12px', background: 'none', border: 'none', cursor: 'pointer', transition: 'background 150ms ease' }}
@@ -215,7 +213,7 @@ const BulkImportModal = ({ onClose }) => {
                             )}
                         </div>
 
-                        {/* Drop zone */}
+                        {}
                         <div onDrop={onDrop} onDragOver={e => e.preventDefault()} onClick={() => fileInputRef.current?.click()}
                             style={{ border: '2px dashed var(--border-accent)', padding: '32px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', textAlign: 'center', transition: 'all 150ms ease' }}
                             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--accent)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
@@ -237,10 +235,10 @@ const BulkImportModal = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* PREVIEW */}
+                {}
                 {phase === 'preview' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* File info */}
+                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
                             <FileSpreadsheet size={16} style={{ color: 'var(--state-success)', flexShrink: 0 }} />
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -253,7 +251,7 @@ const BulkImportModal = ({ onClose }) => {
                             </button>
                         </div>
 
-                        {/* Table */}
+                        {}
                         <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -337,7 +335,7 @@ const BulkImportModal = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* SUBMITTING */}
+                {}
                 {phase === 'submitting' && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', textAlign: 'center' }}>
                         <div style={{ width: '56px', height: '56px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
@@ -355,7 +353,7 @@ const BulkImportModal = ({ onClose }) => {
                     </div>
                 )}
 
-                {/* DONE */}
+                {}
                 {phase === 'done' && result && (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '24px 16px', gap: '16px' }}>
                         <div style={{ width: '64px', height: '64px', background: 'var(--bg-active)', border: '1px solid var(--state-success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -410,13 +408,12 @@ const DlBtn = ({ onClick }) => {
     );
 };
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
 const OnboardingPage = () => {
     const [mode, setMode] = useState(null);
 
     return (
         <div style={{ flex: 1, height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--bg-base)', position: 'relative', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Modal overlay */}
+            {}
             {mode && (
                 <div style={{ position: 'absolute', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
                     {mode === 'individual' ? (
@@ -429,10 +426,10 @@ const OnboardingPage = () => {
                 </div>
             )}
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', transition: 'all 300ms ease', filter: mode ? 'blur(2px)' : 'none', opacity: mode ? 0.4 : 1 }} className="custom-scrollbar">
                 <div style={{ maxWidth: '760px', width: '100%' }}>
-                    {/* Header */}
+                    {}
                     <div style={{ textAlign: 'center', marginBottom: '48px' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'var(--bg-surface)', border: '1px solid var(--border-accent)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--accent)', marginBottom: '20px' }}>
                             <Users size={11} /> Team Growth
@@ -441,7 +438,7 @@ const OnboardingPage = () => {
                         <p style={{ fontSize: '14px', color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto', lineHeight: '1.6' }}>Select a method to onboard new employees to your workspace.</p>
                     </div>
 
-                    {/* Cards */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <OnboardCard icon={UserPlus} label="Individual Setup" desc="Launch the wizard for a single employee. Configure roles, access details, and workspace assignments manually." cta="Start Setup" ctaIcon={Play} onClick={() => setMode('individual')} accentColor="var(--accent)" />
                         <OnboardCard icon={Upload} label="Bulk Import" desc="Upload an Excel file to onboard multiple employees at once. Accounts are created automatically with welcome emails sent." cta="Import Now" ctaIcon={DownloadCloud} onClick={() => setMode('bulk')} accentColor="var(--state-success)" badge=".xlsx · .csv" />

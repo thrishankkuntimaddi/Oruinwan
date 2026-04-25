@@ -1,4 +1,3 @@
-// Step3AccountForm.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, Info, AlertCircle } from 'lucide-react';
 
@@ -25,7 +24,6 @@ const Label = ({ children }) => (
     </label>
 );
 
-// Ignore legacy theme prop
 const Step3AccountForm = ({
     formData, onChange, errors,
     showPassword, showConfirmPassword,
@@ -41,7 +39,7 @@ const Step3AccountForm = ({
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                {/* Company Email */}
+                {}
                 <div>
                     <Label>Company Email</Label>
                     <div style={{ position: 'relative' }}>
@@ -57,9 +55,9 @@ const Step3AccountForm = ({
                     </p>
                 </div>
 
-                {/* Password row */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {/* Password */}
+                    {}
                     <div>
                         <Label>Password</Label>
                         <div style={{ position: 'relative' }}>
@@ -75,7 +73,7 @@ const Step3AccountForm = ({
                         {errors.password && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}><AlertCircle size={11} />{errors.password}</p>}
                     </div>
 
-                    {/* Confirm password */}
+                    {}
                     <div>
                         <Label>Confirm Password</Label>
                         <div style={{ position: 'relative' }}>
@@ -92,7 +90,7 @@ const Step3AccountForm = ({
                     </div>
                 </div>
 
-                {/* Password strength dots */}
+                {}
                 {formData.password.length > 0 && (
                     <div style={{ padding: '12px 14px', background: 'rgba(184,149,106,0.04)', border: '1px solid rgba(184,149,106,0.1)' }}>
                         <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Password requirements</p>

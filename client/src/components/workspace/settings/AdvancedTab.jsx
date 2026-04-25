@@ -5,13 +5,13 @@ const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => (
     <div style={{ fontFamily: 'var(--font)' }}>
         {isAdmin ? (
             <div style={{ border: '1px solid rgba(198,60,60,0.25)', borderRadius: '2px', overflow: 'hidden' }}>
-                {/* Danger header */}
+                {}
                 <div style={{ padding: '14px 18px', background: 'rgba(198,60,60,0.08)', borderBottom: '1px solid rgba(198,60,60,0.2)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <AlertTriangle size={15} style={{ color: 'var(--state-danger)', flexShrink: 0 }} />
                     <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--state-danger)', margin: 0 }}>Danger Zone</h3>
                 </div>
 
-                {/* Warning text */}
+                {}
                 <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: 0 }}>
                         Deleting a workspace is <strong style={{ color: 'var(--text-primary)' }}>permanent</strong> and cannot be undone.
@@ -20,7 +20,7 @@ const AdvancedTab = ({ isAdmin, setShowDeleteConfirm }) => (
                     </p>
                 </div>
 
-                {/* Delete row */}
+                {}
                 <div style={{ padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
                     <div>
                         <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>Delete this workspace</div>

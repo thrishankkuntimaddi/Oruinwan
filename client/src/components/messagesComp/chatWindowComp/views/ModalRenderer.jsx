@@ -6,40 +6,33 @@ import ChannelManagementModal from '../../ChannelManagementModal.jsx';
 import ForwardMessageModal from '../modals/ForwardMessageModal.jsx';
 import MessageInfoModal from '../modals/MessageInfoModal.jsx';
 
-/**
- * Consolidated modal renderer component
- * Renders appropriate modal based on activeModal state
- * @param {string} activeModal - Type of modal to display ('poll', 'members', 'contact', 'channel-settings', etc.)
- * @param {function} onClose - Close modal callback
- * @param {object} modalProps - Props specific to the active modal
- */
 export default function ModalRenderer({ activeModal, onClose, modalProps }) {
     if (!activeModal) return null;
 
     const {
-        // Poll creation props
+        
         onCreate,
         channelId,
 
-        // Member list props
+        
         members,
         channelName,
         currentUserId,
 
-        // Contact info props
+        
         contact,
 
-        // Channel management props
+        
         channel,
         workspaceId,
         initialTab,
 
-        // Forward message props
+        
         currentChatId,
         currentChatType,
         onForward,
 
-        // Message info props
+        
         messageInfoData,
     } = modalProps || {};
 

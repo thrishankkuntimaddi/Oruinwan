@@ -1,4 +1,3 @@
-// client/src/components/ai/AISearchBar.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 const TYPE_ICONS = { message: '💬', knowledge: '📄', meeting: '📅', default: '🔍' };
@@ -23,10 +22,10 @@ export default function AISearchBar({ workspaceId, token, onClose }) {
     const inputRef              = useRef(null);
     const debounceRef           = useRef(null);
 
-    // Focus on mount
+    
     useEffect(() => { inputRef.current?.focus(); }, []);
 
-    // Cmd+K / Escape handling
+    
     useEffect(() => {
         const handler = (e) => {
             if (e.key === 'Escape') onClose?.();
@@ -71,7 +70,7 @@ export default function AISearchBar({ workspaceId, token, onClose }) {
     return (
         <div style={overlayStyle} onClick={(e) => e.target === e.currentTarget && onClose?.()}>
             <div style={boxStyle}>
-                {/* Search Input */}
+                {}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '14px 16px',
@@ -104,7 +103,7 @@ export default function AISearchBar({ workspaceId, token, onClose }) {
                 </div>
                 <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
 
-                {/* Results */}
+                {}
                 {error && (
                     <div style={{ padding: '12px 16px', fontSize: 13, color: '#f87171' }}>
                         ⚠️ {error}
@@ -156,7 +155,7 @@ export default function AISearchBar({ workspaceId, token, onClose }) {
                     </ul>
                 )}
 
-                {/* Empty state */}
+                {}
                 {!query && (
                     <div style={{ padding: '16px 16px', color: '#475569', fontSize: 13 }}>
                         <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#64748b' }}>Search across your workspace</p>

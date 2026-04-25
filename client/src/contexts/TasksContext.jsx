@@ -1,12 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import api from '@services/api'; // This already uses VITE_BACKEND_URL
+import api from '@services/api'; 
 import { useToast } from "./ToastContext";
 import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
-
-// NOTE: All API calls use the 'api' instance from '@services/api'
-// which automatically includes the VITE_BACKEND_URL baseURL.
 
 const TasksContext = createContext();
 
@@ -21,13 +18,13 @@ export const TasksProvider = ({ children }) => {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Extract workspaceId from URL path
+    
     const getWorkspaceId = useCallback(() => {
         const match = location.pathname.match(/\/workspace\/([^/]+)/);
         return match ? match[1] : null;
     }, [location.pathname]);
 
-    // Map backend status to frontend format
+    
     const mapBackendStatus = useCallback((status) => {
         const statusMap = {
             'backlog':      'To Do',
@@ -41,7 +38,7 @@ export const TasksProvider = ({ children }) => {
         return statusMap[status] || 'To Do';
     }, []);
 
-    // Map frontend status to backend format
+    
     const mapFrontendStatus = useCallback((status) => {
         const statusMap = {
             'To Do':       'todo',
@@ -53,7 +50,7 @@ export const TasksProvider = ({ children }) => {
         return statusMap[status] || 'todo';
     }, []);
 
-    // Map backend priority to frontend format
+    
     const mapBackendPriority = useCallback((priority) => {
         const priorityMap = {
             'lowest': 'Lowest',
@@ -65,7 +62,7 @@ export const TasksProvider = ({ children }) => {
         return priorityMap[priority] || 'Medium';
     }, []);
 
-    // Map frontend priority to backend format
+    
     const mapFrontendPriority = useCallback((priority) => {
         const priorityMap = {
             'Lowest': 'lowest',
@@ -77,7 +74,7 @@ export const TasksProvider = ({ children }) => {
         return priorityMap[priority] || 'medium';
     }, []);
 
-    // Load tasks from backend
+    
     const loadTasks = useCallback(async () => {
         try {
             const workspaceId = getWorkspaceId();
@@ -90,9 +87,9 @@ export const TasksProvider = ({ children }) => {
             setLoading(true);
             const response = await api.get(`/api/v2/tasks?workspaceId=${workspaceId}`);
 
-            // Map backend tasks to frontend format
+            
             const mappedTasks = response.data.tasks.map(task => {
-                // Handle multiple assignees display
+                
                 const validAssignees = (task.assignedTo || []).filter(u => u);
 
                 let assigneeDisplay = "Self";
@@ -123,10 +120,10 @@ export const TasksProvider = ({ children }) => {
                     createdAt: task.createdAt,
                     updatedAt: task.updatedAt,
                     visibility: task.visibility || "private",
-                    assignees: validAssignees, // Keep full valid assignee list
+                    assignees: validAssignees, 
                     attachments: task.attachments || [],
                     transferRequest: task.transferRequest || null,
-                    // ── Jira-grade fields ──
+                    
                     issueKey: task.issueKey || null,
                     issueType: task.type || 'task',
                     labels: task.labels || [],
@@ -148,13 +145,12 @@ export const TasksProvider = ({ children }) => {
         }
     }, [getWorkspaceId, showToast, user, mapBackendStatus, mapBackendPriority]);
 
-
-    // Load tasks when workspace changes
+    
     useEffect(() => {
         loadTasks();
     }, [loadTasks]);
 
-    // WebSocket listeners for task events
+    
     useEffect(() => {
         if (!socket) return;
 
@@ -186,7 +182,7 @@ export const TasksProvider = ({ children }) => {
                 assignees: validAssignees,
                 attachments: task.attachments || [],
                 transferRequest: task.transferRequest || null,
-                // ── Jira-grade fields ──
+                
                 issueKey: task.issueKey || null,
                 issueType: task.type || 'task',
                 labels: task.labels || [],
@@ -201,7 +197,7 @@ export const TasksProvider = ({ children }) => {
         const handleTaskCreated = (task) => {
 
             setTasks(prev => {
-                if (prev.some(t => t.id === task._id)) return prev; // Prevent duplicates
+                if (prev.some(t => t.id === task._id)) return prev; 
                 return [mapTaskToFrontend(task), ...prev];
             });
         };
@@ -230,8 +226,8 @@ export const TasksProvider = ({ children }) => {
 
             setTasks(prev => {
                 const existingIndex = prev.findIndex(t => t.id === task._id);
-                if (existingIndex === -1) return prev; // Task not in list? Maybe we should add it if it's now relevant?
-                // For now, only update if existing.
+                if (existingIndex === -1) return prev; 
+                
 
                 const updatedTask = mapTaskToFrontend(task);
                 return prev.map((t, idx) => idx === existingIndex ? updatedTask : t);
@@ -253,7 +249,7 @@ export const TasksProvider = ({ children }) => {
         };
     }, [socket, showToast, user, mapBackendStatus, mapBackendPriority]);
 
-    // Create new task
+    
     const createTask = useCallback(async (taskData) => {
         try {
             const workspaceId = getWorkspaceId();
@@ -267,7 +263,7 @@ export const TasksProvider = ({ children }) => {
                 description: taskData.description || "",
                 workspaceId: workspaceId,
                 assignmentType: taskData.assignmentType || "self",
-                taskMode: taskData.taskMode, // Add task mode here
+                taskMode: taskData.taskMode, 
                 status: mapFrontendStatus(taskData.status || "To Do"),
                 priority: mapFrontendPriority(taskData.priority || "Medium"),
                 dueDate: taskData.dueDate || null,
@@ -275,26 +271,25 @@ export const TasksProvider = ({ children }) => {
                 attachments: taskData.attachments || []
             };
 
-            // Add assignment-specific fields
+            
             if (backendPayload.assignmentType === "individual") {
                 backendPayload.assignedToIds = taskData.assignedToIds;
             } else if (backendPayload.assignmentType === "channel") {
                 backendPayload.channelId = taskData.channelId;
             }
 
-            // Add channel info
+            
             if (taskData.project) {
                 backendPayload.channelName = taskData.project;
             }
 
-
             const response = await api.post('/api/v2/tasks', backendPayload);
 
-            // Handle both single task and array of tasks (for split individual assignments)
+            
             const backendTasks = response.data.tasks || [response.data.task];
 
             const newFrontendTasks = backendTasks.map(task => {
-                // Handle multiple assignees display
+                
                 let assigneeDisplay = "Self";
                 if (task.assignedTo && task.assignedTo.length > 0) {
                     if (task.assignedTo.length === 1) {
@@ -304,7 +299,7 @@ export const TasksProvider = ({ children }) => {
                     }
                 }
 
-                // Determine project/channel name
+                
                 let projectName = taskData.project || "General";
                 if (task.channel && task.channel.name) {
                     projectName = task.channel.name;
@@ -342,12 +337,12 @@ export const TasksProvider = ({ children }) => {
         }
     }, [getWorkspaceId, showToast, user, mapBackendStatus, mapBackendPriority, mapFrontendStatus, mapFrontendPriority]);
 
-    // Update task
+    
     const updateTask = useCallback(async (id, updates) => {
         try {
             const backendUpdates = {};
 
-            // Handle TaskModal format (from full task editing)
+            
             if (updates.title !== undefined) backendUpdates.title = updates.title;
             if (updates.description !== undefined) backendUpdates.description = updates.description;
             if (updates.project !== undefined) backendUpdates.channelName = updates.project;
@@ -359,25 +354,25 @@ export const TasksProvider = ({ children }) => {
             if (updates.completedAt !== undefined) backendUpdates.completedAt = updates.completedAt;
             if (updates.attachments !== undefined) backendUpdates.attachments = updates.attachments;
 
-            // Handle assignment updates from TaskModal
+            
             if (updates.assignmentType !== undefined) {
                 if (updates.assignmentType === "self") {
                     backendUpdates.assignedTo = [user._id];
                 } else if (updates.assignmentType === "individual" && updates.assignedToIds) {
                     backendUpdates.assignedTo = updates.assignedToIds;
                 } else if (updates.assignmentType === "channel" && updates.channelId) {
-                    // Channel assignment handled differently - might need backend support
+                    
                     backendUpdates.channelId = updates.channelId;
                 }
             } else if (updates.assigneeId !== undefined) {
-                // Handle simple assignee update (from dropdown)
+                
                 backendUpdates.assignedTo = [updates.assigneeId];
             }
 
             const response = await api.put(`/api/v2/tasks/${id}`, backendUpdates);
             const updatedBackendTask = response.data.task;
 
-            // Map backend task to frontend format
+            
             const validAssignees = (updatedBackendTask.assignedTo || []).filter(u => u);
             let assigneeDisplay = "Self";
             if (validAssignees.length > 0) {
@@ -422,12 +417,12 @@ export const TasksProvider = ({ children }) => {
             console.error("Failed to update task:", error);
             showToast("Failed to update task", "error");
 
-            // Reload tasks on error
+            
             loadTasks();
         }
     }, [showToast, loadTasks, user, mapBackendStatus, mapBackendPriority, mapFrontendStatus, mapFrontendPriority]);
 
-    // Delete task (soft delete)
+    
     const deleteTask = useCallback(async (id) => {
         try {
             await api.delete(`/api/v2/tasks/${id}`);
@@ -440,12 +435,12 @@ export const TasksProvider = ({ children }) => {
         } catch (error) {
             console.error("Failed to delete task:", error);
             showToast("Failed to delete task", "error");
-            // Revert optimistic update if needed or just reload
+            
             loadTasks();
         }
     }, [showToast, loadTasks]);
 
-    // Permanently delete task
+    
     const permanentlyDeleteTask = useCallback(async (id) => {
         try {
             await api.delete(`/api/v2/tasks/${id}/permanent`);
@@ -457,7 +452,7 @@ export const TasksProvider = ({ children }) => {
         }
     }, [showToast]);
 
-    // Restore task
+    
     const restoreTask = useCallback(async (id) => {
         try {
             await api.put(`/api/v2/tasks/${id}/restore`);
@@ -471,15 +466,15 @@ export const TasksProvider = ({ children }) => {
         }
     }, [showToast]);
 
-    // Handle Transfer Request (Approve/Reject)
+    
     const handleTransferResponse = useCallback(async (taskId, action) => {
         try {
             const response = await api.post(`/api/v2/tasks/${taskId}/transfer-request/${action}`);
 
             if (action === 'approve') {
                 const updatedBackendTask = response.data.task;
-                // Map and update local state
-                // Note: The structure needs to match other mapping areas
+                
+                
                 const validAssignees = (updatedBackendTask.assignedTo || []).filter(u => u);
 
                 let assigneeDisplay = "Self";
@@ -520,9 +515,9 @@ export const TasksProvider = ({ children }) => {
                 ));
                 showToast("Transfer request approved", "success");
             } else {
-                // For reject, we just update the transferRequest status locally or reload
-                // Since backend doesn't return full task on reject (only message), we might need to update locally manually or reload
-                // Let's manually update the transferRequest status locally
+                
+                
+                
                 setTasks(prev => prev.map(task => {
                     if (task.id === taskId) {
                         return {

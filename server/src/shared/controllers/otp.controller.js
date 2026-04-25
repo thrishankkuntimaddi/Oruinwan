@@ -1,21 +1,14 @@
-// src/shared/controllers/otp.controller.js
-
 const otpService = require("../services/otp.service");
 const { handleError } = require("../../../utils/responseHelpers");
 const Company = require("../../../models/Company");
 const { sendOTP } = require("../../../utils/sendOTP");
 
-/**
- * Send OTP (Dev Mode: Logs to Terminal)
- * POST /api/otp/send
- * Body: { target: string, type: 'email' | 'phone' }
- */
 exports.sendOtp = async (req, res) => {
     try {
         const { target, type } = req.body;
         if (!target) return res.status(400).json({ message: "Target is required" });
 
-        // Use shared OTP service
+        
         const result = await otpService.generateAndSendOTP({ target, type });
 
         return res.json({
@@ -27,11 +20,6 @@ exports.sendOtp = async (req, res) => {
     }
 };
 
-/**
- * Verify OTP
- * POST /api/otp/verify
- * Body: { target: string, otp: string }
- */
 exports.verifyOtp = async (req, res) => {
     try {
         const { target, otp } = req.body;
@@ -40,7 +28,7 @@ exports.verifyOtp = async (req, res) => {
             return res.status(400).json({ message: "Target and OTP are required" });
         }
 
-        // Use shared OTP service
+        
         const result = otpService.verifyOTP(target, otp);
 
         if (!result.valid) {
@@ -54,11 +42,6 @@ exports.verifyOtp = async (req, res) => {
     }
 };
 
-/**
- * Send Phone OTP during company registration
- * POST /api/otp/phone/send
- * Body: { phone: string, companyId: string }
- */
 exports.sendPhoneOtp = async (req, res) => {
     try {
         const { phone, companyId } = req.body;
@@ -72,22 +55,22 @@ exports.sendPhoneOtp = async (req, res) => {
             return res.status(404).json({ message: "Company not found" });
         }
 
-        // Generate 6-digit OTP
+        
         const otp = Math.floor(100000 + Math.random() * 900000);
 
-        // Store OTP in company document
+        
         company.ownerPhone = phone;
         company.phoneOTP = otp.toString();
-        company.phoneOTPExpiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+        company.phoneOTPExpiresAt = Date.now() + 5 * 60 * 1000; 
         await company.save();
 
-        // Format phone number to E.164 format for Twilio
+        
         let formattedPhone = phone;
         if (!formattedPhone.startsWith('+')) {
             formattedPhone = `+91${formattedPhone}`;
         }
 
-        // Send OTP via Twilio
+        
         await sendOTP(formattedPhone, otp);
 
         return res.json({
@@ -99,11 +82,6 @@ exports.sendPhoneOtp = async (req, res) => {
     }
 };
 
-/**
- * Verify Phone OTP during company registration
- * POST /api/otp/phone/verify
- * Body: { companyId: string, otp: string }
- */
 exports.verifyPhoneOtp = async (req, res) => {
     try {
         const { companyId, otp } = req.body;
@@ -117,12 +95,12 @@ exports.verifyPhoneOtp = async (req, res) => {
             return res.status(404).json({ message: "Company not found" });
         }
 
-        // Check if OTP exists and is valid
+        
         if (!company.phoneOTP || !company.phoneOTPExpiresAt) {
             return res.status(400).json({ message: "OTP not found. Please request a new one." });
         }
 
-        // Check if OTP is expired
+        
         if (Date.now() > company.phoneOTPExpiresAt) {
             company.phoneOTP = undefined;
             company.phoneOTPExpiresAt = undefined;
@@ -130,12 +108,12 @@ exports.verifyPhoneOtp = async (req, res) => {
             return res.status(400).json({ message: "OTP expired. Please request a new one." });
         }
 
-        // Verify OTP
+        
         if (company.phoneOTP !== otp) {
             return res.status(400).json({ message: "Invalid OTP" });
         }
 
-        // Mark as verified and clear OTP
+        
         company.phoneVerified = true;
         company.phoneOTP = undefined;
         company.phoneOTPExpiresAt = undefined;

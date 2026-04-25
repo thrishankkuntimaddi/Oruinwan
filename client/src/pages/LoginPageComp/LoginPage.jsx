@@ -1,4 +1,3 @@
-// LoginPage.jsx — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Sparkles, Shield, MessageSquare, Zap } from 'lucide-react';
@@ -23,7 +22,7 @@ const LoginPage = () => {
     const registrationMessage = location.state?.message;
     const prefilledEmail = location.state?.email;
 
-    // Enable scroll for this public page
+    
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
         return () => document.documentElement.classList.remove('public-scroll');
@@ -75,19 +74,19 @@ const LoginPage = () => {
                 @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
             `}</style>
 
-            {/* ── LEFT PANEL — Brand (hidden on mobile) ── */}
+            {}
             <div className="login-brand-panel" style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', background: 'var(--bg-base)', borderRight: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
-                {/* Ambient glow */}
+                {}
                 <div style={{ position: 'absolute', top: '20%', left: '30%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
                 <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(110,168,254,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
-                {/* Logo */}
+                {}
                 <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', position: 'relative', zIndex: 1 }}>
                     <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
                     <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
                 </div>
 
-                {/* Center content */}
+                {}
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <h1 style={{ fontSize: 'clamp(32px,3.5vw,52px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '18px' }}>
                         Work where<br />
@@ -111,7 +110,7 @@ const LoginPage = () => {
                     </div>
                 </div>
 
-                {/* Footer quote */}
+                {}
                 <div style={{ position: 'relative', zIndex: 1 }}>
                     <div style={{ borderLeft: '2px solid rgba(184,149,106,0.3)', paddingLeft: '14px', marginBottom: '16px' }}>
                         <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.7' }}>
@@ -123,10 +122,10 @@ const LoginPage = () => {
                 </div>
             </div>
 
-            {/* ── RIGHT PANEL — Forms ── */}
+            {}
             <div className="login-form-panel" style={{ flex: '1 1 50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', overflowY: 'auto' }}>
                 <div style={{ width: '100%', maxWidth: '420px' }}>
-                    {/* Registration success banner */}
+                    {}
                     {registrationMessage && (
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '14px 16px', background: 'rgba(90,186,138,0.07)', border: '1px solid rgba(90,186,138,0.25)', marginBottom: '24px', animation: 'fadeIn 300ms ease' }}>
                             <CheckCircle2 size={16} style={{ color: '#5aba8a', flexShrink: 0, marginTop: '1px' }} />
@@ -139,7 +138,7 @@ const LoginPage = () => {
                     )}
                     <style>{`@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }`}</style>
 
-                    {/* Tab switcher */}
+                    {}
                     <div style={{ display: 'flex', marginBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                         {[{ label: 'Sign In', val: false }, { label: 'Create Account', val: true }].map(tab => (
                             <button key={tab.label} onClick={() => setIsSignup(tab.val)}
@@ -149,13 +148,13 @@ const LoginPage = () => {
                         ))}
                     </div>
 
-                    {/* Form */}
+                    {}
                     {isSignup
                         ? <SignupForm onSwitch={() => setIsSignup(false)} />
                         : <LoginForm onSwitch={() => setIsSignup(true)} initialEmail={prefilledEmail} />
                     }
 
-                    {/* Nav links */}
+                    {}
                     <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', gap: '16px' }}>
                         {[
                             { label: 'Privacy', path: '/privacy' },

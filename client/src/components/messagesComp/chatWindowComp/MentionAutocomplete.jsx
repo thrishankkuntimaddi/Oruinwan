@@ -1,22 +1,8 @@
-// client/src/components/messagesComp/chatWindowComp/MentionAutocomplete.jsx
-// Phase-8: @mention autocomplete dropdown for the chat composer
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import api from '@services/api';
 
 const API = import.meta.env.VITE_API_URL || '';
 
-/**
- * MentionAutocomplete
- *
- * Usage: Mount this adjacent to your textarea or rich-text input.
- *
- * Props:
- *  query            — the text after @ (e.g. "ali" from "@ali")
- *  workspaceId      — for scoping member search
- *  onSelect(user)   — called with { _id, username, profilePicture }
- *  onDismiss()      — user pressed Escape or clicked outside
- *  anchorRef        — ref to the input element (for positioning)
- */
 export default function MentionAutocomplete({ query = '', workspaceId, onSelect, onDismiss, anchorRef }) {
   const [results, setResults]     = useState([]);
   const [loading, setLoading]     = useState(false);
@@ -43,7 +29,7 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
     return () => ctrl.abort();
   }, [query, workspaceId]);
 
-  // Keyboard navigation
+  
   const handleKey = useCallback((e) => {
     if (e.key === 'Escape') { onDismiss?.(); return; }
     if (e.key === 'ArrowDown') {
@@ -65,7 +51,7 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
     return () => window.removeEventListener('keydown', handleKey);
   }, [handleKey]);
 
-  // Scroll highlighted item into view
+  
   useEffect(() => {
     listRef.current?.children[highlighted]?.scrollIntoView({ block: 'nearest' });
   }, [highlighted]);
@@ -137,7 +123,6 @@ export default function MentionAutocomplete({ query = '', workspaceId, onSelect,
   );
 }
 
-/** Wraps matched portion in a highlighted span */
 function highlightMatch(text, query) {
   if (!query) return text;
   const idx = text.toLowerCase().indexOf(query.toLowerCase());

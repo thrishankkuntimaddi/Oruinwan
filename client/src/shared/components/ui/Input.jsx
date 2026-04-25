@@ -5,7 +5,7 @@ const Input = React.forwardRef(({
     label,
     error,
     icon,
-    iconPosition = "left", // 'left' or 'right'
+    iconPosition = "left", 
     helperText,
     className = "",
     containerClassName = "",

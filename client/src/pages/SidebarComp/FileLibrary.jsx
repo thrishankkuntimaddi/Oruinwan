@@ -1,11 +1,9 @@
-// client/src/pages/SidebarComp/FileLibrary.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Upload, Grid3X3, List, Search, Tag, X, RefreshCw, Folder, Image, FileText, Video, Music, File as FileIcon, Download, Trash2, Share2, Eye, Plus, MoreVertical } from 'lucide-react';
 import { useFiles } from '../../hooks/useFiles';
 import { useToast } from '../../contexts/ToastContext';
 
-// ── File type helpers ──────────────────────────────────────────────────────────
 function getMimeEmoji(mimeType = '') {
     if (mimeType.startsWith('image/')) return { emoji: '🖼️', color: 'bg-violet-50 text-violet-600 dark:bg-violet-900/20' };
     if (mimeType.startsWith('video/')) return { emoji: '🎬', color: 'bg-red-50 text-red-600 dark:bg-red-900/20' };
@@ -32,7 +30,6 @@ function timeAgo(dateStr) {
     return `${Math.floor(h / 24)}d ago`;
 }
 
-// ── Dropzone ──────────────────────────────────────────────────────────────────
 function DropZone({ onFiles }) {
     const [dragging, setDragging] = useState(false);
     const inputRef = useRef();
@@ -60,7 +57,6 @@ function DropZone({ onFiles }) {
     );
 }
 
-// ── File card (grid view) ──────────────────────────────────────────────────────
 function FileCard({ file, onClick, onDelete }) {
     const { emoji } = getMimeEmoji(file.mimeType);
     const [showMenu, setShowMenu] = useState(false);
@@ -105,7 +101,6 @@ function FileCard({ file, onClick, onDelete }) {
     );
 }
 
-// ── File row (list view) ───────────────────────────────────────────────────────
 function FileRow({ file, onClick, onDelete }) {
     const { emoji } = getMimeEmoji(file.mimeType);
     return (
@@ -129,13 +124,12 @@ function FileRow({ file, onClick, onDelete }) {
     );
 }
 
-// ── Main component ─────────────────────────────────────────────────────────────
 const FileLibrary = () => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
     const { files, loading, listFiles, uploadFile, deleteFile } = useFiles();
-    const [view, setView] = useState('grid'); // 'grid' | 'list'
+    const [view, setView] = useState('grid'); 
     const [search, setSearch] = useState('');
     const [tagFilter, setTagFilter] = useState('');
     const [uploading, setUploading] = useState(false);
@@ -145,7 +139,7 @@ const FileLibrary = () => {
         if (workspaceId) listFiles(workspaceId, { folderId: 'root' });
     }, [workspaceId, listFiles]);
 
-    // If a specific file id is in URL, open preview
+    
     useEffect(() => {
         if (id && files.length) {
             const f = files.find(f => f._id === id);
@@ -193,9 +187,9 @@ const FileLibrary = () => {
 
     return (
         <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)' }}>
-            {/* Main content */}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                {/* Top bar */}
+                {}
                 <div style={{ height: '52px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                     <h1 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
                         <span>📁</span> File Library
@@ -213,7 +207,7 @@ const FileLibrary = () => {
                     </div>
                 </div>
 
-                {/* Tag filter bar */}
+                {}
                 {allTags.length > 0 && (
                     <div style={{ padding: '6px 24px', display: 'flex', alignItems: 'center', gap: '6px', borderBottom: '1px solid rgba(255,255,255,0.05)', flexWrap: 'wrap', flexShrink: 0 }}>
                         <Tag size={11} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
@@ -226,9 +220,9 @@ const FileLibrary = () => {
                     </div>
                 )}
 
-                {/* Scrollable content */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', scrollbarWidth: 'thin' }}>
-                    {/* Drop zone */}
+                    {}
                     <div style={{ marginBottom: '20px' }}>
                         {uploading ? (
                             <div style={{ border: '2px dashed rgba(184,149,106,0.4)', padding: '28px', textAlign: 'center', background: 'rgba(184,149,106,0.05)' }}>
@@ -275,11 +269,10 @@ const FileLibrary = () => {
     );
 };
 
-// ── Inline preview panel ───────────────────────────────────────────────────────
 function FilePreviewPanel({ file, onClose, workspaceId }) {
     const [comments, setComments] = useState([]);
     const [newComment, setNewComment] = useState('');
-    const [activeTab, setActiveTab] = useState('preview'); // preview | comments | versions
+    const [activeTab, setActiveTab] = useState('preview'); 
     const { getComments, addComment, getVersions } = useFiles();
     const [versions, setVersions] = useState([]);
     const { showToast } = useToast();
@@ -308,7 +301,7 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
 
     return (
         <div style={{ width: '380px', borderLeft: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', background: '#111', flexShrink: 0 }}>
-            {/* Header */}
+            {}
             <div className="h-14 px-4 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
                 <div className="flex items-center gap-2 min-w-0">
                     <span className="text-base">{emoji}</span>
@@ -319,7 +312,7 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
                 </button>
             </div>
 
-            {/* Tabs */}
+            {}
             <div className="flex border-b border-gray-200 dark:border-gray-800">
                 {['preview', 'comments', 'versions'].map(tab => (
                     <button
@@ -331,10 +324,10 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
             </div>
 
             <div className="flex-1 overflow-y-auto">
-                {/* Preview Tab */}
+                {}
                 {activeTab === 'preview' && (
                     <div className="p-4 space-y-4">
-                        {/* Media preview */}
+                        {}
                         <div className="rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                             {isImage && <img src={file.url} alt={file.name} className="w-full object-contain max-h-72" />}
                             {isVideo && <video src={file.url} controls className="w-full max-h-72" />}
@@ -351,7 +344,7 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
                             )}
                         </div>
 
-                        {/* Metadata */}
+                        {}
                         <div className="space-y-3">
                             <div className="grid grid-cols-2 gap-2 text-xs">
                                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
@@ -371,7 +364,7 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
                                     <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{(file.mimeType || '').split('/')[1] || '—'}</p>
                                 </div>
                             </div>
-                            {/* Tags */}
+                            {}
                             {file.tags?.length > 0 && (
                                 <div>
                                     <p className="text-xs text-gray-400 mb-1.5 font-medium">Tags</p>
@@ -394,7 +387,7 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
                     </div>
                 )}
 
-                {/* Comments Tab */}
+                {}
                 {activeTab === 'comments' && (
                     <div className="flex flex-col h-full">
                         <div className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -431,10 +424,10 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
                     </div>
                 )}
 
-                {/* Versions Tab */}
+                {}
                 {activeTab === 'versions' && (
                     <div className="p-4 space-y-2">
-                        {/* Current version */}
+                        {}
                         <div className="flex items-center gap-3 p-3 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
                             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center text-xs font-bold text-indigo-700 dark:text-indigo-300">
                                 v{file.currentVersion}
@@ -444,7 +437,7 @@ function FilePreviewPanel({ file, onClose, workspaceId }) {
                                 <p className="text-[10px] text-indigo-500">{timeAgo(file.updatedAt || file.createdAt)}</p>
                             </div>
                         </div>
-                        {/* Previous versions */}
+                        {}
                         {versions.map(v => (
                             <div key={v._id} className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-gray-300 transition-colors">
                                 <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-xs font-bold text-gray-600 dark:text-gray-400">

@@ -1,27 +1,8 @@
-/**
- * Identity Service - Server-side
- * 
- * Handles storage and retrieval of user public identity keys
- * NEVER generates keys (client-only operation)
- */
-
 const UserIdentityKey = require('../../../models/UserIdentityKey');
 
-// ==================== PUBLIC KEY STORAGE ====================
-
-/**
- * Store or update user's public identity key
- * Called when user registers or generates new key
- * 
- * @param {String} userId - User ID
- * @param {String} publicKey - PEM-encoded public key
- * @param {String} algorithm - 'X25519' or 'RSA-2048'
- * @param {Number} version - Key version
- * @returns {Promise<Object>} Stored key document
- */
 async function storePublicKey(userId, publicKey, algorithm, version = 1) {
     try {
-        // Upsert: update if exists, create if not
+        
         const keyDoc = await UserIdentityKey.findOneAndUpdate(
             { userId },
             {
@@ -45,14 +26,6 @@ async function storePublicKey(userId, publicKey, algorithm, version = 1) {
     }
 }
 
-// ==================== PUBLIC KEY RETRIEVAL ====================
-
-/**
- * Get user's public identity key
- * 
- * @param {String} userId - User ID
- * @returns {Promise<Object|null>} Key document or null
- */
 async function getPublicKey(userId) {
     try {
         const keyDoc = await UserIdentityKey.findByUserId(userId);
@@ -63,13 +36,6 @@ async function getPublicKey(userId) {
     }
 }
 
-/**
- * Batch fetch multiple users' public keys
- * For efficient key distribution
- * 
- * @param {String[]} userIds - Array of user IDs
- * @returns {Promise<Array>} Array of key documents
- */
 async function batchGetPublicKeys(userIds) {
     try {
         const keyDocs = await UserIdentityKey.batchFindByUserIds(userIds);
@@ -80,14 +46,6 @@ async function batchGetPublicKeys(userIds) {
     }
 }
 
-// ==================== KEY VERIFICATION ====================
-
-/**
- * Check if user has uploaded public key
- * 
- * @param {String} userId - User ID
- * @returns {Promise<Boolean>} True if key exists
- */
 async function hasPublicKey(userId) {
     try {
         const keyDoc = await UserIdentityKey.findByUserId(userId);
@@ -98,15 +56,6 @@ async function hasPublicKey(userId) {
     }
 }
 
-// ==================== KEY ROTATION ====================
-
-/**
- * Delete user's public key
- * Used when user rotates keys or deletes account
- * 
- * @param {String} userId - User ID
- * @returns {Promise<Boolean>} True if deleted
- */
 async function deletePublicKey(userId) {
     try {
         const result = await UserIdentityKey.deleteOne({ userId });
@@ -117,8 +66,6 @@ async function deletePublicKey(userId) {
         throw error;
     }
 }
-
-// ==================== EXPORTS ====================
 
 module.exports = {
     storePublicKey,

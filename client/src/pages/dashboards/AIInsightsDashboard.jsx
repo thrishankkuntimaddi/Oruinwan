@@ -1,7 +1,5 @@
-// client/src/pages/dashboards/AIInsightsDashboard.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 const apiFetch = async (path, token) => {
     const res = await fetch(path, {
         headers: { Authorization: `Bearer ${token}` },
@@ -11,7 +9,6 @@ const apiFetch = async (path, token) => {
     return res.json();
 };
 
-// ─── CSS Bar Chart (no external libs) ─────────────────────────────────────────
 const BarChart = ({ data = [], label, color = '#8b5cf6' }) => {
     const max = Math.max(...data.map(d => d.value), 1);
     return (
@@ -35,7 +32,6 @@ const BarChart = ({ data = [], label, color = '#8b5cf6' }) => {
     );
 };
 
-// ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({ icon, label, value, sub, color='#8b5cf6' }) => (
     <div style={{
         background:'var(--bg-surface)', border:`1px solid ${color}33`,
@@ -48,7 +44,6 @@ const StatCard = ({ icon, label, value, sub, color='#8b5cf6' }) => (
     </div>
 );
 
-// ─── Anomaly Banner ───────────────────────────────────────────────────────────
 const AnomalyBanner = ({ anomalies=[], summary }) => {
     if (!anomalies.length) return (
         <div style={{ padding:'10px 14px', background:'rgba(52,211,153,0.1)', border:'1px solid rgba(52,211,153,0.25)', borderRadius:8, fontSize:13, color:'#6ee7b7' }}>
@@ -71,7 +66,6 @@ const AnomalyBanner = ({ anomalies=[], summary }) => {
     );
 };
 
-// ─── Section Wrapper ──────────────────────────────────────────────────────────
 const Section = ({ title, children, action }) => (
     <div style={{ background:'var(--bg-surface)', border:'1px solid var(--border-subtle)', borderRadius:12, padding:'18px 20px' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
@@ -82,7 +76,6 @@ const Section = ({ title, children, action }) => (
     </div>
 );
 
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
 export default function AIInsightsDashboard({ workspaceId, token }) {
     const [days, setDays]           = useState(7);
     const [productivity, setProd]   = useState(null);
@@ -129,7 +122,7 @@ export default function AIInsightsDashboard({ workspaceId, token }) {
 
     return (
         <div style={pageStyle}>
-            {/* Header */}
+            {}
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:28 }}>
                 <div>
                     <h1 style={{ margin:0, fontSize:24, fontWeight:800, background:'linear-gradient(135deg,#8b5cf6,#6366f1)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent' }}>
@@ -161,12 +154,12 @@ export default function AIInsightsDashboard({ workspaceId, token }) {
 
             {error && <div style={{ marginBottom:16, padding:'10px 14px', background:'rgba(239,68,68,0.12)', borderRadius:8, fontSize:13, color:'#fca5a5' }}>⚠️ {error}</div>}
 
-            {/* Anomalies */}
+            {}
             <div style={{ marginBottom:20 }}>
                 <AnomalyBanner anomalies={anomalies?.anomalies||[]} summary={anomalies?.summary} />
             </div>
 
-            {/* Stats Row */}
+            {}
             <div style={{ display:'flex', gap:14, flexWrap:'wrap', marginBottom:20 }}>
                 <StatCard icon="💬" label="Messages" value={productivity?.messageCount ?? '…'} sub={productivity?.period} color="#8b5cf6" />
                 <StatCard icon="👥" label="Active Users" value={productivity?.activeUsers ?? '…'} sub={productivity?.period} color="#6366f1" />
@@ -176,7 +169,7 @@ export default function AIInsightsDashboard({ workspaceId, token }) {
             </div>
 
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
-                {/* Channel Activity */}
+                {}
                 <Section title="📢 Channel Activity">
                     {channelBars.length > 0
                         ? <BarChart data={channelBars} color="#8b5cf6" />
@@ -184,7 +177,7 @@ export default function AIInsightsDashboard({ workspaceId, token }) {
                     }
                 </Section>
 
-                {/* Top Contributors */}
+                {}
                 <Section title="🏆 Top Contributors">
                     {topContributorBars.length > 0
                         ? <BarChart data={topContributorBars} color="#6366f1" />
@@ -193,7 +186,7 @@ export default function AIInsightsDashboard({ workspaceId, token }) {
                 </Section>
             </div>
 
-            {/* Loading overlay */}
+            {}
             {loading && (
                 <div style={{ position:'fixed', bottom:24, right:24, padding:'10px 16px', background:'rgba(139,92,246,0.2)', border:'1px solid rgba(139,92,246,0.4)', borderRadius:8, fontSize:13, color:'#c4b5fd' }}>
                     ↺ Loading insights…

@@ -42,7 +42,7 @@ const SystemHealth = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Monitor server performance and system metrics</p>
             </div>
 
-            {/* Status Banner */}
+            {}
             <div style={{ padding: '16px 20px', background: 'var(--bg-surface)', border: '1px solid var(--state-success)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <CheckCircle size={16} style={{ color: 'var(--state-success)', flexShrink: 0 }} />
                 <div>
@@ -51,7 +51,7 @@ const SystemHealth = () => {
                 </div>
             </div>
 
-            {/* Server Gauges */}
+            {}
             <div>
                 <SectionHeader label="Server Metrics" />
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
@@ -61,9 +61,9 @@ const SystemHealth = () => {
                 </div>
             </div>
 
-            {/* DB & API */}
+            {}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
-                {/* DB Stats */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                         <Database size={14} style={{ color: 'var(--text-muted)' }} />
@@ -77,7 +77,7 @@ const SystemHealth = () => {
                     </div>
                 </div>
 
-                {/* API Performance */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                         <Zap size={14} style={{ color: 'var(--text-muted)' }} />
@@ -95,7 +95,7 @@ const SystemHealth = () => {
                 </div>
             </div>
 
-            {/* DB Entities */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -124,7 +124,7 @@ const SystemHealth = () => {
                 </div>
             </div>
 
-            {/* Errors */}
+            {}
             {metrics.errors.length > 0 && (
                 <div style={{ border: '1px solid var(--state-danger)' }}>
                     <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>

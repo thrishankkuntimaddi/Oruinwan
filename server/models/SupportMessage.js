@@ -1,21 +1,3 @@
-/**
- * SupportMessage Model
- *
- * PURPOSE:
- * - Platform support communication
- * - Company ↔ Platform Admin conversations
- *
- * GUARANTEES:
- * - ❌ NOT end-to-end encrypted
- * - ❌ NOT used in workspace chat
- * - ❌ NOT used in Message.js pipeline
- * - ✅ Fully auditable by platform admins
- *
- * SCOPE:
- * - Used only inside SupportTicket flows
- * - Visible only in Admin / Support UI
- */
-
 const mongoose = require("mongoose");
 
 const SupportAttachmentSchema = new mongoose.Schema(
@@ -30,7 +12,7 @@ const SupportAttachmentSchema = new mongoose.Schema(
 
 const SupportMessageSchema = new mongoose.Schema(
   {
-    /* ---------- Context ---------- */
+    
 
     ticket: {
       type: mongoose.Schema.Types.ObjectId,
@@ -46,7 +28,7 @@ const SupportMessageSchema = new mongoose.Schema(
       index: true
     },
 
-    /* ---------- Sender ---------- */
+    
 
     sender: {
       type: mongoose.Schema.Types.ObjectId,
@@ -60,12 +42,9 @@ const SupportMessageSchema = new mongoose.Schema(
       required: true
     },
 
-    /* ---------- Message Content ---------- */
+    
 
-    /**
-     * Plaintext by design
-     * (Support communication must be auditable)
-     */
+    
     content: {
       type: String,
       required: true,
@@ -74,7 +53,7 @@ const SupportMessageSchema = new mongoose.Schema(
 
     attachments: [SupportAttachmentSchema],
 
-    /* ---------- Read Tracking ---------- */
+    
 
     readBy: [
       {
@@ -89,14 +68,14 @@ const SupportMessageSchema = new mongoose.Schema(
       }
     ],
 
-    /* ---------- Moderation ---------- */
+    
 
     isInternalNote: {
       type: Boolean,
       default: false
     },
 
-    /* ---------- Soft Deletion ---------- */
+    
 
     deletedAt: {
       type: Date,
@@ -108,34 +87,18 @@ const SupportMessageSchema = new mongoose.Schema(
   }
 );
 
-/* =======================
-   Indexes (Performance)
-======================= */
-
-// Fast ticket timeline
 SupportMessageSchema.index({ ticket: 1, createdAt: 1 });
 
-// Company-level filtering
 SupportMessageSchema.index({ company: 1, createdAt: -1 });
 
-// Sender audit
 SupportMessageSchema.index({ sender: 1 });
 
-/* =======================
-   Static Methods
-======================= */
-
-/**
- * Get paginated messages for a ticket
- * @param {ObjectId} ticketId - Ticket ID
- * @param {Object} options - { limit, before, after }
- */
 SupportMessageSchema.statics.getTicketTimeline = async function (ticketId, options = {}) {
   const { limit = 50, before, after } = options;
 
   const query = { ticket: ticketId, deletedAt: null };
 
-  // Cursor-based pagination
+  
   if (before) {
     query._id = { $lt: before };
   } else if (after) {
@@ -149,11 +112,6 @@ SupportMessageSchema.statics.getTicketTimeline = async function (ticketId, optio
     .lean();
 };
 
-/**
- * Mark message as read by a user
- * @param {ObjectId} messageId - Message ID
- * @param {ObjectId} userId - User ID
- */
 SupportMessageSchema.statics.markAsRead = async function (messageId, userId) {
   const message = await this.findById(messageId);
 
@@ -161,7 +119,7 @@ SupportMessageSchema.statics.markAsRead = async function (messageId, userId) {
     throw new Error('Message not found');
   }
 
-  // Check if already read by this user
+  
   const alreadyRead = message.readBy.some(
     (read) => read.user.toString() === userId.toString()
   );
@@ -174,11 +132,6 @@ SupportMessageSchema.statics.markAsRead = async function (messageId, userId) {
   return message;
 };
 
-/**
- * Get unread message count for a ticket (for a specific user)
- * @param {ObjectId} ticketId - Ticket ID
- * @param {ObjectId} userId - User ID
- */
 SupportMessageSchema.statics.getUnreadCount = async function (ticketId, userId) {
   return this.countDocuments({
     ticket: ticketId,
@@ -186,9 +139,5 @@ SupportMessageSchema.statics.getUnreadCount = async function (ticketId, userId) 
     'readBy.user': { $ne: userId }
   });
 };
-
-/* =======================
-   Export
-======================= */
 
 module.exports = mongoose.model("SupportMessage", SupportMessageSchema);

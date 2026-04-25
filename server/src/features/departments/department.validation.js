@@ -1,15 +1,7 @@
-// server/src/features/departments/department.validation.js
-//
-// Phase 2 — Department Management System
-// Express-validator rule sets for each endpoint.
-
 const { body, param } = require('express-validator');
 const mongoose = require('mongoose');
 
-// Helper: is a value a valid Mongo ObjectId
 const isObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
-
-// ── Re-usable field validators ──────────────────────────────────────────────
 
 const validObjectId = (field, location = body) =>
     location(field)
@@ -24,11 +16,6 @@ const validObjectIdArray = (field) =>
         .custom((ids) => ids.every(isObjectId))
         .withMessage(`All entries in ${field} must be valid IDs`);
 
-// ── Validation rule sets ─────────────────────────────────────────────────────
-
-/**
- * POST /api/departments
- */
 const createDepartment = [
     body('name')
         .trim()
@@ -44,9 +31,6 @@ const createDepartment = [
     validObjectId('parentDepartment'),
 ];
 
-/**
- * PATCH /api/departments/:id
- */
 const updateDepartment = [
     param('id').custom(isObjectId).withMessage('id must be a valid department ID'),
 
@@ -67,7 +51,7 @@ const updateDepartment = [
     validObjectId('head'),
     validObjectId('parentDepartment'),
 
-    // At least one field must be present
+    
     body().custom((_, { req }) => {
         const allowed = ['name', 'description', 'head', 'parentDepartment', 'isActive', 'managers'];
         const hasAtLeastOne = allowed.some(f => req.body[f] !== undefined);
@@ -76,9 +60,6 @@ const updateDepartment = [
     }),
 ];
 
-/**
- * PATCH /api/departments/:id/members
- */
 const assignMembers = [
     param('id').custom(isObjectId).withMessage('id must be a valid department ID'),
 

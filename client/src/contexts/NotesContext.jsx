@@ -20,13 +20,13 @@ export const NotesProvider = ({ children }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [activeTagFilter, setActiveTagFilter] = useState(null);
 
-    // Nav state — drives sidebar section & note list filtering
+    
     const [selectedSection, setSelectedSection] = useState("all");
 
-    // Debounce timer for auto-save
+    
     const saveTimerRef = useRef({});
 
-    // Version history — stored in MongoDB, loaded per-note on demand
+    
     const [noteVersions, setNoteVersions] = useState({});
     const versionSaveTimer = useRef({});
 
@@ -110,7 +110,7 @@ export const NotesProvider = ({ children }) => {
         loadNotes();
     }, [loadNotes]);
 
-    // WebSocket listeners
+    
     useEffect(() => {
         if (!socket) return;
 
@@ -169,7 +169,7 @@ export const NotesProvider = ({ children }) => {
         };
     }, [socket, getWorkspaceId, showToast]);
 
-    // Create new note
+    
     const addNote = useCallback(async (noteTitle = "Untitled Note", noteType = "note") => {
         try {
             const wsId = getWorkspaceId();
@@ -208,7 +208,7 @@ export const NotesProvider = ({ children }) => {
         }
     }, [getWorkspaceId, navigate, showToast]);
 
-    // Update note with debounce
+    
     const updateNote = useCallback(async (id, updates) => {
         setNotes(prev => prev.map(note =>
             note.id === id ? { ...note, ...updates, updatedAt: new Date().toISOString() } : note
@@ -228,21 +228,21 @@ export const NotesProvider = ({ children }) => {
         }, 1000);
     }, [showToast, loadNotes]);
 
-    // Delete note (soft delete → archive)
+    
     const deleteNote = useCallback(async (id) => {
         try {
             await api.delete(`/api/v2/notes/${id}`);
             setNotes(prev => prev.filter(n => n.id !== id));
             const wsId = getWorkspaceId();
             if (wsId) navigate(`/workspace/${wsId}/notes`);
-            // Toast is shown by the calling component (Notes.jsx) to avoid duplication
+            
         } catch (error) {
             console.error("Failed to delete note:", error);
             showToast("Failed to delete note", "error");
         }
     }, [getWorkspaceId, navigate, showToast]);
 
-    // Toggle pin / favorite
+    
     const togglePin = useCallback(async (id) => {
         const note = notes.find(n => n.id === id);
         if (!note) return;
@@ -251,21 +251,21 @@ export const NotesProvider = ({ children }) => {
         showToast(newVal ? "Added to Favorites" : "Removed from Favorites", "success");
     }, [notes, updateNote, showToast]);
 
-    // Toggle archive (isArchived flag)
+    
     const toggleArchive = useCallback(async (id) => {
         const note = notes.find(n => n.id === id);
         if (!note) return;
         const newVal = !note.isArchived;
         await updateNote(id, { isArchived: newVal });
         showToast(newVal ? "Note archived" : "Note restored", "success");
-        // If archiving the currently-open note, go back to notes root
+        
         if (newVal && location.pathname.includes(id)) {
             const wsId = getWorkspaceId();
             if (wsId) navigate(`/workspace/${wsId}/notes`);
         }
     }, [notes, updateNote, showToast, location.pathname, getWorkspaceId, navigate]);
 
-    // Share note
+    
     const shareNote = useCallback(async (id, userIds) => {
         try {
             await api.post(`/api/v2/notes/${id}/share`, { userIds });
@@ -277,11 +277,11 @@ export const NotesProvider = ({ children }) => {
         }
     }, [loadNotes, showToast]);
 
-    // Derived: all non-archived notes (base for most views)
+    
     const activeNotes = notes.filter(n => !n.isArchived);
     const archivedNotes = notes.filter(n => n.isArchived);
 
-    // Apply section filter
+    
     const sectionFiltered = (() => {
         if (selectedSection === "favorites") return activeNotes.filter(n => n.isPinned);
         if (selectedSection === "recents") return [...activeNotes].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)).slice(0, 10);
@@ -290,7 +290,7 @@ export const NotesProvider = ({ children }) => {
         return activeNotes;
     })();
 
-    // Apply search + tag filter on top
+    
     const filteredNotes = sectionFiltered.filter(note => {
         const matchesSearch = !searchQuery ||
             note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||

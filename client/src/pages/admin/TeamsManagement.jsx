@@ -14,7 +14,6 @@ const inputStyle = {
 };
 const labelStyle = { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' };
 
-// ── Team Card ─────────────────────────────────────────────────────────────────
 function TeamCard({ team, idx, onEdit, onDelete, onManageMembers }) {
     const [expanded, setExpanded] = useState(false);
     const color = teamColor(idx);
@@ -66,7 +65,6 @@ function TeamCard({ team, idx, onEdit, onDelete, onManageMembers }) {
     );
 }
 
-// ── Team Form Modal ───────────────────────────────────────────────────────────
 function TeamFormModal({ initial, departments, employees, onSave, onClose, saving }) {
     const isEdit = !!initial?._id;
     const [form, setForm] = useState({
@@ -109,7 +107,6 @@ function TeamFormModal({ initial, departments, employees, onSave, onClose, savin
     );
 }
 
-// ── Members Modal ─────────────────────────────────────────────────────────────
 function MembersModal({ team, employees, onClose, onSaved }) {
     const [members, setMembers] = useState(() => new Set((team.members || []).map(m => m.user?._id || m.user).filter(Boolean).map(String)));
     const [saving, setSaving] = useState(false);
@@ -178,7 +175,6 @@ function MembersModal({ team, employees, onClose, onSaved }) {
     );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function TeamsManagement() {
     const { user } = useAuth();
     const rawCompanyId = user?.companyId;
@@ -235,7 +231,7 @@ export default function TeamsManagement() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -247,9 +243,9 @@ export default function TeamsManagement() {
                 <CreateBtn onClick={() => setShowCreate(true)} />
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
-                {/* Filters */}
+                {}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '200px' }}>
                         <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -307,7 +303,6 @@ export default function TeamsManagement() {
     );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const IconBtn = ({ icon, onClick, title, danger }) => {
     const [hov, setHov] = React.useState(false);
     return (

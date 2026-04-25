@@ -1,4 +1,3 @@
-// ForgotPassword.jsx — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -41,20 +40,20 @@ export default function ForgotPassword() {
 
     return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif', padding: '24px' }}>
-            {/* Subtle ambient glow */}
+            {}
             <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
             <div style={{ position: 'fixed', bottom: '-20%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(155,142,207,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
 
             <div style={{ width: '100%', maxWidth: '400px', animation: 'slideUp 300ms cubic-bezier(0.16,1,0.3,1)' }}>
-                {/* Logo */}
+                {}
                 <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px', cursor: 'pointer' }}>
                     <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
                     <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Chttrix</span>
                 </div>
 
-                {/* Card */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '32px' }}>
-                    {/* Icon */}
+                    {}
                     <div style={{ width: '44px', height: '44px', background: 'var(--bg-active)', border: `1px solid ${sent ? 'var(--state-success)' : 'var(--border-accent)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
                         {sent
                             ? <CheckCircle2 size={22} style={{ color: 'var(--state-success)' }} />
@@ -102,7 +101,7 @@ export default function ForgotPassword() {
                     )}
                 </div>
 
-                {/* Back link */}
+                {}
                 <div style={{ marginTop: '20px', textAlign: 'center' }}>
                     <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-muted)', textDecoration: 'none', transition: 'color 150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}

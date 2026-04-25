@@ -1,22 +1,9 @@
-// client/src/components/search/SearchInlineBar.jsx
-/**
- * SearchInlineBar
- *
- * Sits in the MainLayout top bar.
- * - Real <input> field (not a button trigger)
- * - Cmd+K / Ctrl+K focuses the input and opens the dropdown
- * - Dropdown appears directly below the bar (no centered modal)
- * - Shows: recent searches (empty state) or live results
- * - "See all results →" navigates to /workspace/:id/search
- */
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Search, X, Clock, FileText, MessageSquare, User, Hash, CheckSquare, BookOpen, Loader2 } from 'lucide-react';
 import { searchAll, saveRecentSearch, getRecentSearches } from '../../services/searchService';
 import './SearchInlineBar.css';
 
-// ── helpers ───────────────────────────────────────────────────────────────────
 const TYPE_ICON = {
   message:   <MessageSquare size={13} />,
   file:      <FileText      size={13} />,
@@ -60,7 +47,6 @@ function getMeta(item) {
   return '';
 }
 
-// ── main component ─────────────────────────────────────────────────────────────
 export default function SearchInlineBar({ workspaceId: propWsId }) {
   const params   = useParams();
   const navigate = useNavigate();
@@ -68,7 +54,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
 
   const [open,    setOpen]    = useState(false);
   const [query,   setQuery]   = useState('');
-  const [results, setResults] = useState(null);   // null = not searched yet
+  const [results, setResults] = useState(null);   
   const [loading, setLoading] = useState(false);
   const [recents, setRecents] = useState(() => getRecentSearches());
   const [cursor,  setCursor]  = useState(-1);
@@ -78,7 +64,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
   const debounceRef = useRef(null);
   const abortRef   = useRef(null);
 
-  // Cmd+K / Ctrl+K → focus and open
+  
   useEffect(() => {
     const fn = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -91,7 +77,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
     return () => window.removeEventListener('keydown', fn);
   }, []);
 
-  // Click outside → close
+  
   useEffect(() => {
     const fn = (e) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target)) {
@@ -102,7 +88,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
     return () => document.removeEventListener('mousedown', fn);
   }, []);
 
-  // Debounced search
+  
   const runSearch = useCallback((q) => {
     if (!q.trim() || !wsId) { setResults(null); setLoading(false); return; }
     if (abortRef.current) abortRef.current.abort();
@@ -149,7 +135,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
     setOpen(false);
     setQuery('');
     setResults(null);
-    // Navigate based on type
+    
     const base = `/workspace/${wsId}`;
     if (item._type === 'channel') navigate(`${base}/channel/${item._id}`);
     else if (item._type === 'message') navigate(`${base}/channel/${item.channelId || item.channel}`);
@@ -161,7 +147,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
     else goToAll(item.text || item.name || query);
   };
 
-  // Keyboard navigation
+  
   const flatItems = flattenResults(results || {});
   const handleKeyDown = (e) => {
     if (!open) return;
@@ -182,7 +168,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
 
   return (
     <div className='sib-wrap' ref={wrapRef}>
-      {/* ── Input bar ── */}
+      {}
       <div className={`sib-bar ${open ? 'sib-bar--active' : ''}`}>
         <Search size={14} className='sib-bar-icon' />
         <input
@@ -208,11 +194,11 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
         )}
       </div>
 
-      {/* ── Dropdown panel ── */}
+      {}
       {showDropdown && (
         <div className='sib-dropdown'>
 
-          {/* Recent searches (when no query) */}
+          {}
           {!query && recents.length > 0 && (
             <>
               <div className='sib-section-header'>Recent searches</div>
@@ -225,12 +211,12 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
             </>
           )}
 
-          {/* Empty query, no recents */}
+          {}
           {!query && recents.length === 0 && (
             <div className='sib-empty'>Type to search messages, files, people, tasks…</div>
           )}
 
-          {/* Loading skeleton */}
+          {}
           {loading && (
             <div className='sib-results-list'>
               {[1,2,3].map(i => (
@@ -245,7 +231,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
             </div>
           )}
 
-          {/* Results */}
+          {}
           {!loading && hasResults && (
             <div className='sib-results-list'>
               {flatItems.map((item, i) => (
@@ -266,12 +252,12 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
             </div>
           )}
 
-          {/* No results */}
+          {}
           {!loading && noResults && (
             <div className='sib-empty'>No results for <strong>"{query}"</strong></div>
           )}
 
-          {/* Footer */}
+          {}
           {query.trim() && (
             <div className='sib-footer'>
               <span className='sib-footer-hint'>

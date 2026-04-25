@@ -1,4 +1,3 @@
-// client/src/components/manager/ManagerOverview.jsx — Monolith Flow Design System
 import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Users, Activity, CheckCircle2, Clock, TrendingUp, MessageSquare, Calendar, LayoutGrid, RefreshCw, Shield, Briefcase } from 'lucide-react';
@@ -39,7 +38,7 @@ export default function ManagerOverview() {
         showToast('Dashboard refreshed', 'success');
     };
 
-    // No dept guard
+    
     if (!selectedDepartment || !selectedDepartment._id || !/^[a-f\d]{24}$/i.test(String(selectedDepartment._id))) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', padding: '48px', textAlign: 'center', fontFamily: T.ff }}>
@@ -54,19 +53,19 @@ export default function ManagerOverview() {
         );
     }
 
-    // Loading state
+    
     if (loading && !metrics) {
         return (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                {/* Header skeleton */}
+                {}
                 <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div><div className="sk" style={{ height: '14px', width: '160px', marginBottom: '6px' }} /><div className="sk" style={{ height: '10px', width: '240px' }} /></div>
                     <div className="sk" style={{ width: '32px', height: '32px' }} />
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }}>
-                    {/* Section label */}
+                    {}
                     <div style={{ marginBottom: '10px' }}><div className="sk" style={{ height: '10px', width: '100px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '200px' }} /></div>
-                    {/* 4 metric tiles */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '24px' }}>
                         {[1,2,3,4].map(i => (
                             <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
@@ -76,9 +75,9 @@ export default function ManagerOverview() {
                             </div>
                         ))}
                     </div>
-                    {/* Section 2 label */}
+                    {}
                     <div style={{ marginBottom: '10px' }}><div className="sk" style={{ height: '10px', width: '140px', marginBottom: '4px' }} /><div className="sk" style={{ height: '9px', width: '220px' }} /></div>
-                    {/* 3 activity tiles */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '24px' }}>
                         {[1,2,3].map(i => (
                             <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
@@ -88,7 +87,7 @@ export default function ManagerOverview() {
                             </div>
                         ))}
                     </div>
-                    {/* 2 bottom cards */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         {[1,2].map(i => (
                             <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
@@ -113,7 +112,7 @@ export default function ManagerOverview() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: T.ff }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -124,11 +123,11 @@ export default function ManagerOverview() {
                 <RefreshBtn onClick={handleRefresh} loading={refreshing || loading} />
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                    {/* Team Snapshot */}
+                    {}
                     <Section label="Team Snapshot" sub="Member distribution & operational status">
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1px', background: 'var(--border-subtle)' }}>
                             {[
@@ -140,7 +139,7 @@ export default function ManagerOverview() {
                         </div>
                     </Section>
 
-                    {/* Department Activity */}
+                    {}
                     <Section label="Department Activity" sub="Weekly productivity & engagement metrics">
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1px', background: 'var(--border-subtle)' }}>
                             {[
@@ -151,9 +150,9 @@ export default function ManagerOverview() {
                         </div>
                     </Section>
 
-                    {/* Details + Quick Actions */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        {/* Department Details */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
                             <SectionHeader icon={Briefcase} label="Department Details" sub="Core information" />
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px' }}>
@@ -184,7 +183,7 @@ export default function ManagerOverview() {
                             </div>
                         </div>
 
-                        {/* Quick Actions */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
                             <SectionHeader icon={Activity} label="Quick Actions" sub="Frequent management tasks" />
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '16px' }}>
@@ -203,7 +202,6 @@ export default function ManagerOverview() {
     );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 const MetricTile = ({ Icon, color, label, value, sub }) => (
     <div style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>

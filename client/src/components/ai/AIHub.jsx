@@ -1,20 +1,9 @@
-// client/src/components/ai/AIHub.jsx
-/**
- * AIHub — Global AI Command Center
- *
- * Drop this component once (near App root) to enable:
- *   • Cmd+K → AI Search Bar
- *   • / prefix in command box → NL Command dispatch
- *   • Global "AI" button in top bar to toggle assistants
- *
- * Accepts minimal props; reads workspaceId from localStorage / context as fallback.
- */
 import React, { useState, useEffect, useCallback } from 'react';
 import AISearchBar   from './AISearchBar';
 import AICommandBox  from './AICommandBox';
 
 function getToken() {
-    // Try multiple storage keys used by the app
+    
     return (
         localStorage.getItem('accessToken') ||
         localStorage.getItem('token') ||
@@ -31,7 +20,6 @@ function getWorkspaceId() {
     );
 }
 
-// ─── Floating Trigger Button ──────────────────────────────────────────────────
 export const AITriggerButton = ({ onClick, label = '⚡ AI', style = {} }) => (
     <button
         onClick={onClick}
@@ -59,7 +47,6 @@ export const AITriggerButton = ({ onClick, label = '⚡ AI', style = {} }) => (
     </button>
 );
 
-// ─── Main Hub ─────────────────────────────────────────────────────────────────
 export default function AIHub({ workspaceId: propWsId, token: propToken }) {
     const [searchOpen, setSearchOpen]   = useState(false);
     const [commandOpen, setCommandOpen] = useState(false);
@@ -70,7 +57,7 @@ export default function AIHub({ workspaceId: propWsId, token: propToken }) {
     const closeSearch  = useCallback(() => setSearchOpen(false),  []);
     const closeCommand = useCallback(() => setCommandOpen(false), []);
 
-    // ⌘/ → open AI command palette
+    
     useEffect(() => {
         const handler = (e) => {
             if ((e.metaKey || e.ctrlKey) && e.code === 'Slash') {

@@ -1,14 +1,3 @@
-// client/src/pages/SidebarComp/states/EmptyState.jsx
-
-// ⚠️ UI-ONLY COMPONENT
-// Pure presentational — no navigation logic, API calls, or state management.
-
-/**
- * EmptyState — Welcome screen for Home route.
- * Displays when no chat is selected.
- * Monolith Flow: dark base bg, amber accents, no gradients or indigo/purple.
- */
-
 import { Hash, Users } from 'lucide-react';
 
 function EmptyState({ onNavigateChannels, onNavigateDMs }) {
@@ -19,12 +8,12 @@ function EmptyState({ onNavigateChannels, onNavigateDMs }) {
             background: 'var(--bg-base)', position: 'relative', overflow: 'hidden',
             fontFamily: 'var(--font)',
         }}>
-            {/* Subtle ambient blob — single, low opacity, no indigo/purple */}
+            {}
             <div style={{ position: 'absolute', top: '25%', left: '30%', width: '360px', height: '360px', background: 'var(--accent)', opacity: 0.03, borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none' }} />
 
             <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '400px', textAlign: 'center', padding: '32px 24px' }}>
 
-                {/* Logo / Animation container */}
+                {}
                 <div style={{ width: '80px', height: '80px', borderRadius: '2px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '28px', overflow: 'hidden', flexShrink: 0 }}>
                     <video
                         src="/hover-animation.mp4"
@@ -41,7 +30,7 @@ function EmptyState({ onNavigateChannels, onNavigateDMs }) {
                     Your command centre for collaboration. Select a channel or direct message to start.
                 </p>
 
-                {/* Quick-nav cards */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', width: '100%' }}>
                     {[
                         { label: 'Channels', sub: 'Team discussions', Icon: Hash, onClick: onNavigateChannels },

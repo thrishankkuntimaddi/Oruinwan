@@ -1,11 +1,5 @@
-// src/features/employees/employee.controller.js
-
 const employeeService = require("./employee.service");
 
-/**
- * Invite single user to company
- * POST /api/companies/:id/invite
- */
 exports.inviteEmployee = async (req, res) => {
     try {
         const companyId = req.params.id;
@@ -16,7 +10,7 @@ exports.inviteEmployee = async (req, res) => {
             return res.status(400).json({ message: "Email is required" });
         }
 
-        // Use service layer
+        
         const result = await employeeService.inviteEmployee({
             companyId,
             email,
@@ -48,10 +42,6 @@ exports.inviteEmployee = async (req, res) => {
     }
 };
 
-/**
- * Bulk invite employees
- * POST /api/companies/:id/invite/bulk
- */
 exports.bulkInviteEmployees = async (req, res) => {
     try {
         const companyId = req.params.id;
@@ -62,7 +52,7 @@ exports.bulkInviteEmployees = async (req, res) => {
             return res.status(400).json({ message: "Employees array is required" });
         }
 
-        // Use service layer
+        
         const result = await employeeService.bulkInviteEmployees({
             companyId,
             employees,
@@ -91,10 +81,6 @@ exports.bulkInviteEmployees = async (req, res) => {
     }
 };
 
-/**
- * Admin directly creates employee (Method 4 - No email invite)
- * POST /api/companies/:id/employees/create
- */
 exports.directCreateEmployee = async (req, res) => {
     try {
         const companyId = req.params.id;
@@ -107,7 +93,7 @@ exports.directCreateEmployee = async (req, res) => {
             });
         }
 
-        // Use service layer
+        
         const result = await employeeService.directCreateEmployee({
             companyId,
             username,
@@ -142,10 +128,6 @@ exports.directCreateEmployee = async (req, res) => {
     }
 };
 
-/**
- * Accept company invitation
- * POST /api/companies/accept-invite
- */
 exports.acceptInvite = async (req, res) => {
     try {
         const { token, username, password } = req.body;
@@ -158,32 +140,32 @@ exports.acceptInvite = async (req, res) => {
             return res.status(400).json({ message: "Username and password are required" });
         }
 
-        // Use service layer (assuming this exists in employee service)
+        
         const Invite = require("../../../models/Invite");
         const User = require("../../../models/User");
         const Company = require("../../../models/Company");
         const bcrypt = require("bcryptjs");
 
-        // Find invite
+        
         const invite = await Invite.findOne({ token, status: "pending" });
         if (!invite) {
             return res.status(404).json({ message: "Invalid or expired invitation" });
         }
 
-        // Check expiration
+        
         if (invite.expiresAt && new Date() > invite.expiresAt) {
             invite.status = "expired";
             await invite.save();
             return res.status(400).json({ message: "Invitation has expired" });
         }
 
-        // Check if user already exists
+        
         const existingUser = await User.findOne({ email: invite.email.toLowerCase() });
         if (existingUser) {
             return res.status(409).json({ message: "User already exists with this email" });
         }
 
-        // Create user
+        
         const passwordHash = await bcrypt.hash(password, 10);
         const newUser = new User({
             username,
@@ -199,12 +181,12 @@ exports.acceptInvite = async (req, res) => {
 
         await newUser.save();
 
-        // Update invite
+        
         invite.status = "accepted";
         invite.acceptedAt = new Date();
         await invite.save();
 
-        // Add user to company members (if needed)
+        
         const company = await Company.findById(invite.company);
         if (company && !company.members.includes(newUser._id)) {
             company.members.push(newUser._id);
@@ -223,10 +205,6 @@ exports.acceptInvite = async (req, res) => {
     }
 };
 
-/**
- * Check if email can auto-join a company
- * POST /api/companies/check-eligibility
- */
 exports.checkEligibility = async (req, res) => {
     try {
         const { email } = req.body;
@@ -237,13 +215,13 @@ exports.checkEligibility = async (req, res) => {
 
         const Company = require("../../../models/Company");
 
-        // Extract domain from email
+        
         const emailDomain = email.split("@")[1];
         if (!emailDomain) {
             return res.status(400).json({ message: "Invalid email format" });
         }
 
-        // Find company with matching domain and auto-join enabled
+        
         const company = await Company.findOne({
             domain: emailDomain.toLowerCase(),
             domainVerified: true,

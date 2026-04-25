@@ -6,8 +6,6 @@ import { useToast } from '../../contexts/ToastContext';
 
 const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 
-// ── Monolith Flow Toggle ──────────────────────────────────────────────────────
-
 const Toggle = ({ label, description, checked, onChange, disabled }) => {
     const [hovered, setHovered] = React.useState(false);
     return (

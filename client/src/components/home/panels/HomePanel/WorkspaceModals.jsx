@@ -2,7 +2,6 @@ import React from 'react';
 import InvitePeopleModal from "../../../InvitePeopleModal";
 import { X } from 'lucide-react';
 
-// Shared modal shell styles
 const modalOverlay = {
     position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
     zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -27,11 +26,11 @@ const WorkspaceModals = ({
     showInviteModal, setShowInviteModal, workspaceName, activeWorkspace,
 }) => (
     <>
-        {/* Rename Modal */}
+        {}
         {showRenameModal && (
             <div style={modalOverlay} onClick={e => { if (e.target === e.currentTarget) setShowRenameModal(false); }}>
                 <div style={modalBox}>
-                    {/* Close */}
+                    {}
                     <button onClick={() => setShowRenameModal(false)}
                         style={{ position: 'absolute', top: '14px', right: '14px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '3px', borderRadius: '2px', transition: '150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
@@ -77,7 +76,7 @@ const WorkspaceModals = ({
             </div>
         )}
 
-        {/* Invite Modal */}
+        {}
         <InvitePeopleModal
             isOpen={showInviteModal}
             onClose={() => setShowInviteModal(false)}

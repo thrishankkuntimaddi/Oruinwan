@@ -1,11 +1,3 @@
-// server/src/modules/encryption/encryption.controller.js
-/**
- * Encryption Controller — E2EE HTTP Endpoints
- * Handles encryption key management API requests
- *
- * @module encryption/controller
- */
-
 'use strict';
 
 const encryptionService = require('./encryption.service');
@@ -13,10 +5,6 @@ const { handleError } = require('../../../utils/responseHelpers');
 const Workspace = require('../../../models/Workspace');
 const logger = require('../../shared/utils/logger');
 
-/**
- * Get all workspace keys for authenticated user
- * GET /api/encryption/keys
- */
 exports.getUserKeys = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -28,17 +16,6 @@ exports.getUserKeys = async (req, res) => {
     }
 };
 
-/**
- * Enroll user in workspace encryption
- * POST /api/encryption/enroll
- * 
- * Body: {
- *   workspaceId: string,
- *   encryptedWorkspaceKey: string (base64),
- *   keyIv: string (base64),
- *   pbkdf2Salt: string (base64)
- * }
- */
 exports.enrollUser = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -50,8 +27,8 @@ exports.enrollUser = async (req, res) => {
             });
         }
 
-        // Note: In this flow, client sends already-encrypted key
-        // Server doesn't need the raw KEK, just stores the encrypted data
+        
+        
         const { UserWorkspaceKey } = require('../../../models/encryption');
 
         const userKey = await UserWorkspaceKey.create({
@@ -72,15 +49,6 @@ exports.enrollUser = async (req, res) => {
     }
 };
 
-/**
- * Revoke user's access to workspace
- * DELETE /api/encryption/revoke
- * 
- * Body: {
- *   userId: string,
- *   workspaceId: string
- * }
- */
 exports.revokeAccess = async (req, res) => {
     try {
         const { userId, workspaceId } = req.body;
@@ -92,7 +60,7 @@ exports.revokeAccess = async (req, res) => {
             });
         }
 
-        // Authorization: only workspace owners / admins may revoke access
+        
         const workspace = await Workspace.findById(workspaceId);
         if (!workspace) {
             return res.status(404).json({ message: 'Workspace not found' });
@@ -122,10 +90,6 @@ exports.revokeAccess = async (req, res) => {
     }
 };
 
-/**
- * Check if user has workspace access
- * GET /api/encryption/access/:workspaceId
- */
 exports.checkAccess = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -139,17 +103,6 @@ exports.checkAccess = async (req, res) => {
     }
 };
 
-// ==================== PERSONAL E2EE CONTROLLERS ====================
-
-/**
- * Store user's personal encryption keys (for DM E2EE)
- * POST /api/encryption/personal/keys
- * 
- * Body: {
- *   publicKey: string (base64),
- *   encryptedPrivateKey: string (JSON string of encrypted data)
- * }
- */
 exports.storePersonalKeys = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -168,7 +121,7 @@ exports.storePersonalKeys = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Store encryption keys
+        
         user.encryption = {
             publicKey,
             encryptedPrivateKey,
@@ -187,10 +140,6 @@ exports.storePersonalKeys = async (req, res) => {
     }
 };
 
-/**
- * Get user's own personal encryption keys
- * GET /api/encryption/personal/keys
- */
 exports.getMyPersonalKeys = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -216,10 +165,6 @@ exports.getMyPersonalKeys = async (req, res) => {
     }
 };
 
-/**
- * Get another user's public key (for DM encryption)
- * GET /api/encryption/personal/users/:userId/public-key
- */
 exports.getUserPublicKey = async (req, res) => {
     try {
         const { userId } = req.params;

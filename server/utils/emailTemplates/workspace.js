@@ -1,6 +1,3 @@
-// server/utils/emailTemplates/workspace.js
-// Workspace collaboration email templates — Chttrix dark theme
-
 const YEAR = new Date().getFullYear();
 const APP  = 'Chttrix';
 
@@ -100,7 +97,6 @@ function link(text, url) {
 </p>`;
 }
 
-// ─── Workspace Invitation ─────────────────────────────────────────────────────
 const workspaceInvitationTemplate = (workspaceName, inviterName, inviteUrl, role, expiryDays) => {
   const body = `
     ${p('You\'ve been invited to collaborate on Chttrix!')}

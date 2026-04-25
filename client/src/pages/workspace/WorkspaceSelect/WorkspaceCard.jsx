@@ -2,7 +2,7 @@ import React from 'react';
 import { Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, TrendingUp, Lightbulb, Flame, Target, Trophy } from 'lucide-react';
 
 const WorkspaceCard = ({ workspace, onLaunch }) => {
-    // Map icon names to Lucide components
+    
     const iconMap = {
         'rocket': Rocket,
         'briefcase': Briefcase,

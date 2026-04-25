@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { createDepartment, updateDepartment } from '../../services/departmentService';
@@ -38,7 +37,7 @@ const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) 
                 resetForm();
             }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [department, isOpen]);
 
     if (!isOpen) return null;

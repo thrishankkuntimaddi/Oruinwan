@@ -1,36 +1,20 @@
-// client/src/utils/encryptionUtils.js
-/**
- * End-to-End Encryption Utilities
- * 
- * Provides client-side encryption/decryption using:
- * - ECDH for key exchange
- * - AES-256-GCM for message encryption
- * - PBKDF2 for password-based key derivation
- * 
- * @module encryptionUtils
- */
-
-/**
- * Generate a new ECDH keypair for the user
- * @returns {Promise<{publicKey: string, privateKey: string}>}
- */
 export async function generateKeyPair() {
     try {
-        // Generate ECDH keypair using WebCrypto API
+        
         const keyPair = await window.crypto.subtle.generateKey(
             {
                 name: 'ECDH',
-                namedCurve: 'P-256' // secp256r1
+                namedCurve: 'P-256' 
             },
-            true, // extractable
+            true, 
             ['deriveKey', 'deriveBits']
         );
 
-        // Export public key
+        
         const publicKeyBuffer = await window.crypto.subtle.exportKey('spki', keyPair.publicKey);
         const publicKey = btoa(String.fromCharCode(...new Uint8Array(publicKeyBuffer)));
 
-        // Export private key
+        
         const privateKeyBuffer = await window.crypto.subtle.exportKey('pkcs8', keyPair.privateKey);
         const privateKey = btoa(String.fromCharCode(...new Uint8Array(privateKeyBuffer)));
 
@@ -41,18 +25,12 @@ export async function generateKeyPair() {
     }
 }
 
-/**
- * Encrypt private key with user password using AES-256-GCM
- * @param {string} privateKey - Base64-encoded private key
- * @param {string} password - User password
- * @returns {Promise<{ciphertext: string, iv: string, salt: string, authTag: string}>}
- */
 export async function encryptPrivateKey(privateKey, password) {
     try {
-        // Generate salt for PBKDF2
+        
         const salt = window.crypto.getRandomValues(new Uint8Array(16));
 
-        // Derive encryption key from password
+        
         const passwordKey = await window.crypto.subtle.importKey(
             'raw',
             new TextEncoder().encode(password),
@@ -74,10 +52,10 @@ export async function encryptPrivateKey(privateKey, password) {
             ['encrypt']
         );
 
-        // Generate IV for AES-GCM
+        
         const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-        // Encrypt private key
+        
         const encrypted = await window.crypto.subtle.encrypt(
             {
                 name: 'AES-GCM',
@@ -87,7 +65,7 @@ export async function encryptPrivateKey(privateKey, password) {
             new TextEncoder().encode(privateKey)
         );
 
-        // Extract ciphertext and auth tag
+        
         const encryptedArray = new Uint8Array(encrypted);
         const ciphertext = encryptedArray.slice(0, -16);
         const authTag = encryptedArray.slice(-16);
@@ -104,23 +82,17 @@ export async function encryptPrivateKey(privateKey, password) {
     }
 }
 
-/**
- * Decrypt private key with user password
- * @param {Object} encryptedData - {ciphertext, iv, salt, authTag}
- * @param {string} password - User password
- * @returns {Promise<string>} Base64-encoded private key
- */
 export async function decryptPrivateKey(encryptedData, password) {
     try {
         const { ciphertext, iv, salt, authTag } = encryptedData;
 
-        // Convert from base64
+        
         const saltBuffer = Uint8Array.from(atob(salt), c => c.charCodeAt(0));
         const ivBuffer = Uint8Array.from(atob(iv), c => c.charCodeAt(0));
         const ciphertextBuffer = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
         const authTagBuffer = Uint8Array.from(atob(authTag), c => c.charCodeAt(0));
 
-        // Derive key from password
+        
         const passwordKey = await window.crypto.subtle.importKey(
             'raw',
             new TextEncoder().encode(password),
@@ -142,10 +114,10 @@ export async function decryptPrivateKey(encryptedData, password) {
             ['decrypt']
         );
 
-        // Combine ciphertext and auth tag
+        
         const combined = new Uint8Array([...ciphertextBuffer, ...authTagBuffer]);
 
-        // Decrypt private key
+        
         const decrypted = await window.crypto.subtle.decrypt(
             {
                 name: 'AES-GCM',
@@ -162,15 +134,9 @@ export async function decryptPrivateKey(encryptedData, password) {
     }
 }
 
-/**
- * Derive shared secret using ECDH
- * @param {string} myPrivateKey - Base64-encoded private key
- * @param {string} theirPublicKey - Base64-encoded public key
- * @returns {Promise<CryptoKey>} Shared secret key
- */
 export async function deriveSharedSecret(myPrivateKey, theirPublicKey) {
     try {
-        // Import private key
+        
         const privateKeyBuffer = Uint8Array.from(atob(myPrivateKey), c => c.charCodeAt(0));
         const privateKey = await window.crypto.subtle.importKey(
             'pkcs8',
@@ -183,7 +149,7 @@ export async function deriveSharedSecret(myPrivateKey, theirPublicKey) {
             ['deriveKey', 'deriveBits']
         );
 
-        // Import public key
+        
         const publicKeyBuffer = Uint8Array.from(atob(theirPublicKey), c => c.charCodeAt(0));
         const publicKey = await window.crypto.subtle.importKey(
             'spki',
@@ -196,7 +162,7 @@ export async function deriveSharedSecret(myPrivateKey, theirPublicKey) {
             []
         );
 
-        // Derive shared secret
+        
         const sharedSecret = await window.crypto.subtle.deriveKey(
             {
                 name: 'ECDH',
@@ -218,18 +184,12 @@ export async function deriveSharedSecret(myPrivateKey, theirPublicKey) {
     }
 }
 
-/**
- * Encrypt message with AES-256-GCM
- * @param {string} plaintext - Message to encrypt
- * @param {CryptoKey} sharedSecret - Shared secret key
- * @returns {Promise<{ciphertext: string, iv: string}>}
- */
 export async function encryptMessage(plaintext, sharedSecret) {
     try {
-        // Generate IV
+        
         const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-        // Encrypt message
+        
         const encrypted = await window.crypto.subtle.encrypt(
             {
                 name: 'AES-GCM',
@@ -249,20 +209,13 @@ export async function encryptMessage(plaintext, sharedSecret) {
     }
 }
 
-/**
- * Decrypt message with AES-256-GCM
- * @param {string} ciphertext - Base64-encoded ciphertext
- * @param {string} messageIv - Base64-encoded IV
- * @param {CryptoKey} sharedSecret - Shared secret key
- * @returns {Promise<string>} Decrypted plaintext
- */
 export async function decryptMessage(ciphertext, messageIv, sharedSecret) {
     try {
-        // Convert from base64
+        
         const ciphertextBuffer = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
         const ivBuffer = Uint8Array.from(atob(messageIv), c => c.charCodeAt(0));
 
-        // Decrypt message
+        
         const decrypted = await window.crypto.subtle.decrypt(
             {
                 name: 'AES-GCM',
@@ -279,12 +232,6 @@ export async function decryptMessage(ciphertext, messageIv, sharedSecret) {
     }
 }
 
-/**
- * Store keys in IndexedDB for secure client-side storage
- * @param {string} userId - User ID
- * @param {string} privateKey - Base64-encoded private key
- * @returns {Promise<void>}
- */
 export async function storeKeys(userId, privateKey) {
     const dbName = 'ChttrixEncryption';
     const storeName = 'keys';
@@ -323,11 +270,6 @@ export async function storeKeys(userId, privateKey) {
     });
 }
 
-/**
- * Retrieve keys from IndexedDB
- * @param {string} userId - User ID
- * @returns {Promise<{userId: string, privateKey: string, timestamp: number}|null>}
- */
 export async function getStoredKeys(userId) {
     const dbName = 'ChttrixEncryption';
     const storeName = 'keys';
@@ -347,7 +289,7 @@ export async function getStoredKeys(userId) {
         request.onsuccess = () => {
             const db = request.result;
 
-            // Check if object store exists
+            
             if (!db.objectStoreNames.contains(storeName)) {
                 db.close();
                 resolve(null);
@@ -370,11 +312,6 @@ export async function getStoredKeys(userId) {
     });
 }
 
-/**
- * Clear stored keys from IndexedDB (on logout)
- * @param {string} userId - User ID
- * @returns {Promise<void>}
- */
 export async function clearKeys(userId) {
     const dbName = 'ChttrixEncryption';
     const storeName = 'keys';
@@ -394,10 +331,10 @@ export async function clearKeys(userId) {
         request.onsuccess = () => {
             const db = request.result;
 
-            // Check if object store exists
+            
             if (!db.objectStoreNames.contains(storeName)) {
                 db.close();
-                resolve(); // Nothing to clear
+                resolve(); 
                 return;
             }
 

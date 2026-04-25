@@ -1,20 +1,15 @@
-/**
- * Presence Socket Handlers
- */
-
-// Per-tab viewer map: tabId → Map<userId, viewerInfo>
 const canvasViewers = new Map();
 
 function registerPresenceHandlers(io, socket) {
 
-    // Broadcast online when connected
+    
     io.emit('user:online', {
         userId: socket.user.id,
         username: socket.user.username || 'Unknown',
         timestamp: new Date()
     });
 
-    // Status change
+    
     socket.on('user:status_change', (data) => {
         const { status, customStatus } = data;
         const validStatuses = ['online', 'away', 'busy', 'offline'];
@@ -30,7 +25,7 @@ function registerPresenceHandlers(io, socket) {
         });
     });
 
-    // Custom status
+    
     socket.on('user:custom_status', (data) => {
         const { customStatus } = data;
         io.emit('user:custom_status_changed', {
@@ -40,7 +35,7 @@ function registerPresenceHandlers(io, socket) {
         });
     });
 
-    // Workspace presence
+    
     socket.on('workspace:join', async (workspaceId) => {
         if (!workspaceId) return;
         socket.join(`workspace:${workspaceId}`);
@@ -49,8 +44,8 @@ function registerPresenceHandlers(io, socket) {
             timestamp: new Date()
         });
 
-        // Notify other workspace members that this user is active
-        // (throttled: only fires if user joined the workspace in the last 5 minutes)
+        
+        
         try {
             const User = require('../../../models/User');
             const user = await User.findById(socket.user.id).select('username createdAt workspaces').lean();
@@ -61,7 +56,7 @@ function registerPresenceHandlers(io, socket) {
                     const memberIds = (ws.members || []).map(m => (m.user || m).toString());
                     const recipientIds = memberIds.filter(id => id !== socket.user.id.toString());
 
-                    // Only fire notification if this user joined the workspace in the last 10 min
+                    
                     const joinedRecently = user.createdAt && (Date.now() - new Date(user.createdAt).getTime()) < 10 * 60 * 1000;
                     if (joinedRecently && recipientIds.length > 0) {
                         const notifService = require('../../features/notifications/notificationService');
@@ -75,7 +70,7 @@ function registerPresenceHandlers(io, socket) {
                 }
             }
         } catch (err) {
-            // Non-fatal — don't crash the socket handler
+            
         }
     });
 
@@ -84,12 +79,9 @@ function registerPresenceHandlers(io, socket) {
         socket.leave(`workspace:${workspaceId}`);
     });
 
-    // ─── Canvas Viewer Presence ──────────────────────────────────────────────────
+    
 
-    /**
-     * canvas:join — user opened a canvas tab
-     * Payload: { tabId, channelId }
-     */
+    
     socket.on('canvas:join', ({ tabId, channelId } = {}) => {
         if (!tabId || !channelId) return;
 
@@ -103,27 +95,24 @@ function registerPresenceHandlers(io, socket) {
             joinedAt: new Date().toISOString()
         });
 
-        // Remember which canvas this socket is viewing (for disconnect cleanup)
+        
         socket._canvasTab = { tabId, channelId };
 
-        // Broadcast updated viewer list to the channel
+        
         io.to(`channel:${channelId}`).emit('canvas:viewers', {
             tabId,
             viewers: Array.from(viewers.values())
         });
     });
 
-    /**
-     * canvas:leave — user left a canvas tab
-     * Payload: { tabId, channelId }
-     */
+    
     socket.on('canvas:leave', ({ tabId, channelId } = {}) => {
         if (!tabId || !channelId) return;
         _removeViewer(io, socket.user.id, tabId, channelId);
         socket._canvasTab = null;
     });
 
-    // ─── Disconnect cleanup ──────────────────────────────────────────────────────
+    
 
     socket.on('disconnect', () => {
         io.emit('user:offline', {

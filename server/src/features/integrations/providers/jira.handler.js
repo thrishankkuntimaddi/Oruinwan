@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/jira.handler.js
 async function handleWebhook(payload, headers, integration) {
   const webhookEvent = payload.webhookEvent || '';
   const results = [];

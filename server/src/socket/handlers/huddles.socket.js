@@ -1,24 +1,6 @@
-/**
- * Huddle Socket Handlers
- * 
- * Handles all socket events related to huddles (voice channels):
- * - Huddle start/join/leave/end
- * - Audio state changes
- * 
- * @module socket/handlers/huddles
- */
-
-/**
- * Register huddle-related socket handlers
- * @param {Server} io - Socket.io server instance
- * @param {Socket} socket - Individual socket connection
- */
 function registerHuddleHandlers(io, socket) {
 
-    /**
-     * Start a huddle in a channel, DM, or workspace (instant huddle)
-     * data: { channelId?, dmId?, workspaceId?, huddleId }
-     */
+    
     socket.on('huddle:start', async (data) => {
         const { channelId, dmId, workspaceId, huddleId } = data;
 
@@ -33,7 +15,7 @@ function registerHuddleHandlers(io, socket) {
 
         try {
             if (channelId) {
-                // Channel huddle — verify channel membership
+                
                 const Channel = require('../../features/channels/channel.model');
                 const channel = await Channel.findById(channelId).select('members');
                 if (!channel || !channel.isMember(socket.user.id)) {
@@ -47,7 +29,7 @@ function registerHuddleHandlers(io, socket) {
                 });
 
             } else if (dmId) {
-                // DM huddle — verify DM participation
+                
                 const DMSession = require('../../features/chatlist/dmSession.model');
                 const dm = await DMSession.findById(dmId).select('participants');
                 const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
@@ -62,7 +44,7 @@ function registerHuddleHandlers(io, socket) {
                 });
 
             } else if (workspaceId) {
-                // Workspace instant huddle (from Meetings page) — verify workspace membership
+                
                 const WorkspaceModel = require('../../features/workspaces/workspace.model');
                 const ws = await WorkspaceModel.findOne({
                     _id: workspaceId,
@@ -84,10 +66,7 @@ function registerHuddleHandlers(io, socket) {
         }
     });
 
-    /**
-     * Join a huddle (channel, DM, or workspace)
-     * data: { huddleId, channelId?, dmId?, workspaceId?, audioEnabled? }
-     */
+    
     socket.on('huddle:join', async (data) => {
         const { huddleId, channelId, dmId, workspaceId, audioEnabled = true } = data;
 
@@ -96,13 +75,13 @@ function registerHuddleHandlers(io, socket) {
             return;
         }
 
-        // SECURITY: Must provide at least one scope for membership verification
+        
         if (!channelId && !dmId && !workspaceId) {
             socket.emit('error', { message: 'channelId, dmId, or workspaceId required to join a huddle' });
             return;
         }
 
-        // Verify membership based on scope
+        
         if (channelId) {
             try {
                 const Channel = require('../../features/channels/channel.model');
@@ -145,10 +124,10 @@ function registerHuddleHandlers(io, socket) {
             }
         }
 
-        // All checks passed — join huddle room
+        
         socket.join(`huddle:${huddleId}`);
 
-        // Broadcast to huddle participants that someone joined
+        
         io.to(`huddle:${huddleId}`).emit('huddle:joined', {
             huddleId,
             userId: socket.user.id,
@@ -157,7 +136,7 @@ function registerHuddleHandlers(io, socket) {
             timestamp: new Date()
         });
 
-        // Notify the originating room (so non-participants see the join)
+        
         if (channelId) {
             io.to(`channel:${channelId}`).emit('huddle:participant_joined', { huddleId, userId: socket.user.id });
         } else if (dmId) {
@@ -167,9 +146,7 @@ function registerHuddleHandlers(io, socket) {
         }
     });
 
-    /**
-     * Leave a huddle
-     */
+    
     socket.on('huddle:leave', (data) => {
         const { huddleId, channelId, dmId, workspaceId } = data;
 
@@ -177,14 +154,14 @@ function registerHuddleHandlers(io, socket) {
 
         socket.leave(`huddle:${huddleId}`);
 
-        // Broadcast to remaining participants
+        
         io.to(`huddle:${huddleId}`).emit('huddle:left', {
             huddleId,
             userId: socket.user.id,
             timestamp: new Date()
         });
 
-        // Notify originating room
+        
         if (channelId) {
             io.to(`channel:${channelId}`).emit('huddle:participant_left', { huddleId, userId: socket.user.id });
         } else if (dmId) {
@@ -194,24 +171,21 @@ function registerHuddleHandlers(io, socket) {
         }
     });
 
-
-    /**
-     * End a huddle
-     */
+    
     socket.on('huddle:end', async (data) => {
         const { huddleId, channelId, duration } = data;
 
         if (!huddleId) return;
 
-        // SECURITY: Verify the user is actually in this huddle room before broadcasting end.
-        // Without this check, any authenticated user knowing a huddleId can force-end any huddle.
+        
+        
         if (!socket.rooms.has(`huddle:${huddleId}`)) {
             console.warn(`🚫 [huddle:end] User ${socket.user.id} denied — not in huddle:${huddleId}`);
             socket.emit('error', { message: 'Not in this huddle' });
             return;
         }
 
-        // Additionally verify channel membership if channelId provided
+        
         if (channelId) {
             try {
                 const Channel = require('../../features/channels/channel.model');
@@ -228,7 +202,7 @@ function registerHuddleHandlers(io, socket) {
             }
         }
 
-        // Broadcast end to all participants
+        
         io.to(`huddle:${huddleId}`).emit('huddle:ended', {
             huddleId,
             channelId,
@@ -236,7 +210,7 @@ function registerHuddleHandlers(io, socket) {
             timestamp: new Date()
         });
 
-        // Notify channel
+        
         if (channelId) {
             io.to(`channel:${channelId}`).emit('huddle:ended', {
                 huddleId
@@ -244,29 +218,24 @@ function registerHuddleHandlers(io, socket) {
         }
     });
 
-    /**
-     * Toggle audio (mute/unmute)
-     */
+    
     socket.on('huddle:audio_toggle', (data) => {
         const { huddleId, audioEnabled } = data;
 
         if (!huddleId) return;
 
-        // Broadcast to huddle participants
+        
         io.to(`huddle:${huddleId}`).emit('huddle:audio_changed', {
             userId: socket.user.id,
             audioEnabled
         });
     });
 
-    // ── WebRTC Signaling ─────────────────────────────────────────────────────
-    // These relay WebRTC negotiation messages between peers.
-    // The server never inspects SDP/ICE payloads — it just routes to the target.
+    
+    
+    
 
-    /**
-     * Relay a WebRTC offer to a specific peer
-     * data: { huddleId, targetUserId, offer: RTCSessionDescriptionInit }
-     */
+    
     socket.on('huddle:offer', ({ huddleId, targetUserId, offer }) => {
         if (!huddleId || !targetUserId || !offer) return;
         io.to(`user:${targetUserId}`).emit('huddle:offer', {
@@ -276,10 +245,7 @@ function registerHuddleHandlers(io, socket) {
         });
     });
 
-    /**
-     * Relay a WebRTC answer to a specific peer
-     * data: { huddleId, targetUserId, answer: RTCSessionDescriptionInit }
-     */
+    
     socket.on('huddle:answer', ({ huddleId, targetUserId, answer }) => {
         if (!huddleId || !targetUserId || !answer) return;
         io.to(`user:${targetUserId}`).emit('huddle:answer', {
@@ -289,10 +255,7 @@ function registerHuddleHandlers(io, socket) {
         });
     });
 
-    /**
-     * Relay an ICE candidate to a specific peer
-     * data: { huddleId, targetUserId, candidate: RTCIceCandidateInit }
-     */
+    
     socket.on('huddle:ice-candidate', ({ huddleId, targetUserId, candidate }) => {
         if (!huddleId || !targetUserId) return;
         io.to(`user:${targetUserId}`).emit('huddle:ice-candidate', {

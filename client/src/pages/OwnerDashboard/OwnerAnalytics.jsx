@@ -58,7 +58,7 @@ const OwnerAnalytics = () => {
                 <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '30px', width: '120px' }} /><div className="sk" style={{ height: '30px', width: '80px' }} /></div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-                {/* 4 KPI tiles */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
                     {[1,2,3,4].map(i => (
                         <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
@@ -68,7 +68,7 @@ const OwnerAnalytics = () => {
                         </div>
                     ))}
                 </div>
-                {/* 2 chart cards */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                     {[1,2].map(i => (
                         <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
@@ -79,7 +79,7 @@ const OwnerAnalytics = () => {
                         </div>
                     ))}
                 </div>
-                {/* Bottom row */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
                         <div className="sk" style={{ height: '12px', width: '160px', marginBottom: '16px' }} />
@@ -99,7 +99,7 @@ const OwnerAnalytics = () => {
             display: 'flex', flexDirection: 'column', height: '100%',
             background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif',
         }}>
-            {/* Header */}
+            {}
             <header style={{
                 height: '56px', padding: '0 28px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -116,7 +116,7 @@ const OwnerAnalytics = () => {
                     </p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Time range selector */}
+                    {}
                     <div style={{ display: 'flex', background: 'var(--bg-active)', border: '1px solid var(--border-default)' }}>
                         {['7d', '30d', '90d'].map(range => (
                             <button key={range} onClick={() => { if (range !== timeRange) setTimeRange(range); }}
@@ -135,11 +135,11 @@ const OwnerAnalytics = () => {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                    {/* Growth Metrics */}
+                    {}
                     <section>
                         <SectionLabel label="Growth Metrics" sub={`${timeRange === '7d' ? '7-day' : timeRange === '30d' ? '30-day' : '90-day'} performance overview`} />
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
@@ -154,7 +154,7 @@ const OwnerAnalytics = () => {
                         </div>
                     </section>
 
-                    {/* User Growth Trend */}
+                    {}
                     <ChartCard title="User Growth Trend" sub="Total users vs active users over time">
                         {userGrowthData.length > 0 ? (
                             <>
@@ -186,7 +186,7 @@ const OwnerAnalytics = () => {
                         ) : <EmptyState msg="No user data available for this period" />}
                     </ChartCard>
 
-                    {/* Message Volume + Workspace Activity */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
                         <ChartCard title={`${timeRange === '7d' ? 'Weekly' : 'Monthly'} Message Volume`} sub={`Messages sent per day (last ${timeRange === '7d' ? '7' : '30'} days)`}>
                             {messageVolumeData.length > 0 ? (
@@ -221,7 +221,7 @@ const OwnerAnalytics = () => {
                         </ChartCard>
                     </div>
 
-                    {/* Department Distribution */}
+                    {}
                     <ChartCard title="Team Distribution" sub="Employees by department">
                         {departmentDistribution.length > 0 ? (
                             <ResponsiveContainer width="100%" height={280}>
@@ -244,8 +244,6 @@ const OwnerAnalytics = () => {
         </div>
     );
 };
-
-// ─ Sub-components ─────────────────────────────────────────────────────────────
 
 const SectionLabel = ({ label, sub }) => (
     <div style={{ marginBottom: '12px' }}>

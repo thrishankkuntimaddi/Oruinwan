@@ -1,4 +1,3 @@
-// server/src/features/files/files.routes.js
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');

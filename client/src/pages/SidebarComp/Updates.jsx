@@ -12,7 +12,6 @@ import {
     Image, Smile
 } from "lucide-react";
 
-// ─── Type metadata ────────────────────────────────────────────────────────────
 const TYPE_META = {
     general:      { label: "General",      color: "#b8956a",  bg: "rgba(184,149,106,0.1)",  Icon: MessageSquare },
     achievement:  { label: "Achievement",  color: "#34d399",  bg: "rgba(52,211,153,0.1)",   Icon: Award         },
@@ -36,7 +35,6 @@ const TYPE_FILTERS = [
     { key: "milestone",    label: "Milestones" },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function avatarColor(name) {
     const palette = ["#b8956a", "#8a7055", "#6b7280", "#9ca3af", "#d97706", "#64748b", "#78716c", "#a16207"];
     if (!name) return palette[0];
@@ -56,7 +54,6 @@ function formatTime(isoString) {
     return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// ─── Avatar Component ─────────────────────────────────────────────────────────
 function Avatar({ name, src, size = 40 }) {
     return (
         <div
@@ -71,7 +68,6 @@ function Avatar({ name, src, size = 40 }) {
     );
 }
 
-// ─── TypeBadge ───────────────────────────────────────────────────────────────
 function TypeBadge({ type }) {
     const meta = TYPE_META[type?.toLowerCase()] || TYPE_META.general;
     const Icon = meta.Icon;
@@ -86,7 +82,6 @@ function TypeBadge({ type }) {
     );
 }
 
-// ─── PostCard (LinkedIn-style) ────────────────────────────────────────────────
 function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscuss, onCopyLink }) {
     const [showMenu, setShowMenu] = useState(false);
     const [expanded, setExpanded] = useState(false);
@@ -111,10 +106,10 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
     return (
         <article style={{ background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden', transition: 'border-color 150ms ease' }} onMouseEnter={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.12)'} onMouseLeave={e=>e.currentTarget.style.borderColor='rgba(255,255,255,0.07)'}>
 
-            {/* Card Header */}
+            {}
             <div className="p-5 pb-0">
                 <div className="flex items-start justify-between gap-3">
-                    {/* Author Info */}
+                    {}
                     <div className="flex items-start gap-3 flex-1 min-w-0">
                         <Avatar name={post.author.name} src={post.author.avatar} size={44} />
                         <div className="flex-1 min-w-0">
@@ -142,7 +137,7 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
                         </div>
                     </div>
 
-                    {/* Menu */}
+                    {}
                     <div className="relative flex-shrink-0" ref={menuRef}>
                         <button
                             onClick={(e) => { e.stopPropagation(); setShowMenu(p => !p); }}
@@ -172,7 +167,7 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
                 </div>
             </div>
 
-            {/* Content */}
+            {}
             <div className="px-5 pt-4 pb-3">
                 {post.title && (
                     <h3 style={{fontSize:'14px',fontWeight:700,color:'#e4e4e4',marginBottom:'8px',lineHeight:1.3,fontFamily:'Inter,system-ui,sans-serif'}}>
@@ -188,7 +183,7 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
                     </button>
                 )}
 
-                {/* Hashtags */}
+                {}
                 {post.tags?.filter(t => !["normal", "urgent", "high", "low"].includes(t)).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-3">
                         {post.tags.filter(t => !["normal", "urgent", "high", "low"].includes(t)).map(tag => (
@@ -200,7 +195,7 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
                 )}
             </div>
 
-            {/* Reaction tally */}
+            {}
             {post.likes > 0 && (
                 <div className="px-5 pb-2 flex items-center gap-1.5">
                     <div className="flex -space-x-1">
@@ -215,10 +210,10 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
                 </div>
             )}
 
-            {/* Divider */}
+            {}
             <div style={{margin:'0 20px',height:'1px',background:'rgba(255,255,255,0.06)'}}/>
 
-            {/* Action bar */}
+            {}
             <div className="px-3 py-1 flex items-center gap-1">
                 <button
                     onClick={() => onLike(post.id)}
@@ -239,7 +234,6 @@ function PostCard({ post, currentUserId, companyRole, onLike, onDelete, onDiscus
     );
 }
 
-// ─── Composer / Create Post ───────────────────────────────────────────────────
 function Composer({ user, companyRole, canPostUpdates, onPost }) {
     const [open, setOpen] = useState(false);
     const [title, setTitle] = useState("");
@@ -264,7 +258,7 @@ function Composer({ user, companyRole, canPostUpdates, onPost }) {
 
     return (
         <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',overflow:'hidden'}}>
-            {/* Collapsed prompt */}
+            {}
             {!open && (
                 <div className="p-4 flex items-center gap-3">
                     <Avatar name={userName} src={user?.avatar} size={42} />
@@ -280,10 +274,10 @@ function Composer({ user, companyRole, canPostUpdates, onPost }) {
                 </div>
             )}
 
-            {/* Expanded composer */}
+            {}
             {open && (
                 <div className="p-4 space-y-3">
-                    {/* Header */}
+                    {}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Avatar name={userName} src={user?.avatar} size={42} />
@@ -297,7 +291,7 @@ function Composer({ user, companyRole, canPostUpdates, onPost }) {
                         </button>
                     </div>
 
-                    {/* Type pills */}
+                    {}
                     <div className="flex flex-wrap gap-2">
                         {Object.entries(TYPE_META).map(([key, meta]) => (
                             <button
@@ -319,7 +313,7 @@ function Composer({ user, companyRole, canPostUpdates, onPost }) {
                         ))}
                     </div>
 
-                    {/* Title */}
+                    {}
                     <input
                         type="text"
                         placeholder="Give it a title (optional)"
@@ -328,7 +322,7 @@ function Composer({ user, companyRole, canPostUpdates, onPost }) {
                         style={{width:'100%',fontSize:'13px',fontWeight:600,background:'transparent',borderBottom:'1px solid rgba(255,255,255,0.08)',paddingBottom:'8px',outline:'none',color:'#e4e4e4',fontFamily:'Inter,system-ui,sans-serif'}}
                     />
 
-                    {/* Content */}
+                    {}
                     <textarea
                         autoFocus
                         placeholder="What would you like to share with your team?"
@@ -338,7 +332,7 @@ function Composer({ user, companyRole, canPostUpdates, onPost }) {
                         style={{width:'100%',fontSize:'13px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',padding:'10px 14px',outline:'none',resize:'none',color:'#e4e4e4',fontFamily:'Inter,system-ui,sans-serif',lineHeight:1.6,boxSizing:'border-box'}}
                     />
 
-                    {/* Footer */}
+                    {}
                     <div className="flex items-center justify-between pt-1">
                         <div className="flex items-center gap-1">
                             <button style={{padding:'5px',background:'transparent',border:'none',color:'rgba(228,228,228,0.35)',cursor:'pointer'}} title="Add image">
@@ -371,7 +365,6 @@ function Composer({ user, companyRole, canPostUpdates, onPost }) {
     );
 }
 
-// ─── Left Sidebar ─────────────────────────────────────────────────────────────
 function FilterSidebar({ activeFilter, setActiveFilter, activeType, setActiveType, posts, currentUserId }) {
     const allCount   = posts.length;
     const pinnedCount = posts.filter(p => p.isPinned).length;
@@ -457,7 +450,6 @@ function FilterSidebar({ activeFilter, setActiveFilter, activeType, setActiveTyp
     );
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
 function PostSkeleton() {
     return (
         <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.06)',padding:'20px'}}>
@@ -482,7 +474,6 @@ function PostSkeleton() {
     );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 const Updates = () => {
     const navigate  = useNavigate();
     const { workspaceId } = useParams();
@@ -542,7 +533,7 @@ const Updates = () => {
     return (
         <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)' }}>
 
-            {/* ── Left Filter Sidebar ─────────────────────────────────────── */}
+            {}
             <div style={{ width: '256px', flexShrink: 0, overflowY: 'auto', padding: '16px', borderRight: '1px solid var(--border-subtle)', background: 'var(--bg-base)' }}>
                 <FilterSidebar
                     activeFilter={activeFilter}
@@ -554,10 +545,10 @@ const Updates = () => {
                 />
             </div>
 
-            {/* ── Main Feed ──────────────────────────────────────────────── */}
+            {}
             <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
 
-                {/* Top bar */}
+                {}
                 <div style={{flexShrink:0,height:'48px',background:'#0c0c0c',borderBottom:'1px solid rgba(255,255,255,0.06)',display:'flex',alignItems:'center',gap:'10px',padding:'0 20px'}}>
                     <div style={{display:'flex',alignItems:'center',gap:'8px',minWidth:0}}>
                         <Megaphone size={14} style={{color:'#b8956a',flexShrink:0}}/>
@@ -570,7 +561,7 @@ const Updates = () => {
                     </div>
                     <div className="flex-1" />
 
-                    {/* Search */}
+                    {}
                     <div style={{position:'relative'}}>
                         <Search size={12} style={{position:'absolute',left:'8px',top:'50%',transform:'translateY(-50%)',color:'rgba(228,228,228,0.3)'}}/>
                         <input
@@ -591,11 +582,11 @@ const Updates = () => {
                     </button>
                 </div>
 
-                {/* Scrollable feed */}
+                {}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     <div className="max-w-2xl mx-auto px-4 py-5 space-y-4">
 
-                        {/* Composer */}
+                        {}
                         <Composer
                             user={user}
                             companyRole={companyRole}
@@ -603,7 +594,7 @@ const Updates = () => {
                             onPost={handlePost}
                         />
 
-                        {/* Skeletons */}
+                        {}
                         {loading && filteredPosts.length === 0 && (
                             <>
                                 <PostSkeleton />
@@ -612,7 +603,7 @@ const Updates = () => {
                             </>
                         )}
 
-                        {/* Posts */}
+                        {}
                         {filteredPosts.map(post => (
                             <PostCard
                                 key={post.id}
@@ -626,7 +617,7 @@ const Updates = () => {
                             />
                         ))}
 
-                        {/* Empty state */}
+                        {}
                         {filteredPosts.length === 0 && !loading && (
                             <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.06)',display:'flex',flexDirection:'column',alignItems:'center',padding:'64px 24px',textAlign:'center'}}>
                                 <div style={{width:'48px',height:'48px',background:'rgba(184,149,106,0.08)',border:'1px solid rgba(184,149,106,0.2)',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:'16px'}}>
@@ -644,7 +635,7 @@ const Updates = () => {
                 </div>
             </div>
 
-            {/* ── Delete Confirmation Modal ──────────────────────────────── */}
+            {}
             {postToDelete && (
                 <div style={{position:'fixed',inset:0,zIndex:50,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,0.7)',backdropFilter:'blur(4px)'}}>
                     <div style={{background:'#111111',border:'1px solid rgba(255,255,255,0.1)',padding:'24px',width:'100%',maxWidth:'360px',margin:'0 16px'}}>

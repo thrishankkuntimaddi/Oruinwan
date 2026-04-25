@@ -4,7 +4,6 @@ const dns = require('dns').promises;
 const { URL } = require('url');
 const net = require('net');
 
-// ── SSRF IP blocklist ──────────────────────────────────────────────────────
 function isPrivateIP(ip) {
     if (ip === '127.0.0.1' || ip.startsWith('127.')) return true;
     if (ip === '::1') return true;
@@ -43,15 +42,11 @@ async function assertNotSSRF(rawUrl) {
     return parsed;
 }
 
-/**
- * Lazily requires open-graph-scraper so the server starts even if the module
- * hasn't been installed yet (fails gracefully on first request instead).
- */
 async function fetchLinkPreview(url) {
-    // SSRF guard — throws if blocked
+    
     await assertNotSSRF(url);
 
-    // Lazy require so module absence only affects this code path
+    
     let ogs;
     try {
         ogs = require('open-graph-scraper');

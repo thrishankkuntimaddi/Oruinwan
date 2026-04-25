@@ -1,13 +1,4 @@
 #!/usr/bin/env node
-/**
- * Repair Conversation Keys Script
- * 
- * Triggers the backend auto-repair endpoint to fix conversation key distribution issues.
- * Run this after creating channels if you get "403 KEY_NOT_DISTRIBUTED" errors.
- * 
- * Usage:
- *   node scripts/repair-conversation-keys.js
- */
 
 const https = require('https');
 

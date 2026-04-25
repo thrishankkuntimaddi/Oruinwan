@@ -1,18 +1,8 @@
-// server/src/features/company-analytics/analytics.service.js
-//
-// Phase 6 — Company Analytics
-// Aggregate COUNTS only — no message contents read.
-// All queries are company-scoped and use indexed fields.
-
 const User = require('../../../models/User');
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
 const Message = require('../../features/messages/message.model');
 const Task = require('../../../models/Task');
-
-// ============================================================================
-// TIME RANGE HELPER
-// ============================================================================
 
 function since(range) {
     const now = new Date();
@@ -24,21 +14,10 @@ function since(range) {
     }
 }
 
-// ============================================================================
-// MAIN AGGREGATOR
-// ============================================================================
-
-/**
- * Returns a snapshot of company health metrics.
- * All queries hit indexed fields only — never reads message text/payload.
- *
- * @param {string} companyId
- * @param {string} timeRange  '7d' | '30d' | '90d'
- */
 async function getCompanyAnalytics(companyId, timeRange = '30d') {
     const from = since(timeRange);
 
-    // ── Run all counts in parallel ──────────────────────────────────────────
+    
     const [
         totalEmployees,
         activeEmployees,
@@ -48,66 +27,66 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         totalWorkspaces,
         activeWorkspaces,
 
-        // Message volume — count only, no text read
+        
         totalMessages,
         recentMessages,
         channelMessages,
         dmMessages,
 
-        // Task counts
+        
         totalTasks,
         completedTasks,
         openTasks,
         overdueTasks,
 
-        // Activity: unique members who sent a message in timeRange
+        
         activeMessageSenders,
 
-        // New hires in timeRange
+        
         newHires,
 
-        // Updates posted
+        
         totalUpdates,
         recentUpdates,
     ] = await Promise.all([
-        // ── Employees ───────────────────────────────────────────────────────
+        
         User.countDocuments({ companyId, accountStatus: { $ne: 'removed' } }),
         User.countDocuments({ companyId, accountStatus: 'active' }),
         User.countDocuments({ companyId, accountStatus: 'invited' }),
         User.countDocuments({ companyId, accountStatus: 'suspended' }),
 
-        // ── Org Structure ───────────────────────────────────────────────────
+        
         Department.countDocuments({ company: companyId, isActive: true }),
 
-        // ── Workspaces ──────────────────────────────────────────────────────
+        
         Workspace.countDocuments({ company: companyId }),
         Workspace.countDocuments({ company: companyId, isActive: true, isArchived: false }),
 
-        // ── Messages (counts only — no content projected) ───────────────────
+        
         Message.countDocuments({ company: companyId, isDeleted: false }),
         Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
         Message.countDocuments({ company: companyId, isDeleted: false, channel: { $ne: null } }),
         Message.countDocuments({ company: companyId, isDeleted: false, dm: { $ne: null } }),
 
-        // ── Tasks ────────────────────────────────────────────────────────────
+        
         Task.countDocuments({ company: companyId }),
         Task.countDocuments({ company: companyId, status: { $in: ['done', 'completed'] } }),
         Task.countDocuments({ company: companyId, status: { $nin: ['done', 'completed', 'cancelled'] } }),
         Task.countDocuments({ company: companyId, dueDate: { $lt: new Date() }, status: { $nin: ['done', 'completed', 'cancelled'] } }),
 
-        // ── Engagement: unique active message senders in period ─────────────
+        
         Message.distinct('sender', { company: companyId, isDeleted: false, createdAt: { $gte: from } })
             .then(ids => ids.length),
 
-        // ── Growth: users who joined in timeRange ───────────────────────────
+        
         User.countDocuments({ companyId, createdAt: { $gte: from }, accountStatus: { $ne: 'removed' } }),
 
-        // ── Company Updates ─────────────────────────────────────────────────
+        
         require('../../../models/Update').countDocuments({ company: companyId, isDeleted: false }),
         require('../../../models/Update').countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
     ]);
 
-    // ── Derived metrics ─────────────────────────────────────────────────────
+    
 
     const taskCompletionRate = totalTasks > 0
         ? Math.round((completedTasks / totalTasks) * 100)
@@ -121,7 +100,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         ? Math.round((recentMessages / totalMessages) * 100)
         : 0;
 
-    // ── Department breakdown (top 5 by member count) ─────────────────────────
+    
     const departmentBreakdown = await Department.aggregate([
         { $match: { company: require('mongoose').Types.ObjectId.createFromHexString(companyId.toString()), isActive: true } },
         { $project: { name: 1, memberCount: { $size: '$members' } } },
@@ -129,7 +108,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         { $limit: 5 },
     ]);
 
-    // ── Workspace activity breakdown ─────────────────────────────────────────
+    
     const workspaceActivity = await Message.aggregate([
         { $match: { company: require('mongoose').Types.ObjectId.createFromHexString(companyId.toString()), isDeleted: false, createdAt: { $gte: from }, workspace: { $ne: null } } },
         { $group: { _id: '$workspace', count: { $sum: 1 } } },
@@ -140,7 +119,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         { $project: { _id: 0, workspaceId: '$_id', name: { $ifNull: ['$ws.name', 'Unknown'] }, messageCount: '$count' } },
     ]);
 
-    // ── Role distribution ────────────────────────────────────────────────────
+    
     const roleDistribution = await User.aggregate([
         { $match: { companyId: require('mongoose').Types.ObjectId.createFromHexString(companyId.toString()), accountStatus: { $ne: 'removed' } } },
         { $group: { _id: '$companyRole', count: { $sum: 1 } } },
@@ -148,7 +127,7 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
         { $sort: { count: -1 } },
     ]);
 
-    // ── Assemble response ────────────────────────────────────────────────────
+    
     return {
         timeRange,
         period: { from, to: new Date() },
@@ -201,18 +180,6 @@ async function getCompanyAnalytics(companyId, timeRange = '30d') {
     };
 }
 
-// ============================================================================
-// ACTIVITY ANALYTICS (for GET /api/company/analytics/activity)
-// ============================================================================
-
-/**
- * Returns a lightweight activity snapshot for the last 7 days.
- * Called by GET /api/company/analytics/activity.
- * All queries are count-only — no message text is ever projected.
- *
- * @param {string} companyId
- * @returns {Promise<Object>}
- */
 async function getActivityAnalytics(companyId) {
     const from = since('7d');
     const mongoose = require('mongoose');
@@ -227,14 +194,14 @@ async function getActivityAnalytics(companyId) {
     ] = await Promise.all([
         Message.countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
         Task.countDocuments({ company: companyId, createdAt: { $gte: from } }),
-        // Unique senders in last 7 days
+        
         Message.distinct('sender', { company: companyId, isDeleted: false, createdAt: { $gte: from } })
             .then(ids => ids.length),
         User.countDocuments({ companyId, accountStatus: 'invited', createdAt: { $gte: from } }),
         require('../../../models/Update').countDocuments({ company: companyId, isDeleted: false, createdAt: { $gte: from } }),
     ]);
 
-    // Daily message breakdown (last 7 days)
+    
     const dailyActivity = await Message.aggregate([
         {
             $match: {
@@ -265,4 +232,3 @@ async function getActivityAnalytics(companyId) {
 }
 
 module.exports = { getCompanyAnalytics, getActivityAnalytics };
-

@@ -18,7 +18,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
 
     const [publicChannels, setPublicChannels] = useState([]);
     const [loadingList, setLoadingList] = useState(false);
-    const [joiningId, setJoiningId] = useState(null); // track which channel is being joined
+    const [joiningId, setJoiningId] = useState(null); 
 
     const loadPublicChannels = useCallback(async () => {
         if (!workspaceId) return;
@@ -27,7 +27,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
             const res = await api.get(`/api/workspaces/${workspaceId}/channels`);
             const allChannels = res.data.channels || [];
 
-            // Filter to public discoverable channels the user hasn't joined
+            
             const notJoined = allChannels.filter(ch =>
                 !ch.isPrivate &&
                 ch.isDiscoverable !== false &&
@@ -50,14 +50,14 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
     const handleJoin = async (channelId) => {
         setJoiningId(channelId);
         try {
-            // joinDiscoverableChannel: optimistic state update + correct endpoint
+            
             const joined = await joinDiscoverableChannel(channelId);
 
             showToast(`Joined #${joined.label} successfully!`);
             onJoined?.(joined);
             onClose();
 
-            // Navigate into the channel — no page reload
+            
             navigate(joined.path || `/channels/${channelId}`);
         } catch (err) {
             console.error("Join failed:", err);
@@ -84,7 +84,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                 display: 'flex', flexDirection: 'column',
                 boxShadow: '0 16px 48px rgba(0,0,0,0.5)',
             }}>
-                {/* Header */}
+                {}
                 <div style={{
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     padding: '14px 20px', borderBottom: '1px solid var(--border-default)',
@@ -110,7 +110,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                     </button>
                 </div>
 
-                {/* Body */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
                     {loadingList ? (
                         <div style={{
@@ -193,7 +193,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
                     )}
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{
                     padding: '12px 20px', borderTop: '1px solid var(--border-default)',
                     display: 'flex', justifyContent: 'flex-end', flexShrink: 0,

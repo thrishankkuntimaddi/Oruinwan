@@ -1,25 +1,11 @@
-/**
- * scripts/backfill-avatars.js
- *
- * One-time script: assign a DiceBear avatar URL to every User
- * that currently has no profilePicture set.
- *
- * Usage:
- *   cd server
- *   node scripts/backfill-avatars.js
- */
+require('dotenv').config(); 
 
-require('dotenv').config(); // loads server/.env
-// Fallback: try parent .env (monorepo setups)
 if (!process.env.MONGODB_URI && !process.env.MONGO_URI) {
   require('dotenv').config({ path: '../.env' });
 }
 
-
 const mongoose = require('mongoose');
 const User = require('../models/User');
-
-// ─── Avatar generator (mirrors client/src/utils/avatarUtils.js) ────────────
 
 const BG_COLORS = [
   'b6e3f4', 'c0aede', 'd1d4f9', 'ffd5dc',
@@ -40,8 +26,6 @@ function generateAvatarUrl(userId) {
   return `https://api.dicebear.com/9.x/avataaars/svg?seed=${encodeURIComponent(seed)}&backgroundColor=${bg}&radius=50`;
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────
-
 async function run() {
   const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
   if (!uri) {
@@ -53,7 +37,7 @@ async function run() {
   await mongoose.connect(uri);
   console.log('✅ Connected');
 
-  // Find all users with a missing or empty profilePicture
+  
   const users = await User.find({
     $or: [
       { profilePicture: { $exists: false } },

@@ -1,4 +1,3 @@
-// src/components/messageComp/chatWindow/messages/messageGroup.jsx
 import React from "react";
 import MessageItem from "./messageItem";
 
@@ -23,13 +22,13 @@ export default function MessageGroup({
   threadCounts,
   chatType,
   channelMembers,
-  isAdmin = false, // NEW: admin check for pin permissions
-  // Translation
+  isAdmin = false, 
+  
   translationState,
   onTranslate,
   onClearTranslation,
 }) {
-  // This component just delegates to MessageItem — kept for future grouping logic
+  
   return (
     <MessageItem
       msg={msg}
@@ -52,7 +51,7 @@ export default function MessageGroup({
       threadCounts={threadCounts}
       chatType={chatType}
       channelMembers={channelMembers}
-      isAdmin={isAdmin} // ★ PASS DOWN FOR PIN PERMISSIONS
+      isAdmin={isAdmin} 
       translationState={translationState}
       onTranslate={onTranslate}
       onClearTranslation={onClearTranslation}

@@ -85,7 +85,7 @@ const OwnerSidebar = ({ onNavigate }) => {
             flexShrink: 0,
             fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
         }}>
-            {/* Header */}
+            {}
             <div style={{
                 height: '64px',
                 display: 'flex',
@@ -122,7 +122,7 @@ const OwnerSidebar = ({ onNavigate }) => {
                 </div>
             </div>
 
-            {/* Navigation */}
+            {}
             <nav style={{
                 flex: 1,
                 overflowY: 'auto',
@@ -159,7 +159,7 @@ const OwnerSidebar = ({ onNavigate }) => {
                 </div>
             </nav>
 
-            {/* Footer / Profile */}
+            {}
             <div style={{ padding: '12px', borderTop: '1px solid var(--border-subtle)', position: 'relative', flexShrink: 0 }}>
                 {showUserMenu && (
                     <div style={{

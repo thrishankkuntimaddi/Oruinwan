@@ -1,29 +1,7 @@
-// server/src/features/tasks/tasks.validator.js
-/**
- * Tasks Validator - Input Validation Layer
- * 
- * STEP 2: Schema validation for task creation/updates.
- * 
- * NO business logic - only input sanitization and schema validation.
- * All business rules are enforced in the service layer.
- * 
- * @module features/tasks/tasks.validator
- */
-
-// ============================================================================
-// VALIDATION RULES
-// ============================================================================
-
-/**
- * Validate task creation data
- * 
- * @param {Object} data - Task data to validate
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateCreateTask(data) {
     const errors = [];
 
-    // Required fields
+    
     if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
         errors.push('Title is required and must be a non-empty string');
     }
@@ -36,25 +14,25 @@ function validateCreateTask(data) {
         errors.push('Workspace ID is required');
     }
 
-    // Assignment type validation
+    
     if (data.assignmentType) {
         const validTypes = ['self', 'individual', 'channel'];
         if (!validTypes.includes(data.assignmentType)) {
             errors.push(`Invalid assignment type. Must be one of: ${validTypes.join(', ')}`);
         }
 
-        // Individual assignment requires assignedToIds
+        
         if (data.assignmentType === 'individual' && (!data.assignedToIds || !Array.isArray(data.assignedToIds) || data.assignedToIds.length === 0)) {
             errors.push('Individual assignment requires at least one assignee ID');
         }
 
-        // Channel assignment requires channelId
+        
         if (data.assignmentType === 'channel' && !data.channelId) {
             errors.push('Channel assignment requires a channel ID');
         }
     }
 
-    // Task mode validation (for individual assignments)
+    
     if (data.taskMode) {
         const validModes = ['split', 'shared'];
         if (!validModes.includes(data.taskMode)) {
@@ -62,7 +40,7 @@ function validateCreateTask(data) {
         }
     }
 
-    // Status validation
+    
     if (data.status) {
         const validStatuses = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
         if (!validStatuses.includes(data.status)) {
@@ -70,7 +48,7 @@ function validateCreateTask(data) {
         }
     }
 
-    // Priority validation
+    
     if (data.priority) {
         const validPriorities = ['lowest', 'low', 'medium', 'high', 'highest'];
         if (!validPriorities.includes(data.priority)) {
@@ -78,17 +56,17 @@ function validateCreateTask(data) {
         }
     }
 
-    // Date validation
+    
     if (data.dueDate && isNaN(new Date(data.dueDate).getTime())) {
         errors.push('Invalid due date format');
     }
 
-    // Tags validation
+    
     if (data.tags && !Array.isArray(data.tags)) {
         errors.push('Tags must be an array');
     }
 
-    // Description length
+    
     if (data.description && data.description.length > 5000) {
         errors.push('Description must not exceed 5000 characters');
     }
@@ -99,16 +77,10 @@ function validateCreateTask(data) {
     };
 }
 
-/**
- * Validate task update data
- * 
- * @param {Object} data - Update data to validate
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateUpdateTask(data) {
     const errors = [];
 
-    // Title validation (if provided)
+    
     if (data.title !== undefined) {
         if (typeof data.title !== 'string' || data.title.trim().length === 0) {
             errors.push('Title must be a non-empty string');
@@ -118,20 +90,20 @@ function validateUpdateTask(data) {
         }
     }
 
-    // Status validation (if provided)
+    
     if (data.status) {
         const validStatuses = ['backlog', 'todo', 'in_progress', 'review', 'blocked', 'done', 'cancelled'];
         if (!validStatuses.includes(data.status)) {
             errors.push(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
         }
 
-        // Blocked status requires blockedReason
+        
         if (data.status === 'blocked' && (!data.blockedReason || typeof data.blockedReason !== 'string')) {
             errors.push('Blocked status requires a blockedReason');
         }
     }
 
-    // Priority validation (if provided)
+    
     if (data.priority) {
         const validPriorities = ['lowest', 'low', 'medium', 'high', 'highest'];
         if (!validPriorities.includes(data.priority)) {
@@ -139,27 +111,27 @@ function validateUpdateTask(data) {
         }
     }
 
-    // Date validation (if provided)
+    
     if (data.dueDate && isNaN(new Date(data.dueDate).getTime())) {
         errors.push('Invalid due date format');
     }
 
-    // Assignees validation (if provided)
+    
     if (data.assignedTo !== undefined && !Array.isArray(data.assignedTo) && typeof data.assignedTo !== 'string') {
         errors.push('assignedTo must be an array of user IDs or a single user ID');
     }
 
-    // Tags validation (if provided)
+    
     if (data.tags !== undefined && !Array.isArray(data.tags)) {
         errors.push('Tags must be an array');
     }
 
-    // Description length (if provided)
+    
     if (data.description !== undefined && data.description.length > 5000) {
         errors.push('Description must not exceed 5000 characters');
     }
 
-    // Numeric field validation
+    
     if (data.storyPoints !== undefined && (typeof data.storyPoints !== 'number' || data.storyPoints < 0)) {
         errors.push('Story points must be a non-negative number');
     }
@@ -178,16 +150,10 @@ function validateUpdateTask(data) {
     };
 }
 
-/**
- * Validate subtask creation data
- * 
- * @param {Object} data - Subtask data to validate
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateCreateSubtask(data) {
     const errors = [];
 
-    // Required fields
+    
     if (!data.title || typeof data.title !== 'string' || data.title.trim().length === 0) {
         errors.push('Subtask title is required and must be a non-empty string');
     }
@@ -196,12 +162,12 @@ function validateCreateSubtask(data) {
         errors.push('Subtask title must not exceed 500 characters');
     }
 
-    // Description length (if provided)
+    
     if (data.description && data.description.length > 5000) {
         errors.push('Subtask description must not exceed 5000 characters');
     }
 
-    // Priority validation (if provided)
+    
     if (data.priority) {
         const validPriorities = ['lowest', 'low', 'medium', 'high', 'highest'];
         if (!validPriorities.includes(data.priority)) {
@@ -209,17 +175,17 @@ function validateCreateSubtask(data) {
         }
     }
 
-    // Date validation (if provided)
+    
     if (data.dueDate && isNaN(new Date(data.dueDate).getTime())) {
         errors.push('Invalid due date format');
     }
 
-    // Assignees validation (if provided)
+    
     if (data.assignedTo !== undefined && !Array.isArray(data.assignedTo)) {
         errors.push('assignedTo must be an array of user IDs');
     }
 
-    // Tags validation (if provided)
+    
     if (data.tags !== undefined && !Array.isArray(data.tags)) {
         errors.push('Tags must be an array');
     }
@@ -230,12 +196,6 @@ function validateCreateSubtask(data) {
     };
 }
 
-/**
- * Validate transfer request data
- * 
- * @param {Object} data - Transfer request data
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateTransferRequest(data) {
     const errors = [];
 
@@ -257,12 +217,6 @@ function validateTransferRequest(data) {
     };
 }
 
-/**
- * Validate pagination parameters
- * 
- * @param {Object} params - Pagination params
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validatePagination(params) {
     const errors = [];
 
@@ -285,10 +239,6 @@ function validatePagination(params) {
         errors: errors.length > 0 ? errors : undefined
     };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     validateCreateTask,

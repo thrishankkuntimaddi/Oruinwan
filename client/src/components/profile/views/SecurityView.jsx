@@ -2,10 +2,6 @@ import React from 'react';
 import { ChevronLeft, Key, Shield, CheckCircle2, Check, Laptop, Smartphone, Monitor, LogOut, AlertCircle, Trash2 } from 'lucide-react';
 import PasswordInput from '../shared/PasswordInput';
 
-/**
- * SecurityView Component
- * Password management, 2FA toggle, active sessions, and account deletion
- */
 const SecurityView = ({
     user,
     passData,
@@ -30,14 +26,14 @@ const SecurityView = ({
             </div>
 
             <div className="p-5 overflow-y-auto custom-scrollbar space-y-8">
-                {/* Password Section */}
+                {}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
                         <Key size={16} className="text-gray-400" />
                         <h4 className="text-xs font-bold text-gray-900 dark:text-white uppercase tracking-wide">Password</h4>
                     </div>
 
-                    {/* OAuth Info Banner - Show if user signed up with OAuth */}
+                    {}
                     {user?.authProvider && user.authProvider !== 'local' && (
                         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
                             <div className="flex items-start gap-2">
@@ -84,7 +80,7 @@ const SecurityView = ({
                         </div>
                     )}
 
-                    {/* Show "Current Password" field ONLY for users who signed up with email (local auth) */}
+                    {}
                     {(!user?.authProvider || user.authProvider === 'local') && (
                         <PasswordInput
                             label="Current Password"
@@ -106,7 +102,7 @@ const SecurityView = ({
                             fieldType="new"
                         />
 
-                        {/* Password Rules Checklist */}
+                        {}
                         <div className="mt-3 grid grid-cols-2 gap-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-lg border border-gray-100 dark:border-gray-700">
                             <div className={`text-[10px] flex items-center font-medium ${passData.new.length >= 8 ? "text-green-600 dark:text-green-400" : "text-gray-400"}`}>
                                 <span className="mr-1.5">{passData.new.length >= 8 ? <Check size={10} /> : <div className="w-2.5 h-2.5 rounded-full border border-gray-300 dark:border-gray-600"></div>}</span> 8+ chars
@@ -138,7 +134,7 @@ const SecurityView = ({
                     </button>
                 </div>
 
-                {/* 2FA Section */}
+                {}
                 <div className="space-y-3">
                     <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
                         <Shield size={16} className="text-gray-400" />
@@ -155,7 +151,7 @@ const SecurityView = ({
                     </div>
                 </div>
 
-                {/* Active Sessions Section */}
+                {}
                 <div className="space-y-4">
                     <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
                         <Laptop size={16} className="text-gray-400" />
@@ -201,7 +197,7 @@ const SecurityView = ({
                     )}
                 </div>
 
-                {/* Delete Account Section - Personal Users Only */}
+                {}
                 {user?.userType === "personal" && !user?.companyId && (
                     <div className="space-y-3 pt-4 border-t border-gray-200 dark:border-gray-800">
                         <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">

@@ -1,19 +1,4 @@
-/**
- * 🔐 E2EE Database Migration (SAFE)
- *
- * Purpose:
- * - Create UserWorkspaceKey collection
- * - NOTHING ELSE
- *
- * ❌ Does NOT touch Message schema
- * ❌ Does NOT mutate existing messages
- */
-
 const mongoose = require('mongoose');
-
-/* ====================
-   USER WORKSPACE KEYS
-==================== */
 
 const userWorkspaceKeySchema = new mongoose.Schema(
   {
@@ -31,17 +16,17 @@ const userWorkspaceKeySchema = new mongoose.Schema(
 
     encryptedKey: {
       type: String,
-      required: true // Base64
+      required: true 
     },
 
     keyIv: {
       type: String,
-      required: true // Base64
+      required: true 
     },
 
     pbkdf2Salt: {
       type: String,
-      required: true // Base64
+      required: true 
     },
 
     pbkdf2Iterations: {
@@ -67,15 +52,6 @@ const UserWorkspaceKey = mongoose.model(
   userWorkspaceKeySchema
 );
 
-/* ====================
-   WORKSPACE MASTER KEYS
-==================== */
-
-/**
- * WorkspaceKey: Stores the master encryption key for each workspace
- * This key is used to encrypt all messages in the workspace
- * For security, it's stored encrypted with the creator's KEK
- */
 const workspaceKeySchema = new mongoose.Schema(
   {
     workspaceId: {
@@ -85,21 +61,21 @@ const workspaceKeySchema = new mongoose.Schema(
       unique: true
     },
 
-    // Master workspace key encrypted with creator's KEK
+    
     encryptedMasterKey: {
       type: String,
-      required: true // Base64
+      required: true 
     },
 
     masterKeyIv: {
       type: String,
-      required: true // Base64
+      required: true 
     },
 
-    // Salt used to derive creator's KEK (for reference)
+    
     creatorSalt: {
       type: String,
-      required: false // Base64
+      required: false 
     },
 
     createdBy: {
@@ -122,10 +98,6 @@ const workspaceKeySchema = new mongoose.Schema(
 );
 
 const WorkspaceKey = mongoose.model('WorkspaceKey', workspaceKeySchema);
-
-/* ====================
-   MIGRATIONS
-==================== */
 
 async function migrateUp() {
   console.log('🔐 Creating UserWorkspaceKey indexes...');
@@ -153,4 +125,3 @@ module.exports = {
   migrateUp,
   migrateDown
 };
-

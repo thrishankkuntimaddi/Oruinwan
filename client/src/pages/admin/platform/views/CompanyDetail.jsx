@@ -47,7 +47,7 @@ const CompanyDetail = ({ companyId, onBack }) => {
             </button>
 
             <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', overflow: 'hidden' }}>
-                {/* Header */}
+                {}
                 <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <div style={{ width: '52px', height: '52px', background: 'var(--bg-base)', border: '2px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
                         {company.logo ? <img src={company.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : company.name.charAt(0)}
@@ -65,9 +65,9 @@ const CompanyDetail = ({ companyId, onBack }) => {
                     </div>
                 </div>
 
-                {/* Body */}
+                {}
                 <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    {/* Settings */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>
                             <Shield size={14} style={{ color: 'var(--accent)' }} />
@@ -96,7 +96,7 @@ const CompanyDetail = ({ companyId, onBack }) => {
                         </div>
                     </div>
 
-                    {/* Stats */}
+                    {}
                     <div>
                         <div style={{ paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)', marginBottom: '16px' }}>
                             <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Usage Statistics</span>
@@ -117,7 +117,7 @@ const CompanyDetail = ({ companyId, onBack }) => {
                     </div>
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{ padding: '14px 24px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                     <button onClick={onBack} style={{ padding: '8px 16px', background: 'none', border: 'none', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', transition: 'color 150ms ease' }} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}>Cancel</button>
                     <SaveBtn onClick={handleSave} />

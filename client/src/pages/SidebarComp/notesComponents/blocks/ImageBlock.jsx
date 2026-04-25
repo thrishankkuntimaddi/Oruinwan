@@ -16,10 +16,10 @@ const ImageBlock = ({
         const file = e.target.files[0];
         if (file) {
             try {
-                // Show upload progress
+                
                 setUploadProgress(prev => ({ ...prev, [block.id]: 0 }));
 
-                // Upload file
+                
                 const result = await uploadNoteAttachment(
                     file,
                     workspaceId,
@@ -29,10 +29,10 @@ const ImageBlock = ({
                     }
                 );
 
-                // Update block with file URL
+                
                 onBlockChange(block.id, result.url);
 
-                // Clear upload progress
+                
                 setUploadProgress(prev => {
                     const newProgress = { ...prev };
                     delete newProgress[block.id];

@@ -148,16 +148,16 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
             fontFamily: 'var(--font)', boxSizing: 'border-box',
             padding: '0 16px', gap: '8px', overflow: 'hidden',
         }}>
-            {/* Logo */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
                 <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '24px', height: '24px', borderRadius: '2px', objectFit: 'cover' }} />
                 <span className="psh-ws-label" style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>Chttrix</span>
             </div>
 
-            {/* Right side buttons */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0, marginLeft: 'auto', position: 'relative' }}>
 
-                {/* Console buttons — only on md+ */}
+                {}
                 {user?.companyRole === 'owner' && (
                     <button onClick={onOwnerConsoleClick} style={consoleBtn} className="hidden md:flex"
                         onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
@@ -180,7 +180,7 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                 )}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-                    {/* Profile — desktop: show avatar + name */}
+                    {}
                     <button onClick={onProfileClick} title="View Profile" className="hidden sm:flex"
                         style={{ ...btn, gap: '8px', padding: '4px 8px', maxWidth: '160px' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
@@ -193,7 +193,7 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                         </div>
                     </button>
 
-                    {/* Profile — mobile: avatar only */}
+                    {}
                     <button onClick={onProfileClick} title="View Profile" className="sm:hidden" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <img src={getAvatarUrl(user)} alt={user?.username || 'U'} style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-default)' }} />
                     </button>
@@ -207,7 +207,7 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                         onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
                     ><Settings size={16} /></button>
 
-                    {/* Help */}
+                    {}
                     <div style={{ position: 'relative' }}>
                         <button onClick={() => setShowHelp(!showHelp)} style={iconBtn(showHelp)} title="Help & Resources"
                             onMouseEnter={e => { if (!showHelp) { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; } }}
@@ -276,13 +276,13 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                         )}
                     </div>
 
-                    {/* AI Button */}
+                    {}
                     <button onClick={onAIClick} style={iconBtn(showAI)} title="Chttrix AI"
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = showAI ? 'var(--bg-hover)' : 'none'; e.currentTarget.style.color = showAI ? 'var(--accent)' : 'var(--text-muted)'; }}
                     ><Bot size={16} /></button>
 
-                    {/* Logout */}
+                    {}
                     <button onClick={onLogout} style={iconBtn()} title="Sign out"
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--state-danger)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = 'var(--text-muted)'; }}
@@ -292,6 +292,5 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
         </header>
     );
 };
-
 
 export default Header;

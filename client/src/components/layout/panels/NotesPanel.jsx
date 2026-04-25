@@ -13,7 +13,6 @@ import api from '@services/api';
 import { useNotes } from "../../../contexts/NotesContext";
 import NoteTemplateModal from "../../../pages/SidebarComp/notesComponents/ui/NoteTemplateModal";
 
-// ─── Note types (Lucide icon components) ──────────────────────────────────────
 const NOTE_TYPES = [
     { id: "note", Icon: FileText, color: "text-sky-400", label: "Document" },
     { id: "brainstorm", Icon: Lightbulb, color: "text-amber-500", label: "Brainstorm" },
@@ -24,16 +23,15 @@ const NOTE_TYPES = [
     { id: "announcement", Icon: Megaphone, color: "text-rose-500", label: "Announcement" },
 ];
 
-// ─── Canvas hook ──────────────────────────────────────────────────────────────
 function useCanvasByChannel(workspaceId) {
     const [channels, setChannels] = useState([]);
     const load = useCallback(async () => {
         if (!workspaceId) return;
         try {
-            // Must pass workspaceId as query param — the API requires it
+            
             const res = await api.get(`/api/channels/my?workspaceId=${workspaceId}`);
             const all = res.data?.channels || [];
-            // Server already scopes to workspace, but filter here too for safety
+            
             const withTabs = await Promise.all(all.map(async ch => {
                 try {
                     const tr = await api.get(`/api/channels/${ch._id}/tabs`);
@@ -43,7 +41,7 @@ function useCanvasByChannel(workspaceId) {
                     return { ...ch, canvasTabs: [] };
                 }
             }));
-            // Only keep channels that actually have canvas tabs
+            
             setChannels(withTabs.filter(ch => ch.canvasTabs.length > 0));
         } catch (e) {
             console.warn('[NotesPanel] useCanvasByChannel fetch failed:', e?.message);
@@ -53,7 +51,6 @@ function useCanvasByChannel(workspaceId) {
     return { channels };
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatDate(iso) {
     if (!iso) return "";
     const diff = (Date.now() - new Date(iso)) / 1000;
@@ -76,7 +73,6 @@ function getPreview(content) {
     return content.replace(/<[^>]*>/g, "").slice(0, 60);
 }
 
-// ─── Bottom accordion (VS Code style) ────────────────────────────────────────
 function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
     return (
         <div style={{ borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
@@ -95,7 +91,6 @@ function BottomPanel({ label, icon: Icon, count, isOpen, onToggle, children }) {
     );
 }
 
-// ─── Delete confirm dialog ────────────────────────────────────────────────────
 function DeleteDialog({ note, onConfirm, onCancel }) {
     return (
         <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
@@ -120,7 +115,6 @@ function DeleteDialog({ note, onConfirm, onCancel }) {
     );
 }
 
-// ─── Move-to picker (inline submenu) ─────────────────────────────────────────
 function MovePicker({ groups, noteGroup, onMove, onClose }) {
     return (
         <div style={{ position: 'absolute', right: '100%', top: 0, marginRight: '4px', width: '176px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 12px 40px rgba(0,0,0,0.6)', padding: '4px 0', zIndex: 70 }}>
@@ -144,9 +138,6 @@ function MovePicker({ groups, noteGroup, onMove, onClose }) {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Main Component
-// ─────────────────────────────────────────────────────────────────────────────
 const NotesPanel = () => {
     const navigate = useNavigate();
     const location = useLocation();
@@ -160,19 +151,19 @@ const NotesPanel = () => {
 
     const { channels: canvasChannels } = useCanvasByChannel(workspaceId);
 
-    // ── Tabs: "workspace" | "canvas" ─────────────────────────────────────────
+    
     const [activeTab, setActiveTab] = useState("workspace");
 
-    // ── Workspace sub-filter: "all" | "favorites" ────────────────────────────
+    
     const [wsFilter, setWsFilter] = useState("all");
 
-    // ── Groups ─ persisted in localStorage so empty groups survive refresh ──────────
+    
     const GROUPS_KEY = `chttrix_note_groups_${workspaceId}`;
     const [groups, setGroups] = useState(() => {
         try { return JSON.parse(localStorage.getItem(GROUPS_KEY) || '[]'); } catch { return []; }
     });
 
-    // Keep groups in sync: any tag used on a note that isn't in groups list gets added
+    
     useEffect(() => {
         const tagGroups = [...new Set(activeNotes.flatMap(n => n.tags || []).filter(Boolean))];
         setGroups(prev => {
@@ -183,23 +174,23 @@ const NotesPanel = () => {
             }
             return prev;
         });
-    }, [activeNotes, GROUPS_KEY]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [activeNotes, GROUPS_KEY]); 
 
-    const [activeGroup, setActiveGroup] = useState(null); // null = show all
+    const [activeGroup, setActiveGroup] = useState(null); 
     const [showGroupInput, setShowGroupInput] = useState(false);
     const [newGroupName, setNewGroupName] = useState("");
 
-    // ── Sort ─────────────────────────────────────────────────────────────────
+    
     const [sortOrder, setSortOrder] = useState("newest");
     const [showSortMenu, setShowSortMenu] = useState(false);
 
-    // ── Modals / menus ────────────────────────────────────────────────────────
+    
     const [showTemplateModal, setShowTemplateModal] = useState(false);
-    const [noteMenu, setNoteMenu] = useState(null); // { noteId, x, y }
+    const [noteMenu, setNoteMenu] = useState(null); 
     const [showMovePicker, setShowMovePicker] = useState(false);
-    const [deleteTarget, setDeleteTarget] = useState(null); // note to delete
+    const [deleteTarget, setDeleteTarget] = useState(null); 
 
-    // ── Bottom panels ─────────────────────────────────────────────────────────
+    
     const [byTypeOpen, setByTypeOpen] = useState(false);
     const [archiveOpen, setArchiveOpen] = useState(false);
     const [activeTypeId, setActiveTypeId] = useState(null);
@@ -211,7 +202,7 @@ const NotesPanel = () => {
 
     const activeId = location.pathname.split("/").pop();
 
-    // Close menus on outside click
+    
     useEffect(() => {
         const h = (e) => {
             if (sortMenuRef.current && !sortMenuRef.current.contains(e.target)) setShowSortMenu(false);
@@ -224,25 +215,25 @@ const NotesPanel = () => {
         return () => document.removeEventListener("mousedown", h);
     }, []);
 
-    // Focus group input when shown
+    
     useEffect(() => {
         if (showGroupInput) setTimeout(() => groupInputRef.current?.focus(), 50);
     }, [showGroupInput]);
 
-    // ── Derived note list ─────────────────────────────────────────────────────
+    
     const displayNotes = (() => {
         let base = [...activeNotes];
-        // Workspace sub-filter
+        
         if (wsFilter === "favorites") base = base.filter(n => n.isPinned);
-        // Group filter
+        
         if (activeGroup) base = base.filter(n => (n.tags || []).includes(activeGroup));
-        // Search
+        
         if (searchQuery)
             base = base.filter(n =>
                 n.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 n.content?.toLowerCase().includes(searchQuery.toLowerCase())
             );
-        // Sort
+        
         return base.sort((a, b) => {
             if (sortOrder === "newest") return new Date(b.updatedAt) - new Date(a.updatedAt);
             if (sortOrder === "oldest") return new Date(a.updatedAt) - new Date(b.updatedAt);
@@ -263,11 +254,11 @@ const NotesPanel = () => {
 
     const totalCanvas = canvasChannels.reduce((s, ch) => s + ch.canvasTabs.length, 0);
 
-    // ── Group create ───────────────────────────────────────────────────
+    
     const handleCreateGroup = () => {
         const name = newGroupName.trim();
         if (!name) { setShowGroupInput(false); return; }
-        // Persist group even before any notes are added to it
+        
         setGroups(prev => {
             if (prev.includes(name)) return prev;
             const next = [...prev, name];
@@ -279,7 +270,7 @@ const NotesPanel = () => {
         setShowGroupInput(false);
     };
 
-    // ── Move note to group ────────────────────────────────────────────────────
+    
     const handleMove = async (groupName) => {
         if (!noteMenu) return;
         const note = allNotes.find(n => n.id === noteMenu.noteId);
@@ -292,10 +283,10 @@ const NotesPanel = () => {
         setNoteMenu(null);
     };
 
-    // ── Template handler ──────────────────────────────────────────────────────
+    
     const handleTemplateSelect = async (template) => {
         setShowTemplateModal(false);
-        // Map template IDs to the server-accepted note type enum values
+        
         const TYPE_MAP = { blank: 'note', document: 'documentation' };
         const noteType = TYPE_MAP[template.id] || template.id || 'note';
         const newNote = await addNote(template.title, noteType);
@@ -306,14 +297,14 @@ const NotesPanel = () => {
         }
     };
 
-    // ── Delete note ───────────────────────────────────────────────────────────
+    
     const handleDelete = async () => {
         if (!deleteTarget) return;
         await deleteNote(deleteTarget.id);
         setDeleteTarget(null);
     };
 
-    // ── Note three-dot menu helper ────────────────────────────────────────────
+    
     const ctxNote = noteMenu ? allNotes.find(n => n.id === noteMenu.noteId) : null;
     const openNoteMenu = (e, noteId) => {
         e.preventDefault();
@@ -322,7 +313,7 @@ const NotesPanel = () => {
         setShowMovePicker(false);
     };
 
-    // ── Shared note row renderer ──────────────────────────────────────────────
+    
     const renderNoteRow = (note) => {
         const typeConf = NOTE_TYPES.find(t => t.id === note.type) || NOTE_TYPES[0];
         const isActive = activeId === note.id;
@@ -368,7 +359,7 @@ const NotesPanel = () => {
         <>
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)' }}>
 
-                {/* ── Header ── */}
+                {}
                 <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <BookOpen size={14} style={{ color: 'var(--text-muted)' }} />
@@ -402,7 +393,7 @@ const NotesPanel = () => {
                     </div>
                 </div>
 
-                {/* ── Tab strip: Workspace | Channel Canvas ── */}
+                {}
                 <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                     {[
                         { id: 'workspace', label: 'Workspace', count: activeNotes.length },
@@ -421,7 +412,7 @@ const NotesPanel = () => {
                     ))}
                 </div>
 
-                {/* ── Search ── */}
+                {}
                 <div style={{ padding: '8px 12px', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
                         <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} size={11} />
@@ -435,15 +426,13 @@ const NotesPanel = () => {
                     </div>
                 </div>
 
-                {/* ══════════════════════════════════════
-                TAB CONTENT
-                ══════════════════════════════════════ */}
+                {}
 
                 {activeTab === "workspace" ? (
                     <>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px 10px', flexShrink: 0 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', flex: 1, minWidth: 0 }}>
-                                {/* All pill */}
+                                {}
                                 <button onClick={() => { setWsFilter('all'); setActiveGroup(null); }}
                                     style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'var(--bg-hover)', border: `1px solid ${wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'var(--border-subtle)'}`, color: wsFilter === 'all' && !activeGroup ? '#b8956a' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                                     onMouseEnter={e => { if (!(wsFilter === 'all' && !activeGroup)) e.currentTarget.style.background = 'var(--bg-active)'; }}
@@ -453,7 +442,7 @@ const NotesPanel = () => {
                                     <span style={{ fontSize: '10px', fontWeight: 700, padding: '1px 5px', background: wsFilter === 'all' && !activeGroup ? 'rgba(184,149,106,0.2)' : 'rgba(255,255,255,0.07)', color: wsFilter === 'all' && !activeGroup ? '#b8956a' : 'rgba(228,228,228,0.3)', fontFamily: 'monospace' }}>{activeNotes.length}</span>
                                 </button>
 
-                                {/* Starred pill */}
+                                {}
                                 <button onClick={() => { setWsFilter('favorites'); setActiveGroup(null); }}
                                     style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.15)' : 'var(--bg-hover)', border: `1px solid ${wsFilter === 'favorites' && !activeGroup ? 'rgba(184,149,106,0.35)' : 'var(--border-subtle)'}`, color: wsFilter === 'favorites' && !activeGroup ? '#b8956a' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
                                     onMouseEnter={e => { if (!(wsFilter === 'favorites' && !activeGroup)) e.currentTarget.style.background = 'var(--bg-active)'; }}
@@ -462,7 +451,7 @@ const NotesPanel = () => {
                                     <Star size={11} style={{ fill: wsFilter === 'favorites' && !activeGroup ? 'currentColor' : 'none' }} /> Starred
                                 </button>
 
-                                {/* Group pills */}
+                                {}
                                 {groups.map(g => (
                                     <button key={g} onClick={() => setActiveGroup(activeGroup === g ? null : g)}
                                         style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 12px', fontSize: '12px', fontWeight: 700, background: activeGroup === g ? 'rgba(167,139,250,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${activeGroup === g ? 'rgba(167,139,250,0.3)' : 'rgba(255,255,255,0.08)'}`, color: activeGroup === g ? '#a78bfa' : 'rgba(228,228,228,0.45)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
@@ -474,7 +463,7 @@ const NotesPanel = () => {
                                 ))}
                             </div>
 
-                            {/* + create group */}
+                            {}
                             <button onClick={() => setShowGroupInput(v => !v)}
                                 style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', background: showGroupInput ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.05)', border: `1px solid ${showGroupInput ? 'rgba(184,149,106,0.3)' : 'rgba(255,255,255,0.08)'}`, color: showGroupInput ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
                                 title="Create group"
@@ -483,7 +472,7 @@ const NotesPanel = () => {
                             </button>
                         </div>
 
-                        {/* Group name input */}
+                        {}
                         {showGroupInput && (
                             <div style={{ padding: '0 12px 8px', flexShrink: 0 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.1)', padding: '6px 10px' }}>
@@ -499,7 +488,7 @@ const NotesPanel = () => {
                             </div>
                         )}
 
-                        {/* ── Scrollable note list ── */}
+                        {}
                         <div className="flex-1 overflow-y-auto px-3 pb-2">
                             {activeGroup && (
                                 <p className="text-[9.5px] font-bold uppercase tracking-widest text-indigo-400 px-1 pt-1 pb-1.5 flex items-center gap-1">
@@ -535,7 +524,7 @@ const NotesPanel = () => {
                         </div>
                     </>
                 ) : (
-                    /* ── CANVAS TAB ── */
+                    
                     <div className="flex-1 overflow-y-auto px-3 pb-2">
                         <p className="text-[9.5px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-600 px-1 pt-1 pb-1.5">
                             Channel Canvases
@@ -602,12 +591,10 @@ const NotesPanel = () => {
                     </div>
                 )}
 
-                {/* ════════════════════════════════════════
-                BOTTOM FIXED PANELS
-                ════════════════════════════════════════ */}
+                {}
                 <div className="shrink-0">
 
-                    {/* ── BY TYPE ── */}
+                    {}
                     <BottomPanel
                         label="By Type" icon={Layers}
                         count={activeNotes.length}
@@ -647,7 +634,7 @@ const NotesPanel = () => {
                         </div>
                     </BottomPanel>
 
-                    {/* ── ARCHIVE ── */}
+                    {}
                     <BottomPanel
                         label="Archive" icon={Archive}
                         count={archivedNotes.length}
@@ -685,7 +672,7 @@ const NotesPanel = () => {
                 </div>
             </div>
 
-            {/* ── Three-dot context menu (horizontal ⋯) ── */}
+            {}
             {noteMenu && ctxNote && (
                 <div ref={noteMenuRef}
                     style={{ position: 'fixed', zIndex: 50, background: 'var(--bg-surface)', border: '1px solid var(--border-default)', boxShadow: 'var(--card-shadow)', padding: '4px 0', width: '192px', left: Math.min(noteMenu.x, window.innerWidth - 200), top: Math.min(noteMenu.y, window.innerHeight - 220) }}
@@ -702,7 +689,7 @@ const NotesPanel = () => {
 
                     <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '3px 0' }} />
 
-                    {/* Move to ▶ */}
+                    {}
                     <div style={{ position: 'relative' }}>
                         <button onClick={() => setShowMovePicker(v => !v)}
                             style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
@@ -715,7 +702,7 @@ const NotesPanel = () => {
                         {showMovePicker && <MovePicker groups={groups} noteGroup={(ctxNote.tags || []).find(t => groups.includes(t)) || null} onMove={handleMove} onClose={() => setShowMovePicker(false)} />}
                     </div>
 
-                    {/* Archive */}
+                    {}
                     <button onClick={() => { toggleArchive(ctxNote.id); setNoteMenu(null); }}
                         style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
@@ -726,7 +713,7 @@ const NotesPanel = () => {
 
                     <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '3px 0' }} />
 
-                    {/* Delete */}
+                    {}
                     <button onClick={() => { setDeleteTarget(ctxNote); setNoteMenu(null); }}
                         style={{ width: '100%', textAlign: 'left', padding: '8px 12px', fontSize: '12px', color: '#f87171', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'background 150ms ease' }}
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}
@@ -737,7 +724,7 @@ const NotesPanel = () => {
                 </div>
             )}
 
-            {/* ── Delete confirmation dialog ── */}
+            {}
             {deleteTarget && (
                 <DeleteDialog
                     note={deleteTarget}
@@ -746,7 +733,7 @@ const NotesPanel = () => {
                 />
             )}
 
-            {/* ── Template modal ── */}
+            {}
             {showTemplateModal && (
                 <NoteTemplateModal onSelect={handleTemplateSelect} onClose={() => setShowTemplateModal(false)} />
             )}

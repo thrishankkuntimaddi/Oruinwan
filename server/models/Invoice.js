@@ -1,9 +1,5 @@
 const mongoose = require('mongoose');
 
-/**
- * Invoice Model
- * Stores invoice and payment records for companies
- */
 const InvoiceSchema = new mongoose.Schema({
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -11,13 +7,13 @@ const InvoiceSchema = new mongoose.Schema({
         required: true
     },
 
-    // Invoice details
+    
     invoiceNumber: {
         type: String,
         required: true
     },
 
-    // Amount and plan
+    
     amount: {
         type: Number,
         required: true,
@@ -28,24 +24,24 @@ const InvoiceSchema = new mongoose.Schema({
         default: 'USD'
     },
 
-    // Plan details at time of invoice
+    
     planType: {
         type: String,
         enum: ['free', 'starter', 'professional', 'enterprise'],
         required: true
     },
     planName: {
-        type: String, // Display name like "Pro", "Enterprise"
+        type: String, 
         required: true
     },
 
-    // Billing period
+    
     billingPeriod: {
         start: Date,
         end: Date
     },
 
-    // Seat information
+    
     seatsIncluded: {
         type: Number,
         default: 0
@@ -55,14 +51,14 @@ const InvoiceSchema = new mongoose.Schema({
         default: 0
     },
 
-    // Payment status
+    
     status: {
         type: String,
         enum: ['paid', 'pending', 'failed', 'refunded', 'cancelled'],
         default: 'pending'
     },
 
-    // Payment dates
+    
     issueDate: {
         type: Date,
         default: Date.now
@@ -76,23 +72,23 @@ const InvoiceSchema = new mongoose.Schema({
         default: null
     },
 
-    // Payment method
+    
     paymentMethod: {
         type: {
-            type: String, // 'card', 'bank_transfer', 'paypal'
+            type: String, 
             default: 'card'
         },
-        last4: String, // Last 4 digits of card
-        brand: String, // 'visa', 'mastercard', etc.
+        last4: String, 
+        brand: String, 
     },
 
-    // Transaction reference
+    
     transactionId: {
         type: String,
         default: null
     },
 
-    // Line items
+    
     lineItems: [{
         description: String,
         quantity: Number,
@@ -100,7 +96,7 @@ const InvoiceSchema = new mongoose.Schema({
         amount: Number
     }],
 
-    // Totals
+    
     subtotal: Number,
     tax: {
         rate: Number,
@@ -115,14 +111,14 @@ const InvoiceSchema = new mongoose.Schema({
         required: true
     },
 
-    // PDF and download
+    
     pdfUrl: String,
     downloadLink: String,
 
-    // Notes
+    
     notes: String,
 
-    // Metadata
+    
     metadata: {
         type: mongoose.Schema.Types.Mixed,
         default: {}
@@ -131,13 +127,11 @@ const InvoiceSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Indexes
 InvoiceSchema.index({ companyId: 1, createdAt: -1 });
 InvoiceSchema.index({ invoiceNumber: 1 }, { unique: true });
 InvoiceSchema.index({ status: 1 });
 InvoiceSchema.index({ dueDate: 1 });
 
-// Generate invoice number
 InvoiceSchema.pre('save', async function (next) {
     if (!this.invoiceNumber) {
         const count = await mongoose.model('Invoice').countDocuments();

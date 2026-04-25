@@ -1,8 +1,3 @@
-/**
- * Verification script for Channel Routes Canonicalization
- * Tests that routes are now using the modular channel controller
- */
-
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:5000/api';
@@ -15,7 +10,7 @@ async function testChannelRoutes() {
             name: 'Get My Channels',
             method: 'GET',
             endpoint: '/channels/my?workspaceId=test',
-            expectedStatus: 401, // No auth token
+            expectedStatus: 401, 
             expectLog: false
         },
         {
@@ -52,7 +47,7 @@ async function testChannelRoutes() {
                 method: test.method,
                 url: `${BASE_URL}${test.endpoint}`,
                 data: test.data,
-                validateStatus: () => true // Don't throw on any status
+                validateStatus: () => true 
             };
 
             const response = await axios(config);

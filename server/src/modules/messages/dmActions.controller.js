@@ -1,20 +1,7 @@
-/**
- * dmActions.controller.js
- * Handles all DM contact option actions:
- *   POST /api/v2/dm/:dmId/clear   — Clear chat (per-user watermark)
- *   DELETE /api/v2/dm/:dmId       — Delete chat (hide session for this user)
- *   POST /api/v2/dm/:dmId/block   — Block user in this DM
- *   DELETE /api/v2/dm/:dmId/block — Unblock user in this DM
- *   POST /api/v2/dm/:dmId/mute    — Mute notifications for this DM
- *   DELETE /api/v2/dm/:dmId/mute  — Unmute notifications for this DM
- *   GET  /api/v2/dm/:dmId/status  — Get mute/block status for current user
- */
-
 const DMSession = require('../../../models/DMSession');
 const Message = require('../../features/messages/message.model');
 const mongoose = require('mongoose');
 
-// ─── Helper: verify participant ───────────────────────────────────────────────
 async function getSessionAsParticipant(dmId, userId) {
     const session = await DMSession.findById(dmId);
     if (!session) throw Object.assign(new Error('DM session not found'), { status: 404 });
@@ -23,7 +10,6 @@ async function getSessionAsParticipant(dmId, userId) {
     return session;
 }
 
-// ─── GET /api/v2/dm/:dmId/status ─────────────────────────────────────────────
 exports.getDMStatus = async (req, res) => {
     try {
         const { dmId } = req.params;
@@ -40,9 +26,6 @@ exports.getDMStatus = async (req, res) => {
     }
 };
 
-// ─── POST /api/v2/dm/:dmId/clear ─────────────────────────────────────────────
-// Sets a per-user clearedAt watermark. Frontend already filters messages by
-// createdAt > clearedAt when loading conversation (handled in getDMs).
 exports.clearDMChat = async (req, res) => {
     try {
         const { dmId } = req.params;
@@ -50,7 +33,7 @@ exports.clearDMChat = async (req, res) => {
 
         const session = await getSessionAsParticipant(dmId, userId);
 
-        // Remove existing clearedAt entry for this user, then add fresh one
+        
         session.clearedAt = session.clearedAt.filter(c => String(c.user) !== String(userId));
         session.clearedAt.push({ user: userId, clearedAt: new Date() });
         await session.save();
@@ -61,7 +44,6 @@ exports.clearDMChat = async (req, res) => {
     }
 };
 
-// ─── DELETE /api/v2/dm/:dmId — Delete chat (hide for current user only) ──────
 exports.deleteDMChat = async (req, res) => {
     try {
         const { dmId } = req.params;
@@ -69,7 +51,7 @@ exports.deleteDMChat = async (req, res) => {
 
         const session = await getSessionAsParticipant(dmId, userId);
 
-        // Add to hiddenFor (per-user soft-delete)
+        
         const alreadyHidden = session.hiddenFor?.some(h => String(h.user) === String(userId));
         if (!alreadyHidden) {
             session.hiddenFor = session.hiddenFor || [];
@@ -83,7 +65,6 @@ exports.deleteDMChat = async (req, res) => {
     }
 };
 
-// ─── POST /api/v2/dm/:dmId/block ─────────────────────────────────────────────
 exports.blockUser = async (req, res) => {
     try {
         const { dmId } = req.params;
@@ -104,7 +85,6 @@ exports.blockUser = async (req, res) => {
     }
 };
 
-// ─── DELETE /api/v2/dm/:dmId/block ───────────────────────────────────────────
 exports.unblockUser = async (req, res) => {
     try {
         const { dmId } = req.params;
@@ -121,7 +101,6 @@ exports.unblockUser = async (req, res) => {
     }
 };
 
-// ─── POST /api/v2/dm/:dmId/mute ──────────────────────────────────────────────
 exports.muteDM = async (req, res) => {
     try {
         const { dmId } = req.params;
@@ -142,7 +121,6 @@ exports.muteDM = async (req, res) => {
     }
 };
 
-// ─── DELETE /api/v2/dm/:dmId/mute ────────────────────────────────────────────
 exports.unmuteDM = async (req, res) => {
     try {
         const { dmId } = req.params;

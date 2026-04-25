@@ -1,4 +1,3 @@
-// server/controllers/userController.js
 const User = require("../../../models/User");
 const DMSession = require("../../../models/DMSession");
 
@@ -119,21 +118,17 @@ exports.deleteDM = async (req, res) => {
     }
 };
 
-/**
- * Update user status (Active/Away/DND)
- * PATCH /api/users/status
- */
 exports.updateStatus = async (req, res) => {
     try {
         const userId = req.user.sub;
         const { status } = req.body;
 
-        // Validate status
+        
         if (!['active', 'away', 'dnd'].includes(status)) {
             return res.status(400).json({ message: "Invalid status. Must be: active, away, or dnd" });
         }
 
-        // Update user status
+        
         const user = await User.findByIdAndUpdate(
             userId,
             { userStatus: status },
@@ -144,7 +139,7 @@ exports.updateStatus = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Broadcast status change via Socket.IO
+        
         const io = req.app.get('io');
         if (io) {
             io.emit('user-status-changed', {
@@ -164,10 +159,6 @@ exports.updateStatus = async (req, res) => {
     }
 };
 
-/**
- * Check if username is already taken
- * POST /api/users/check-username
- */
 exports.checkUsername = async (req, res) => {
     try {
         const { username } = req.body;
@@ -190,10 +181,6 @@ exports.checkUsername = async (req, res) => {
     }
 };
 
-/**
- * Check if email is already registered
- * POST /api/users/check-email
- */
 exports.checkEmail = async (req, res) => {
     try {
         const { email } = req.body;
@@ -216,10 +203,6 @@ exports.checkEmail = async (req, res) => {
     }
 };
 
-/**
- * Check if phone number is already registered
- * POST /api/users/check-phone
- */
 exports.checkPhone = async (req, res) => {
     try {
         const { phone, phoneCode } = req.body;
@@ -247,32 +230,27 @@ exports.checkPhone = async (req, res) => {
     }
 };
 
-/**
- * Delete user account (Personal users only)
- * DELETE /api/users/me
- * Body: { password }
- */
 exports.deleteAccount = async (req, res) => {
     try {
         const userId = req.user.sub;
 
-        // Get user
+        
         const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // 1. Verify user is personal (not company)
+        
         if (user.userType === "company" || user.companyId) {
             return res.status(403).json({
                 message: "Company users cannot delete their accounts. Please contact your administrator."
             });
         }
 
-        // 2. No password check needed - frontend requires typing "DELETE" for confirmation
-        // This works for both local users and OAuth users (Google, GitHub, LinkedIn)
+        
+        
 
-        // 3. CASCADE DELETION - Clean up all user data
+        
         const Message = require("../messages/message.model.js");
         const Channel = require("../channels/channel.model.js");
         const Workspace = require('../../../models/Workspace');
@@ -281,11 +259,11 @@ exports.deleteAccount = async (req, res) => {
 
         console.log(`🗑️ Deleting account for user: ${user.username} (${userId})`);
 
-        // Delete user's messages
+        
         const deletedMessages = await Message.deleteMany({ sender: userId });
         console.log(`  Deleted ${deletedMessages.deletedCount} messages`);
 
-        // Remove user from channels (members and admins)
+        
         const updatedChannels = await Channel.updateMany(
             { 'members.user': userId },
             {
@@ -297,18 +275,18 @@ exports.deleteAccount = async (req, res) => {
         );
         console.log(`  Removed from ${updatedChannels.modifiedCount} channels`);
 
-        // Delete personal workspace if exists
+        
         if (user.personalWorkspace) {
             await Workspace.findByIdAndDelete(user.personalWorkspace);
             console.log(`  Deleted personal workspace`);
         }
 
-        // Delete DM sessions where user is participant
+        
         const DMSession = require('../../../models/DMSession');
         const deletedDMs = await DMSession.deleteMany({ participants: userId });
         console.log(`  Deleted ${deletedDMs.deletedCount} DM sessions`);
 
-        // Delete tasks assigned to or created by user
+        
         const deletedTasks = await Task.deleteMany({
             $or: [
                 { assignedTo: userId },
@@ -317,11 +295,11 @@ exports.deleteAccount = async (req, res) => {
         });
         console.log(`  Deleted ${deletedTasks.deletedCount} tasks`);
 
-        // Delete user's notes
+        
         const deletedNotes = await Note.deleteMany({ createdBy: userId });
         console.log(`  Deleted ${deletedNotes.deletedCount} notes`);
 
-        // 4. Delete user account
+        
         await user.deleteOne();
         console.log(`✅ Account deleted successfully`);
 
@@ -334,4 +312,3 @@ exports.deleteAccount = async (req, res) => {
         return res.status(500).json({ message: "Server error" });
     }
 };
-

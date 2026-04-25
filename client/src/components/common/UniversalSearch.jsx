@@ -5,7 +5,6 @@ import api from '@services/api';
 
 const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'}/api`;
 
-// Helper: highlight matched text in a string
 function HighlightMatch({ text = '', query = '' }) {
     if (!query.trim() || !text) return <span>{text}</span>;
     const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -21,7 +20,6 @@ function HighlightMatch({ text = '', query = '' }) {
     );
 }
 
-// Skeleton loader row
 function SkeletonRow() {
     return (
         <div className="px-4 py-3 flex items-center gap-3 animate-pulse">
@@ -44,7 +42,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
         results.tasks.length > 0 ||
         results.notes.length > 0;
 
-    // Handle ESC key to close
+    
     useEffect(() => {
         const handleEsc = (e) => {
             if (e.key === 'Escape') {
@@ -58,10 +56,10 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
 
     const handleClose = () => {
         onClose();
-        // Don't clear search on close so user can reopen to same state
+        
     };
 
-    // Navigate helpers
+    
     const handleChannelClick = (channel) => {
         navigate(`/workspace/${workspaceId}/messages?channel=${channel.id}`);
         clearSearch?.();
@@ -130,10 +128,10 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
     return (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-900 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden z-[100] max-w-2xl mx-auto" style={{ animation: 'searchFadeIn 0.12s cubic-bezier(.4,0,.2,1)' }}>
 
-            {/* Results */}
+            {}
             <div className="max-h-[460px] overflow-y-auto">
 
-                {/* Loading Skeletons */}
+                {}
                 {loading && query.trim() && (
                     <div className="border-b border-gray-100 dark:border-gray-800">
                         <div className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50 flex items-center gap-2">
@@ -146,7 +144,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                     </div>
                 )}
 
-                {/* Empty State — No Query */}
+                {}
                 {!query.trim() && (
                     <div className="py-14 text-center">
                         <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -167,7 +165,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                     </div>
                 )}
 
-                {/* Empty State — No Results */}
+                {}
                 {query.trim() && !loading && !hasResults && (
                     <div className="py-14 text-center">
                         <div className="w-14 h-14 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -178,7 +176,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                     </div>
                 )}
 
-                {/* ── Channels ── */}
+                {}
                 {!loading && results.channels.length > 0 && (
                     <div className="border-b border-gray-100 dark:border-gray-800">
                         <SectionHeader label="Channels" count={results.channels.length} />
@@ -213,7 +211,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                     </div>
                 )}
 
-                {/* ── Contacts ── */}
+                {}
                 {!loading && results.contacts.length > 0 && (
                     <div className="border-b border-gray-100 dark:border-gray-800">
                         <SectionHeader label="People" count={results.contacts.length} />
@@ -247,7 +245,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                     </div>
                 )}
 
-                {/* ── Messages ── */}
+                {}
                 {!loading && results.messages.length > 0 && (
                     <div className="border-b border-gray-100 dark:border-gray-800">
                         <SectionHeader label="Messages" count={results.messages.length} note="3 most recent" />
@@ -279,7 +277,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                     </div>
                 )}
 
-                {/* ── Tasks ── */}
+                {}
                 {!loading && results.tasks.length > 0 && (
                     <div className="border-b border-gray-100 dark:border-gray-800">
                         <SectionHeader label="Tasks" count={results.tasks.length} />
@@ -320,7 +318,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                     </div>
                 )}
 
-                {/* ── Notes ── */}
+                {}
                 {!loading && results.notes.length > 0 && (
                     <div>
                         <SectionHeader label="Notes" count={results.notes.length} />
@@ -360,7 +358,7 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
                 )}
             </div>
 
-            {/* Footer */}
+            {}
             <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
                 <div className="flex items-center justify-between text-xs text-gray-400">
                     <span>
@@ -382,7 +380,6 @@ export default function UniversalSearch({ workspaceId, onClose, results, loading
     );
 }
 
-// Sub-components
 function SectionHeader({ label, count, note }) {
     return (
         <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-900/50 flex items-center justify-between">

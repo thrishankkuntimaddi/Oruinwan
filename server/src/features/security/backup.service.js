@@ -1,20 +1,11 @@
-// server/src/features/security/backup.service.js
-// Encrypted backup service using AES-256-GCM.
-// Creates an encrypted JSON snapshot of critical data for disaster recovery.
-
 'use strict';
 
 const crypto = require('crypto');
 const User = require('../../../models/User');
 const AuditLog = require('../../../models/AuditLog');
 
-// Use SERVER_KEK as the backup encryption key (same as E2EE workspace key encryption)
 const BACKUP_KEY = Buffer.from(process.env.SERVER_KEK || '', 'hex');
 
-/**
- * Encrypt a JSON-serializable payload using AES-256-GCM.
- * Returns a base64-encoded string: iv:tag:ciphertext
- */
 function encryptPayload(payload) {
   const plaintext = JSON.stringify(payload);
   const iv = crypto.randomBytes(12);
@@ -26,9 +17,6 @@ function encryptPayload(payload) {
   ).toString('base64');
 }
 
-/**
- * Decrypt an encrypted backup string.
- */
 function decryptPayload(encryptedBase64) {
   const raw = Buffer.from(encryptedBase64, 'base64').toString('utf8');
   const [ivHex, tagHex, encBase64] = raw.split(':');
@@ -41,13 +29,6 @@ function decryptPayload(encryptedBase64) {
   return JSON.parse(decrypted.toString('utf8'));
 }
 
-/**
- * Create an encrypted data backup for a workspace or company.
- * @param {object} options
- * @param {string} options.requesterId - Admin user ID requesting the backup
- * @param {string} [options.companyId] - Limit backup to a specific company
- * @returns {object} backup metadata + encrypted payload
- */
 async function createBackup({ requesterId, companyId }) {
   const filter = companyId ? { companyId } : {};
 
@@ -79,7 +60,7 @@ async function createBackup({ requesterId, companyId }) {
     encryptedPayload: encrypted,
   };
 
-  // Audit the backup creation
+  
   await AuditLog.create({
     userId: requesterId,
     action: 'security.backup_created',

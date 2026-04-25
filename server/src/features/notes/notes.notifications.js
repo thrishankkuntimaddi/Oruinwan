@@ -1,24 +1,3 @@
-// server/src/features/notes/notes.notifications.js
-/**
- * Notes Notifications - Real-time Socket Events
- * 
- * Handles all socket.io emissions for note operations.
- * Extracted from legacy inline socket logic.
- * 
- * @module features/notes/notes.notifications
- */
-
-// ============================================================================
-// HELPER: Get Recipients
-// ============================================================================
-
-/**
- * Get socket recipients for a note
- * Returns either workspace room or Set of user IDs
- * 
- * @param {Object} note - Note document
- * @returns {Object} { type: 'workspace'|'users', target: string|Set<string> }
- */
 function getRecipients(note) {
     if (note.isPublic && note.workspace) {
         return {
@@ -39,16 +18,6 @@ function getRecipients(note) {
     }
 }
 
-// ============================================================================
-// NOTIFICATION FUNCTIONS
-// ============================================================================
-
-/**
- * Notify note created
- * 
- * @param {Object} note - Populated note document
- * @param {Object} io - Socket.io instance
- */
 function notifyNoteCreated(note, io) {
     if (!io) return;
 
@@ -63,12 +32,6 @@ function notifyNoteCreated(note, io) {
     }
 }
 
-/**
- * Notify note updated
- * 
- * @param {Object} note - Populated note document
- * @param {Object} io - Socket.io instance
- */
 function notifyNoteUpdated(note, io) {
     if (!io) return;
 
@@ -83,13 +46,6 @@ function notifyNoteUpdated(note, io) {
     }
 }
 
-/**
- * Notify note deleted (archived)
- * 
- * @param {string} noteId - Note ID
- * @param {Object} note - Note document (before deletion)
- * @param {Object} io - Socket.io instance
- */
 function notifyNoteDeleted(noteId, note, io) {
     if (!io) return;
 
@@ -108,38 +64,22 @@ function notifyNoteDeleted(noteId, note, io) {
     }
 }
 
-/**
- * Notify note shared
- * 
- * Special case: If already public, sends 'note-updated' instead
- * 
- * @param {Object} note - Populated note document
- * @param {Object} io - Socket.io instance
- */
 function notifyNoteShared(note, io) {
     if (!io) return;
 
     const recipients = getRecipients(note);
 
     if (recipients.type === 'workspace') {
-        // If already public, sharing just updates list
+        
         io.to(recipients.target).emit('note-updated', note);
     } else {
-        // Notify all shared users (including new ones)
+        
         recipients.target.forEach(userId => {
             io.to(`user_${userId}`).emit('note-shared', note);
         });
     }
 }
 
-/**
- * Notify attachment added
- * 
- * @param {string} noteId - Note ID
- * @param {Object} attachment - Attachment data
- * @param {Object} note - Note document
- * @param {Object} io - Socket.io instance
- */
 function notifyAttachmentAdded(noteId, attachment, note, io) {
     if (!io) return;
 
@@ -157,10 +97,6 @@ function notifyAttachmentAdded(noteId, attachment, note, io) {
         });
     }
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     notifyNoteCreated,

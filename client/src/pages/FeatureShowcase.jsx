@@ -1,4 +1,3 @@
-// FeatureShowcase.jsx — Chttrix Landing Page · Monolith Flow Design System
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -13,7 +12,6 @@ import LoadingScreen from '../shared/components/ui/LoadingScreen';
 const VIDEO_HERO  = '/hover-animation.mp4';
 const VIDEO_AI    = '/ChttrixAI-animation.mp4';
 
-// ─── Utility: animate on scroll ───────────────────────────────────────────────
 function useReveal() {
     const ref = useRef(null);
     const [visible, setVisible] = useState(false);
@@ -27,7 +25,6 @@ function useReveal() {
     return [ref, visible];
 }
 
-// ─── Subcomponents ─────────────────────────────────────────────────────────────
 const NavLink = ({ href, children }) => {
     const [hov, setHov] = useState(false);
     return (
@@ -142,7 +139,6 @@ const DlBtn = ({ label, onClick }) => {
     );
 };
 
-// ─── FEATURES DATA ─────────────────────────────────────────────────────────────
 const FEATURES = [
     { icon: MessageSquare, color: '#6ea8fe', title: 'Channels', desc: 'Structured, threaded conversations for every project and topic. Keep the noise out, the focus in.' },
     { icon: MessageCircle, color: '#a78bfa', title: 'Direct Messages', desc: 'Private 1:1 and group chats. Secure, fast, context-aware.' },
@@ -154,7 +150,6 @@ const FEATURES = [
     { icon: Sparkles, color: '#b8956a', title: 'Chttrix AI', desc: 'The intelligence layer connecting it all — summarize threads, generate tasks, answer questions.' },
 ];
 
-// ─── MAIN COMPONENT ────────────────────────────────────────────────────────────
 const FeatureShowcase = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
@@ -170,7 +165,7 @@ const FeatureShowcase = () => {
     const [heroMuted, setHeroMuted] = useState(true);
     const [aiMuted, setAiMuted] = useState(true);
 
-    // Enable page scroll (html/body have overflow:hidden globally for the app shell)
+    
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
         window.scrollTo(0, 0);
@@ -185,7 +180,7 @@ const FeatureShowcase = () => {
         return () => window.removeEventListener('scroll', onScroll);
     }, [user, navigate, isFirstVisit]);
 
-    // Video intersection observer
+    
     useEffect(() => {
         const ob = new IntersectionObserver((entries) => {
             entries.forEach(e => {
@@ -218,10 +213,10 @@ const FeatureShowcase = () => {
 
     return (
         <div style={S.page}>
-            {/* ── Loading ────────────────── */}
+            {}
             {isLoading && isFirstVisit && <LoadingScreen onComplete={() => setIsLoading(false)} />}
 
-            {/* ── Global page styles ──────── */}
+            {}
             <style>{`
                 html { scroll-behavior: smooth; }
                 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -241,9 +236,7 @@ const FeatureShowcase = () => {
                 .landing-btn-accent:hover { opacity: 0.88; }
             `}</style>
 
-            {/* ══════════════════════════════
-                NAV
-            ══════════════════════════════ */}
+            {}
             <nav style={{
                 position: 'fixed', top: 0, width: '100%', zIndex: 100,
                 background: scrolled ? 'rgba(12,12,12,0.92)' : 'transparent',
@@ -252,13 +245,13 @@ const FeatureShowcase = () => {
                 transition: 'all 300ms ease',
             }}>
                 <div style={{ ...S.container, height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    {/* Logo */}
+                    {}
                     <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                         <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '30px', height: '30px', objectFit: 'cover' }} />
                         <span style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
                     </div>
 
-                    {/* Center Nav */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
                         <NavLink href="#platform">Platform</NavLink>
                         <NavLink href="#ai">Chttrix AI</NavLink>
@@ -266,7 +259,7 @@ const FeatureShowcase = () => {
                         <NavLink href="#downloads">Downloads</NavLink>
                     </div>
 
-                    {/* Right actions */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <button onClick={() => navigate('/login')}
                             style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
@@ -281,18 +274,16 @@ const FeatureShowcase = () => {
                 </div>
             </nav>
 
-            {/* ══════════════════════════════
-                HERO
-            ══════════════════════════════ */}
+            {}
             <section style={{ paddingTop: '120px', paddingBottom: '80px', position: 'relative', overflow: 'hidden' }}>
-                {/* Ambient background */}
+                {}
                 <div style={{ position: 'absolute', top: '-10%', right: '-5%', width: '600px', height: '600px', background: 'radial-gradient(circle, rgba(184,149,106,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
                 <div style={{ position: 'absolute', bottom: '0', left: '-10%', width: '500px', height: '400px', background: 'radial-gradient(circle, rgba(155,142,207,0.05) 0%, transparent 65%)', pointerEvents: 'none' }} />
 
                 <div style={{ ...S.container, display: 'flex', alignItems: 'center', gap: '64px', flexWrap: 'wrap' }}>
-                    {/* Left — text */}
+                    {}
                     <div style={{ flex: '1 1 400px' }}>
-                        {/* Status badge */}
+                        {}
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 12px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '32px' }}>
                             <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#34d399', animation: 'pulse-dot 2s ease-in-out infinite', flexShrink: 0 }} />
                             <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(184,149,106,0.9)', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
@@ -318,7 +309,7 @@ const FeatureShowcase = () => {
                             </GhostBtn>
                         </div>
 
-                        {/* Trust badges */}
+                        {}
                         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
                             {['SOC 2 Ready', 'End-to-end encrypted', '99.9% uptime SLA'].map(b => (
                                 <div key={b} style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.02em' }}>
@@ -329,7 +320,7 @@ const FeatureShowcase = () => {
                         </div>
                     </div>
 
-                    {/* Right — hero video */}
+                    {}
                     <div style={{ flex: '1 1 360px', maxWidth: '520px', animation: 'heroFloat 9s ease-in-out infinite' }}>
                         <div style={{ position: 'relative', border: '1px solid rgba(255,255,255,0.09)', background: '#111', overflow: 'hidden', aspectRatio: '1/1' }}>
                             <video ref={heroVideoRef} src={VIDEO_HERO} autoPlay muted={heroMuted} playsInline loop
@@ -343,9 +334,7 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                SOCIAL PROOF BAR
-            ══════════════════════════════ */}
+            {}
             <section style={{ ...S.divider, background: 'rgba(255,255,255,0.02)', padding: '28px 0', overflow: 'hidden' }}>
                 <div style={S.container}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '48px', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -359,9 +348,7 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                PLATFORM FEATURES
-            ══════════════════════════════ */}
+            {}
             <section id="platform" style={{ padding: '96px 0', ...S.divider }}>
                 <div style={S.container}>
                     <div style={{ marginBottom: '56px' }}>
@@ -381,19 +368,17 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                AI SECTION
-            ══════════════════════════════ */}
+            {}
             <section id="ai" style={{ padding: '96px 0', background: '#0f0f0f' }}>
                 <div style={S.container}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '72px', flexWrap: 'wrap' }}>
-                        {/* Video */}
+                        {}
                         <div style={{ flex: '1 1 380px', border: '1px solid rgba(255,255,255,0.07)', overflow: 'hidden', background: '#111' }}>
                             <video ref={aiVideoRef} src={VIDEO_AI} autoPlay muted={aiMuted} playsInline loop
                                 style={{ width: '100%', display: 'block', objectFit: 'cover' }} />
                         </div>
 
-                        {/* Text */}
+                        {}
                         <div style={{ flex: '1 1 360px' }}>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '24px' }}>
                                 <Sparkles size={12} style={{ color: '#b8956a' }} />
@@ -431,9 +416,7 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                TRUST / SECURITY
-            ══════════════════════════════ */}
+            {}
             <section style={{ padding: '80px 0', ...S.divider }}>
                 <div style={S.container}>
                     <div style={{ textAlign: 'center', marginBottom: '56px' }}>
@@ -459,9 +442,7 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                SOLUTIONS / GET STARTED
-            ══════════════════════════════ */}
+            {}
             <section id="accounts" style={{ padding: '96px 0', background: '#0f0f0f' }}>
                 <div style={S.container}>
                     <div style={{ marginBottom: '56px' }}>
@@ -494,9 +475,7 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                DOWNLOADS
-            ══════════════════════════════ */}
+            {}
             <section id="downloads" style={{ padding: '96px 0', ...S.divider }}>
                 <div style={S.container}>
                     <div style={{ marginBottom: '56px' }}>
@@ -519,9 +498,7 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                CTA BANNER
-            ══════════════════════════════ */}
+            {}
             <section style={{ padding: '80px 0', background: 'rgba(184,149,106,0.05)', borderTop: '1px solid rgba(184,149,106,0.15)', borderBottom: '1px solid rgba(184,149,106,0.15)' }}>
                 <div style={{ ...S.container, textAlign: 'center' }}>
                     <h2 style={{ fontSize: 'clamp(24px,3.5vw,40px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em', marginBottom: '14px' }}>
@@ -541,14 +518,12 @@ const FeatureShowcase = () => {
                 </div>
             </section>
 
-            {/* ══════════════════════════════
-                FOOTER
-            ══════════════════════════════ */}
+            {}
             <footer style={{ background: 'var(--bg-base)', borderTop: '1px solid var(--border-subtle)', paddingTop: '64px', paddingBottom: '40px' }}>
                 <div style={S.container}>
-                    {/* Top row — brand + columns */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', gap: '48px', marginBottom: '56px', flexWrap: 'wrap' }}>
-                        {/* Brand */}
+                        {}
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                                 <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
@@ -557,7 +532,7 @@ const FeatureShowcase = () => {
                             <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.8', maxWidth: '220px' }}>
                                 The operating system for forward-thinking teams. Channels, AI, tasks — all in one place.
                             </p>
-                            {/* Social icons */}
+                            {}
                             <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
                                 {[
                                     { label: '𝕏', href: 'https://x.com/chttrix' },
@@ -574,7 +549,7 @@ const FeatureShowcase = () => {
                             </div>
                         </div>
 
-                        {/* Link columns */}
+                        {}
                         {[
                             { title: 'Product', links: [{ l: 'Features', f: () => scrollTo('platform') }, { l: 'Chttrix AI', f: () => scrollTo('ai') }, { l: 'Enterprise', f: () => scrollTo('accounts') }, { l: 'Security', f: () => navigate('/security') }, { l: 'Downloads', f: () => scrollTo('downloads') }] },
                             { title: 'Company', links: [{ l: 'About Us', f: () => navigate('/about') }, { l: 'Careers', f: () => navigate('/careers') }, { l: 'Blog', f: () => navigate('/blog') }, { l: 'Brand & Media', f: () => navigate('/brand') }, { l: 'Contact', f: () => navigate('/contact') }] },
@@ -598,7 +573,7 @@ const FeatureShowcase = () => {
                         ))}
                     </div>
 
-                    {/* Bottom bar */}
+                    {}
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                             © 2026 Chttrix Inc. All rights reserved.

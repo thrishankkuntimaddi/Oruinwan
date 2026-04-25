@@ -48,7 +48,7 @@ const ActivityHealth = ({ data }) => {
                 gap: '1px',
                 background: 'var(--border-subtle)'
             }}>
-                {/* Engagement Score */}
+                {}
                 <MetricCard icon={Zap} title="Engagement Score">
                     <div style={{
                         fontSize: '26px',
@@ -76,7 +76,7 @@ const ActivityHealth = ({ data }) => {
                     </div>
                 </MetricCard>
 
-                {/* Message Volume */}
+                {}
                 <MetricCard icon={MessageSquare} title="Message Volume">
                     <div style={{
                         fontSize: '26px',
@@ -99,7 +99,7 @@ const ActivityHealth = ({ data }) => {
                     </div>
                 </MetricCard>
 
-                {/* Active Workspaces */}
+                {}
                 <MetricCard icon={Briefcase} title="Active Workspaces">
                     <div style={{
                         fontSize: '26px',
@@ -115,7 +115,7 @@ const ActivityHealth = ({ data }) => {
                     </div>
                 </MetricCard>
 
-                {/* Dormant Workspaces */}
+                {}
                 <MetricCard icon={Moon} title="Dormant">
                     <div style={{
                         fontSize: '26px',

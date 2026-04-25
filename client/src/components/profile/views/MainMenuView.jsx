@@ -16,7 +16,7 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
             boxShadow: '0 24px 80px rgba(0,0,0,0.75)',
             overflow: 'hidden', fontFamily: 'Inter, system-ui, sans-serif',
         }}>
-            {/* ── Profile Header ── */}
+            {}
             <div
                 onClick={() => onNavigate('profile')}
                 style={{
@@ -43,7 +43,7 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                 <ChevronRight size={14} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
             </div>
 
-            {/* ── Status Selector ── */}
+            {}
             <div style={{ padding: '12px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
                 <div style={{ display: 'flex', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', padding: '3px', gap: '2px' }}>
                     {Object.entries(STATUS_CONFIG).map(([key, cfg]) => {
@@ -72,9 +72,9 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                 </div>
             </div>
 
-            {/* ── Menu Items ── */}
+            {}
             <div style={{ padding: '6px' }}>
-                {/* Help & Support */}
+                {}
                 <button
                     onClick={() => onNavigate('help')}
                     style={{
@@ -91,7 +91,7 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                     Help &amp; Support
                 </button>
 
-                {/* Admin Dashboard (admin/owner only) */}
+                {}
                 {(user?.companyRole === 'admin' || user?.companyRole === 'owner') && (
                     <>
                         <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '4px 4px' }} />
@@ -113,10 +113,10 @@ const MainMenuView = ({ user, status, onStatusChange, onNavigate, onLogout }) =>
                     </>
                 )}
 
-                {/* Divider */}
+                {}
                 <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '4px 4px' }} />
 
-                {/* Sign Out */}
+                {}
                 <button
                     onClick={onLogout}
                     style={{

@@ -12,7 +12,6 @@ const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireOwner } = require('../../shared/middleware/permissionMiddleware');
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
 function sinceDate(timeRange) {
     const now = new Date();
     switch (timeRange) {
@@ -23,7 +22,6 @@ function sinceDate(timeRange) {
     }
 }
 
-/** Build an array of ISO date strings for the last N days */
 function buildDateLabels(days) {
     const labels = [];
     for (let i = days - 1; i >= 0; i--) {
@@ -35,10 +33,6 @@ function buildDateLabels(days) {
     return labels;
 }
 
-/**
- * GET /api/owner-dashboard/overview
- * Organization overview metrics
- */
 router.get('/overview', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -62,7 +56,7 @@ router.get('/overview', requireAuth, requireOwner, async (req, res) => {
             Department.countDocuments({ company: companyId })
         ]);
 
-        // Calculate growth (last 30 days)
+        
         const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
         const [newUsersLast30Days, newWorkspacesLast30Days] = await Promise.all([
             User.countDocuments({ companyId, createdAt: { $gte: thirtyDaysAgo } }),
@@ -85,10 +79,6 @@ router.get('/overview', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/activity-health
- * Activity and engagement metrics
- */
 router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -140,10 +130,6 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/billing-summary
- * Billing and plan information
- */
 router.get('/billing-summary', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -178,24 +164,20 @@ router.get('/billing-summary', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/security-risk
- * Security and risk metrics
- */
 router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
         const companyId = user.companyId;
 
-        // Count active sessions (users logged in within last 24 hours)
+        
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
         const activeSessions = await User.countDocuments({
             companyId,
             lastLogin: { $gte: oneDayAgo }
         });
 
-        // Get recent audit log summary
+        
         const AuditLog = require('../../../models/AuditLog');
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
@@ -216,7 +198,7 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
 
         res.json({
             activeSessions,
-            suspiciousLogins: [], // Placeholder for future implementation
+            suspiciousLogins: [], 
             auditSummary: {
                 lastWeek: totalAuditLogs,
                 critical: criticalActions,
@@ -231,17 +213,13 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/active-sessions
- * Get all active user sessions for security monitoring
- */
 router.get('/active-sessions', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
         const companyId = user.companyId;
 
-        // Get active sessions from last 24 hours
+        
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
         const sessions = await UserSession.find({
@@ -254,7 +232,7 @@ router.get('/active-sessions', requireAuth, requireOwner, async (req, res) => {
             .limit(50)
             .lean();
 
-        // Format sessions for frontend
+        
         const formattedSessions = sessions.map(session => ({
             id: session._id,
             user: session.userId?.username || 'Unknown User',
@@ -277,10 +255,6 @@ router.get('/active-sessions', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/security-events
- * Get recent security events and audit logs
- */
 router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -289,7 +263,7 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
 
         const { limit = 50, type = 'all' } = req.query;
 
-        // Define security-related actions
+        
         const securityActions = [
             'user.login',
             'user.logout',
@@ -313,7 +287,7 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
             createdAt: { $gte: sevenDaysAgo }
         };
 
-        // Filter by type if specified
+        
         if (type !== 'all') {
             if (type === 'login') {
                 query.action = { $in: ['user.login', 'user.logout', 'user.login.failed'] };
@@ -334,7 +308,7 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
             .limit(parseInt(limit))
             .lean();
 
-        // Format events
+        
         const formattedEvents = events.map(event => {
             let eventType = 'info';
             if (event.action.includes('failed') || event.status === 'failure') {
@@ -364,10 +338,6 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/invoices
- * Get company invoices and payment history
- */
 router.get('/invoices', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -393,17 +363,13 @@ router.get('/invoices', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/payment-methods
- * Get saved payment methods for the company
- */
 router.get('/payment-methods', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
         const companyId = user.companyId;
 
-        // Get most recent invoice to extract payment method
+        
         const latestInvoice = await Invoice.findOne({ companyId })
             .sort({ createdAt: -1 })
             .select('paymentMethod')
@@ -428,10 +394,6 @@ router.get('/payment-methods', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-/**
- * GET /api/owner-dashboard/analytics
- * Time-series analytics for charts (user growth, daily messages, workspace activity, department distribution)
- */
 router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
@@ -470,7 +432,7 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             ? Math.round((activeSenderIds.length / totalUsers) * 100)
             : 0;
 
-        // Weekly user growth buckets
+        
         const numWeeks = timeRange === '7d' ? 1 : timeRange === '90d' ? 13 : 4;
         const weekBuckets = [];
         for (let w = numWeeks - 1; w >= 0; w--) {
@@ -485,7 +447,7 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             return { date: label, users, active };
         }));
 
-        // Daily message volume
+        
         const rawMsgAgg = await Message.aggregate([
             { $match: { company: cid, isDeleted: false, createdAt: { $gte: msgFrom } } },
             { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, messages: { $sum: 1 } } },
@@ -498,7 +460,7 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             messages: msgMap[date] || 0,
         }));
 
-        // Workspace activity
+        
         const workspaceActivity = await Message.aggregate([
             { $match: { company: cid, isDeleted: false, createdAt: { $gte: from }, workspace: { $ne: null } } },
             { $group: { _id: '$workspace', count: { $sum: 1 } } },
@@ -509,7 +471,7 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             { $project: { _id: 0, name: { $ifNull: ['$ws.name', 'Unknown'] }, activity: '$count' } },
         ]);
 
-        // Department distribution
+        
         const departments = await Department.find({ company: companyId, isActive: true }).select('name members').lean();
         let departmentDistribution = departments.map(d => ({
             name: d.name,

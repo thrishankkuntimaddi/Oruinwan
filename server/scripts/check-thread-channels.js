@@ -1,8 +1,3 @@
-// server/scripts/check-thread-channels.js
-/**
- * Check which channels the updated thread messages belong to
- */
-
 const mongoose = require('mongoose');
 const Message = require("../src/features/messages/message.model.js");
 require('dotenv').config();
@@ -12,7 +7,7 @@ async function checkThreadChannels() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB\n');
 
-        // IDs from the migration that was run
+        
         const updatedMessageIds = [
             '69801901159e8c7292ebfb01',
             '6980190f159e8c7292ebfb90',
@@ -37,7 +32,7 @@ async function checkThreadChannels() {
             }
         }
 
-        // Now check the specific channel the user is viewing
+        
         const userChannel = '698018d5159e8c7292ebfa25';
         console.log(`\n🔍 Checking threads in user's current channel: ${userChannel}\n`);
 

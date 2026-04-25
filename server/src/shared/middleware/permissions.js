@@ -1,13 +1,8 @@
-// server/middleware/permissions.js
-
 const Company = require("../models/Company");
 const Workspace = require("../models/Workspace");
 const Channel = require("../../features/channels/channel.model.js");
 const User = require("../models/User");
 
-/**
- * Check if user belongs to a company
- */
 exports.requireCompany = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.sub);
@@ -33,7 +28,7 @@ exports.requireCompany = async (req, res, next) => {
             return res.status(403).json({ message: "Company is inactive" });
         }
 
-        // Attach to request
+        
         req.company = company;
         req.userRole = user.companyRole;
 
@@ -44,9 +39,6 @@ exports.requireCompany = async (req, res, next) => {
     }
 };
 
-/**
- * Check if user is company owner
- */
 exports.requireCompanyOwner = async (req, res, next) => {
     try {
         await exports.requireCompany(req, res, async () => {
@@ -61,9 +53,6 @@ exports.requireCompanyOwner = async (req, res, next) => {
     }
 };
 
-/**
- * Check if user is company admin or owner
- */
 exports.requireCompanyAdmin = async (req, res, next) => {
     try {
         await exports.requireCompany(req, res, async () => {
@@ -81,9 +70,6 @@ exports.requireCompanyAdmin = async (req, res, next) => {
     }
 };
 
-/**
- * Check if user has access to a workspace
- */
 exports.requireWorkspaceAccess = async (req, res, next) => {
     try {
         const workspaceId = req.params.workspaceId || req.body.workspaceId;
@@ -98,12 +84,12 @@ exports.requireWorkspaceAccess = async (req, res, next) => {
             return res.status(404).json({ message: "Workspace not found" });
         }
 
-        // Check if user is member
+        
         if (!workspace.isMember(req.user.sub)) {
             return res.status(403).json({ message: "You are not a member of this workspace" });
         }
 
-        // Check if workspace belongs to user's company (if company user)
+        
         const user = await User.findById(req.user.sub);
         if (user.companyId && workspace.type === "company") {
             if (workspace.company.toString() !== user.companyId.toString()) {
@@ -119,9 +105,6 @@ exports.requireWorkspaceAccess = async (req, res, next) => {
     }
 };
 
-/**
- * Check if user is workspace admin or owner
- */
 exports.requireWorkspaceAdmin = async (req, res, next) => {
     try {
         await exports.requireWorkspaceAccess(req, res, async () => {
@@ -136,9 +119,6 @@ exports.requireWorkspaceAdmin = async (req, res, next) => {
     }
 };
 
-/**
- * Check if user has access to a channel
- */
 exports.requireChannelAccess = async (req, res, next) => {
     try {
         const channelId = req.params.channelId || req.body.channelId;
@@ -153,13 +133,13 @@ exports.requireChannelAccess = async (req, res, next) => {
             return res.status(404).json({ message: "Channel not found" });
         }
 
-        // Check workspace access first
+        
         const workspace = channel.workspace;
         if (!workspace.isMember(req.user.sub)) {
             return res.status(403).json({ message: "You are not a member of this workspace" });
         }
 
-        // Check channel membership (for private channels)
+        
         if (!channel.isMember(req.user.sub)) {
             return res.status(403).json({ message: "You are not a member of this channel" });
         }
@@ -173,9 +153,6 @@ exports.requireChannelAccess = async (req, res, next) => {
     }
 };
 
-/**
- * Validate same company for DM
- */
 exports.validateDMAccess = async (req, res, next) => {
     try {
         const { recipientId } = req.body;
@@ -191,7 +168,7 @@ exports.validateDMAccess = async (req, res, next) => {
             return res.status(404).json({ message: "Recipient not found" });
         }
 
-        // Both must belong to same company
+        
         if (sender.companyId && recipient.companyId) {
             if (sender.companyId.toString() !== recipient.companyId.toString()) {
                 return res.status(403).json({
@@ -199,7 +176,7 @@ exports.validateDMAccess = async (req, res, next) => {
                 });
             }
         } else if (!sender.companyId || !recipient.companyId) {
-            // Personal users can only DM other personal users
+            
             if (sender.companyId !== recipient.companyId) {
                 return res.status(403).json({
                     message: "Personal and company users cannot DM each other"
@@ -215,14 +192,11 @@ exports.validateDMAccess = async (req, res, next) => {
     }
 };
 
-/**
- * Multi-tenant isolation - ensure all queries include companyId
- */
 exports.tenantIsolation = async (req, res, next) => {
     try {
         const user = await User.findById(req.user.sub);
 
-        // Add companyId to request for automatic filtering
+        
         req.tenantId = user.companyId || null;
         req.userType = user.userType;
 
@@ -233,15 +207,12 @@ exports.tenantIsolation = async (req, res, next) => {
     }
 };
 
-/**
- * Check specific permission
- */
 exports.checkPermission = (permission) => {
     return async (req, res, next) => {
         try {
             const user = await User.findById(req.user.sub);
 
-            // Super simple permission check based on role
+            
             const rolePermissions = {
                 owner: ["all"],
                 admin: ["manageUsers", "createWorkspace", "deleteChannel", "assignTasks"],

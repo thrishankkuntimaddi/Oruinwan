@@ -1,29 +1,11 @@
-/**
- * notifications.routes.js
- *
- * REST API for the per-user notification feed.
- *
- * GET    /api/notifications?workspaceId=&page=&limit=   — paginated feed
- * GET    /api/notifications/unread-count?workspaceId=   — fast unread count
- * GET    /api/notifications/preferences?workspaceId=    — get user preferences
- * PATCH  /api/notifications/preferences?workspaceId=    — update preferences
- * PATCH  /api/notifications/read-all?workspaceId=        — mark all read
- * PATCH  /api/notifications/:id/read                     — mark single read
- * DELETE /api/notifications/:id                          — dismiss single
- * DELETE /api/notifications?workspaceId=                 — clear all
- * POST   /api/notifications/test                         — (dev) fire test notification
- */
-
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const Notification = require('../../models/Notification');
 const prefService = require('./notificationPreferenceService');
 
-// All routes require auth
 router.use(requireAuth);
 
-// GET /api/notifications — paginated feed
 router.get('/', async (req, res) => {
     try {
         const { workspaceId, page = 1, limit = 30, type, unreadOnly } = req.query;
@@ -59,7 +41,6 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /api/notifications/unread-count
 router.get('/unread-count', async (req, res) => {
     try {
         const { workspaceId } = req.query;
@@ -76,7 +57,6 @@ router.get('/unread-count', async (req, res) => {
     }
 });
 
-// PATCH /api/notifications/read-all
 router.patch('/read-all', async (req, res) => {
     try {
         const { workspaceId } = req.query;
@@ -92,7 +72,6 @@ router.patch('/read-all', async (req, res) => {
     }
 });
 
-// PATCH /api/notifications/:id/read
 router.patch('/:id/read', async (req, res) => {
     try {
         const notif = await Notification.findOneAndUpdate(
@@ -107,7 +86,6 @@ router.patch('/:id/read', async (req, res) => {
     }
 });
 
-// DELETE /api/notifications/:id
 router.delete('/:id', async (req, res) => {
     try {
         const notif = await Notification.findOneAndDelete({
@@ -121,7 +99,6 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// DELETE /api/notifications?workspaceId= — clear all
 router.delete('/', async (req, res) => {
     try {
         const { workspaceId } = req.query;
@@ -134,7 +111,6 @@ router.delete('/', async (req, res) => {
     }
 });
 
-// GET /api/notifications/preferences
 router.get('/preferences', async (req, res) => {
     try {
         const { workspaceId } = req.query;
@@ -147,7 +123,6 @@ router.get('/preferences', async (req, res) => {
     }
 });
 
-// PATCH /api/notifications/preferences
 router.patch('/preferences', async (req, res) => {
     try {
         const { workspaceId } = req.query;
@@ -160,7 +135,6 @@ router.patch('/preferences', async (req, res) => {
     }
 });
 
-// POST /api/notifications/test — dev-only trigger
 router.post('/test', async (req, res) => {
     if (process.env.NODE_ENV === 'production') {
         return res.status(403).json({ message: 'Not available in production' });
@@ -186,4 +160,3 @@ router.post('/test', async (req, res) => {
 });
 
 module.exports = router;
-

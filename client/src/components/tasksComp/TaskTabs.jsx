@@ -1,4 +1,3 @@
-// components/TaskTabs.jsx
 const TaskTabs = ({ activeTab, setActiveTab }) => {
   const tabs = ["All", "In Progress", "To Do", "Completed", "Overdue", "Deleted"];
 

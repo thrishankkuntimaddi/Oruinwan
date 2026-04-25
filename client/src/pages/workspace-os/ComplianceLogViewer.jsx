@@ -1,4 +1,3 @@
-// client/src/pages/workspace-os/ComplianceLogViewer.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -63,7 +62,7 @@ export default function ComplianceLogViewer({ companyId: propCompanyId }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -86,15 +85,15 @@ export default function ComplianceLogViewer({ companyId: propCompanyId }) {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '20px 28px' }}>
-                {/* Immutability notice */}
+                {}
                 <div style={{ padding: '10px 14px', background: 'rgba(90,186,138,0.08)', border: '1px solid var(--state-success)', color: 'var(--state-success)', fontSize: '12px', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <ShieldCheck size={13} style={{ flexShrink: 0 }} />
                     All records are signed with SHA-256 hashes at write time. Enable "Verify integrity" to detect any tampered records.
                 </div>
 
-                {/* Filters */}
+                {}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
                     <select value={category} onChange={e => setCategory(e.target.value)} style={inputBase}>
                         <option value="">All Categories</option>

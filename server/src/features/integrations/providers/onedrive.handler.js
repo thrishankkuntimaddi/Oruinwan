@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/onedrive.handler.js
 async function verify(config) {
   if (!config.accessToken) throw Object.assign(new Error('OneDrive: accessToken required'), { statusCode: 400 });
   return config;

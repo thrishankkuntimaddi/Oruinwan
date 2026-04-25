@@ -33,7 +33,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
         >
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '460px', maxHeight: '580px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-                {/* Header */}
+                {}
                 <div style={{ padding: '16px 18px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div>
                         <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>New Message</h3>
@@ -48,7 +48,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                     </button>
                 </div>
 
-                {/* Search */}
+                {}
                 <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
                         <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -63,7 +63,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                     </div>
                 </div>
 
-                {/* List */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '6px 0' }} className="custom-scrollbar">
                     {filtered.length === 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px', color: 'var(--text-muted)' }}>
@@ -88,7 +88,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                                         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                         onMouseLeave={e => e.currentTarget.style.background = 'none'}
                                     >
-                                        {/* Avatar */}
+                                        {}
                                         <div style={{ position: 'relative', flexShrink: 0 }}>
                                             <img
                                                 src={getAvatarUrl(member)} alt={displayName}
@@ -102,7 +102,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                                             }} />
                                         </div>
 
-                                        {/* Info */}
+                                        {}
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                 <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -122,7 +122,7 @@ const NewDMModal = ({ showNewDMModal, setShowNewDMModal, workspaceMembers, handl
                                             )}
                                         </div>
 
-                                        {/* Message CTA */}
+                                        {}
                                         <button
                                             onClick={e => { e.stopPropagation(); handleStartDM(member); }}
                                             style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--accent)', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', opacity: 0, transition: '150ms ease' }}

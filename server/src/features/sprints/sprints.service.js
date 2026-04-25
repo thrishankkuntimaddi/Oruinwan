@@ -1,4 +1,3 @@
-// server/src/features/sprints/sprints.service.js
 const Sprint = require('../../../models/Sprint');
 const Workspace = require('../../../models/Workspace');
 const User = require('../../../models/User');

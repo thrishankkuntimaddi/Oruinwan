@@ -1,9 +1,3 @@
-/**
- * Application Constants
- * Centralized constant definitions for maintainability
- */
-
-/** User Roles */
 const ROLES = {
     OWNER: 'owner',
     ADMIN: 'admin',
@@ -11,7 +5,6 @@ const ROLES = {
     MEMBER: 'member'
 };
 
-/** Time Constants (in milliseconds) */
 const TIME = {
     ONE_SECOND: 1000,
     ONE_MINUTE: 60 * 1000,
@@ -23,7 +16,6 @@ const TIME = {
     THIRTY_DAYS: 30 * 24 * 60 * 60 * 1000
 };
 
-/** HTTP Status Codes */
 const HTTP_STATUS = {
     OK: 200,
     CREATED: 201,
@@ -38,7 +30,6 @@ const HTTP_STATUS = {
     SERVICE_UNAVAILABLE: 503
 };
 
-/** Error Messages */
 const ERROR_MESSAGES = {
     UNAUTHORIZED: 'Authentication required',
     FORBIDDEN: 'Insufficient permissions',

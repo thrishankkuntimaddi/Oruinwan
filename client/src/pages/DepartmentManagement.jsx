@@ -1,5 +1,3 @@
-// client/src/pages/DepartmentManagement.jsx
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,7 +19,7 @@ const DepartmentManagement = () => {
     const [formData, setFormData] = useState({ name: '', description: '' });
     const [submitting, setSubmitting] = useState(false);
 
-    // Check admin access
+    
     if (!isCompanyAdmin()) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -99,7 +97,7 @@ const DepartmentManagement = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
+            {}
             <div className="bg-white border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
@@ -126,7 +124,7 @@ const DepartmentManagement = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
+            {}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {loading ? (
                     <div className="flex justify-center py-20">
@@ -161,7 +159,7 @@ const DepartmentManagement = () => {
                 )}
             </div>
 
-            {/* Create Modal */}
+            {}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl max-w-md w-full p-6">
@@ -224,7 +222,7 @@ const DepartmentManagement = () => {
                 </div>
             )}
 
-            {/* Edit Modal */}
+            {}
             {showEditModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl max-w-md w-full p-6">

@@ -1,5 +1,3 @@
-// client/src/components/company/UserCard.jsx
-
 import React from 'react';
 import { Mail } from 'lucide-react';
 import RoleBadge from './RoleBadge';
@@ -11,7 +9,7 @@ const UserCard = ({
     actions = null,
     onClick
 }) => {
-    // Generate avatar color based on username
+    
     const getAvatarColor = (name) => {
         const colors = [
             'bg-gradient-to-br from-blue-500 to-blue-600',
@@ -31,12 +29,12 @@ const UserCard = ({
             className={`flex items-center justify-between p-4 rounded-lg border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-all ${onClick ? 'cursor-pointer' : ''}`}
         >
             <div className="flex items-center gap-3 flex-1 min-w-0">
-                {/* Avatar */}
+                {}
                 <div className={`w-10 h-10 rounded-full ${getAvatarColor(user.username)} flex items-center justify-center text-white font-bold shrink-0`}>
                     {user.username?.charAt(0).toUpperCase() || user.email?.charAt(0).toUpperCase() || '?'}
                 </div>
 
-                {/* User Info */}
+                {}
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                         <p className="font-semibold text-gray-900 dark:text-white truncate">{user.username || 'Unknown'}</p>
@@ -58,7 +56,7 @@ const UserCard = ({
                 </div>
             </div>
 
-            {/* Actions */}
+            {}
             {actions && (
                 <div className="flex items-center gap-2 ml-3">
                     {actions}

@@ -2,17 +2,13 @@ const Poll = require("./poll.model.js");
 const Channel = require("../channels/channel.model.js");
 const _User = require("../../../models/User");
 
-/**
- * Create a new poll in a channel
- * POST /api/polls
- */
 exports.createPoll = async (req, res) => {
     console.log('🔄 [POLLS:MODULAR] Function invoked: createPoll');
     try {
         const { channelId, question, options, type } = req.body;
         const userId = req.user.sub;
 
-        // Validation
+        
         if (!question || !options || !Array.isArray(options)) {
             return res.status(400).json({ error: "Question and options are required" });
         }
@@ -21,13 +17,13 @@ exports.createPoll = async (req, res) => {
             return res.status(400).json({ error: "Poll must have between 2 and 10 options" });
         }
 
-        // Check for duplicate options
+        
         const uniqueOptions = new Set(options.map(opt => opt.trim().toLowerCase()));
         if (uniqueOptions.size !== options.length) {
             return res.status(400).json({ error: "Poll options must be unique" });
         }
 
-        // Verify channel exists and user is a member
+        
         const channel = await Channel.findById(channelId);
         if (!channel) {
             return res.status(404).json({ error: "Channel not found" });
@@ -37,7 +33,7 @@ exports.createPoll = async (req, res) => {
             return res.status(403).json({ error: "You must be a channel member to create polls" });
         }
 
-        // Create poll
+        
         const poll = new Poll({
             channel: channelId,
             workspace: channel.workspace,
@@ -50,7 +46,7 @@ exports.createPoll = async (req, res) => {
 
         await poll.save();
 
-        // Populate creator info for response
+        
         await poll.populate('createdBy', 'username email profilePicture');
 
         res.status(201).json({ poll });
@@ -60,10 +56,6 @@ exports.createPoll = async (req, res) => {
     }
 };
 
-/**
- * Get a single poll by ID
- * GET /api/polls/:pollId
- */
 exports.getPollById = async (req, res) => {
     console.log('🔄 [POLLS:MODULAR] Function invoked: getPollById');
     try {
@@ -77,7 +69,7 @@ exports.getPollById = async (req, res) => {
             return res.status(404).json({ error: "Poll not found" });
         }
 
-        // Verify user is a member of the channel
+        
         const channel = await Channel.findById(poll.channel);
         if (!channel || !channel.isMember(userId)) {
             return res.status(403).json({ error: "You must be a channel member to view this poll" });
@@ -90,17 +82,13 @@ exports.getPollById = async (req, res) => {
     }
 };
 
-/**
- * Get all polls for a channel
- * GET /api/polls/channel/:channelId
- */
 exports.getPollsByChannel = async (req, res) => {
     console.log('🔄 [POLLS:MODULAR] Function invoked: getPollsByChannel');
     try {
         const { channelId } = req.params;
         const userId = req.user.sub;
 
-        // Verify channel exists and user is a member
+        
         const channel = await Channel.findById(channelId);
         if (!channel) {
             return res.status(404).json({ error: "Channel not found" });
@@ -121,15 +109,11 @@ exports.getPollsByChannel = async (req, res) => {
     }
 };
 
-/**
- * Vote on a poll
- * POST /api/polls/:pollId/vote
- */
 exports.vote = async (req, res) => {
     console.log('🔄 [POLLS:MODULAR] Function invoked: vote');
     try {
         const { pollId } = req.params;
-        const { optionIds } = req.body; // Array of option IDs
+        const { optionIds } = req.body; 
         const userId = req.user.sub;
 
         if (!optionIds || !Array.isArray(optionIds) || optionIds.length === 0) {
@@ -145,30 +129,30 @@ exports.vote = async (req, res) => {
             return res.status(400).json({ error: "This poll is closed" });
         }
 
-        // Verify user is channel member
+        
         const channel = await Channel.findById(poll.channel);
         if (!channel || !channel.isMember(userId)) {
             return res.status(403).json({ error: "You must be a channel member to vote" });
         }
 
-        // Validate option IDs exist
+        
         const validOptionIds = poll.options.map(opt => opt._id.toString());
         const invalidOptions = optionIds.filter(id => !validOptionIds.includes(id));
         if (invalidOptions.length > 0) {
             return res.status(400).json({ error: "Invalid option IDs" });
         }
 
-        // Single-choice validation
+        
         if (poll.type === 'single' && optionIds.length > 1) {
             return res.status(400).json({ error: "Only one option allowed for single-choice polls" });
         }
 
-        // Remove user's previous votes
+        
         poll.options.forEach(option => {
             option.votes = option.votes.filter(voteId => voteId.toString() !== userId.toString());
         });
 
-        // Add new votes
+        
         optionIds.forEach(optionId => {
             const option = poll.options.find(opt => opt._id.toString() === optionId);
             if (option && !option.votes.includes(userId)) {
@@ -176,11 +160,11 @@ exports.vote = async (req, res) => {
             }
         });
 
-        // Update total votes
+        
         poll.updateTotalVotes();
         await poll.save();
 
-        // Populate for response
+        
         await poll.populate('createdBy', 'username email profilePicture');
 
         res.json({ poll });
@@ -190,10 +174,6 @@ exports.vote = async (req, res) => {
     }
 };
 
-/**
- * Delete a poll (creator or channel admin only)
- * DELETE /api/polls/:pollId
- */
 exports.deletePoll = async (req, res) => {
     console.log('🔄 [POLLS:MODULAR] Function invoked: deletePoll');
     try {
@@ -205,7 +185,7 @@ exports.deletePoll = async (req, res) => {
             return res.status(404).json({ error: "Poll not found" });
         }
 
-        // Check permissions: creator OR channel admin
+        
         const channel = await Channel.findById(poll.channel);
         const isCreator = poll.createdBy.toString() === userId.toString();
         const isChannelAdmin = channel && channel.isAdmin(userId);
@@ -223,10 +203,6 @@ exports.deletePoll = async (req, res) => {
     }
 };
 
-/**
- * Close a poll (creator or channel admin only)
- * PATCH /api/polls/:pollId/close
- */
 exports.closePoll = async (req, res) => {
     console.log('🔄 [POLLS:MODULAR] Function invoked: closePoll');
     try {
@@ -238,7 +214,7 @@ exports.closePoll = async (req, res) => {
             return res.status(404).json({ error: "Poll not found" });
         }
 
-        // Check permissions: creator OR channel admin
+        
         const channel = await Channel.findById(poll.channel);
         const isCreator = poll.createdBy.toString() === userId.toString();
         const isChannelAdmin = channel && channel.isAdmin(userId);

@@ -1,10 +1,3 @@
-// client/src/components/search/GlobalSearchBar.jsx
-/**
- * GlobalSearchBar — Cmd+K triggered search overlay.
- * Provides instant dropdown results grouped by type.
- * Accessible via keyboard shortcut or programmatic open.
- */
-
 import React, { useEffect, useRef } from 'react';
 import { useSearch } from '../../contexts/SearchContext';
 import SearchResultItem from './SearchResultItem';
@@ -31,7 +24,7 @@ export default function GlobalSearchBar() {
     const inputRef    = useRef(null);
     const overlayRef  = useRef(null);
 
-    // Focus input when opened
+    
     useEffect(() => {
         if (isOpen && inputRef.current) {
             inputRef.current.focus();
@@ -39,7 +32,7 @@ export default function GlobalSearchBar() {
         }
     }, [isOpen]);
 
-    // Click outside to close
+    
     useEffect(() => {
         const handler = (e) => {
             if (overlayRef.current && !overlayRef.current.contains(e.target)) {
@@ -63,10 +56,10 @@ export default function GlobalSearchBar() {
         ? Object.values(results).filter(Array.isArray).reduce((s, a) => s + a.length, 0)
         : 0;
 
-    // ── Trigger button (always visible in header) ──────────────────────────
+    
     return (
         <>
-            {/* Trigger bar */}
+            {}
             <button
                 className="gsb-trigger"
                 onClick={openSearch}
@@ -81,11 +74,11 @@ export default function GlobalSearchBar() {
                 <kbd className="gsb-trigger-kbd">⌘K</kbd>
             </button>
 
-            {/* Overlay */}
+            {}
             {isOpen && (
                 <div className="gsb-backdrop" role="dialog" aria-modal="true" aria-label="Global Search">
                     <div className="gsb-modal" ref={overlayRef}>
-                        {/* Input */}
+                        {}
                         <div className="gsb-input-row">
                             <svg className="gsb-input-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2">
                                 <circle cx="8.5" cy="8.5" r="5.5" />
@@ -108,12 +101,12 @@ export default function GlobalSearchBar() {
                             )}
                         </div>
 
-                        {/* Body */}
+                        {}
                         <div className="gsb-body">
-                            {/* Error */}
+                            {}
                             {error && <div className="gsb-error">⚠️ {error}</div>}
 
-                            {/* No query → recent searches */}
+                            {}
                             {!query && !loading && (
                                 <div className="gsb-recents">
                                     {recentSearches.length > 0 ? (
@@ -132,7 +125,7 @@ export default function GlobalSearchBar() {
                                 </div>
                             )}
 
-                            {/* Has query, loading */}
+                            {}
                             {query && loading && (
                                 <div className="gsb-loading-state">
                                     {[...Array(3)].map((_, i) => (
@@ -147,7 +140,7 @@ export default function GlobalSearchBar() {
                                 </div>
                             )}
 
-                            {/* Has query, results */}
+                            {}
                             {query && !loading && totalResults > 0 && (
                                 <>
                                     {SECTIONS.map(({ key, label, icon }) => {
@@ -175,7 +168,7 @@ export default function GlobalSearchBar() {
                                 </>
                             )}
 
-                            {/* No results */}
+                            {}
                             {query && !loading && totalResults === 0 && !error && (
                                 <div className="gsb-no-results">
                                     <span className="gsb-no-results-icon">🔍</span>
@@ -185,7 +178,7 @@ export default function GlobalSearchBar() {
                             )}
                         </div>
 
-                        {/* Footer */}
+                        {}
                         {query && (
                             <div className="gsb-footer">
                                 <span className="gsb-footer-hint">
@@ -201,7 +194,7 @@ export default function GlobalSearchBar() {
                             </div>
                         )}
 
-                        {/* Keyboard hint */}
+                        {}
                         <div className="gsb-keys-hint">
                             <kbd>↑↓</kbd> navigate&nbsp;
                             <kbd>↵</kbd> confirm&nbsp;

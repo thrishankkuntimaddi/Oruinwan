@@ -1,12 +1,7 @@
-// server/scripts/nukeDbPreserveAdmin.js
-// Clear entire database EXCEPT the Chttrix platform admin account
-// Use with caution - this deletes all company data, users, workspaces, messages, etc.
-
 const path = require("path");
 require("dotenv").config({ path: path.join(__dirname, "../.env") });
 const mongoose = require("mongoose");
 
-// Import all models
 const User = require("../models/User");
 const Company = require("../models/Company");
 const Department = require("../models/Department");
@@ -31,7 +26,7 @@ async function nukeDbPreserveAdmin() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log("✅ Connected to MongoDB");
 
-        // Find the platform admin to preserve
+        
         const adminUser = await User.findOne({ email: CHTTRIX_ADMIN_EMAIL });
 
         if (!adminUser) {
@@ -46,16 +41,16 @@ async function nukeDbPreserveAdmin() {
         console.log(`  - Platform Admin: ${CHTTRIX_ADMIN_EMAIL}`);
         console.log("=".repeat(70));
 
-        // Wait 3 seconds for user to cancel if needed
+        
         console.log("\n⏳ Starting in 3 seconds... Press Ctrl+C to cancel\n");
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         const adminId = adminUser ? adminUser._id : null;
 
-        // Delete all data except admin user
+        
         console.log("\n🗑️  Deleting collections...\n");
 
-        // Delete all users except admin
+        
         if (adminId) {
             const deletedUsers = await User.deleteMany({ _id: { $ne: adminId } });
             console.log(`✅ Users: Deleted ${deletedUsers.deletedCount}, Preserved: 1 (admin)`);
@@ -66,7 +61,7 @@ async function nukeDbPreserveAdmin() {
 
         const { UserWorkspaceKey, WorkspaceKey } = require("../models/encryption");
 
-        // Delete all other collections (no preservation needed)
+        
         const results = await Promise.all([
             Company.deleteMany({}),
             Department.deleteMany({}),
@@ -126,5 +121,4 @@ async function nukeDbPreserveAdmin() {
     }
 }
 
-// Run the script
 nukeDbPreserveAdmin();

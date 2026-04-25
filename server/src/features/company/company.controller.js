@@ -1,5 +1,3 @@
-// src/features/company/company.controller.js
-
 const companyService = require("./company.service");
 const Company = require("../../../models/Company");
 const multer = require('multer');
@@ -7,28 +5,23 @@ const XLSX = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 
-// Memory-based multer for setup (logo image + excel file)
 const setupUpload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    limits: { fileSize: 5 * 1024 * 1024 }, 
 });
 
-/**
- * Get company details
- * GET /api/companies/:id
- */
 exports.getCompany = async (req, res) => {
     try {
         const companyId = req.params.id;
         const userId = req.user.sub;
 
-        // Use service layer
+        
         const company = await companyService.getCompanyById(companyId);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
 
-        // Check access
+        
         const { hasAccess } = await companyService.checkUserAccess(userId, companyId);
         if (!hasAccess) {
             return res.status(403).json({ message: "Access denied" });
@@ -42,23 +35,19 @@ exports.getCompany = async (req, res) => {
     }
 };
 
-/**
- * Update company settings
- * PUT /api/companies/:id
- */
 exports.updateCompany = async (req, res) => {
     try {
         const companyId = req.params.id;
         const userId = req.user.sub;
         const updates = req.body;
 
-        // Check if user is admin
+        
         const { isAdmin } = await companyService.checkIsAdmin(userId, companyId);
         if (!isAdmin) {
             return res.status(403).json({ message: "Only admins can update company settings" });
         }
 
-        // Use service layer
+        
         const company = await companyService.updateCompany(companyId, updates);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
@@ -72,28 +61,24 @@ exports.updateCompany = async (req, res) => {
     }
 };
 
-/**
- * Get company members
- * GET /api/companies/:id/members
- */
 exports.getCompanyMembers = async (req, res) => {
     try {
         const companyId = req.params.id;
         const userId = req.user.sub;
 
-        // Check company exists
+        
         const company = await Company.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
 
-        // Check access
+        
         const { hasAccess } = await companyService.checkUserAccess(userId, companyId);
         if (!hasAccess) {
             return res.status(403).json({ message: "Access denied" });
         }
 
-        // Use service layer
+        
         console.log(`[COMPANY] Fetching members for company ${companyId}`);
         const members = await companyService.getCompanyMembers(companyId);
         console.log(`[COMPANY] Found ${members.length} members`);
@@ -105,17 +90,13 @@ exports.getCompanyMembers = async (req, res) => {
     }
 };
 
-/**
- * Update user role in company
- * PUT /api/companies/:id/members/:userId/role
- */
 exports.updateMemberRole = async (req, res) => {
     try {
         const { id: companyId, userId: targetUserId } = req.params;
         const requesterId = req.user.sub;
         const { role } = req.body;
 
-        // Use service layer
+        
         const result = await companyService.updateMemberRole({
             companyId,
             targetUserId,
@@ -140,10 +121,6 @@ exports.updateMemberRole = async (req, res) => {
     }
 };
 
-/**
- * Check if company name is available
- * POST /api/companies/check-name
- */
 exports.checkCompanyName = async (req, res) => {
     try {
         const { name } = req.body;
@@ -163,10 +140,6 @@ exports.checkCompanyName = async (req, res) => {
     }
 };
 
-/**
- * Check if company domain is available
- * POST /api/companies/check-domain
- */
 exports.checkCompanyDomain = async (req, res) => {
     try {
         const { domain } = req.body;
@@ -186,10 +159,6 @@ exports.checkCompanyDomain = async (req, res) => {
     }
 };
 
-/**
- * Check if email exists
- * POST /api/companies/check-email
- */
 exports.checkEmail = async (req, res) => {
     try {
         const { email } = req.body;
@@ -210,10 +179,6 @@ exports.checkEmail = async (req, res) => {
     }
 };
 
-/**
- * Check if phone exists
- * POST /api/companies/check-phone
- */
 exports.checkPhone = async (req, res) => {
     try {
         const { phone } = req.body;
@@ -235,10 +200,6 @@ exports.checkPhone = async (req, res) => {
     }
 };
 
-/**
- * Start setup — accept terms
- * POST /api/companies/:id/start-setup
- */
 exports.startSetup = async (req, res) => {
     try {
         const { id: companyId } = req.params;
@@ -270,13 +231,8 @@ exports.startSetup = async (req, res) => {
     }
 };
 
-/**
- * Handle setup steps (multipart/form-data)
- * PUT /api/companies/:id/setup
- * Body: step (number), data (JSON string), file (optional)
- */
 exports.handleSetup = (req, res) => {
-    // Use multer fields: 'logo' for step1, 'employeeFile' for step3
+    
     const upload = setupUpload.fields([
         { name: 'logo', maxCount: 1 },
         { name: 'employeeFile', maxCount: 1 }
@@ -321,25 +277,21 @@ exports.handleSetup = (req, res) => {
     });
 };
 
-/**
- * Download sample employee Excel template
- * GET /api/companies/:id/setup/template
- */
 exports.downloadTemplate = async (req, res) => {
     try {
         const wb = XLSX.utils.book_new();
-        // Headers MUST match the column guide A-J exactly
+        
         const headers = [
-            'First Name',   // A
-            'Last Name',    // B
-            'Email',        // C – Work email (company domain) — Required
-            'Pers. Email',  // D – Personal email (credentials sent here)
-            'Job Title',    // E
-            'Join Date',    // F – YYYY-MM-DD
-            'Mobile',       // G – Phone no. — Required
-            'Corp ID',      // H – e.g. EMP001
-            'Role',         // I – member/admin/manager
-            'Department'    // J – Team name
+            'First Name',   
+            'Last Name',    
+            'Email',        
+            'Pers. Email',  
+            'Job Title',    
+            'Join Date',    
+            'Mobile',       
+            'Corp ID',      
+            'Role',         
+            'Department'    
         ];
         const samples = [
             ['Aarav',  'Sharma',  'aarav.sharma@kt.com',  'kthrishank.9@gmail.com',   'Software Engineer',    '2024-06-10', '9876543210', 'KT1001', 'admin',   'Engineering'],
@@ -366,4 +318,3 @@ exports.downloadTemplate = async (req, res) => {
         return res.status(500).json({ message: 'Server error' });
     }
 };
-

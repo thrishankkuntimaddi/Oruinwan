@@ -9,8 +9,8 @@ export const useTheme = () => useContext(ThemeContext);
 export const ThemeProvider = ({ children }) => {
     const { user, setUser } = useAuth();
 
-    // state: 'light' | 'dark' | 'auto'
-    // Initialize from local storage first to prevent flash, will sync with user pref later
+    
+    
     const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme');
@@ -19,23 +19,23 @@ export const ThemeProvider = ({ children }) => {
         return 'dark';
     });
 
-    // 1. Sync FROM backend (user preference) on first load only
+    
     useEffect(() => {
         if (user?.preferences?.theme) {
             const backendTheme = user.preferences.theme;
             setTheme(backendTheme);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
     }, [user?.preferences?.theme]);
 
-    // 2. Sync TO backend when theme changes (if user is logged in)
+    
     const handleSetTheme = async (newTheme) => {
         setTheme(newTheme);
 
-        // Save to backend if user is logged in
+        
         if (user) {
-            // Optimistically update the user object in AuthContext immediately
-            // This prevents the "Sync FROM backend" effect from reverting our change
+            
+            
             const updatedUser = {
                 ...user,
                 preferences: {
@@ -45,7 +45,6 @@ export const ThemeProvider = ({ children }) => {
             };
             setUser(updatedUser);
 
-
             try {
                 await api.put('/api/auth/me', {
                     preferences: { theme: newTheme }
@@ -53,8 +52,8 @@ export const ThemeProvider = ({ children }) => {
 
             } catch (err) {
                 console.error("Failed to save theme preference:", err);
-                // Optional: Revert on failure if strict consistency is needed
-                // But generally better to leave the UI in the state the user picked
+                
+                
             }
         }
     };
@@ -62,7 +61,7 @@ export const ThemeProvider = ({ children }) => {
     useEffect(() => {
         const root = window.document.documentElement;
 
-        // Remove both potential classes to start fresh
+        
         root.classList.remove('light', 'dark');
 
         if (theme === 'system' || theme === 'auto') {
@@ -72,12 +71,12 @@ export const ThemeProvider = ({ children }) => {
             root.classList.add(theme);
         }
 
-        // Save to local storage
+        
         localStorage.setItem('theme', theme);
 
     }, [theme]);
 
-    // Listen for system changes if mode is auto
+    
     useEffect(() => {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
@@ -93,8 +92,8 @@ export const ThemeProvider = ({ children }) => {
         return () => mediaQuery.removeEventListener('change', handleChange);
     }, [theme]);
 
-    // Can be called with a specific value: toggleTheme('light')
-    // or without args to flip dark ↔ light: toggleTheme()
+    
+    
     const toggleTheme = (newTheme) => {
         if (newTheme && ['light', 'dark', 'auto', 'system'].includes(newTheme)) {
             handleSetTheme(newTheme);
@@ -106,7 +105,7 @@ export const ThemeProvider = ({ children }) => {
     const value = {
         theme,
         setTheme: handleSetTheme,
-        toggleTheme // Exposed for easier usage
+        toggleTheme 
     };
 
     return (

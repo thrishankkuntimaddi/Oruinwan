@@ -5,17 +5,13 @@ const Message = require("../messages/message.model.js");
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
 
-// ============================================================================
-// AUDIT LOGS
-// ============================================================================
-
 exports.getAuditLogs = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 100; // Increased for better UX
+        const limit = parseInt(req.query.limit) || 100; 
         const { action, resource, userId, dateFrom, dateTo } = req.query;
 
-        // Build filter object
+        
         const filter = {};
 
         if (action && action !== 'all') {
@@ -30,7 +26,7 @@ exports.getAuditLogs = async (req, res) => {
             filter.userId = userId;
         }
 
-        // Date range filtering
+        
         if (dateFrom || dateTo) {
             filter.createdAt = {};
             if (dateFrom) {
@@ -53,7 +49,7 @@ exports.getAuditLogs = async (req, res) => {
 
         const total = await AuditLog.countDocuments(filter);
 
-        // If no pagination requested, return all logs
+        
         if (!req.query.page) {
             const allLogs = await AuditLog.find(filter)
                 .sort({ createdAt: -1 })
@@ -75,10 +71,6 @@ exports.getAuditLogs = async (req, res) => {
     }
 };
 
-// ============================================================================
-// ACTIVE COMPANIES (Multi-Tenant View)
-// ============================================================================
-
 exports.getActiveCompanies = async (req, res) => {
     try {
         const companies = await Company.find({ verificationStatus: 'verified' })
@@ -93,11 +85,6 @@ exports.getActiveCompanies = async (req, res) => {
     }
 };
 
-// ============================================================================
-// SUPPORT TICKETS
-// ============================================================================
-
-// Get all tickets (Platform Admin View)
 exports.getAllTickets = async (req, res) => {
     try {
         const tickets = await SupportTicket.find()
@@ -112,7 +99,6 @@ exports.getAllTickets = async (req, res) => {
     }
 };
 
-// Create a ticket (Company Admin View)
 exports.createTicket = async (req, res) => {
     try {
         const { subject, description, priority } = req.body;
@@ -129,7 +115,7 @@ exports.createTicket = async (req, res) => {
 
         await ticket.save();
 
-        // Create Audit Log
+        
         await AuditLog.create({
             companyId,
             userId: req.user.sub,
@@ -144,7 +130,6 @@ exports.createTicket = async (req, res) => {
     }
 };
 
-// Update ticket (Reply/Status)
 exports.updateTicket = async (req, res) => {
     try {
         const { status, message, internalNotes } = req.body;
@@ -172,7 +157,7 @@ exports.updateTicket = async (req, res) => {
 
         await ticket.save();
 
-        // Populate sender for the new message if returned
+        
         const updatedTicket = await SupportTicket.findById(req.params.id)
             .populate('messages.sender', 'username email profilePicture');
 
@@ -183,39 +168,34 @@ exports.updateTicket = async (req, res) => {
     }
 };
 
-// ============================================================================
-// PLATFORM CHAT
-// ============================================================================
-
-// Get or Create Session with a Company Admin
 exports.getPlatformSession = async (req, res) => {
     try {
-        const { companyId } = req.params; // Target company
-        // If Requesting User is Platform Admin: target company is param
-        // If Requesting User is Company Admin: target is self (connect to platform admin)
+        const { companyId } = req.params; 
+        
+        
 
-        // Simplified Logic: 
-        // 1. Identify participants: Current User + Target (Platform Super Admin or Company Owner)
+        
+        
 
-        // Find the Company Owner
+        
         const company = await Company.findById(companyId).populate('admins.user');
         if (!company) return res.status(404).json({ message: "Company not found" });
 
         const owner = company.admins.find(a => a.role === 'owner')?.user;
         if (!owner) return res.status(400).json({ message: "Company has no owner" });
 
-        // Find Super Admins (Platform Admins) - For now just pick one or all?
-        // Ideally, the session is "Company vs Platform Support", not specific user.
-        // But our model uses 'participants'. 
-        // Let's find ANY user with 'chttrix_admin' role to add to participants if not present.
+        
+        
+        
+        
         const superAdmins = await User.find({ roles: 'chttrix_admin' });
         const superAdminIds = superAdmins.map(u => u._id);
 
-        // Check if session exists
+        
         let session = await PlatformSession.findOne({ companyId });
 
         if (!session) {
-            // Create new
+            
             session = new PlatformSession({
                 companyId,
                 participants: [owner._id, ...superAdminIds]
@@ -223,10 +203,10 @@ exports.getPlatformSession = async (req, res) => {
             await session.save();
         }
 
-        // Ensure current user is participant (if logic skipped them)
+        
         if (!session.participants.includes(req.user.sub)) {
-            // session.participants.push(req.user.sub);
-            // await session.save();
+            
+            
         }
 
         res.json(session);
@@ -264,7 +244,7 @@ exports.sendSessionMessage = async (req, res) => {
 
         await message.save();
 
-        // Update session
+        
         await PlatformSession.findByIdAndUpdate(sessionId, {
             lastMessageAt: new Date(),
             lastMessagePreview: text.substring(0, 50)
@@ -272,8 +252,8 @@ exports.sendSessionMessage = async (req, res) => {
 
         const fullMessage = await Message.findById(message._id).populate('sender', 'username email profilePicture roles');
 
-        // Real-time socket emission would go here
-        // req.io.to(`platform_session_${sessionId}`).emit('param_message', fullMessage);
+        
+        
 
         res.json(fullMessage);
     } catch (err) {

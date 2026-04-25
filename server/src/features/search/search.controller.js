@@ -1,20 +1,9 @@
-// server/src/features/search/search.controller.js
-/**
- * Unified Search Controller
- *
- * Exposes the search API endpoints:
- *   GET /api/search               — v2 unified endpoint (filters + pagination + semantic rerank)
- *   GET /api/search/universal     — legacy endpoint (backward compat)
- *   GET /api/search/contacts      — legacy contacts search
- */
-
 'use strict';
 
 const Workspace  = require('../../../models/Workspace');
 const logger     = require('../../../utils/logger');
 const searchSvc  = require('./search.service');
 
-// ─── Legacy helpers (kept for /universal backward-compat) ─────────────────────
 const Channel       = require('../channels/channel.model.js');
 const User          = require('../../../models/User');
 const Message       = require('../messages/message.model.js');

@@ -22,7 +22,7 @@ const DomainSSO = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Manage domain verification and single sign-on</p>
             </div>
 
-            {/* Domain Verification */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
                 <SectionHeader text="Domain Verification" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -66,7 +66,7 @@ const DomainSSO = () => {
                 </div>
             </div>
 
-            {/* SSO Configuration */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
                 <SectionHeader text="Single Sign-On (SSO)" />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

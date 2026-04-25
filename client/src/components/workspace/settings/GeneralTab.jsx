@@ -3,7 +3,6 @@ import { Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, Tren
 import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 
-// Icon options for workspace customization
 const iconOptions = [
     { id: 'rocket',    name: 'Rocket',    Icon: Rocket     },
     { id: 'briefcase', name: 'Briefcase', Icon: Briefcase  },
@@ -19,7 +18,6 @@ const iconOptions = [
     { id: 'trophy',    name: 'Trophy',    Icon: Trophy     },
 ];
 
-// ── Shared token shortcuts ──────────────────────────────────────
 const border  = 'rgba(255,255,255,0.07)';
 const surface = 'rgba(255,255,255,0.04)';
 const accent  = '#b8956a';
@@ -59,14 +57,14 @@ const GeneralTab = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontFamily: font }}>
 
             {editingIcon ? (
-                /* ── EDIT MODE ── */
+                
                 <div style={{ padding: '20px', background: accentBg, border: `1px solid ${accentBorder}` }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 700, color: text, margin: 0 }}>Edit Workspace Settings</h3>
                         <span style={{ fontSize: '9px', fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.12em', padding: '2px 8px', background: accentBg, border: `1px solid ${accentBorder}` }}>Editing</span>
                     </div>
 
-                    {/* Name */}
+                    {}
                     <div style={{ marginBottom: '20px' }}>
                         <label style={labelStyle}>Workspace Name</label>
                         <input
@@ -79,7 +77,7 @@ const GeneralTab = ({
                         />
                     </div>
 
-                    {/* Icon picker */}
+                    {}
                     <div style={{ marginBottom: '20px' }}>
                         <label style={labelStyle}>Choose Icon</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
@@ -109,7 +107,7 @@ const GeneralTab = ({
                         </div>
                     </div>
 
-                    {/* Color picker */}
+                    {}
                     <div style={{ marginBottom: '20px' }}>
                         <label style={labelStyle}>Choose Color</label>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '6px' }}>
@@ -144,7 +142,7 @@ const GeneralTab = ({
                         </div>
                     </div>
 
-                    {/* Preview */}
+                    {}
                     <div style={{ padding: '16px', background: surface, border: `1px solid ${border}`, marginBottom: '16px' }}>
                         <p style={{ fontSize: '10px', fontWeight: 700, color: muted, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '12px' }}>Preview</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -164,7 +162,7 @@ const GeneralTab = ({
                         </div>
                     </div>
 
-                    {/* Actions */}
+                    {}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                         <button
                             onClick={() => { setEditingIcon(false); setSelectedIcon(activeWorkspace?.icon || 'rocket'); setSelectedColor(activeWorkspace?.color || '#2563eb'); setNewWorkspaceName(workspaceName); }}
@@ -202,9 +200,9 @@ const GeneralTab = ({
                 </div>
 
             ) : (
-                /* ── VIEW MODE ── */
+                
                 <>
-                    {/* Workspace Details card */}
+                    {}
                     <div style={{ padding: '18px 20px', background: surface, border: `1px solid ${border}` }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
                             <h3 style={{ fontSize: '13px', fontWeight: 700, color: text, margin: 0 }}>Workspace Details</h3>
@@ -239,7 +237,7 @@ const GeneralTab = ({
                         </div>
                     </div>
 
-                    {/* Workspace Information */}
+                    {}
                     {loadingStats ? (
                         <p style={{ fontSize: '12px', color: muted }}>Loading workspace info…</p>
                     ) : stats && (
@@ -260,7 +258,7 @@ const GeneralTab = ({
                         </div>
                     )}
 
-                    {/* Rules & Guidelines */}
+                    {}
                     <div style={{ padding: '16px 20px', background: surface, border: `1px solid ${border}` }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                             <h4 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: text, margin: 0 }}>

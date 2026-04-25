@@ -1,4 +1,3 @@
-// server/models/Sprint.js
 const mongoose = require("mongoose");
 
 const SprintSchema = new mongoose.Schema({
@@ -13,7 +12,7 @@ const SprintSchema = new mongoose.Schema({
         enum: ['planning', 'active', 'completed', 'cancelled'],
         default: 'planning'
     },
-    // Kanban columns config for this sprint's board
+    
     boardColumns: [{
         name: { type: String, required: true },
         order: { type: Number, required: true },

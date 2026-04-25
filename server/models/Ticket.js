@@ -1,24 +1,3 @@
-/**
- * Ticket Model - Internal Company Ticketing
- * 
- * PURPOSE:
- * - Internal ticketing system WITHIN a company
- * - Employee-to-employee support requests
- * - Internal IT, facilities, HR tickets
- * 
- * SCOPE:
- * - Company employees ↔ Company employees
- * - NOT for platform support (use SupportTicket for that)
- * 
- * EXAMPLES:
- * - Employee requests new equipment
- * - Facilities maintenance request
- * - Internal IT support ticket
- * - Department collaboration requests
- * 
- * @see SupportTicket - For platform support (company ↔ Chttrix admins)
- */
-
 const mongoose = require('mongoose');
 
 const ticketSchema = new mongoose.Schema({
@@ -78,7 +57,6 @@ const ticketSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Index for faster queries
 ticketSchema.index({ companyId: 1, status: 1 });
 ticketSchema.index({ creatorId: 1 });
 

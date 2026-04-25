@@ -1,4 +1,3 @@
-// client/src/components/tasksComp/KanbanBoard.jsx
 import React, { useState } from 'react';
 import api from '@services/api';
 import { useTasks } from '../../contexts/TasksContext';
@@ -85,7 +84,7 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onClick }) {
       onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget)) setDragOver(false); }}
       onDrop={() => { setDragOver(false); onDrop(col); }}
     >
-      {/* Column header */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderTop: `3px solid ${col.topColor}`, flexShrink: 0, background: T.colBg }}>
         <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: col.topColor, fontFamily: T.font }}>
           {col.label}
@@ -95,7 +94,7 @@ function KanbanColumn({ col, tasks, onDragStart, onDrop, onClick }) {
         </span>
       </div>
 
-      {/* Cards drop zone */}
+      {}
       <div
         style={{
           flex: 1, overflowY: 'auto', padding: '8px', minHeight: '80px',
@@ -146,7 +145,7 @@ export default function KanbanBoard({ tasks = [], onTaskClick }) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: T.bg }}>
-      {/* Updating indicator */}
+      {}
       {updating && (
         <div style={{ flexShrink: 0, height: '2px', background: 'var(--bg-active)', overflow: 'hidden' }}>
           <div style={{ height: '100%', background: T.accent, width: '60%', animation: 'pulse 1s ease-in-out infinite' }} />

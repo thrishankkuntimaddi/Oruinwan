@@ -1,23 +1,9 @@
-// server/src/features/people/people.service.js
-//
-// Phase 3 — Company People Management
-// Business logic layer — no HTTP references.
-// Workspace, Channel, Messaging, Tasks, Notes are NOT touched.
-
 const User = require('../../../models/User');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 const VALID_ROLES = ['owner', 'admin', 'manager', 'member', 'guest'];
 const VALID_STATUSES = ['active', 'suspended', 'removed'];
-
-// ============================================================================
-// HELPERS
-// ============================================================================
 
 function generateTempPassword() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#!';
@@ -70,20 +56,12 @@ async function sendInviteEmail({ to, name, companyName, tempPassword }) {
         });
     } catch (err) {
         console.error('[PEOPLE SERVICE] Invite email failed for', to, ':', err.message);
-        // Non-fatal — account is still created
+        
     }
 }
 
-// ============================================================================
-// INVITE EMPLOYEE
-// ============================================================================
-
-/**
- * Invite a new employee to the company.
- * Creates User with accountStatus: 'invited' + sends temp password email.
- */
 async function inviteEmployee({ companyId, email, firstName, lastName, companyRole, jobTitle, departments, invitedById }) {
-    // Guard: email already registered
+    
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
         const err = new Error(`A user with email "${email}" already exists.`);
@@ -111,11 +89,11 @@ async function inviteEmployee({ companyId, email, firstName, lastName, companyRo
         departments: departments || [],
         managedDepartments: role === 'manager' ? (departments || []) : [],
         accountStatus: 'invited',
-        verified: true, // admin-created accounts skip email verification
+        verified: true, 
         lastLoginAt: null,
     });
 
-    // Fetch company name for email
+    
     const Company = require('../../../models/Company');
     const company = await Company.findById(companyId).select('name').lean();
     const companyName = company?.name || 'Your Company';
@@ -132,14 +110,6 @@ async function inviteEmployee({ companyId, email, firstName, lastName, companyRo
     };
 }
 
-// ============================================================================
-// LIST & GET MEMBERS
-// ============================================================================
-
-/**
- * List all company members with optional filters.
- * Guests are excluded from visible results if the caller is a guest.
- */
 async function listMembers(companyId, { callerRole, status, role, search } = {}) {
     const filter = { companyId };
 
@@ -150,7 +120,7 @@ async function listMembers(companyId, { callerRole, status, role, search } = {})
         filter.$or = [{ username: regex }, { email: regex }, { jobTitle: regex }];
     }
 
-    // Guests cannot see other guests
+    
     if (callerRole === 'guest') {
         filter.companyRole = { $ne: 'guest' };
     }
@@ -165,9 +135,6 @@ async function listMembers(companyId, { callerRole, status, role, search } = {})
     return members;
 }
 
-/**
- * Get a single member — enforces company isolation.
- */
 async function getMember(memberId, companyId) {
     const member = await User.findOne({ _id: memberId, companyId })
         .select('-passwordHash -refreshTokens -otpCodes -verificationTokenHash -resetPasswordTokenHash')
@@ -184,17 +151,6 @@ async function getMember(memberId, companyId) {
     return member;
 }
 
-// ============================================================================
-// ROLE MANAGEMENT
-// ============================================================================
-
-/**
- * Change a member's company role.
- * Guards:
- *   - Cannot change the role of a company owner
- *   - Only an owner can assign the owner role
- *   - Admins cannot demote themselves below admin
- */
 async function changeRole({ companyId, targetId, newRole, managedDepartments, requesterId, requesterRole }) {
     if (!VALID_ROLES.includes(newRole)) {
         const err = new Error(`Invalid role "${newRole}". Must be one of: ${VALID_ROLES.join(', ')}`);
@@ -209,21 +165,21 @@ async function changeRole({ companyId, targetId, newRole, managedDepartments, re
         throw err;
     }
 
-    // Guard: cannot modify owner
+    
     if (target.companyRole === 'owner') {
         const err = new Error('The company owner\'s role cannot be changed.');
         err.status = 403;
         throw err;
     }
 
-    // Guard: only owner can assign owner
+    
     if (newRole === 'owner' && requesterRole !== 'owner') {
         const err = new Error('Only a company owner can assign the owner role.');
         err.status = 403;
         throw err;
     }
 
-    // Guard: admin cannot self-demote below admin
+    
     if (targetId.toString() === requesterId.toString() && requesterRole === 'admin' && newRole !== 'admin' && newRole !== 'owner') {
         const err = new Error('Admins cannot demote their own role.');
         err.status = 403;
@@ -232,7 +188,7 @@ async function changeRole({ companyId, targetId, newRole, managedDepartments, re
 
     target.companyRole = newRole;
 
-    // Sync managedDepartments on manager promotion/demotion
+    
     if (newRole === 'manager' && managedDepartments) {
         target.managedDepartments = managedDepartments;
     } else if (newRole !== 'manager') {
@@ -250,16 +206,6 @@ async function changeRole({ companyId, targetId, newRole, managedDepartments, re
     };
 }
 
-// ============================================================================
-// STATUS MANAGEMENT (suspend / activate / remove)
-// ============================================================================
-
-/**
- * Update a member's accountStatus.
- * Guards:
- *   - Cannot modify company owner
- *   - Admins cannot suspend/remove other admins (only owner can)
- */
 async function updateStatus({ companyId, targetId, newStatus, reason, requesterId, requesterRole }) {
     if (!VALID_STATUSES.includes(newStatus)) {
         const err = new Error(`Invalid status "${newStatus}". Must be one of: ${VALID_STATUSES.join(', ')}`);
@@ -274,14 +220,14 @@ async function updateStatus({ companyId, targetId, newStatus, reason, requesterI
         throw err;
     }
 
-    // Guard: cannot touch owner
+    
     if (target.companyRole === 'owner') {
         const err = new Error('The company owner\'s status cannot be changed.');
         err.status = 403;
         throw err;
     }
 
-    // Guard: only owner can suspend/remove an admin
+    
     if (target.companyRole === 'admin' && requesterRole !== 'owner') {
         const err = new Error('Only a company owner can suspend or remove another admin.');
         err.status = 403;
@@ -295,7 +241,7 @@ async function updateStatus({ companyId, targetId, newStatus, reason, requesterI
         target.suspendedBy = requesterId;
         target.suspensionReason = reason || 'No reason provided';
     } else if (newStatus === 'active') {
-        // Clear suspension fields on reactivation
+        
         target.suspendedAt = null;
         target.suspendedBy = null;
         target.suspensionReason = null;
@@ -313,10 +259,6 @@ async function updateStatus({ companyId, targetId, newStatus, reason, requesterI
         companyRole: target.companyRole,
     };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     inviteEmployee,

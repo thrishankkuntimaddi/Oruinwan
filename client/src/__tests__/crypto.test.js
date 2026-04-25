@@ -1,10 +1,3 @@
-/**
- * Crypto Utilities Test Suite
- * 
- * Tests for E2EE cryptographic functions
- * Run with: npm test crypto.test.js
- */
-
 import {
     generateWorkspaceKey,
     generateIV,
@@ -26,14 +19,14 @@ import {
 
 describe('Crypto Utilities', () => {
 
-    // ==================== SETUP ====================
+    
 
     beforeAll(() => {
-        // Verify crypto is supported
+        
         expect(isCryptoSupported()).toBe(true);
     });
 
-    // ==================== KEY GENERATION ====================
+    
 
     describe('Key Generation', () => {
         test('generateWorkspaceKey creates valid AES-256-GCM key', async () => {
@@ -67,7 +60,7 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== KEY DERIVATION ====================
+    
 
     describe('Key Derivation (PBKDF2)', () => {
         test('deriveKeyFromPassword creates valid key', async () => {
@@ -119,20 +112,20 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== ENCRYPTION/DECRYPTION ====================
+    
 
     describe('AES-GCM Encryption/Decryption', () => {
         test('encrypt and decrypt text message', async () => {
             const plaintext = 'Hello, this is a secret message!';
             const key = await generateWorkspaceKey();
 
-            // Encrypt
+            
             const { ciphertext, iv } = await encryptAESGCM(plaintext, key);
 
             expect(ciphertext).toBeDefined();
             expect(iv).toBeDefined();
 
-            // Decrypt
+            
             const decrypted = await decryptAESGCM(ciphertext, key, iv);
             const decryptedText = new TextDecoder().decode(decrypted);
 
@@ -185,20 +178,20 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== MESSAGE HELPERS ====================
+    
 
     describe('Message Encryption Helpers', () => {
         test('encryptMessage and decryptMessage work end-to-end', async () => {
             const message = 'Hello team! This is a test message.';
             const workspaceKey = await generateWorkspaceKey();
 
-            // Encrypt
+            
             const { ciphertext, iv } = await encryptMessage(message, workspaceKey);
 
-            expect(typeof ciphertext).toBe('string'); // Base64
-            expect(typeof iv).toBe('string'); // Base64
+            expect(typeof ciphertext).toBe('string'); 
+            expect(typeof iv).toBe('string'); 
 
-            // Decrypt
+            
             const decrypted = await decryptMessage(ciphertext, iv, workspaceKey);
 
             expect(decrypted).toBe(message);
@@ -225,21 +218,21 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== KEY IMPORT/EXPORT ====================
+    
 
     describe('Key Import/Export', () => {
         test('export and import workspace key', async () => {
             const originalKey = await generateWorkspaceKey();
 
-            // Export
+            
             const exported = await exportKey(originalKey);
             expect(exported).toBeInstanceOf(ArrayBuffer);
-            expect(exported.byteLength).toBe(32); // 256 bits = 32 bytes
+            expect(exported.byteLength).toBe(32); 
 
-            // Import
+            
             const importedKey = await importKey(exported);
 
-            // Verify keys work the same
+            
             const plaintext = 'Test message';
             const { ciphertext, iv } = await encryptAESGCM(plaintext, originalKey);
             const decrypted = await decryptAESGCM(ciphertext, importedKey, iv);
@@ -249,7 +242,7 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== WORKSPACE KEY ENCRYPTION ====================
+    
 
     describe('Workspace Key Encryption', () => {
         test('encrypt and decrypt workspace key with KEK', async () => {
@@ -258,16 +251,16 @@ describe('Crypto Utilities', () => {
             const salt = generateSalt();
             const kek = await deriveKeyFromPassword(password, salt);
 
-            // Encrypt workspace key with KEK
+            
             const { encryptedKey, iv } = await encryptWorkspaceKey(workspaceKey, kek);
 
             expect(typeof encryptedKey).toBe('string');
             expect(typeof iv).toBe('string');
 
-            // Decrypt workspace key
+            
             const decryptedKey = await decryptWorkspaceKey(encryptedKey, iv, kek);
 
-            // Verify it's the same key
+            
             const testMessage = 'Test';
             const encrypted = await encryptMessage(testMessage, workspaceKey);
             const decrypted = await decryptMessage(encrypted.ciphertext, encrypted.iv, decryptedKey);
@@ -292,7 +285,7 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== ENCODING ====================
+    
 
     describe('Base64 Encoding', () => {
         test('arrayBufferToBase64 and base64ToArrayBuffer roundtrip', () => {
@@ -312,7 +305,7 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== VALIDATION ====================
+    
 
     describe('Validation', () => {
         test('isCryptoSupported returns true in test environment', () => {
@@ -324,18 +317,18 @@ describe('Crypto Utilities', () => {
         });
     });
 
-    // ==================== PERFORMANCE ====================
+    
 
     describe('Performance', () => {
         test('encryption is fast enough (<100ms for 1KB message)', async () => {
-            const message = 'A'.repeat(1024); // 1KB message
+            const message = 'A'.repeat(1024); 
             const key = await generateWorkspaceKey();
 
             const start = performance.now();
             await encryptMessage(message, key);
             const duration = performance.now() - start;
 
-            expect(duration).toBeLessThan(100); // Should be < 100ms
+            expect(duration).toBeLessThan(100); 
         });
 
         test('decryption is fast enough (<50ms for 1KB message)', async () => {
@@ -348,7 +341,7 @@ describe('Crypto Utilities', () => {
             await decryptMessage(ciphertext, iv, key);
             const duration = performance.now() - start;
 
-            expect(duration).toBeLessThan(50); // Should be < 50ms
+            expect(duration).toBeLessThan(50); 
         });
     });
 });

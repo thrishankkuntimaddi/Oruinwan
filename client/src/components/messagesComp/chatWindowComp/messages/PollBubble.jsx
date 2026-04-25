@@ -1,16 +1,7 @@
-// Phase 2 — Poll Bubble Component
-// Renders a poll message with real-time vote updates via socket
-
 import React, { useState, useCallback } from "react";
 import { BarChart3, CheckCircle, Circle, Users } from "lucide-react";
 import api from '@services/api';
 
-/**
- * @param {object} props
- * @param {object} props.poll - The poll subdoc from the message
- * @param {string} props.messageId - The parent message _id
- * @param {string} props.currentUserId
- */
 export default function PollBubble({ poll, messageId, currentUserId }) {
     const [localPoll, setLocalPoll] = useState(poll);
     const [voting, setVoting] = useState(false);
@@ -23,7 +14,7 @@ export default function PollBubble({ poll, messageId, currentUserId }) {
 
     const handleVote = useCallback(async (optionIndex) => {
         if (voting || !localPoll?.isActive) return;
-        // Toggle: voting same option removes vote
+        
         if (!localPoll.allowMultiple && myVoteIndex === optionIndex) return;
 
         setVoting(true);
@@ -43,13 +34,13 @@ export default function PollBubble({ poll, messageId, currentUserId }) {
 
     return (
         <div className="mt-1 bg-white border border-gray-200 rounded-2xl p-4 max-w-sm shadow-sm">
-            {/* Question */}
+            {}
             <div className="flex items-start gap-2 mb-3">
                 <BarChart3 size={16} className="text-violet-500 mt-0.5 flex-shrink-0" />
                 <p className="text-sm font-semibold text-gray-900 leading-snug">{localPoll.question}</p>
             </div>
 
-            {/* Options */}
+            {}
             <div className="space-y-2">
                 {localPoll.options?.map((option, idx) => {
                     const count = option.votes?.length || 0;
@@ -66,7 +57,7 @@ export default function PollBubble({ poll, messageId, currentUserId }) {
                                 : "border-gray-200 hover:border-violet-300 hover:bg-gray-50"
                                 } disabled:cursor-default`}
                         >
-                            {/* Progress bar bg */}
+                            {}
                             <div
                                 className={`absolute inset-y-0 left-0 rounded-xl transition-all duration-500 ${isMine ? "bg-violet-200" : "bg-gray-100"}`}
                                 style={{ width: `${pct}%` }}
@@ -90,7 +81,7 @@ export default function PollBubble({ poll, messageId, currentUserId }) {
                 })}
             </div>
 
-            {/* Footer */}
+            {}
             <div className="flex items-center gap-1.5 mt-3 text-xs text-gray-400">
                 <Users size={11} />
                 <span>{totalVotes} vote{totalVotes !== 1 ? "s" : ""}</span>

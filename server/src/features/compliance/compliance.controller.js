@@ -1,16 +1,9 @@
-// server/src/features/compliance/compliance.controller.js
-// Read-only API for compliance logs (immutable records).
 'use strict';
 
 const ComplianceLog = require('../../../models/ComplianceLog');
 const crypto = require('crypto');
 const { handleError } = require('../../../utils/responseHelpers');
 
-/**
- * GET /api/compliance-logs
- * Paginated, filtered reader for compliance logs. Admin-only.
- * Query: companyId, category, severity, actorId, page, limit, from, to, verify
- */
 exports.getComplianceLogs = async (req, res) => {
     try {
         const {
@@ -44,7 +37,7 @@ exports.getComplianceLogs = async (req, res) => {
             ComplianceLog.countDocuments(filter)
         ]);
 
-        // Optional integrity verification: recompute and compare hashes
+        
         let verifiedLogs = logs;
         if (verify === 'true' || verify === true) {
             verifiedLogs = logs.map(log => {
@@ -72,10 +65,6 @@ exports.getComplianceLogs = async (req, res) => {
     }
 };
 
-/**
- * GET /api/compliance-logs/:id
- * Get a single compliance log and verify its hash integrity.
- */
 exports.getComplianceLog = async (req, res) => {
     try {
         const log = await ComplianceLog.findById(req.params.id)

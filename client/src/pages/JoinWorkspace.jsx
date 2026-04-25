@@ -24,7 +24,7 @@ const JoinWorkspace = () => {
             return;
         }
 
-        // Fetch workspace details
+        
         const fetchDetails = async () => {
             try {
                 const response = await api.get(`/api/workspaces/invite/${token}`);
@@ -42,7 +42,7 @@ const JoinWorkspace = () => {
 
     const handleJoin = async () => {
         if (!user) {
-            // Redirect to login, then come back here
+            
             localStorage.setItem('pendingInvite', token);
             navigate('/login');
             return;
@@ -54,7 +54,7 @@ const JoinWorkspace = () => {
 
             const data = response.data;
 
-            // Store workspace ID and redirect to workspace home
+            
             localStorage.setItem('currentWorkspace', data.workspace.id);
             localStorage.removeItem('pendingInvite');
 
@@ -70,20 +70,19 @@ const JoinWorkspace = () => {
         }
     };
 
-    // Helper to render icon
+    
     const renderWorkspaceIcon = (iconName) => {
         if (!iconName) return <Icons.Rocket size={48} strokeWidth={1.5} />;
 
-        // Check if it's a valid Lucide icon
+        
         const IconComponent = Icons[iconName.charAt(0).toUpperCase() + iconName.slice(1)];
         if (IconComponent) {
             return <IconComponent size={48} strokeWidth={1.5} />;
         }
 
-        // Fallback to Rocket if icon name is invalid or text is provided
+        
         return <Icons.Hash size={48} strokeWidth={1.5} />;
     };
-
 
     if (loading) {
         return (
@@ -99,7 +98,7 @@ const JoinWorkspace = () => {
     if (error) {
         return (
             <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500 p-6">
-                {/* Toggle Theme (Top Right) */}
+                {}
                 <div className="absolute top-6 right-6 z-50">
                     <button
                         onClick={toggleTheme}
@@ -132,7 +131,7 @@ const JoinWorkspace = () => {
 
     return (
         <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500 relative overflow-hidden font-sans selection:bg-indigo-500 selection:text-white">
-            {/* Background Effects */}
+            {}
             <div className={`absolute inset-0 transition-opacity duration-1000 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
                 <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
@@ -143,7 +142,7 @@ const JoinWorkspace = () => {
                 <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-indigo-100/60 via-pink-100/30 to-transparent blur-[80px]"></div>
             </div>
 
-            {/* Toggle Theme (Top Right) */}
+            {}
             <div className="absolute top-6 right-6 z-50">
                 <button
                     onClick={toggleTheme}
@@ -153,11 +152,10 @@ const JoinWorkspace = () => {
                 </button>
             </div>
 
-
             <div className="relative z-10 w-full max-w-lg px-6">
                 <div className="backdrop-blur-xl bg-white/70 dark:bg-[#0B0F19]/60 border border-white/50 dark:border-white/10 shadow-2xl rounded-3xl p-8 md:p-10 animate-fade-in-up">
 
-                    {/* Workspace Identity */}
+                    {}
                     <div className="text-center mb-8">
                         <div
                             className="w-24 h-24 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl transform rotate-3 transition-transform hover:rotate-6"
@@ -184,7 +182,7 @@ const JoinWorkspace = () => {
                         )}
                     </div>
 
-                    {/* Stats Grid */}
+                    {}
                     <div className="grid grid-cols-2 gap-4 mb-8">
                         <div className="bg-slate-50/50 dark:bg-white/5 rounded-2xl p-4 text-center border border-slate-200/50 dark:border-white/5">
                             <Icons.Users className="w-6 h-6 text-blue-500 dark:text-blue-400 mx-auto mb-2" />
@@ -198,7 +196,7 @@ const JoinWorkspace = () => {
                         </div>
                     </div>
 
-                    {/* Actions */}
+                    {}
                     <div className="space-y-4">
                         <button
                             onClick={handleJoin}

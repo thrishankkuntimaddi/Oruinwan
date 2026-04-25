@@ -1,7 +1,3 @@
-/**
- * VideoMessage.jsx — Phase 7.1 Attachments
- * Renders an HTML5 <video> player with controls.
- */
 import React from "react";
 import { ExternalLink } from "lucide-react";
 import { toProxyUrl } from "../../../../../utils/gcsProxy";

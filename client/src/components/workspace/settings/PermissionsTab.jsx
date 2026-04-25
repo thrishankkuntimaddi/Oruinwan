@@ -8,7 +8,6 @@ const TOGGLES = [
     { key: 'isDiscoverable',             label: 'Workspace Discoverable',  sub: 'Make workspace visible in search' },
 ];
 
-/* Flat square toggle — no Tailwind peer classes */
 const Toggle = ({ checked, onChange, disabled }) => (
     <button
         role="switch"

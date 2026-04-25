@@ -29,7 +29,7 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
       background: 'var(--bg-surface)', borderLeft: '1px solid rgba(255,255,255,0.07)',
       width: '288px', flexShrink: 0,
     }}>
-      {/* Header */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '28px', height: '28px', background: 'rgba(184,149,106,0.15)', border: '1px solid rgba(184,149,106,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -49,7 +49,7 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
         </button>
       </div>
 
-      {/* Current version banner */}
+      {}
       <div style={{ padding: '8px 14px', background: 'rgba(184,149,106,0.06)', borderBottom: '1px solid rgba(184,149,106,0.15)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{ width: '6px', height: '6px', background: '#b8956a', borderRadius: '50%', flexShrink: 0 }} />
@@ -60,7 +60,7 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
         </p>
       </div>
 
-      {/* Version list */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin' }}>
         {versions.length === 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 16px', textAlign: 'center' }}>
@@ -101,7 +101,7 @@ const VersionHistoryPanel = ({ versions, currentContent, currentTitle, onRestore
         )}
       </div>
 
-      {/* Footer */}
+      {}
       <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'monospace' }}>
           Last 50 auto-saves · Stored in database

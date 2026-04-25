@@ -1,9 +1,3 @@
-// client/src/components/tasksComp/WorkloadPanel.jsx
-/**
- * WorkloadPanel — Shows tasks per user for a workspace.
- * Calls GET /api/tasks/workload?workspaceId=...
- * (Tasks are registered under /api/tasks in server.js)
- */
 import React, { useState, useEffect } from 'react';
 import { Users, RefreshCw } from 'lucide-react';
 import api from '@services/api';
@@ -95,7 +89,7 @@ export default function WorkloadPanel({ workspaceId }) {
     setLoading(true);
     setError(null);
     try {
-      // Route is /api/v2/tasks/workload (tasks registered under /api/v2/tasks)
+      
       const res = await api.get(`/api/v2/tasks/workload?workspaceId=${workspaceId}`);
       setWorkload(res.data.workload || []);
     } catch (err) {
@@ -109,14 +103,14 @@ export default function WorkloadPanel({ workspaceId }) {
 
   useEffect(() => {
     fetchWorkload();
-  }, [workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [workspaceId]); 
 
   const maxCount = workload.reduce((max, item) => Math.max(max, item.count), 0);
   const totalTasks = workload.reduce((sum, item) => sum + item.count, 0);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: T.bg, fontFamily: T.font }}>
-      {/* Header */}
+      {}
       <div style={{ flexShrink: 0, background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
         <Users size={14} style={{ color: T.accent }} />
         <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Team Workload</span>
@@ -138,7 +132,7 @@ export default function WorkloadPanel({ workspaceId }) {
         </button>
       </div>
 
-      {/* Legend */}
+      {}
       {!loading && workload.length > 0 && (
         <div style={{ flexShrink: 0, padding: '6px 16px', background: 'var(--bg-surface)', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
           {[
@@ -154,7 +148,7 @@ export default function WorkloadPanel({ workspaceId }) {
         </div>
       )}
 
-      {/* Content */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', background: T.bg }}>
         {loading && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '160px', color: T.muted, fontSize: '13px', gap: '8px', fontFamily: T.font }}>

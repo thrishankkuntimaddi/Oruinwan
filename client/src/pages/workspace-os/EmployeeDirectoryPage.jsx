@@ -1,4 +1,3 @@
-// client/src/pages/workspace-os/EmployeeDirectoryPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -66,7 +65,7 @@ export default function EmployeeDirectoryPage({ companyId: propCompanyId }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -82,10 +81,10 @@ export default function EmployeeDirectoryPage({ companyId: propCompanyId }) {
                 </button>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '20px 28px' }} className="custom-scrollbar">
 
-                {/* Filters */}
+                {}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
                     <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '200px' }}>
                         <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -104,7 +103,7 @@ export default function EmployeeDirectoryPage({ companyId: propCompanyId }) {
 
                 {error && <div style={{ padding: '10px 14px', background: 'rgba(224,82,82,0.08)', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '12px', marginBottom: '12px' }}>{error}</div>}
 
-                {/* Table */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden', flex: 1, overflowY: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
@@ -134,7 +133,7 @@ export default function EmployeeDirectoryPage({ companyId: propCompanyId }) {
                         </tbody>
                     </table>
 
-                    {/* Pagination */}
+                    {}
                     {pagination.pages > 1 && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderTop: '1px solid var(--border-subtle)' }}>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>

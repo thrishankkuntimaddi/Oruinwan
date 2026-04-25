@@ -1,4 +1,3 @@
-// client/src/pages/admin/AuditSecurityPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { Shield, AlertTriangle, CheckCircle, XCircle, Clock, Download, Filter, Search, Calendar } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
@@ -81,7 +80,7 @@ const AuditSecurityPage = () => {
             </header>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }} className="custom-scrollbar">
-                {/* Stats */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
                     {stats.map(s => (
                         <div key={s.label} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '14px 16px' }}>
@@ -95,7 +94,7 @@ const AuditSecurityPage = () => {
                     ))}
                 </div>
 
-                {/* Filter Bar */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                     <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
                         <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -124,7 +123,7 @@ const AuditSecurityPage = () => {
                     </div>
                 </div>
 
-                {/* Log List */}
+                {}
                 {loading ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                         <div style={{ width: '28px', height: '28px', border: '2px solid var(--accent)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />

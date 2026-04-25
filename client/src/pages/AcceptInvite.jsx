@@ -4,11 +4,6 @@ import { useAuth } from "../contexts/AuthContext";
 import { CheckCircle, AlertCircle, ArrowRight, Loader } from "lucide-react";
 import { API_BASE } from '@services/api';
 
-/**
- * AcceptInvite Page
- * Handles accepting a company/workspace invite.
- * Query params: token, email
- */
 const AcceptInvite = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
@@ -55,12 +50,12 @@ const AcceptInvite = () => {
 
             setSuccess(true);
 
-            // Auto login logic if provided by backend response, otherwise redirect to login
+            
             if (data.accessToken && data.user) {
-                // Here we might need a way to set auth state directly or just redirect to login
-                // For simplicity, let's redirect to login with a success message or try to use context login
-                // If AuthContext supports setting user from token, do that.
-                // Assuming standard flow:
+                
+                
+                
+                
                 setTimeout(() => {
                     navigate("/login");
                 }, 2000);

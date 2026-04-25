@@ -1,5 +1,3 @@
-// client/src/components/company/RoleBadge.jsx
-
 import React from 'react';
 
 const ROLE_STYLES = {

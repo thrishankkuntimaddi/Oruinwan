@@ -1,4 +1,3 @@
-// ProgressHeader.jsx — Monolith Flow Design System
 import React from 'react';
 
 const STEP_TITLES = {
@@ -9,7 +8,6 @@ const STEP_TITLES = {
     5: 'Review & Launch',
 };
 
-// Accept and ignore legacy theme prop
 const ProgressHeader = ({ currentStep, theme }) => (
     <div style={{ padding: '24px 32px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, background: 'rgba(0,0,0,0.15)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
@@ -25,7 +23,7 @@ const ProgressHeader = ({ currentStep, theme }) => (
                 </h1>
             </div>
 
-            {/* Step bars */}
+            {}
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                 {[1, 2, 3, 4, 5].map(step => (
                     <div key={step} style={{

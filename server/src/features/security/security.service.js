@@ -1,17 +1,4 @@
-// server/src/features/security/security.service.js
-//
-// Phase 3 — Company Security Layer
-//
-// Responsible for:
-//   logSecurityEvent()    — write a SecurityEvent record (non-fatal, never throws)
-//   getSecurityEvents()   — query events for the owner/admin dashboard
-//   getSummary()          — aggregate counts by eventType + severity
-
 const SecurityEvent = require('../../../models/SecurityEvent');
-
-// ============================================================================
-// SEVERITY CLASSIFICATION
-// ============================================================================
 
 const SEVERITY_MAP = {
     login_success: 'info',
@@ -30,24 +17,6 @@ const SEVERITY_MAP = {
     bulk_import_completed: 'info',
 };
 
-// ============================================================================
-// LOG EVENT
-// ============================================================================
-
-/**
- * Write a SecurityEvent record.
- *
- * NEVER throws — security logging is non-fatal.
- * Failed writes are console.warn'd only.
- *
- * @param {Object} params
- * @param {string}  params.companyId
- * @param {string}  [params.actorId]   — userId who triggered the event
- * @param {string}  params.eventType   — see SecurityEventSchema enum
- * @param {string}  [params.outcome]   — 'success' | 'failure' (default 'success')
- * @param {Object}  [params.metadata]  — any extra context
- * @param {Object}  [params.req]       — Express req for IP + userAgent extraction
- */
 async function logSecurityEvent({ companyId, actorId, eventType, outcome, metadata, req }) {
     try {
         const ipAddress = req
@@ -70,25 +39,6 @@ async function logSecurityEvent({ companyId, actorId, eventType, outcome, metada
     }
 }
 
-// ============================================================================
-// QUERY EVENTS
-// ============================================================================
-
-/**
- * Get security events for a company — paginated, filterable.
- *
- * @param {string}  companyId
- * @param {Object}  filters
- * @param {string}  [filters.eventType]
- * @param {string}  [filters.severity]    — 'info' | 'warning' | 'critical'
- * @param {string}  [filters.outcome]     — 'success' | 'failure'
- * @param {string}  [filters.actorId]
- * @param {string}  [filters.startDate]
- * @param {string}  [filters.endDate]
- * @param {number}  [filters.page=1]
- * @param {number}  [filters.limit=50]
- * @returns {Promise<{ events, total, page, pages }>}
- */
 async function getSecurityEvents(companyId, filters = {}) {
     const {
         eventType,
@@ -133,10 +83,6 @@ async function getSecurityEvents(companyId, filters = {}) {
     };
 }
 
-/**
- * Get a high-level summary of security events for the dashboard.
- * Aggregates counts by eventType over the last 30 days.
- */
 async function getSecuritySummary(companyId) {
     const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
@@ -155,7 +101,7 @@ async function getSecuritySummary(companyId) {
             { $group: { _id: '$severity', count: { $sum: 1 } } },
             { $project: { _id: 0, severity: '$_id', count: 1 } },
         ]),
-        // Failed login count in last 24h
+        
         SecurityEvent.countDocuments({
             companyId,
             eventType: 'login_failure',
@@ -170,10 +116,6 @@ async function getSecuritySummary(companyId) {
         failedLoginsLast24h: failedLogins,
     };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     logSecurityEvent,

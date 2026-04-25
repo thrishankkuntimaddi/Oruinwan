@@ -1,10 +1,7 @@
-// server/src/features/integrations/integration.service.js
-// Core integration framework — connect, disconnect, trigger, webhook handling
 const Integration = require('./integration.model');
 const Webhook = require('./webhook.model');
 const webhookTrigger = require('./webhook.trigger');
 
-// ─── Provider handlers (lightweight, isolated) ───────────────────────────────
 const githubHandler = require('./providers/github.handler');
 const gitlabHandler = require('./providers/gitlab.handler');
 const bitbucketHandler = require('./providers/bitbucket.handler');
@@ -39,19 +36,15 @@ const HANDLERS = {
   google_meet: googleMeetHandler,
   teams: teamsHandler,
   zapier: zapierHandler,
-  make: zapierHandler, // same pattern
+  make: zapierHandler, 
   n8n: zapierHandler,
   webhook: zapierHandler
 };
 
-/**
- * Connect or update an integration for a workspace.
- * Config (tokens, keys) should be encrypted at rest in production.
- */
 async function connectIntegration({ workspaceId, type, config, label, userId }) {
   const handler = HANDLERS[type];
 
-  // Run provider-specific validation / token verification if available
+  
   let verifiedConfig = config;
   if (handler && typeof handler.verify === 'function') {
     verifiedConfig = await handler.verify(config);
@@ -69,7 +62,7 @@ async function connectIntegration({ workspaceId, type, config, label, userId }) 
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
 
-  // Fire integration.connected webhook event
+  
   await webhookTrigger.fire(workspaceId, 'integration.connected', {
     type,
     integrationId: integration._id
@@ -78,9 +71,6 @@ async function connectIntegration({ workspaceId, type, config, label, userId }) 
   return integration;
 }
 
-/**
- * Disconnect an integration.
- */
 async function disconnectIntegration({ workspaceId, type }) {
   const integration = await Integration.findOneAndUpdate(
     { workspaceId, type },
@@ -97,26 +87,19 @@ async function disconnectIntegration({ workspaceId, type }) {
   return integration;
 }
 
-/**
- * Get all integrations for a workspace.
- */
 async function getIntegrations(workspaceId) {
   return Integration.find({ workspaceId })
-    .select('-config') // never expose keys to client
+    .select('-config') 
     .lean();
 }
 
-/**
- * Handle an incoming webhook from an external provider.
- * Each provider handler has a `handleWebhook(payload, headers, integration)` function.
- */
 async function handleWebhook({ type, payload, headers, workspaceId }) {
   const handler = HANDLERS[type];
   if (!handler || typeof handler.handleWebhook !== 'function') {
     throw Object.assign(new Error(`No webhook handler for type: ${type}`), { statusCode: 400 });
   }
 
-  // Lookup integration record for config (e.g. webhook secret for HMAC check)
+  
   const integration = workspaceId
     ? await Integration.findOne({ workspaceId, type }).lean()
     : null;
@@ -124,9 +107,6 @@ async function handleWebhook({ type, payload, headers, workspaceId }) {
   return handler.handleWebhook(payload, headers, integration);
 }
 
-/**
- * Trigger an internal integration event (e.g., from task service).
- */
 async function triggerIntegrationEvent(workspaceId, event, data) {
   return webhookTrigger.fire(workspaceId, event, data);
 }

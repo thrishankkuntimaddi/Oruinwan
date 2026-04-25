@@ -1,19 +1,9 @@
-/**
- * ScheduledMeeting.js
- *
- * Persists scheduled meetings created from the ScheduleMeetingModal
- * or HomePanel. Scoped to a workspace so the HomePanel sidebar can
- * query upcoming meetings across all channels.
- *
- * SECURITY (S-02): companyId added for multi-tenant isolation.
- * All queries must include companyId to prevent cross-tenant access.
- */
 const mongoose = require('mongoose');
 
 const scheduledMeetingSchema = new mongoose.Schema(
     {
-        // S-02: Tenant isolation — every meeting is scoped to a company.
-        // Required so that GET/PATCH/DELETE can never cross tenant boundaries.
+        
+        
         companyId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Company',
@@ -47,12 +37,12 @@ const scheduledMeetingSchema = new mongoose.Schema(
             trim: true,
             maxlength: 150,
         },
-        // ISO start time
+        
         startTime: {
             type: Date,
             required: true,
         },
-        // Duration in minutes
+        
         duration: {
             type: Number,
             default: 30,
@@ -64,21 +54,21 @@ const scheduledMeetingSchema = new mongoose.Schema(
             default: null,
             trim: true,
         },
-        // Workspace members invited (refs, not required)
+        
         participants: [
             {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: 'User',
             }
         ],
-        // 'scheduled' | 'live' | 'completed' | 'cancelled'
+        
         status: {
             type: String,
             enum: ['scheduled', 'live', 'completed', 'cancelled'],
             default: 'scheduled',
         },
 
-        // ── Extended Collaboration Fields ──────────────────────────────────
+        
 
         recordingUrl: {
             type: String,
@@ -95,13 +85,13 @@ const scheduledMeetingSchema = new mongoose.Schema(
             default: '',
         },
 
-        // Realtime shared notes — synced via WebSocket meeting:notes_update
+        
         sharedNotes: {
             type: String,
             default: '',
         },
 
-        // Agenda items for the meeting
+        
         agenda: [
             {
                 _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
@@ -111,7 +101,7 @@ const scheduledMeetingSchema = new mongoose.Schema(
             },
         ],
 
-        // Action items extracted from the meeting
+        
         actionItems: [
             {
                 _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
@@ -121,7 +111,7 @@ const scheduledMeetingSchema = new mongoose.Schema(
                     ref: 'User',
                     default: null,
                 },
-                // Link to a Task document if the action item is converted to a task
+                
                 taskId: {
                     type: mongoose.Schema.Types.ObjectId,
                     ref: 'Task',
@@ -138,7 +128,6 @@ const scheduledMeetingSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-// S-02: Compound index — all tenant-scoped queries use companyId first
 scheduledMeetingSchema.index({ companyId: 1, workspaceId: 1, startTime: 1, status: 1 });
 
 module.exports = mongoose.model('ScheduledMeeting', scheduledMeetingSchema);

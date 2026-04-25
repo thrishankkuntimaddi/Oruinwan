@@ -8,7 +8,6 @@ import {
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
 
-// ─── Design tokens (Monolith Flow) ───────────────────────────────────────────
 const T = {
     base: 'var(--bg-base)',
     surface: 'var(--bg-surface)',
@@ -23,7 +22,6 @@ const T = {
     amberBorder: 'rgba(184,149,106,0.25)',
 };
 
-// ─── Statuses ─────────────────────────────────────────────────────────────────
 const WS_STATUSES = [
     { key: 'To Do',      label: 'TO DO',       color: 'var(--text-muted)',  bg: 'var(--bg-active)' },
     { key: 'In Progress',label: 'IN PROGRESS',  color: '#60a5fa',               bg: 'rgba(96,165,250,0.1)'   },
@@ -33,7 +31,6 @@ const WS_STATUSES = [
 ];
 const STATUS_MAP = Object.fromEntries(WS_STATUSES.map(s => [s.key, s]));
 
-// ─── Priorities ───────────────────────────────────────────────────────────────
 const WS_PRIORITIES = [
     { key: 'Emergency', label: 'Emergency', color: '#f87171', arrow: '↑↑' },
     { key: 'High',      label: 'High',      color: '#fb923c', arrow: '↑'  },
@@ -51,7 +48,6 @@ const TRANSITIONS = {
     'Blocked':    ['In Progress', 'To Do'],
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function avatarColor(name = '') {
     const colors = ['#b8956a', '#60a5fa', '#34d399', '#a78bfa', '#fb923c', '#f472b6', '#38bdf8'];
     let h = 0;
@@ -75,14 +71,12 @@ function fmtSeconds(s) {
     return `${sec}s`;
 }
 
-// ─── Section label ────────────────────────────────────────────────────────────
 const SectionLabel = ({ children, icon }) => (
     <p style={{ fontSize: '10px', fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px', fontFamily: 'monospace' }}>
         {icon} {children}
     </p>
 );
 
-// ─── Activity Log ─────────────────────────────────────────────────────────────
 function ActivityLog({ taskId }) {
     const [log, setLog] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -149,7 +143,6 @@ function ActivityLog({ taskId }) {
     );
 }
 
-// ─── Main Panel ───────────────────────────────────────────────────────────────
 export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, onUpdate, onDelete }) {
     const { showToast } = useToast();
     const [tab, setTab] = useState('details');
@@ -164,7 +157,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : ''
     );
 
-    // Time tracking
+    
     const [timerRunning, setTimerRunning] = useState(false);
     const [timerElapsed, setTimerElapsed] = useState(0);
     const [timerLoading, setTimerLoading] = useState(false);
@@ -215,7 +208,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
         } finally { setTimerLoading(false); }
     };
 
-    // Dependencies
+    
     const [depInput, setDepInput] = useState('');
     const [depLoading, setDepLoading] = useState(false);
     const [localDeps, setLocalDeps] = useState(task.dependencies || []);
@@ -264,7 +257,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
     return (
         <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', width: '320px', height: '100%', background: T.surface, borderLeft: `1px solid ${T.border}`, overflow: 'hidden' }}>
 
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: T.base }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', padding: '3px 8px', background: statusConf.bg, color: statusConf.color, border: `1px solid ${statusConf.color}30` }}>
@@ -282,7 +275,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                 </div>
             </div>
 
-            {/* Tabs */}
+            {}
             <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0, background: T.base }}>
                 {[
                     { key: 'details', label: 'Details', icon: <Eye size={11} /> },
@@ -295,12 +288,12 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                 ))}
             </div>
 
-            {/* Scrollable body */}
+            {}
             <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'thin' }}>
                 {tab === 'details' ? (
                     <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-                        {/* Issue key */}
+                        {}
                         {task.issueKey && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <CheckCircle2 size={11} style={{ color: T.amber }} />
@@ -308,7 +301,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         )}
 
-                        {/* Title */}
+                        {}
                         <div>
                             {editTitle ? (
                                 <input autoFocus value={title}
@@ -328,7 +321,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             )}
                         </div>
 
-                        {/* Description */}
+                        {}
                         <div>
                             <SectionLabel>Description</SectionLabel>
                             {editDesc ? (
@@ -348,7 +341,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             )}
                         </div>
 
-                        {/* Status transitions */}
+                        {}
                         <div>
                             <SectionLabel>Status</SectionLabel>
                             {allowedNext.length === 0 ? (
@@ -391,7 +384,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             )}
                         </div>
 
-                        {/* Priority */}
+                        {}
                         <div>
                             <SectionLabel>Priority</SectionLabel>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
@@ -405,7 +398,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         </div>
 
-                        {/* Assignees */}
+                        {}
                         <div>
                             <SectionLabel>Assignee</SectionLabel>
                             {assignees.length > 0 ? (
@@ -444,7 +437,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             )}
                         </div>
 
-                        {/* Due Date */}
+                        {}
                         <div>
                             <SectionLabel icon={<Calendar size={10} />}>Due Date</SectionLabel>
                             <input type="date" value={localDueDate}
@@ -456,7 +449,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             )}
                         </div>
 
-                        {/* Child Issues */}
+                        {}
                         {(task.subtasks?.length > 0 || task.childIssues?.length > 0) && (
                             <div>
                                 <SectionLabel>Child Issues ({(task.subtasks || task.childIssues || []).length})</SectionLabel>
@@ -477,7 +470,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         )}
 
-                        {/* Labels */}
+                        {}
                         {task.labels?.length > 0 && (
                             <div>
                                 <SectionLabel>Labels</SectionLabel>
@@ -491,7 +484,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         )}
 
-                        {/* Time Tracking */}
+                        {}
                         <div>
                             <SectionLabel icon={<Timer size={10} />}>Time Tracking</SectionLabel>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -511,7 +504,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </button>
                         </div>
 
-                        {/* Dependencies */}
+                        {}
                         <div>
                             <SectionLabel icon={<Link2 size={10} />}>Dependencies</SectionLabel>
                             {localDeps.length > 0 ? (
@@ -546,7 +539,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         </div>
 
-                        {/* Channel */}
+                        {}
                         {task.project && (
                             <div>
                                 <SectionLabel>Channel</SectionLabel>
@@ -554,7 +547,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         )}
 
-                        {/* Reporter */}
+                        {}
                         {reporter && (
                             <div>
                                 <SectionLabel>Reporter</SectionLabel>
@@ -567,7 +560,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         )}
 
-                        {/* Completion note */}
+                        {}
                         {task.completionNote && (
                             <div style={{ padding: '10px', background: 'rgba(52,211,153,0.06)', border: '1px solid rgba(52,211,153,0.18)' }}>
                                 <p style={{ fontSize: '10px', fontWeight: 700, color: '#34d399', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -582,7 +575,7 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                             </div>
                         )}
 
-                        {/* Delete */}
+                        {}
                         <div style={{ paddingTop: '8px', borderTop: `1px solid ${T.border}` }}>
                             <button onClick={() => onDelete(task.id)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 500, color: '#f87171', background: 'transparent', border: 'none', cursor: 'pointer', transition: 'color 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}

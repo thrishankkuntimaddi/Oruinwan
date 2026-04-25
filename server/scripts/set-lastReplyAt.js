@@ -1,11 +1,3 @@
-// server/scripts/set-lastReplyAt.js
-/**
- * Migration Script: Set lastReplyAt for existing threads
- * 
- * For each parent message with replies, set lastReplyAt to the
- * timestamp of its most recent reply
- */
-
 const mongoose = require('mongoose');
 const Message = require("../src/features/messages/message.model.js");
 require('dotenv').config();
@@ -16,7 +8,7 @@ async function setLastReplyAt() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB\n');
 
-        // Find all messages with replies
+        
         const messagesWithReplies = await Message.find({
             replyCount: { $gt: 0 },
             parentId: null
@@ -27,7 +19,7 @@ async function setLastReplyAt() {
         let updated = 0;
 
         for (const parentMsg of messagesWithReplies) {
-            // Find the most recent reply
+            
             const mostRecentReply = await Message.findOne({
                 parentId: parentMsg._id
             })
@@ -36,7 +28,7 @@ async function setLastReplyAt() {
                 .lean();
 
             if (mostRecentReply) {
-                // Update parent with lastReplyAt timestamp
+                
                 await Message.findByIdAndUpdate(parentMsg._id, {
                     $set: { lastReplyAt: mostRecentReply.createdAt }
                 });

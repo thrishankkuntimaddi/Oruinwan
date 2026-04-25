@@ -1,10 +1,3 @@
-/**
- * automation.templates.js
- *
- * Predefined automation templates for quick-start.
- * Returned by GET /api/v2/automations/templates — no DB needed.
- */
-
 const AUTOMATION_TEMPLATES = [
     {
         id: 'task_completed_notify_manager',

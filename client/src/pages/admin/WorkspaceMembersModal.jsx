@@ -133,7 +133,7 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
         <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', background: 'rgba(0,0,0,0.6)' }}
             onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
             <div style={{ width: '100%', maxWidth: '480px', height: '100%', background: 'var(--bg-surface)', borderLeft: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                {/* Header */}
+                {}
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '32px', height: '32px', background: workspace.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -151,7 +151,7 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
                     </button>
                 </div>
 
-                {/* Tabs */}
+                {}
                 <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                     {[{ key: 'members', label: 'Members', icon: Users, count: members.length }, { key: 'add', label: 'Add Members', icon: UserPlus, count: addableMembers.length }].map(t => {
                         const active = tab === t.key;
@@ -165,7 +165,7 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
                     })}
                 </div>
 
-                {/* Members Tab */}
+                {}
                 {tab === 'members' && (
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                         <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, position: 'relative' }}>
@@ -211,7 +211,7 @@ const WorkspaceMembersModal = ({ workspace, onClose, onMemberCountChange }) => {
                     </div>
                 )}
 
-                {/* Add Members Tab */}
+                {}
                 {tab === 'add' && (
                     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                         <div style={{ margin: '10px 12px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'flex-start', gap: '8px', flexShrink: 0 }}>

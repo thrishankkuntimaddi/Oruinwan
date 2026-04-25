@@ -22,7 +22,7 @@ const AdminAnalyticsDashboard = () => {
   const [timeRange, setTimeRange] = useState('30d');
   const [analyticsData, setAnalyticsData] = useState(null);
 
-  // Extract data from analytics response with fallbacks
+  
   const growthData = analyticsData?.growth?.data || [];
   const collaborationData = analyticsData?.collaboration?.data || [];
   const workspaceHealth = analyticsData?.workspaceHealth || [];
@@ -82,7 +82,7 @@ const AdminAnalyticsDashboard = () => {
             </div>
           ) : (
             <>
-              {/* SECTION 1: GROWTH ANALYTICS */}
+              {}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="p-2 bg-indigo-100 rounded-lg text-indigo-600"><TrendingUp size={20} /></div>
@@ -128,7 +128,7 @@ const AdminAnalyticsDashboard = () => {
                 </div>
               </section>
 
-              {/* SECTION 2: COLLABORATION ANALYTICS */}
+              {}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Activity size={20} /></div>
@@ -153,7 +153,7 @@ const AdminAnalyticsDashboard = () => {
                 </div>
               </section>
 
-              {/* SECTION 3: WORKSPACE HEALTH */}
+              {}
               <section>
                 <div className="flex items-center gap-2 mb-4">
                   <div className="p-2 bg-green-100 rounded-lg text-green-600"><CheckCircle size={20} /></div>
@@ -210,7 +210,7 @@ const AdminAnalyticsDashboard = () => {
 
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* SECTION 4: Culture & Updates */}
+                {}
                 <div className="lg:col-span-2 space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="p-2 bg-pink-100 rounded-lg text-pink-600"><Zap size={20} /></div>
@@ -235,7 +235,7 @@ const AdminAnalyticsDashboard = () => {
                   </div>
                 </div>
 
-                {/* SECTION 5: Security & Access */}
+                {}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <div className="p-2 bg-slate-100 rounded-lg text-slate-600"><Shield size={20} /></div>
@@ -263,7 +263,7 @@ const AdminAnalyticsDashboard = () => {
                 </div>
               </div>
 
-              {/* SECTION 6: Plan & Limits */}
+              {}
               <section>
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl p-8 text-white relative overflow-hidden">
                   <div className="relative z-10 flex justify-between items-center">
@@ -279,7 +279,7 @@ const AdminAnalyticsDashboard = () => {
                       Upgrade to Enterprise
                     </button>
                   </div>
-                  {/* Decorative background circles */}
+                  {}
                   <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
                   <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl"></div>
                 </div>

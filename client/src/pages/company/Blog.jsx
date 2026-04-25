@@ -1,4 +1,3 @@
-// Blog.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { BookOpen, Tag, Clock, ArrowRight, Sparkles, Shield, Users } from 'lucide-react';
@@ -43,7 +42,7 @@ export default function Blog() {
 
     return (
         <PublicPageShell title="Blog">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '72px 0 56px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
@@ -54,7 +53,7 @@ export default function Blog() {
                     <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75', maxWidth: '520px', marginBottom: '28px' }}>
                         Product announcements, behind-the-scenes engineering, and thoughts on the future of work.
                     </p>
-                    {/* Tag filters */}
+                    {}
                     <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                         {TAGS.map(t => (
                             <button key={t} onClick={() => setActive(t)}
@@ -67,7 +66,7 @@ export default function Blog() {
             </div>
 
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px' }}>
-                {/* Featured post */}
+                {}
                 {featured && (
                     <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: '36px', marginBottom: '1px', display: 'flex', gap: '40px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                         <div style={{ width: '56px', height: '56px', background: `${featured.tagColor}12`, border: `1px solid ${featured.tagColor}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -87,7 +86,7 @@ export default function Blog() {
                     </div>
                 )}
 
-                {/* Rest of posts */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
                     {rest.map(post => (
                         <div key={post.id} style={{ background: '#111', padding: '24px' }}>

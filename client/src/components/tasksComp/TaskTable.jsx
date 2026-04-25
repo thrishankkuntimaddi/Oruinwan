@@ -1,4 +1,3 @@
-// components/TaskTable.jsx
 import TaskRow from "./TaskRow";
 
 const TaskTable = ({

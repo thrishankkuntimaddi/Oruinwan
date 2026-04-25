@@ -19,7 +19,6 @@ const FEATURES = [
 const INVITE_ROLES = ['owner', 'admin', 'member'];
 const CHANNEL_CREATE_ROLES = ['owner', 'admin', 'member'];
 
-// Monolith Flow flat toggle
 const FlatToggle = ({ checked, onChange }) => {
     const [hov, setHov] = React.useState(false);
     return (
@@ -58,7 +57,7 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
     const queryWsId = new URLSearchParams(window.location.search).get('workspaceId');
 
     const [selectedWsId, setSelectedWsId] = useState(propWorkspaceId || queryWsId || allWorkspaces[0]?.id || '');
-    useEffect(() => { if (!selectedWsId && allWorkspaces.length > 0) setSelectedWsId(String(allWorkspaces[0].id)); }, [user, selectedWsId]); // eslint-disable-line
+    useEffect(() => { if (!selectedWsId && allWorkspaces.length > 0) setSelectedWsId(String(allWorkspaces[0].id)); }, [user, selectedWsId]); 
 
     const wsId = selectedWsId ? String(selectedWsId) : '';
     const [permissions, setPermissions] = useState(null);
@@ -105,7 +104,7 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -121,10 +120,10 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
                 )}
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
 
-                {/* Workspace picker */}
+                {}
                 {allWorkspaces.length > 1 && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
                         <label style={{ ...labelStyle, marginBottom: 0 }}>Workspace:</label>
@@ -143,7 +142,7 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
 
                 {permissions && !loading && (
                     <div style={{ maxWidth: '800px' }}>
-                        {/* Tabs */}
+                        {}
                         <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', marginBottom: '20px' }}>
                             {tabs.map(([key, label]) => (
                                 <button key={key} onClick={() => setActiveTab(key)}
@@ -159,7 +158,7 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
                             ))}
                         </div>
 
-                        {/* Feature Toggles */}
+                        {}
                         {activeTab === 'features' && (
                             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                                 <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
@@ -177,7 +176,7 @@ export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
                             </div>
                         )}
 
-                        {/* Role Permissions */}
+                        {}
                         {activeTab === 'roles' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {[
@@ -229,5 +228,3 @@ const SaveBtn = ({ onClick, saving }) => {
         </button>
     );
 };
-
-

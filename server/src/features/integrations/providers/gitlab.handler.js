@@ -1,5 +1,3 @@
-// server/src/features/integrations/providers/gitlab.handler.js
-// GitLab integration — lightweight webhook handler
 async function handleWebhook(payload, headers, integration) {
   const event = headers['x-gitlab-event'] || '';
   const results = [];

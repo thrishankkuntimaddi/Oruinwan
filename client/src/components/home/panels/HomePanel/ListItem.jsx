@@ -26,7 +26,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
         }
     };
 
-    // Status color map
+    
     const statusColor = {
         active: 'var(--state-success)', online: 'var(--state-success)',
         away: '#e59e0c', dnd: 'var(--state-danger)', busy: 'var(--state-danger)',
@@ -50,13 +50,13 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
             onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
             onMouseLeave={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'none'; }}
         >
-            {/* Active indicator bar */}
+            {}
             {isActive && !isSelectionMode && (
                 <div style={{ position: 'absolute', left: 0, top: '20%', height: '60%', width: '2px', background: 'var(--accent)', borderRadius: '0 2px 2px 0' }} />
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: '8px' }}>
-                {/* Selection checkbox */}
+                {}
                 {isSelectionMode && (
                     <div style={{
                         width: '14px', height: '14px', borderRadius: '2px', flexShrink: 0,
@@ -69,7 +69,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                     </div>
                 )}
 
-                {/* Icon / Avatar */}
+                {}
                 <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {item.type === 'dm' ? (
                         <div style={{ position: 'relative' }}>
@@ -83,7 +83,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                             }}>
                                 {item.label.charAt(0).toUpperCase()}
                             </div>
-                            {/* Status dot */}
+                            {}
                             <div style={{
                                 position: 'absolute', bottom: '-1px', right: '-1px',
                                 width: '8px', height: '8px', borderRadius: '50%',
@@ -119,7 +119,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                     )}
                 </div>
 
-                {/* Label */}
+                {}
                 <span style={{
                     fontSize: '13px', fontWeight: isActive ? 600 : 500,
                     color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
@@ -130,7 +130,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                 </span>
             </div>
 
-            {/* Favorite star */}
+            {}
             {!isSelectionMode && (
                 <button
                     onClick={e => { e.stopPropagation(); toggleFavorite(item.id); }}

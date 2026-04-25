@@ -16,7 +16,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const { showToast } = useToast();
     const [activeSettingsTab, setActiveSettingsTab] = useState("General");
 
-    // General Tab State
+    
     const [workspaceName, setWorkspaceName] = useState(activeWorkspace?.name || '');
     const [newWorkspaceName, setNewWorkspaceName] = useState(activeWorkspace?.name || '');
     const [editingIcon, setEditingIcon] = useState(false);
@@ -28,7 +28,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const [editingRules, setEditingRules] = useState(false);
     const [savingRules, setSavingRules] = useState(false);
 
-    // Permissions Tab State
+    
     const [permissions, setPermissions] = useState({
         allowMemberChannelCreation: activeWorkspace?.allowMemberChannelCreation || false,
         allowMemberInvite: activeWorkspace?.allowMemberInvite || false,
@@ -37,13 +37,13 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     });
     const [savingPermissions, setSavingPermissions] = useState(false);
 
-    // Members Tab State
+    
     const [members, setMembers] = useState([]);
     const [loadingMembers, setLoadingMembers] = useState(true);
     const [openMemberDropdown, setOpenMemberDropdown] = useState(null);
     const [memberActionLoading, setMemberActionLoading] = useState({});
 
-    // Stats State
+    
     const [stats, setStats] = useState(null);
     const [loadingStats, setLoadingStats] = useState(true);
 
@@ -139,7 +139,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
         >
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '800px', height: '580px', display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-                {/* Tab Sidebar */}
+                {}
                 <div style={{ width: '200px', background: 'var(--bg-base)', borderRight: '1px solid var(--border-subtle)', padding: '20px 0', flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
                     <div style={{ padding: '0 16px 12px', fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
                         Settings
@@ -166,16 +166,16 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                     </nav>
                 </div>
 
-                {/* Content Area */}
+                {}
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    {/* Content header */}
+                    {}
                     <div style={{ padding: '18px 28px 14px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
                             {activeSettingsTab}
                         </h2>
                     </div>
 
-                    {/* Scrollable tab body */}
+                    {}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                         {activeSettingsTab === "General" && (
                             <GeneralTab
@@ -218,7 +218,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                     </div>
                 </div>
 
-                {/* Close button */}
+                {}
                 <button
                     onClick={() => setShowSettingsModal(false)}
                     style={{ position: 'absolute', top: '14px', right: '14px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}

@@ -1,10 +1,6 @@
-// server/src/features/teams/team.service.js
-// Teams Business Logic — company-isolated, no HTTP references
 const Team = require('../../models/Team');
 const User = require('../../../models/User');
 const Department = require('../../../models/Department');
-
-// ── READ ──────────────────────────────────────────────────────────────────────
 
 async function getTeams(companyId, departmentId) {
   const query = { company: companyId, isActive: true };
@@ -33,10 +29,8 @@ async function getTeamById(teamId, companyId) {
   return team;
 }
 
-// ── CREATE ────────────────────────────────────────────────────────────────────
-
 async function createTeam({ companyId, name, description, icon, color, departmentId, leadId, creatorId }) {
-  // Guard: unique name within company
+  
   const existing = await Team.findOne({
     company: companyId,
     name: new RegExp(`^${name.trim()}$`, 'i'),
@@ -48,7 +42,7 @@ async function createTeam({ companyId, name, description, icon, color, departmen
     throw err;
   }
 
-  // Validate department belongs to company
+  
   if (departmentId) {
     const dept = await Department.findOne({ _id: departmentId, company: companyId, isActive: true });
     if (!dept) {
@@ -84,8 +78,6 @@ async function createTeam({ companyId, name, description, icon, color, departmen
     .lean();
 }
 
-// ── UPDATE ────────────────────────────────────────────────────────────────────
-
 async function updateTeam(teamId, companyId, updates) {
   const allowed = ['name', 'description', 'icon', 'color', 'department', 'lead'];
   const sanitized = {};
@@ -116,8 +108,6 @@ async function updateTeam(teamId, companyId, updates) {
   return team;
 }
 
-// ── DELETE ────────────────────────────────────────────────────────────────────
-
 async function deleteTeam(teamId, companyId) {
   const team = await Team.findOne({ _id: teamId, company: companyId });
   if (!team) {
@@ -130,8 +120,6 @@ async function deleteTeam(teamId, companyId) {
   return { deleted: true, teamId };
 }
 
-// ── MEMBER ASSIGNMENT ─────────────────────────────────────────────────────────
-
 async function assignMembers(teamId, companyId, userIds, action) {
   const team = await Team.findOne({ _id: teamId, company: companyId, isActive: true });
   if (!team) {
@@ -140,7 +128,7 @@ async function assignMembers(teamId, companyId, userIds, action) {
     throw err;
   }
 
-  // Verify all users belong to this company
+  
   const users = await User.find({ _id: { $in: userIds }, companyId }).select('_id').lean();
   if (users.length !== userIds.length) {
     const err = new Error('One or more users not found or do not belong to this company.');

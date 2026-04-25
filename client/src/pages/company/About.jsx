@@ -1,4 +1,3 @@
-// About.jsx — Monolith Flow Design System
 import React from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { Users, Sparkles, Globe, Shield, ArrowRight, Building2 } from 'lucide-react';
@@ -20,7 +19,7 @@ const TEAM = [
 export default function About() {
     return (
         <PublicPageShell title="About">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 64px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '24px' }}>
@@ -36,7 +35,7 @@ export default function About() {
                 </div>
             </div>
 
-            {/* Mission */}
+            {}
             <div style={{ padding: '72px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px', display: 'flex', gap: '80px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
                     <div style={{ flex: '1 1 300px' }}>
@@ -56,7 +55,7 @@ export default function About() {
                 </div>
             </div>
 
-            {/* Values */}
+            {}
             <div style={{ padding: '72px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '40px' }}>Our Values</p>
@@ -77,7 +76,7 @@ export default function About() {
                 </div>
             </div>
 
-            {/* Team */}
+            {}
             <div style={{ padding: '72px 0', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '40px' }}>The Team</p>
@@ -95,7 +94,7 @@ export default function About() {
                 </div>
             </div>
 
-            {/* CTA */}
+            {}
             <div style={{ padding: '72px 0', textAlign: 'center' }}>
                 <div style={{ maxWidth: '480px', margin: '0 auto', padding: '0 24px' }}>
                     <h2 style={{ fontSize: '26px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.025em', marginBottom: '12px' }}>Want to join us?</h2>

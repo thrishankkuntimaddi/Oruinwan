@@ -1,5 +1,3 @@
-// server/src/features/community/AppReview.model.js
-// Ratings & reviews for marketplace apps
 const mongoose = require('mongoose');
 
 const appReviewSchema = new mongoose.Schema({
@@ -30,7 +28,6 @@ const appReviewSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// One review per user per app
 appReviewSchema.index({ appId: 1, userId: 1 }, { unique: true });
 
 module.exports = mongoose.model('AppReview', appReviewSchema);

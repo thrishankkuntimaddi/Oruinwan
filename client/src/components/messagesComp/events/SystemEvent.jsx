@@ -1,7 +1,3 @@
-// client/src/components/messagesComp/events/SystemEvent.jsx
-// Renders system events from the messages collection (type: 'system')
-// Backend stores: event.systemEvent (e.g. 'member_joined') + event.systemData { userId, userName, ... }
-
 import React from 'react';
 import { UserPlus, UserMinus, Settings, Info, Hash, Shield, Trash2, Pin, MessageCircle, Phone, Video } from 'lucide-react';
 
@@ -19,24 +15,24 @@ const ICONS = {
     channel_privacy_changed: <Settings size={14} />,
     message_pinned: <Pin size={14} />,
     message_unpinned: <Pin size={14} />,
-    // DM-specific events
+    
     dm_created: <MessageCircle size={14} />,
     dm_message_pinned: <Pin size={14} />,
     dm_message_unpinned: <Pin size={14} />,
     dm_call_started: <Phone size={14} />,
     dm_video_call_started: <Video size={14} />,
     dm_messages_cleared: <Trash2 size={14} />,
-    // Legacy keys
+    
     'user-joined': <UserPlus size={14} />,
     'user-left': <UserMinus size={14} />,
     'channel-updated': <Settings size={14} />,
 };
 
 function SystemEvent({ event, currentUserId }) {
-    // Exhaustive fallback chain — event shape varies by source:
-    //   History (useConversation):  ev at event.systemEvent (hoisted from msg)
-    //   Realtime (ChatWindowV2):    ev at event.backend.systemEvent (raw socket doc)
-    //   Fallback:                   ev at event.payload.systemEvent (full msg in payload)
+    
+    
+    
+    
     const ev =
         event.systemEvent ||
         event.backend?.systemEvent ||
@@ -54,8 +50,8 @@ function SystemEvent({ event, currentUserId }) {
         event.payload?.createdAt ||
         event.payload?.timestamp;
 
-    // Some events (admin_assigned, admin_demoted) store a human-readable sentence
-    // in the `text` field directly on the message document.
+    
+    
     const rawText =
         event.text ||
         event.backend?.text ||
@@ -74,7 +70,7 @@ function SystemEvent({ event, currentUserId }) {
         channel_renamed: () => `${who(sd.userId, sd.userName)} renamed the channel to #${sd.newName || 'new name'}`,
         channel_desc_changed: () => `${who(sd.userId, sd.userName)} updated the channel description`,
         channel_privacy_changed: () => `${who(sd.userId, sd.userName)} made this channel ${sd.newPrivacy || 'private'}`,
-        // admin_assigned / admin_demoted: backend stores the full sentence in `text`; fall back to constructed string
+        
         admin_assigned: () =>
             rawText || `${who(sd.assignerId, sd.assignerName)} made ${isMe(sd.assignedUserId) ? 'you' : (sd.assignedUserName || 'someone')} an admin`,
         admin_demoted: () =>
@@ -85,7 +81,7 @@ function SystemEvent({ event, currentUserId }) {
             return `${who(sd.userId, sd.userName)} pinned a message${snippet}`;
         },
         message_unpinned: () => `${who(sd.userId, sd.userName)} unpinned a message`,
-        // DM-specific events
+        
         dm_created: () => `${who(sd.userId, sd.userName)} started this conversation`,
         dm_message_pinned: () => {
             const snippet = sd.messageSnippet ? `: "${sd.messageSnippet}"` : '';
@@ -95,14 +91,14 @@ function SystemEvent({ event, currentUserId }) {
         dm_call_started: () => `${who(sd.userId, sd.userName)} started a voice call`,
         dm_video_call_started: () => `${who(sd.userId, sd.userName)} started a video call`,
         dm_messages_cleared: () => `${who(sd.userId, sd.userName)} cleared the chat history`,
-        // Legacy
+        
         'user-joined': () => `${sd.userName || event.payload?.username || 'Someone'} joined`,
         'user-left': () => `${sd.userName || event.payload?.username || 'Someone'} left`,
         'channel-updated': () => 'Channel settings were updated',
         'channel-created': () => 'Channel was created',
     };
 
-    // Final text: textMap → raw backend text → payload.message → generic fallback
+    
     const text = textMap[ev]?.() || rawText || event.payload?.message || 'System event';
     const icon = ICONS[ev] || <Info size={14} />;
 

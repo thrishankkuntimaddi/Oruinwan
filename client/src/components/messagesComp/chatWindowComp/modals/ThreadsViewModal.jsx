@@ -3,9 +3,6 @@ import { X, MessageSquare } from "lucide-react";
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
-/**
- * ThreadsViewModal - Shows only messages that have thread replies
- */
 export default function ThreadsViewModal({
     isOpen,
     onClose,
@@ -42,13 +39,13 @@ export default function ThreadsViewModal({
 
     return (
         <>
-            {/* Backdrop */}
+            {}
             <div
                 style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 50 }}
                 onClick={onClose}
             />
 
-            {/* Modal */}
+            {}
             <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', pointerEvents: 'none' }}>
                 <div
                     style={{
@@ -65,7 +62,7 @@ export default function ThreadsViewModal({
                     }}
                     onClick={e => e.stopPropagation()}
                 >
-                    {/* Header */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
@@ -85,7 +82,7 @@ export default function ThreadsViewModal({
                         <CloseBtn onClick={onClose} />
                     </div>
 
-                    {/* Search */}
+                    {}
                     <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <input
                             type="text"
@@ -103,7 +100,7 @@ export default function ThreadsViewModal({
                         />
                     </div>
 
-                    {/* Thread List */}
+                    {}
                     <div style={{ flex: 1, overflowY: 'auto' }}>
                         {filteredThreads.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center', gap: '10px' }}>
@@ -131,7 +128,7 @@ export default function ThreadsViewModal({
                         )}
                     </div>
 
-                    {/* Footer */}
+                    {}
                     <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-default)', backgroundColor: 'var(--bg-active)', flexShrink: 0 }}>
                         <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', fontFamily: FONT }}>
                             Click on any thread to view the full conversation
@@ -158,7 +155,7 @@ function ThreadRow({ msg, count, onOpenThread, onClose, formatTime }) {
             }}
         >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                {/* Avatar */}
+                {}
                 {msg.senderAvatar ? (
                     <img src={msg.senderAvatar} alt={msg.senderName}
                         style={{ width: '36px', height: '36px', borderRadius: '2px', objectFit: 'cover', flexShrink: 0 }} />
@@ -174,7 +171,7 @@ function ThreadRow({ msg, count, onOpenThread, onClose, formatTime }) {
                     </div>
                 )}
 
-                {/* Content */}
+                {}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
                         <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>
@@ -188,9 +185,9 @@ function ThreadRow({ msg, count, onOpenThread, onClose, formatTime }) {
                         {msg.text}
                     </p>
 
-                    {/* Thread info */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '11px' }}>
-                        {/* Reply avatars */}
+                        {}
                         {msg.replyAvatars && msg.replyAvatars.length > 0 && (
                             <div style={{ display: 'flex' }}>
                                 {msg.replyAvatars.slice(0, 3).map((avatar, i) => (

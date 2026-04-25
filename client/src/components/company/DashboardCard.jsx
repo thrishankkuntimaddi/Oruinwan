@@ -1,5 +1,3 @@
-// client/src/components/company/DashboardCard.jsx
-
 import React from 'react';
 
 const DashboardCard = ({

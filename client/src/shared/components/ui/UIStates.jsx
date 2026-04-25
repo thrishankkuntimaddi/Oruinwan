@@ -1,12 +1,6 @@
-// client/src/shared/components/ui/UIStates.jsx
-//
-// Shared loading / error / empty state primitives — Monolith Flow design system.
-// Zero Tailwind, pure inline styles with CSS var tokens.
-
 import React from 'react';
 import { AlertCircle, RefreshCw, Inbox } from 'lucide-react';
 
-// ─── Shimmer keyframe (injected once) ──────────────────────────────────────────
 const SHIMMER_STYLE = `
   @keyframes mf-shimmer {
     0%   { opacity: 0.35; }
@@ -16,14 +10,6 @@ const SHIMMER_STYLE = `
   .mf-shimmer { animation: mf-shimmer 1.6s ease-in-out infinite; }
 `;
 
-// ─── Loading Skeleton ──────────────────────────────────────────────────────────
-/**
- * Animated shimmer skeleton rows — Monolith Flow dark palette.
- *
- * @param {number}  rows    Number of skeleton rows (default 5)
- * @param {boolean} avatar  Show an avatar placeholder on the left (default true)
- * @param {string}  className  Extra CSS class (optional, for layout overrides only)
- */
 export function LoadingSkeleton({ rows = 5, avatar = true, className = '' }) {
     const widths = [72, 56, 88, 48, 64, 80, 52];
     return (
@@ -61,13 +47,6 @@ export function LoadingSkeleton({ rows = 5, avatar = true, className = '' }) {
     );
 }
 
-// ─── Error Banner ──────────────────────────────────────────────────────────────
-/**
- * Friendly error message with optional Retry button.
- *
- * @param {string}   message   Error message (default: generic)
- * @param {function} onRetry   If provided, a Retry button is rendered
- */
 export function ErrorBanner({ message = 'Something went wrong. Please try again.', onRetry, className = '' }) {
     return (
         <div
@@ -111,15 +90,6 @@ export function ErrorBanner({ message = 'Something went wrong. Please try again.
     );
 }
 
-// ─── Empty Banner ──────────────────────────────────────────────────────────────
-/**
- * Centered empty state with icon, title, subtitle, and optional CTA.
- *
- * @param {ReactNode} icon
- * @param {string}   title
- * @param {string}   subtitle
- * @param {{ label: string, onClick: function }} action   Optional CTA
- */
 export function EmptyBanner({ icon, title, subtitle, action, className = '' }) {
     return (
         <div

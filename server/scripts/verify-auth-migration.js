@@ -1,16 +1,9 @@
 #!/usr/bin/env node
 
-/**
- * Authentication Canonicalization - Verification Script
- * 
- * Tests that all auth routes are now using the modular controller
- */
-
 const axios = require('axios');
 
 const BASE_URL = 'http://localhost:5000/api/auth';
 
-// ANSI colors for output
 const colors = {
     green: '\x1b[32m',
     red: '\x1b[31m',
@@ -67,7 +60,7 @@ async function runTests() {
                 method: test.method.toLowerCase(),
                 url: BASE_URL + test.path,
                 data: test.data,
-                validateStatus: () => true // Don't throw on any status
+                validateStatus: () => true 
             };
 
             const response = await axios(config);

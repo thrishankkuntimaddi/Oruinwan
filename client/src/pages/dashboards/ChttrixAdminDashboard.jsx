@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 
-// View Imports
 import Overview from "../admin/platform/views/Overview";
 import PendingRequests from "../admin/platform/views/PendingRequests";
 import ActiveCompanies from "../admin/platform/views/ActiveCompanies";
@@ -85,7 +84,7 @@ const ChttrixAdminDashboard = () => {
             overflow: 'hidden',
             position: 'relative',
         }}>
-            {/* Mobile Backdrop */}
+            {}
             {isMobile && sidebarOpen && (
                 <div
                     onClick={closeSidebar}
@@ -97,7 +96,7 @@ const ChttrixAdminDashboard = () => {
                 />
             )}
 
-            {/* Sidebar */}
+            {}
             <aside style={{
                 width: '240px',
                 background: 'var(--bg-surface)',
@@ -115,7 +114,7 @@ const ChttrixAdminDashboard = () => {
                     position: 'sticky', top: 0, zIndex: 20,
                 })
             }}>
-                {/* Header */}
+                {}
                 <div style={{
                     height: '64px',
                     display: 'flex',
@@ -142,7 +141,7 @@ const ChttrixAdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Navigation */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 12px' }} className="custom-scrollbar">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                         {navGroups.map((group, idx) => (
@@ -167,7 +166,7 @@ const ChttrixAdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Footer / User Profile */}
+                {}
                 <div style={{ padding: '12px', borderTop: '1px solid var(--border-subtle)', position: 'relative', flexShrink: 0 }}>
                     {showUserMenu && (
                         <div style={{
@@ -199,7 +198,7 @@ const ChttrixAdminDashboard = () => {
                 </div>
             </aside>
 
-            {/* Main Content */}
+            {}
             <main style={{
                 flex: 1,
                 height: '100vh',
@@ -207,7 +206,7 @@ const ChttrixAdminDashboard = () => {
                 background: 'var(--bg-base)',
                 display: 'flex', flexDirection: 'column',
             }} className="custom-scrollbar">
-                {/* Mobile Top Bar */}
+                {}
                 {isMobile && (
                     <div style={{
                         height: '52px', flexShrink: 0,

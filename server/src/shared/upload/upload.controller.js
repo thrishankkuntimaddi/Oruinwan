@@ -1,22 +1,12 @@
-// server/src/shared/upload/upload.controller.js
-// Note-attachment upload — stores files in GCS (memory→GCS, never local disk)
 const { uploadNoteAttachment, getFileCategory, validateFileSize, FILE_SIZE_LIMITS } = require('../../../config/multer.config');
 const { uploadToGCS, streamGCSFile, BUCKET_NAME } = require('../../modules/uploads/upload.service');
 const { Storage } = require('@google-cloud/storage');
 const Note = require('../../../models/Note');
 const Workspace = require('../../../models/Workspace');
 
-/**
- * Upload a file for note attachment
- * POST /api/upload/note-attachment
- * Body (multipart/form-data):
- *   - file: The file to upload
- *   - workspaceId: Workspace ID
- *   - noteId: (optional) Note ID if attaching to existing note
- */
 exports.uploadNoteAttachment = async (req, res) => {
     try {
-        // Run multer middleware (memory storage)
+        
         uploadNoteAttachment.single('file')(req, res, async (err) => {
             if (err) {
                 console.error('Upload error:', err);
@@ -41,7 +31,7 @@ exports.uploadNoteAttachment = async (req, res) => {
                 return res.status(403).json({ message: 'Access denied to workspace' });
             }
 
-            // Validate file size based on category
+            
             if (!validateFileSize(req.file)) {
                 const category = getFileCategory(req.file.mimetype);
                 const categoryKey = category === 'images' ? 'image' :
@@ -53,7 +43,7 @@ exports.uploadNoteAttachment = async (req, res) => {
                 });
             }
 
-            // Upload to GCS (memory buffer → Cloud Storage)
+            
             const gcsFolder = `notes/${workspaceId}`;
             const gcsAttachment = await uploadToGCS(req.file, gcsFolder);
 
@@ -64,7 +54,7 @@ exports.uploadNoteAttachment = async (req, res) => {
 
             const attachmentData = {
                 name: req.file.originalname,
-                url: gcsAttachment.url,          // GCS proxy URL (/api/v2/uploads/file?path=<gcsPath>)
+                url: gcsAttachment.url,          
                 type: req.file.mimetype,
                 size: req.file.size,
                 category: categoryKey,
@@ -72,7 +62,7 @@ exports.uploadNoteAttachment = async (req, res) => {
                 uploadedAt: new Date()
             };
 
-            // If noteId provided, add attachment to note
+            
             if (noteId) {
                 const note = await Note.findById(noteId);
                 if (!note) {
@@ -85,7 +75,7 @@ exports.uploadNoteAttachment = async (req, res) => {
                 note.attachments.push(attachmentData);
                 await note.save();
 
-                // Emit real-time update
+                
                 if (req.io) {
                     if (note.isPublic && note.workspace) {
                         req.io.to(`workspace_${note.workspace}`).emit('note-attachment-added', {
@@ -124,11 +114,6 @@ exports.uploadNoteAttachment = async (req, res) => {
     }
 };
 
-/**
- * Delete a note attachment from GCS
- * DELETE /api/upload/note-attachment/:filename
- * Query: gcsPath — the GCS object path returned when the file was uploaded
- */
 exports.deleteAttachment = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -138,28 +123,28 @@ exports.deleteAttachment = async (req, res) => {
             return res.status(400).json({ message: 'gcsPath query parameter required' });
         }
 
-        // Basic path traversal guard
+        
         if (!/^[a-zA-Z0-9/_.\-]+$/.test(gcsPath)) {
             return res.status(400).json({ message: 'Invalid gcsPath' });
         }
 
-        // The proxy URL that was stored in attachment.url looks like:
-        //   /api/v2/uploads/file?path=<gcsPath>
-        // Match on that URL so we can find the owning note without a separate gcsPath field.
+        
+        
+        
         const proxyUrl = `/api/v2/uploads/file?path=${encodeURIComponent(gcsPath)}`;
         const notes = await Note.find({ 'attachments.url': proxyUrl });
 
-        // Verify user has permission to delete
+        
         const hasPermission = notes.some(note => note.owner.toString() === userId);
         if (!hasPermission) {
             return res.status(403).json({ message: 'Not authorized to delete this file' });
         }
 
-        // Delete from GCS
+        
         const storageClient = new Storage({ projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod' });
         await storageClient.bucket(BUCKET_NAME).file(gcsPath).delete();
 
-        // Remove from all notes' attachments
+        
         for (const note of notes) {
             note.attachments = note.attachments.filter(att => att.url !== proxyUrl);
             await note.save();

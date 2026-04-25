@@ -1,4 +1,3 @@
-// TeamAllocation — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { Search, Briefcase, CheckCircle2, Clock, Users } from 'lucide-react';
@@ -45,7 +44,7 @@ export default function TeamAllocation() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -55,9 +54,9 @@ export default function TeamAllocation() {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
-                {/* Search */}
+                {}
                 <div style={{ position: 'relative', maxWidth: '480px', marginBottom: '16px' }}>
                     <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                     <input type="text" placeholder="Search by name, email or project..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -70,15 +69,15 @@ export default function TeamAllocation() {
                 <div><div className="sk" style={{ height: '13px', width: '180px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '280px' }} /></div>
             </div>
             <div style={{ flex: 1, padding: '20px 28px' }}>
-                {/* Search skeleton */}
+                {}
                 <div className="sk" style={{ height: '32px', width: '320px', marginBottom: '16px' }} />
-                {/* Table */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-                    {/* thead */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1.5fr', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '16px' }}>
                         {[90, 100, 70, 90].map((w,i) => <div key={i} className="sk" style={{ height: '9px', width: `${w}px` }} />)}
                     </div>
-                    {/* rows */}
+                    {}
                     {[1,2,3,4,5].map(i => (
                         <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 2fr 1.5fr 1.5fr', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

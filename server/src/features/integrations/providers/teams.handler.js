@@ -1,4 +1,3 @@
-// server/src/features/integrations/providers/teams.handler.js
 async function verify(config) {
   if (!config.webhookUrl) throw Object.assign(new Error('Teams: webhookUrl required'), { statusCode: 400 });
   return config;

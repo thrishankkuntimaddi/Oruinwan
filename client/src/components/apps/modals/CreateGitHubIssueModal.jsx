@@ -11,14 +11,6 @@ const MOCK_REPOS = [
 
 const MOCK_LABELS = ["bug", "enhancement", "feature", "documentation", "question", "help wanted"];
 
-/**
- * CreateGitHubIssueModal
- * Mock GitHub issue creation modal — no real API calls.
- *
- * Props:
- *   onClose       – () => void
- *   onInsertText  – (text: string) => void — inserts formatted text into chat
- */
 export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
   const [title, setTitle] = useState("");
   const [repo, setRepo] = useState(MOCK_REPOS[0]);
@@ -45,7 +37,7 @@ export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[120] backdrop-blur-sm animate-fade-in">
       <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-md shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
 
-        {/* Header */}
+        {}
         <div className="flex items-center gap-3 p-5 border-b border-gray-100 dark:border-gray-800">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center text-lg flex-shrink-0">
             🐙
@@ -59,7 +51,7 @@ export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
           </button>
         </div>
 
-        {/* Body */}
+        {}
         <div className="p-5 space-y-4">
           {done ? (
             <div className="flex flex-col items-center gap-3 py-4 animate-fade-in">
@@ -73,7 +65,7 @@ export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
             </div>
           ) : (
             <>
-              {/* Repository */}
+              {}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                   Repository
@@ -89,7 +81,7 @@ export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
                 </select>
               </div>
 
-              {/* Title */}
+              {}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                   Issue Title <span className="text-red-400">*</span>
@@ -103,7 +95,7 @@ export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
                 />
               </div>
 
-              {/* Label */}
+              {}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                   Label
@@ -119,7 +111,7 @@ export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
                 </select>
               </div>
 
-              {/* Description */}
+              {}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
                   Description <span className="text-gray-400 font-normal">(optional)</span>
@@ -136,7 +128,7 @@ export default function CreateGitHubIssueModal({ onClose, onInsertText }) {
           )}
         </div>
 
-        {/* Footer */}
+        {}
         {!done && (
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex gap-2">
             <button

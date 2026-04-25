@@ -1,16 +1,5 @@
 const mongoose = require("mongoose");
 
-/**
- * DMSession Model
- *
- * 🔒 Workspace-scoped Direct Messages
- *
- * Guarantees:
- * - Exactly 2 distinct participants
- * - Belongs to ONE workspace
- * - Contains NO message content
- * - Safe for E2EE
- */
 const DMSessionSchema = new mongoose.Schema(
   {
     workspace: {
@@ -45,18 +34,13 @@ const DMSessionSchema = new mongoose.Schema(
       }
     },
 
-    /**
-     * Used for inbox sorting only
-     * (never stores message content)
-     */
+    
     lastMessageAt: {
       type: Date,
       default: Date.now
     },
 
-    /**
-     * Per-user soft delete / hide
-     */
+    
     hiddenFor: [
       {
         user: {
@@ -71,13 +55,7 @@ const DMSessionSchema = new mongoose.Schema(
       }
     ],
 
-    /**
-     * Per-user read state for this DM session.
-     * Separate from participants[] so the 2-participant validator and
-     * unique compound index on { workspace, participants } are not affected.
-     * Old documents without this field default to [] — client treats
-     * all messages as unread when no entry exists for a user.
-     */
+    
     lastSeen: [
       {
         userId: {
@@ -93,27 +71,19 @@ const DMSessionSchema = new mongoose.Schema(
       }
     ],
 
-    /**
-     * Per-user mute (notifications silenced)
-     */
+    
     mutedBy: [{
       user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       mutedAt: { type: Date, default: Date.now }
     }],
 
-    /**
-     * Per-user block — blocked user cannot send messages;
-     * the blocker sees no new messages from blocked user
-     */
+    
     blockedBy: [{
       user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       blockedAt: { type: Date, default: Date.now }
     }],
 
-    /**
-     * Per-user "clear" watermark — messages before this
-     * timestamp are hidden for that user only
-     */
+    
     clearedAt: [{
       user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
       clearedAt: { type: Date, default: Date.now }
@@ -124,19 +94,9 @@ const DMSessionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* ---------- Indexes ---------- */
-
-// Index for fast lookup by workspace + participants pair
-// NOTE: NOT unique — a multikey unique index on an array field would block
-// creating any DM where either participant already exists in another DM
-// in the same workspace. Application-level findOne-before-create handles dedup.
 DMSessionSchema.index({ workspace: 1, participants: 1 });
 
-// Optional company-level lookup
 DMSessionSchema.index({ company: 1, participants: 1 });
-
-
-/* ---------- Safety Guard ---------- */
 
 DMSessionSchema.pre("save", function (next) {
   if (!this.workspace || !this.participants || this.participants.length !== 2) {

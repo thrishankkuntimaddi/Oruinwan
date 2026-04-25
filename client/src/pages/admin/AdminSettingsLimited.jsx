@@ -1,6 +1,3 @@
-// client/src/pages/admin/AdminSettingsLimited.jsx
-// Limited Settings for Admin (NOT Owner) - Only Notifications and User Defaults
-
 import React, { useState } from 'react';
 import { Bell, Users, Check, AlertCircle } from 'lucide-react';
 
@@ -58,7 +55,7 @@ const AdminSettingsLimited = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>Admin Settings</h2>
@@ -68,7 +65,7 @@ const AdminSettingsLimited = () => {
             </header>
 
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                {/* Sidebar */}
+                {}
                 <div style={{ width: '200px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', overflowY: 'auto' }} className="custom-scrollbar">
                     <nav style={{ padding: '8px' }}>
                         {tabs.map(tab => {
@@ -83,7 +80,7 @@ const AdminSettingsLimited = () => {
                             );
                         })}
                     </nav>
-                    {/* Limited Access Notice */}
+                    {}
                     <div style={{ margin: '12px 8px', padding: '12px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', borderLeft: '2px solid var(--accent)' }}>
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
                             <AlertCircle size={13} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
@@ -95,7 +92,7 @@ const AdminSettingsLimited = () => {
                     </div>
                 </div>
 
-                {/* Content */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }} className="custom-scrollbar">
                     {activeTab === 'notifications' && (
                         <div style={{ maxWidth: '560px' }}>

@@ -1,4 +1,3 @@
-// Toast.jsx — Monolith Flow Design System
 import React, { useEffect, useState, useCallback } from 'react';
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
@@ -82,7 +81,7 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
                     <X size={14} />
                 </button>
             </div>
-            {/* Progress ticks */}
+            {}
             <div style={{ position: 'absolute', bottom: 0, left: 0, height: '2px', width: '100%', background: 'var(--bg-active)' }}>
                 <div style={{ height: '100%', background: cfg.accent, width: `${progress}%`, transition: 'width 16ms linear' }} />
             </div>

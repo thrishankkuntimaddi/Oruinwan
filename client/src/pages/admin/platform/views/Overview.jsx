@@ -6,7 +6,6 @@ import {
     Activity, CheckCircle, AlertCircle, Megaphone, ArrowRight
 } from 'lucide-react';
 
-/* ─── Shared tokens ─── */
 const T = {
     label: { fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.13em', textTransform: 'uppercase', margin: '0 0 4px' },
     subtext: { fontSize: '13px', color: 'var(--text-secondary)', margin: 0 },
@@ -40,7 +39,7 @@ const Overview = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* Header */}
+            {}
             <div>
                 <h1 style={{ fontSize: '26px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>
                     Platform Overview
@@ -48,7 +47,7 @@ const Overview = () => {
                 <p style={T.subtext}>Monitor your platform's health and activity</p>
             </div>
 
-            {/* Status Banner */}
+            {}
             <div style={{
                 padding: '20px 24px',
                 background: 'var(--bg-surface)',
@@ -67,7 +66,7 @@ const Overview = () => {
                 <ViewDetailsBtn onClick={() => navigate('/chttrix-admin/health')} />
             </div>
 
-            {/* Stats Grid */}
+            {}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
                 <StatCard icon={Building2} label="Total Companies" value={stats.totalCompanies} change={stats.companiesGrowth} trend={stats.companiesGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/chttrix-admin/companies')} />
                 <StatCard icon={Users} label="Active Users" value={stats.activeUsers} change={stats.usersGrowth} trend={stats.usersGrowth >= 0 ? 'up' : 'down'} />
@@ -75,7 +74,7 @@ const Overview = () => {
                 <StatCard icon={DollarSign} label="Monthly Revenue" value={`$${(stats.monthlyRevenue || 0).toLocaleString()}`} change={stats.revenueGrowth} trend={stats.revenueGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/chttrix-admin/billing')} />
             </div>
 
-            {/* Pending Requests Alert */}
+            {}
             {stats.pendingRequests > 0 && (
                 <div style={{
                     padding: '20px 24px',
@@ -96,7 +95,7 @@ const Overview = () => {
                 </div>
             )}
 
-            {/* Recent Activity */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -114,7 +113,7 @@ const Overview = () => {
                 </div>
             </div>
 
-            {/* Quick Actions */}
+            {}
             <div>
                 <h2 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '12px' }}>Quick Actions</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>

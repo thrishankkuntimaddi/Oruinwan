@@ -134,7 +134,7 @@ const CanvasDashboardView = ({
 
     return (
         <div style={{ flex: 1, backgroundColor: 'var(--bg-base)', overflowY: 'auto' }}>
-            {/* Header */}
+            {}
             <div style={{
                 position: 'sticky', top: 0, zIndex: 10,
                 backgroundColor: 'var(--bg-surface)',
@@ -166,7 +166,7 @@ const CanvasDashboardView = ({
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* Search */}
+                    {}
                     <div style={{ position: 'relative' }}>
                         <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                         <input
@@ -186,7 +186,7 @@ const CanvasDashboardView = ({
                         />
                     </div>
 
-                    {/* View toggle */}
+                    {}
                     <div style={{
                         display: 'flex', alignItems: 'center',
                         backgroundColor: 'var(--bg-active)',
@@ -206,7 +206,7 @@ const CanvasDashboardView = ({
                         ))}
                     </div>
 
-                    {/* Create */}
+                    {}
                     {tabs.length < 5 && (
                         <button onClick={() => setShowCreate(true)} style={{
                             display: 'flex', alignItems: 'center', gap: '6px',
@@ -226,7 +226,7 @@ const CanvasDashboardView = ({
                 </div>
             </div>
 
-            {/* Content */}
+            {}
             <div style={{ padding: '24px' }}>
                 {tabs.length === 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '80px', textAlign: 'center' }}>

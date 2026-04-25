@@ -1,20 +1,8 @@
-/**
- * ⚠️ SYSTEM-ONLY COMMUNICATION (NOT E2EE)
- *
- * Used ONLY for:
- * - Chttrix platform admins
- * - Company owners / admins
- *
- * ❌ Never appears in workspace chat
- * ❌ Never encrypted end-to-end
- * ❌ Never mixed with Message / DMSession
- */
-
 const mongoose = require('mongoose');
 
 const internalMessageSchema = new mongoose.Schema(
   {
-    /* ---------- Scope ---------- */
+    
 
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -23,7 +11,7 @@ const internalMessageSchema = new mongoose.Schema(
       index: true
     },
 
-    /* ---------- Participants ---------- */
+    
 
     sender: {
       type: mongoose.Schema.Types.ObjectId,
@@ -37,7 +25,7 @@ const internalMessageSchema = new mongoose.Schema(
       required: true
     },
 
-    /* ---------- Content ---------- */
+    
 
     content: {
       type: String,
@@ -51,7 +39,7 @@ const internalMessageSchema = new mongoose.Schema(
       required: true
     },
 
-    /* ---------- Read State ---------- */
+    
 
     read: {
       type: Boolean,
@@ -64,7 +52,7 @@ const internalMessageSchema = new mongoose.Schema(
       default: null
     },
 
-    /* ---------- Attachments ---------- */
+    
 
     attachments: [
       {
@@ -75,7 +63,7 @@ const internalMessageSchema = new mongoose.Schema(
       }
     ],
 
-    /* ---------- Metadata ---------- */
+    
 
     isFromAdmin: {
       type: Boolean,
@@ -88,41 +76,25 @@ const internalMessageSchema = new mongoose.Schema(
       default: null
     },
 
-    /* ---------- Safety / Retention ---------- */
+    
 
     isSystemLocked: {
       type: Boolean,
-      default: true // cannot be deleted or edited
+      default: true 
     }
   },
   { timestamps: true }
 );
 
-/* ======================
-   Indexes
-====================== */
-
 internalMessageSchema.index({ sender: 1, recipient: 1, createdAt: -1 });
 internalMessageSchema.index({ recipient: 1, read: 1, createdAt: -1 });
 internalMessageSchema.index({ companyId: 1, read: 1 });
 
-/* ======================
-   Virtuals
-====================== */
-
-/**
- * Always returns "the other user"
- * regardless of populate state
- */
 internalMessageSchema.virtual('conversationPartner').get(function () {
   return this.sender.equals(this._viewerId)
     ? this.recipient
     : this.sender;
 });
-
-/* ======================
-   Methods
-====================== */
 
 internalMessageSchema.methods.markAsRead = async function () {
   if (!this.read) {
@@ -132,10 +104,6 @@ internalMessageSchema.methods.markAsRead = async function () {
   }
   return this;
 };
-
-/* ======================
-   Statics
-====================== */
 
 internalMessageSchema.statics.getConversation = async function (
   userId1,
@@ -161,9 +129,6 @@ internalMessageSchema.statics.getUnreadCount = async function (userId) {
   });
 };
 
-/**
- * Admin inbox: one row per conversation
- */
 internalMessageSchema.statics.getAdminInbox = async function (
   adminId,
   companyId

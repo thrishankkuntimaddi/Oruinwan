@@ -1,4 +1,3 @@
-// server/src/features/ai/knowledge/ai-knowledge.routes.js
 'use strict';
 
 const express   = require('express');
@@ -7,8 +6,6 @@ const auth      = require('../../../shared/middleware/auth');
 const knowledge = require('./ai-knowledge.service');
 const logger    = require('../../../../utils/logger');
 
-// POST /api/ai/search
-// Body: { query, workspaceId }
 router.post('/search', auth, async (req, res) => {
     try {
         const { query, workspaceId } = req.body;
@@ -22,8 +19,6 @@ router.post('/search', auth, async (req, res) => {
     }
 });
 
-// POST /api/ai/ask
-// Body: { question, workspaceId }
 router.post('/ask', auth, async (req, res) => {
     try {
         const { question, workspaceId } = req.body;
@@ -37,8 +32,6 @@ router.post('/ask', auth, async (req, res) => {
     }
 });
 
-// POST /api/ai/meetings/query
-// Body: { question, workspaceId }
 router.post('/meetings/query', auth, async (req, res) => {
     try {
         const { question, workspaceId } = req.body;

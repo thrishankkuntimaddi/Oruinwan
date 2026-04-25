@@ -1,26 +1,16 @@
-// server/src/features/security/retention.cron.js
-// Message retention policy cron job.
-// Runs daily. Auto-deletes messages older than retentionDays for each user/workspace
-// that has a retention policy set. Respects legalHold flag — never deletes held data.
-
 'use strict';
 
 const User = require('../../../models/User');
 
-// Safely require message model — returns null if it doesn't exist yet
 function tryRequire(path) {
   try { return require(path); } catch { return null; }
 }
 
-/**
- * Run retention cleanup.
- * Called once at startup, then scheduled every 24h.
- */
 async function runRetentionCleanup() {
   console.log('[Retention] Starting message retention cleanup...');
 
   try {
-    // Find all users with a retention policy
+    
     const usersWithPolicy = await User.find({
       retentionDays: { $ne: null, $gt: 0 },
       legalHold: { $ne: true },
@@ -31,8 +21,8 @@ async function runRetentionCleanup() {
       return { deleted: 0 };
     }
 
-    // Try to load message model for cleanup
-    // Supports both common message model paths across Chttrix architecture
+    
+    
     const MessageModel =
       tryRequire('../../../models/InternalMessage') ||
       tryRequire('../../modules/messages/message.model');
@@ -49,12 +39,12 @@ async function runRetentionCleanup() {
       cutoffDate.setDate(cutoffDate.getDate() - user.retentionDays);
 
       try {
-        // Only delete messages where the user is the sender (not receiver messages)
-        // This preserves conversation history for other participants
+        
+        
         const result = await MessageModel.deleteMany({
           sender: user._id,
           createdAt: { $lt: cutoffDate },
-          // Respect legal hold at message level if supported
+          
           legalHold: { $ne: true },
         });
         totalDeleted += result.deletedCount || 0;
@@ -71,20 +61,16 @@ async function runRetentionCleanup() {
   }
 }
 
-/**
- * Start the retention cron.
- * Runs immediately then every 24 hours.
- */
 function startRetentionCron() {
-  const INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
+  const INTERVAL_MS = 24 * 60 * 60 * 1000; 
 
   console.log('[Retention] Retention cron scheduled (runs every 24h).');
 
-  // Small delay on first run to not block server startup
+  
   setTimeout(async () => {
     await runRetentionCleanup();
     setInterval(runRetentionCleanup, INTERVAL_MS);
-  }, 30 * 1000); // 30s after startup
+  }, 30 * 1000); 
 }
 
 module.exports = { startRetentionCron, runRetentionCleanup };

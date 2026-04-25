@@ -1,17 +1,8 @@
-// server/src/features/knowledge/knowledge.service.js
-/**
- * Knowledge Service — Business Logic Layer
- * Handles wiki pages, page linking (graph), backlinks, AI summarization, and search.
- */
-
 const KnowledgePage = require('./KnowledgePage');
 const PageLink = require('./PageLink');
 const KnowledgeCategory = require('./KnowledgeCategory');
 
-// ── AI summarization — delegate to shared summarizer service ────────────────
 const aiSummarizer = require('../ai/ai.summarizer.service');
-
-// ── Pages ─────────────────────────────────────────────────────────────────────
 
 async function createPage(userId, workspaceId, data) {
     const page = await KnowledgePage.create({
@@ -57,7 +48,7 @@ async function updatePage(userId, pageId, updates) {
     const page = await KnowledgePage.findById(pageId);
     if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
 
-    // Save version snapshot before update (max 50 versions rolling)
+    
     if (updates.content !== undefined && updates.content !== page.content) {
         const snapshot = { content: page.content, savedBy: userId, savedAt: new Date() };
         page.versions = [snapshot, ...page.versions].slice(0, 50);
@@ -77,18 +68,16 @@ async function deletePage(userId, pageId) {
     if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
     page.isDeleted = true;
     await page.save();
-    // Remove all links involving this page
+    
     await PageLink.deleteMany({ $or: [{ fromPageId: pageId }, { toPageId: pageId }] });
     return { message: 'Page deleted' };
 }
-
-// ── Graph / Linking ───────────────────────────────────────────────────────────
 
 async function linkPages(userId, fromPageId, toPageId, workspaceId) {
     if (fromPageId === toPageId) {
         throw Object.assign(new Error('Cannot link a page to itself'), { statusCode: 400 });
     }
-    // upsert — ignore duplicate key
+    
     await PageLink.updateOne(
         { fromPageId, toPageId },
         { $setOnInsert: { fromPageId, toPageId, workspaceId } },
@@ -121,19 +110,17 @@ async function getGraph(userId, workspaceId) {
     return { nodes, edges };
 }
 
-// ── AI Summarization ──────────────────────────────────────────────────────────
-
 async function generateSummary(userId, pageId) {
     const page = await KnowledgePage.findById(pageId);
     if (!page || page.isDeleted) throw Object.assign(new Error('Page not found'), { statusCode: 404 });
 
-    // Delegate to ai.summarizer.service — it handles caching and fallbacks.
+    
     const { summary, cached, fallback } = await aiSummarizer.summarizeDocument(
         page.content,
         { title: page.title, type: 'wiki' }
     );
 
-    // Persist to page.summary only when the content changed (avoid spurious saves).
+    
     if (page.summary !== summary) {
         page.summary = summary;
         await page.save();
@@ -141,8 +128,6 @@ async function generateSummary(userId, pageId) {
 
     return { summary, cached, fallback };
 }
-
-// ── Search ────────────────────────────────────────────────────────────────────
 
 async function searchKnowledge(userId, workspaceId, query) {
     if (!query || query.trim().length === 0) return { results: [] };

@@ -1,4 +1,3 @@
-// client/src/components/meetingsComp/BrainstormBoard.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, X } from 'lucide-react';
 import api from '@services/api';
@@ -6,9 +5,6 @@ import { useSocket } from '../../contexts/SocketContext';
 
 const NOTE_COLORS = ['#FBBF24', '#34D399', '#60A5FA', '#F9A8D4', '#C4B5FD', '#FCA5A5', '#6EE7B7'];
 
-/**
- * Draggable sticky-note brainstorm board with realtime sync.
- */
 const BrainstormBoard = ({ meetingId, workspaceId }) => {
     const { socket } = useSocket();
     const boardRef = useRef(null);
@@ -17,10 +13,10 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
     const [newText, setNewText] = useState('');
     const [newColor, setNewColor] = useState(NOTE_COLORS[0]);
 
-    // Dragging state
-    const dragging = useRef(null); // { itemId, startX, startY, origX, origY }
+    
+    const dragging = useRef(null); 
 
-    // ── Load items ─────────────────────────────────────────────────────────────
+    
     useEffect(() => {
         if (!meetingId) return;
         api.get(`/api/v2/collaboration/brainstorm/${meetingId}`)
@@ -29,7 +25,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
             .finally(() => setLoading(false));
     }, [meetingId]);
 
-    // ── Socket listeners ───────────────────────────────────────────────────────
+    
     useEffect(() => {
         if (!socket || !meetingId) return;
         const onUpdate = (data) => {
@@ -49,7 +45,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
         return () => socket.off('brainstorm:update', onUpdate);
     }, [socket, meetingId]);
 
-    // ── Add note ───────────────────────────────────────────────────────────────
+    
     const handleAdd = useCallback(async () => {
         if (!newText.trim()) return;
         try {
@@ -62,18 +58,18 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
                 return exists ? prev : [...prev, data.item];
             });
             setNewText('');
-        } catch { /* ignore */ }
+        } catch {  }
     }, [meetingId, workspaceId, newText, newColor]);
 
-    // ── Delete note ────────────────────────────────────────────────────────────
+    
     const handleDelete = useCallback(async (itemId) => {
         setItems(prev => prev.filter(i => i._id !== itemId));
         try {
             await api.delete(`/api/v2/collaboration/brainstorm/${meetingId}/${itemId}`);
-        } catch { /* ignore */ }
+        } catch {  }
     }, [meetingId]);
 
-    // ── Drag ───────────────────────────────────────────────────────────────────
+    
     const onMouseDown = (e, itemId, origX, origY) => {
         e.preventDefault();
         dragging.current = { itemId, startX: e.clientX, startY: e.clientY, origX, origY };
@@ -103,7 +99,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
                 `/api/v2/collaboration/brainstorm/${meetingId}/${itemId}`,
                 { position: { x: newX, y: newY } }
             );
-        } catch { /* ignore */ }
+        } catch {  }
     }, [meetingId]);
 
     useEffect(() => {
@@ -117,7 +113,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
 
     return (
         <div className="flex flex-col h-full gap-3">
-            {/* Add note toolbar */}
+            {}
             <div className="flex items-center gap-2 flex-wrap">
                 <input
                     value={newText}
@@ -144,7 +140,7 @@ const BrainstormBoard = ({ meetingId, workspaceId }) => {
                 </button>
             </div>
 
-            {/* Board canvas */}
+            {}
             <div
                 ref={boardRef}
                 className="flex-1 relative rounded-2xl border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 overflow-hidden"

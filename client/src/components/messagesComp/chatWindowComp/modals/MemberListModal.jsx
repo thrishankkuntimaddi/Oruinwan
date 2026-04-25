@@ -65,13 +65,13 @@ export default function MemberListModal({
 
     return (
         <>
-            {/* Backdrop */}
+            {}
             <div
                 style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)', zIndex: 50 }}
                 onClick={onClose}
             />
 
-            {/* Modal */}
+            {}
             <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', pointerEvents: 'none' }}>
                 <div
                     style={{
@@ -88,7 +88,7 @@ export default function MemberListModal({
                     }}
                     onClick={e => e.stopPropagation()}
                 >
-                    {/* Header */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
@@ -108,7 +108,7 @@ export default function MemberListModal({
                         <CloseBtn onClick={onClose} />
                     </div>
 
-                    {/* Search */}
+                    {}
                     <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                         <div style={{ position: 'relative' }}>
                             <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -129,7 +129,7 @@ export default function MemberListModal({
                         </div>
                     </div>
 
-                    {/* Member List */}
+                    {}
                     <div style={{ flex: 1, overflowY: 'auto' }}>
                         {filteredMembers.length === 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center', gap: '10px' }}>
@@ -166,7 +166,7 @@ export default function MemberListModal({
                         )}
                     </div>
 
-                    {/* Footer Stats */}
+                    {}
                     <div style={{ padding: '10px 20px', borderTop: '1px solid var(--border-default)', backgroundColor: 'var(--bg-active)', flexShrink: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
@@ -197,7 +197,7 @@ function MemberRow({ user, userId, isCurrentUser, roleBadge, isOnline, joinedAt,
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Avatar */}
+                {}
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                     {user.profilePicture ? (
                         <img src={user.profilePicture} alt={user.username}
@@ -220,7 +220,7 @@ function MemberRow({ user, userId, isCurrentUser, roleBadge, isOnline, joinedAt,
                     }} />
                 </div>
 
-                {/* Info */}
+                {}
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
                         <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: FONT }}>
@@ -249,7 +249,7 @@ function MemberRow({ user, userId, isCurrentUser, roleBadge, isOnline, joinedAt,
                     </div>
                 </div>
 
-                {/* Actions */}
+                {}
                 {!isCurrentUser && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', opacity: hovered ? 1 : 0, transition: 'opacity 150ms ease', flexShrink: 0 }}>
                         {onStartDM && (

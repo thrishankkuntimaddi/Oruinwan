@@ -37,7 +37,7 @@ const WorkspaceHeader = ({
             position: 'relative', userSelect: 'none', fontFamily: 'var(--font)', flexShrink: 0,
             transition: 'background 150ms ease',
         }}>
-            {/* Workspace name + chevron */}
+            {}
             <div
                 style={{ display: 'flex', alignItems: 'center', gap: '5px', flex: 1, cursor: 'pointer', minWidth: 0 }}
                 onClick={() => setShowWorkspaceMenu(!showWorkspaceMenu)}
@@ -51,7 +51,7 @@ const WorkspaceHeader = ({
                 />
             </div>
 
-            {/* Action buttons */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
                 <button
                     style={isSelectionMode ? iconBtnActive : iconBtn}
@@ -73,7 +73,7 @@ const WorkspaceHeader = ({
                 </button>
             </div>
 
-            {/* Dropdown Menu */}
+            {}
             {showWorkspaceMenu && (
                 <>
                     <div style={{ position: 'fixed', inset: 0, zIndex: 40 }} onClick={() => setShowWorkspaceMenu(false)} />
@@ -83,7 +83,7 @@ const WorkspaceHeader = ({
                         borderRadius: '2px', zIndex: 50, overflow: 'hidden',
                         animation: 'wsFadeIn 0.15s cubic-bezier(.4,0,.2,1)',
                     }}>
-                        {/* Workspace identity */}
+                        {}
                         <div style={{ padding: '12px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '10px', background: 'var(--bg-active)' }}>
                             <div style={{ width: '36px', height: '36px', borderRadius: '2px', backgroundColor: activeWorkspace?.color || '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0 }}>
                                 {ICON_MAP[activeWorkspace?.icon?.toLowerCase()] || ICON_MAP.rocket}
@@ -98,7 +98,7 @@ const WorkspaceHeader = ({
                             </div>
                         </div>
 
-                        {/* Actions */}
+                        {}
                         <div style={{ padding: '4px 0' }}>
                             {isAdmin && (
                                 <button
@@ -138,7 +138,7 @@ const WorkspaceHeader = ({
                             )}
                         </div>
 
-                        {/* Danger zone */}
+                        {}
                         <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '4px 0' }}>
                             <button
                                 style={{ width: '100%', textAlign: 'left', padding: '8px 14px', fontSize: '12px', fontWeight: 500, color: 'var(--state-danger)', display: 'flex', alignItems: 'center', gap: '9px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}

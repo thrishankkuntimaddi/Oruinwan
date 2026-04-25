@@ -3,7 +3,7 @@ import { Briefcase, Building, ChevronDown, Check } from 'lucide-react';
 import { API_BASE } from '@services/api';
 
 const ScopeSelector = ({ onScopeChange, onLoad }) => {
-    const [scope, setScope] = useState(null); // { type: 'department'|'workspace', id, name }
+    const [scope, setScope] = useState(null); 
     const [options, setOptions] = useState({ departments: [], workspaces: [] });
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -17,10 +17,10 @@ const ScopeSelector = ({ onScopeChange, onLoad }) => {
                 const data = await res.json();
                 setOptions(data);
 
-                // Pass full data back to parent
+                
                 if (onLoad) onLoad(data);
 
-                // Default selection: First department, or first workspace
+                
                 if (data.departments && data.departments.length > 0) {
                     handleSelect('department', data.departments[0]);
                 } else if (data.workspaces && data.workspaces.length > 0) {
@@ -66,7 +66,7 @@ const ScopeSelector = ({ onScopeChange, onLoad }) => {
 
             {isOpen && (
                 <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-2 overflow-hidden animate-fadeIn max-h-96 overflow-y-auto">
-                    {/* Departments */}
+                    {}
                     {options.departments.length > 0 && (
                         <div className="mb-2">
                             <p className="px-3 py-2 text-xs font-bold text-gray-400 uppercase">Departments</p>
@@ -84,7 +84,7 @@ const ScopeSelector = ({ onScopeChange, onLoad }) => {
                         </div>
                     )}
 
-                    {/* Workspaces */}
+                    {}
                     {options.workspaces.length > 0 && (
                         <div>
                             <p className="px-3 py-2 text-xs font-bold text-gray-400 uppercase">Workspaces</p>

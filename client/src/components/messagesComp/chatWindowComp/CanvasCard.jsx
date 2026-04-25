@@ -1,5 +1,3 @@
-// client/src/components/messagesComp/chatWindowComp/CanvasCard.jsx
-
 import { useState, useEffect, useRef } from 'react';
 import { MoreVertical, Edit2, Share2, Trash2, Clock, FileText } from 'lucide-react';
 
@@ -157,7 +155,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
         );
     }
 
-    // Grid View
+    
     return (
         <div
             onClick={onClick}
@@ -172,11 +170,11 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                 transform: hovered ? 'translateY(-1px)' : 'none',
             }}
         >
-            {/* Accent bar */}
+            {}
             <div style={{ height: '2px', width: '100%', backgroundColor: color, flexShrink: 0 }} />
 
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '18px' }}>
-                {/* Top: emoji + menu */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '14px' }}>
                     <div style={{
                         width: 40, height: 40, borderRadius: '2px', flexShrink: 0,
@@ -198,7 +196,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                     </div>
                 </div>
 
-                {/* Title */}
+                {}
                 <div style={{ flex: 1 }}>
                     {isRenaming ? (
                         <input ref={inputRef} value={renameValue}
@@ -222,7 +220,7 @@ function CanvasCard({ tab, view, onClick, onDelete, onRename, onShare }) {
                     )}
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: '6px', marginTop: '14px',
                     paddingTop: '12px', borderTop: '1px solid var(--border-subtle)',

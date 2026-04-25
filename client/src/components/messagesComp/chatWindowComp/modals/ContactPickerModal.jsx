@@ -1,10 +1,3 @@
-/**
- * ContactPickerModal.jsx — Phase 7.4
- *
- * Workspace-scoped contact picker.
- * Fetches members via GET /api/workspaces/:workspaceId/members,
- * lets the user search + select one, then calls onSelect({ name, email, phone, avatar }).
- */
 import React, { useEffect, useState, useMemo } from 'react';
 import { X, Search, Loader2, AlertCircle } from 'lucide-react';
 import api from '@services/api';
@@ -85,7 +78,7 @@ export default function ContactPickerModal({ isOpen, onClose, onSelect, workspac
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                     <div>
                         <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: FONT }}>Share a Contact</h2>
@@ -94,7 +87,7 @@ export default function ContactPickerModal({ isOpen, onClose, onSelect, workspac
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Search */}
+                {}
                 <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
                         <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -116,7 +109,7 @@ export default function ContactPickerModal({ isOpen, onClose, onSelect, workspac
                     </div>
                 </div>
 
-                {/* Member list */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {loading && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '40px 0', color: 'var(--text-muted)', fontSize: '12px', fontFamily: FONT }}>

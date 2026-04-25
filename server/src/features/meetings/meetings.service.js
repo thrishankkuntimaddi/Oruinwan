@@ -1,10 +1,7 @@
 'use strict';
-// server/src/features/meetings/meetings.service.js
 
 const ScheduledMeeting = require('../../models/ScheduledMeeting');
 const { summarizeDocument } = require('../ai/ai.summarizer.service');
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const POPULATE_CREATED_BY = { path: 'createdBy', select: 'username firstName lastName avatarUrl' };
 const POPULATE_PARTICIPANTS = { path: 'participants', select: 'username firstName lastName avatarUrl' };
@@ -19,11 +16,6 @@ async function populateMeeting(meeting) {
         .lean();
 }
 
-// ─── Service Methods ───────────────────────────────────────────────────────────
-
-/**
- * List upcoming + recent meetings for a workspace.
- */
 async function getMeetings({ workspaceId, userId, companyId, limit = 20, includeCompleted = true }) {
     const query = { workspaceId };
     if (companyId) query.companyId = companyId;
@@ -38,9 +30,6 @@ async function getMeetings({ workspaceId, userId, companyId, limit = 20, include
         .lean();
 }
 
-/**
- * Get a single meeting by ID with full population.
- */
 async function getMeeting(meetingId, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -53,9 +42,6 @@ async function getMeeting(meetingId, { companyId } = {}) {
         .lean();
 }
 
-/**
- * Mark a meeting as live and add the user to participants.
- */
 async function joinMeeting(meetingId, userId, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -72,9 +58,6 @@ async function joinMeeting(meetingId, userId, { companyId } = {}) {
     return populateMeeting(meeting);
 }
 
-/**
- * Mark meeting as completed and optionally save recordingUrl.
- */
 async function endMeeting(meetingId, { companyId, recordingUrl } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -87,9 +70,6 @@ async function endMeeting(meetingId, { companyId, recordingUrl } = {}) {
     return populateMeeting(meeting);
 }
 
-/**
- * Replace agenda items.
- */
 async function updateAgenda(meetingId, agenda, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -103,9 +83,6 @@ async function updateAgenda(meetingId, agenda, { companyId } = {}) {
     return populateMeeting(meeting);
 }
 
-/**
- * Save / replace transcript text.
- */
 async function updateTranscript(meetingId, transcript, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -119,9 +96,6 @@ async function updateTranscript(meetingId, transcript, { companyId } = {}) {
     return populateMeeting(meeting);
 }
 
-/**
- * Update shared notes (called after socket sync as persistence layer).
- */
 async function updateSharedNotes(meetingId, sharedNotes, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -129,9 +103,6 @@ async function updateSharedNotes(meetingId, sharedNotes, { companyId } = {}) {
     await ScheduledMeeting.findOneAndUpdate(query, { $set: { sharedNotes } });
 }
 
-/**
- * Generate AI summary from the stored transcript using the existing AI service.
- */
 async function summarizeMeeting(meetingId, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -150,13 +121,9 @@ async function summarizeMeeting(meetingId, { companyId } = {}) {
     return summary;
 }
 
-/**
- * Suggest a meeting time (simple placeholder — picks the next whole hour slot).
- * Can be extended with participant availability from calendar later.
- */
 async function suggestTime({ participantIds, durationMinutes = 30 }) {
     const now = new Date();
-    // Round up to next whole hour
+    
     const next = new Date(now);
     next.setHours(now.getHours() + 1, 0, 0, 0);
     const end = new Date(next.getTime() + durationMinutes * 60 * 1000);
@@ -168,9 +135,6 @@ async function suggestTime({ participantIds, durationMinutes = 30 }) {
     };
 }
 
-/**
- * Add an action item to a meeting.
- */
 async function addActionItem(meetingId, { text, assignedTo, status = 'pending' }, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;
@@ -185,9 +149,6 @@ async function addActionItem(meetingId, { text, assignedTo, status = 'pending' }
     return populateMeeting(meeting);
 }
 
-/**
- * Update a specific action item.
- */
 async function updateActionItem(meetingId, actionItemId, updates, { companyId } = {}) {
     const query = { _id: meetingId };
     if (companyId) query.companyId = companyId;

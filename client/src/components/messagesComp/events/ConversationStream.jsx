@@ -1,6 +1,3 @@
-// client/src/components/messagesComp/events/ConversationStream.jsx
-// Unified event stream renderer - replaces messagesContainer.jsx
-
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import MessageEvent from './MessageEvent';
 import PollEvent from './PollEvent';
@@ -11,49 +8,6 @@ import JoinMarker from '../chatWindowComp/messages/JoinMarker';
 import { Loader2, Lock, Hash } from 'lucide-react';
 import logger from '../../../utils/logger';
 
-// ⚠️ PURE RENDERING COMPONENT
-// This component receives ALL business logic as props (actions, callbacks).
-// DO NOT add API calls, socket emissions, encryption logic, or state mutations here.
-// Business orchestration lives in ChatWindowV2.jsx + useMessageActions.js
-// This component ONLY: renders messages, handles scroll, groups by date.
-
-
-/**
- * ConversationStream - Pure Message Rendering Layer
- * 
- * ARCHITECTURE: This component is a PURE RENDERER that receives all business logic as props.
- * It delegates actions to child components (MessageEvent, PollEvent) without executing them.
- * 
- * RESPONSIBILITIES:
- * ✅ Render message stream with infinite scroll
- * ✅ Group messages by date
- * ✅ Merge system events into timeline
- * ✅ Handle scroll position maintenance
- * ✅ Display loading states and empty states
- * 
- * DOES NOT (Business logic in parent):
- * ❌ Make API calls
- * ❌ Emit socket events
- * ❌ Perform encryption/decryption
- * ❌ Mutate message state
- * ❌ Contain business handlers
- * 
- * @param {array} events - Array of conversation events (messages, polls, meetings)
- * @param {array} systemEvents - System events (joins, leaves, channel created)
- * @param {string} creatorName - Channel creator name (for system events)
- * @param {boolean} loading - Loading state for pagination
- * @param {function} onLoadMore - Callback for pagination (handled by useConversation)
- * @param {boolean} hasMore - Whether more messages exist
- * @param {object} actions - Message actions from useMessageActions (delegated to children)
- * @param {string} conversationType - "channel" | "dm"  
- * @param {array} channelMembers - Channel members with join dates (for markers)
- * @param {date} userJoinedAt - When current user joined (for join marker)
- * @param {function} onThreadOpen - Callback when thread is opened (handled by ChatWindowV2)
- * @param {object} replyingTo - Current reply state
- * @param {function} onCancelReply - Callback to cancel reply
- * @param {string} currentUserId - Current user ID
- * @param {object} threadCounts - Thread reply counts by message ID
- */
 function ConversationStream({
     events = [],
     systemEvents = [],
@@ -81,7 +35,7 @@ function ConversationStream({
     const streamRef = useRef(null);
     const bottomRef = useRef(null);
     const prevScrollHeight = useRef(0);
-    const prevEventsLengthRef = useRef(0); // track initial load
+    const prevEventsLengthRef = useRef(0); 
     const [openMsgMenuId, setOpenMsgMenuId] = useState(null);
 
     const toggleMsgMenu = (e, id) => {
@@ -89,7 +43,7 @@ function ConversationStream({
         setOpenMsgMenuId(prev => prev === id ? null : id);
     };
 
-    // Close menu when clicking outside
+    
     useEffect(() => {
         const handleClickOutside = () => setOpenMsgMenuId(null);
         if (openMsgMenuId) {
@@ -100,10 +54,10 @@ function ConversationStream({
         };
     }, [openMsgMenuId]);
 
-    // Reset scroll tracking when switching channels/DMs
+    
     useEffect(() => {
         prevEventsLengthRef.current = 0;
-        // Also jump to bottom immediately if content already loaded
+        
         if (bottomRef.current) {
             requestAnimationFrame(() => {
                 bottomRef.current?.scrollIntoView({ behavior: 'instant' });
@@ -111,7 +65,7 @@ function ConversationStream({
         }
     }, [conversationId]);
 
-    // Auto-scroll to bottom on new messages
+    
     useEffect(() => {
         if (!bottomRef.current) return;
 
@@ -120,14 +74,14 @@ function ConversationStream({
         const isNewMessage = currentLen > prevEventsLengthRef.current;
 
         if (isInitialLoad) {
-            // On first load: jump instantly to bottom (DOM not yet scrolled)
+            
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     bottomRef.current?.scrollIntoView({ behavior: 'instant' });
                 });
             });
         } else if (isNewMessage) {
-            // On new message: only scroll if user is near bottom
+            
             const el = streamRef.current;
             const isNearBottom = el
                 ? el.scrollHeight - el.scrollTop - el.clientHeight < 200
@@ -140,7 +94,7 @@ function ConversationStream({
         prevEventsLengthRef.current = currentLen;
     }, [events]);
 
-    // Maintain scroll position when loading more
+    
     useEffect(() => {
         if (streamRef.current && loading && hasMore) {
             prevScrollHeight.current = streamRef.current.scrollHeight;
@@ -156,7 +110,7 @@ function ConversationStream({
         }
     }, [loading]);
 
-    // Detect scroll to top for pagination
+    
     const handleScroll = () => {
         if (!streamRef.current || loading || !hasMore) return;
 
@@ -165,25 +119,25 @@ function ConversationStream({
         }
     };
 
-    // Filter out thread messages (they render in ThreadPanel)
+    
     const mainStreamEvents = events.filter(event => !event.parentId);
 
-    // Merge systemEvents into the event stream
+    
     const mergedEvents = useMemo(() => {
-        // Transform systemEvents to match event stream format
+        
         const transformedSystemEvents = systemEvents.map(sysEvent => ({
             id: `system-${sysEvent._id || sysEvent.timestamp}`,
             type: 'system_timeline',
             createdAt: sysEvent.timestamp,
             payload: {
-                type: sysEvent.type,  // Use 'type' not 'eventType' for SystemEventItem
+                type: sysEvent.type,  
                 userId: sysEvent.userId,
                 timestamp: sysEvent.timestamp,
                 userName: sysEvent.userName
             }
         }));
 
-        // Merge and sort by timestamp
+        
         const merged = [...mainStreamEvents, ...transformedSystemEvents];
         const sorted = merged.sort((a, b) => {
             const dateA = new Date(a.createdAt);
@@ -191,17 +145,17 @@ function ConversationStream({
             return dateA - dateB;
         });
 
-        // When showThreadsOnly is on, keep only message events with threads.
-        // System events (channel updates, pins, etc.) are always shown.
-        // Attachment types (image, video, voice, file, poll, contact) are message
-        // bubbles too — they should ALSO be excluded unless they have replies.
+        
+        
+        
+        
         if (showThreadsOnly) {
             const SYSTEM_TYPES = new Set(['system', 'channel-update', 'pin', 'member-joined', 'member-left', 'meeting']);
             return sorted.filter(e => {
-                // Always keep true system/meta events
+                
                 if (SYSTEM_TYPES.has(e.type)) return true;
-                // For all user-generated content (text, image, video, voice, file, poll, contact, etc.)
-                // only keep items that have at least one thread reply
+                
+                
                 const count = (threadCounts[e.id] ?? 0) || (e.replyCount ?? 0);
                 return count > 0;
             });
@@ -209,13 +163,13 @@ function ConversationStream({
         return sorted;
     }, [mainStreamEvents, systemEvents, showThreadsOnly, threadCounts]);
 
-    // Group by date - create our own implementation to ensure arrays
+    
     const groupedEvents = useMemo(() => {
         const grouped = {};
         mergedEvents.forEach(event => {
             const raw = event.createdAt || event.payload?.createdAt;
             const date = new Date(raw);
-            // Bug fix: skip events with no valid timestamp to avoid "Invalid Date" group headers
+            
             if (!raw || isNaN(date.getTime())) return;
             const dateKey = date.toLocaleDateString('en-US', {
                 weekday: 'long',
@@ -232,17 +186,17 @@ function ConversationStream({
         return grouped;
     }, [mergedEvents]);
 
-    // Render event based on type
+    
     const renderEvent = (event) => {
         switch (event.type) {
             case 'message':
-            // Phase 7.1 — Attachment types route through MessageEvent → ChannelMessageItem/DMMessageItem
-            // which dispatch to the appropriate type renderer (ImageMessage, VideoMessage, etc.)
+            
+            
             case 'image':
             case 'video':
             case 'file':
             case 'voice':
-            // Phase 7.4 — Contact card
+            
             case 'contact':
                 return conversationType === 'channel' ? (
                     <MessageEvent
@@ -257,7 +211,7 @@ function ConversationStream({
                         openMsgMenuId={openMsgMenuId}
                         toggleMsgMenu={toggleMsgMenu}
                         setOpenMsgMenuId={setOpenMsgMenuId}
-                        threadCounts={threadCounts} // ✅ Forward threadCounts
+                        threadCounts={threadCounts} 
                     />
                 ) : (
                     <MessageEvent
@@ -270,7 +224,7 @@ function ConversationStream({
                         openMsgMenuId={openMsgMenuId}
                         toggleMsgMenu={toggleMsgMenu}
                         setOpenMsgMenuId={setOpenMsgMenuId}
-                        threadCounts={threadCounts} // ✅ Forward threadCounts
+                        threadCounts={threadCounts} 
                     />
                 );
 
@@ -332,7 +286,7 @@ function ConversationStream({
                 backgroundColor: 'var(--bg-primary)'
             }}
         >
-            {/* Threads-only filter banner */}
+            {}
             {showThreadsOnly && (
                 <div style={{
                     position: 'sticky', top: 0, zIndex: 10,
@@ -346,7 +300,7 @@ function ConversationStream({
                 </div>
             )}
 
-            {/* Load More / Pagination Skeleton */}
+            {}
             {hasMore && (
                 <div style={{ padding: '8px 16px', textAlign: 'center' }}>
                     {loading ? (
@@ -377,12 +331,12 @@ function ConversationStream({
                 </div>
             )}
 
-            {/* ── Channel Creation Banner ──────────────────────────────── */}
+            {}
             {conversationType === 'channel' && channelCreatedAt && (() => {
                 const cleanName = (channelName || 'this channel').replace(/^#+/, '');
                 return (
                     <div style={{ padding: '2rem 1.5rem 1.25rem', borderBottom: '1px solid var(--border-subtle)' }}>
-                        {/* Channel icon */}
+                        {}
                         <div style={{
                             width: 48, height: 48, borderRadius: '2px',
                             backgroundColor: isPrivate ? 'rgba(184,149,106,0.08)' : 'var(--bg-active)',
@@ -421,7 +375,7 @@ function ConversationStream({
                 );
             })()}
 
-            {/* Join Marker — only for non-creators */}
+            {}
             {conversationType === 'channel' && userJoinedAt &&
                 String(currentUserId) !== String(channelCreatedById) && (
                     <div style={{ padding: '0 1rem' }}>
@@ -429,22 +383,20 @@ function ConversationStream({
                     </div>
                 )}
 
-
-
-            {/* Grouped Events by Date - only show if there are actual messages */}
+            {}
             <div style={{ padding: '0 1rem' }}>
                 {Object.keys(groupedEvents).map(dateKey => {
-                    // Filter out channel_created events since they're shown above
+                    
                     const eventsForDate = groupedEvents[dateKey].filter(
                         event => !(event.type === 'system_timeline' && event.payload.type === 'channel_created')
                     );
 
-                    // Don't show date divider if no events for this date (after filtering)
+                    
                     if (eventsForDate.length === 0) return null;
 
                     return (
                         <div key={dateKey}>
-                            {/* Date Divider */}
+                            {}
                             <div
                                 className="date-divider"
                                 style={{
@@ -479,14 +431,14 @@ function ConversationStream({
                                 />
                             </div>
 
-                            {/* Events for this date */}
+                            {}
                             {eventsForDate.map((event, idx) => (
                                 <div key={event.id || `event-${dateKey}-${idx}`}>
                                     {renderEvent(event)}
                                 </div>
                             ))}
 
-                            {/* Member Join Markers (for channels) */}
+                            {}
                             {conversationType === 'channel' && channelMembers.map(member => {
                                 const memberJoinDate = new Date(member.joinedAt).toLocaleDateString();
                                 if (memberJoinDate === dateKey) {
@@ -511,7 +463,7 @@ function ConversationStream({
                 })}
             </div>
 
-            {/* Skeleton loader — only when truly no data and no creation banner to show */}
+            {}
             {events.length === 0 && loading && !channelCreatedAt && (
                 <div style={{ flex: 1, padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                     {[{ name: 22, line1: 68, line2: 0 }, { name: 18, line1: 50, line2: 35 }, { name: 24, line1: 80, line2: 55 }, { name: 20, line1: 45, line2: 0 }, { name: 22, line1: 72, line2: 40 }, { name: 16, line1: 58, line2: 0 }].map((row, i) => (
@@ -530,7 +482,7 @@ function ConversationStream({
                 </div>
             )}
 
-            {/* Empty state — only show when no channel creation banner (channels) or for DMs */}
+            {}
             {events.length === 0 && !loading && !channelCreatedAt && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '48px 24px', textAlign: 'center', userSelect: 'none' }}>
                     <div style={{
@@ -559,8 +511,7 @@ function ConversationStream({
                 </div>
             )}
 
-
-            {/* Auto-scroll anchor */}
+            {}
             <div ref={bottomRef} />
         </div>
     );

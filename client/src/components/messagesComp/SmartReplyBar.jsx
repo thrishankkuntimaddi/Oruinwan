@@ -1,20 +1,9 @@
-// client/src/components/messagesComp/SmartReplyBar.jsx
-// Phase-8: AI-generated quick reply chip suggestions
 import React, { useState, useEffect, useRef } from 'react';
 import api from '@services/api';
 import { Sparkles, X } from 'lucide-react';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
-/**
- * SmartReplyBar — shows 3 AI-generated reply suggestions as chips.
- *
- * Props:
- *  messageId       — source message ID (used as cache key)
- *  messageText     — plaintext of the message to reply to
- *  onSelectReply   — callback(text: string) — fills composer with chosen reply
- *  onDismiss       — called when user clicks dismiss
- */
 export default function SmartReplyBar({ messageId, messageText, onSelectReply, onDismiss }) {
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -34,7 +23,7 @@ export default function SmartReplyBar({ messageId, messageText, onSelectReply, o
       { signal: ctrl.signal }
     )
       .then(res => setSuggestions(res.data?.suggestions || []))
-      .catch(() => {}) // silently fail — AI is optional
+      .catch(() => {}) 
       .finally(() => setLoading(false));
 
     return () => ctrl.abort();

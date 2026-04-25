@@ -1,22 +1,3 @@
-// server/src/features/onboarding/bulkImport.service.js
-//
-// Phase 1 — Company Identity Layer
-//
-// Async bulk onboarding engine.
-// NEVER runs synchronously in an HTTP request beyond file validation.
-//
-// Architecture:
-//   startBulkJob()           — parse, validate, create BulkOnboardingJob, kick off worker
-//   _processJobBatches()     — background worker (setImmediate), batches of 20 / 200ms delay
-//   _resolveDeptMap()        — pre-loads departmentName→ObjectId map for this company
-//   getJobStatus()           — reads BulkOnboardingJob from MongoDB (not in-memory)
-//
-// Security:
-//   - owner role blocked in bulk import (spec requirement)
-//   - Invalid roles default to 'member' with a warning (not a hard fail)
-//   - Duplicate emails within the file → second occurrence skipped + warning
-//   - Department names resolved via pre-loaded map; unresolved → warning, not error
-
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
@@ -28,31 +9,19 @@ const { onboardIndividual, ASSIGNABLE_ROLES } = require('./onboarding.service');
 const sendEmail = require('../../../utils/sendEmail');
 const { bulkWelcomeTemplate } = require('../../../utils/emailTemplates');
 
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
 const BATCH_SIZE = 20;
-const BATCH_DELAY = 200;  // ms between batches — Brevo rate limiting
+const BATCH_DELAY = 200;  
 const MAX_ROWS = 500;
 
-// Roles blocked in bulk import even if the requester could assign them individually
 const BULK_BLOCKED_ROLES = ['owner'];
 
-// ============================================================================
-// HELPERS
-// ============================================================================
-
 function _makeJobId() {
-    // S-13: 16 bytes = 128-bit entropy (upgraded from 4 bytes / 32-bit)
+    
     return `bjob_${Date.now()}_${crypto.randomBytes(16).toString('hex')}`;
 }
 
 const _delay = ms => new Promise(r => setTimeout(r, ms));
 
-/**
- * Generate a random temporary password: 12 chars, mixed case + digits + symbol.
- */
 function _generateTempPassword() {
     const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
     const lower = 'abcdefghjkmnpqrstuvwxyz';
@@ -66,14 +35,10 @@ function _generateTempPassword() {
         symbols[Math.floor(Math.random() * symbols.length)],
     ];
     for (let i = 4; i < 12; i++) pwd.push(all[Math.floor(Math.random() * all.length)]);
-    // Shuffle
+    
     return pwd.sort(() => Math.random() - 0.5).join('');
 }
 
-/**
- * Send a welcome email to the employee's personal email with their
- * work (login) email address and temporary password.
- */
 async function _sendWelcomeEmail({ toEmail, name, workEmail, companyName, tempPassword }) {
     const tpl = bulkWelcomeTemplate(name, workEmail, tempPassword, companyName);
     try {
@@ -85,13 +50,6 @@ async function _sendWelcomeEmail({ toEmail, name, workEmail, companyName, tempPa
     }
 }
 
-/**
- * Pre-load a companyName → ObjectId map for all active departments in the company.
- * Called ONCE before the batch loop begins.
- *
- * @param {string} companyId
- * @returns {Promise<Map<string, string>>}  lowercase name → ObjectId string
- */
 async function _resolveDeptMap(companyId) {
     const depts = await Department.find({
         company: companyId,
@@ -101,38 +59,31 @@ async function _resolveDeptMap(companyId) {
     return new Map(depts.map(d => [d.name.toLowerCase().trim(), d._id.toString()]));
 }
 
-/**
- * Parse an Excel/CSV buffer.
- * Supports the 10-column format (current template) and 5-column legacy format.
- *
- * @param {Buffer} buffer
- * @returns {{ rows: Object[], parseError?: string }}
- */
 function _parseFile(buffer) {
     try {
         const wb = XLSX.read(buffer, { type: 'buffer' });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-        const dataRows = raw.slice(1).filter(r => r[2] || r[1]); // email at col 2 (new) or 1 (old)
+        const dataRows = raw.slice(1).filter(r => r[2] || r[1]); 
 
         const rows = dataRows.map(r => {
             const isNewFormat = String(r[2] || '').includes('@');
             if (isNewFormat) {
-                // 10-col: FirstName(0) LastName(1) Email(2) PersonalEmail(3)
-                //         JobTitle(4) JoiningDate(5) Mobile(6) CorpId(7) Role(8) Dept(9)
+                
+                
                 return {
                     firstName: String(r[0] || '').trim(),
                     lastName: String(r[1] || '').trim(),
                     email: String(r[2] || '').trim().toLowerCase(),
-                    personalEmail: String(r[3] || '').trim().toLowerCase(), // ← col D: personal email
+                    personalEmail: String(r[3] || '').trim().toLowerCase(), 
                     jobTitle: String(r[4] || '').trim(),
                     joiningDate: r[5] ? new Date(r[5]) : null,
                     role: String(r[8] || 'member').trim().toLowerCase(),
                     department: String(r[9] || '').trim(),
                 };
             }
-            // Legacy 5-col: Name(0) Email(1) Phone(2) Role(3) Dept(4)
+            
             return {
                 firstName: String(r[0] || '').trim(),
                 lastName: '',
@@ -148,10 +99,6 @@ function _parseFile(buffer) {
     }
 }
 
-/**
- * Validate raw rows and return { validRows, errors }.
- * Hard validation only — role sanitization handled per-row in the worker.
- */
 function _validateRows(rows, requesterRole) {
     const allowedRoles = ASSIGNABLE_ROLES[requesterRole] || [];
     const errors = [];
@@ -166,28 +113,13 @@ function _validateRows(rows, requesterRole) {
             errors.push({ email: row.email, error: `Role '${row.role}' cannot be assigned via bulk import.` });
             continue;
         }
-        // Invalid role → sanitize to 'member' in worker (not a hard error)
+        
         validRows.push(row);
     }
 
     return { validRows, errors };
 }
 
-// ============================================================================
-// BACKGROUND WORKER
-// ============================================================================
-
-/**
- * Process bulk job rows in background batches.
- * Mutates the BulkOnboardingJob document in MongoDB after each batch.
- *
- * @param {string}      jobId
- * @param {Object[]}    rows       — validated, de-duplicated rows
- * @param {string}      companyId
- * @param {string}      requesterRole
- * @param {string}      invitedBy
- * @param {Map}         deptMap    — pre-resolved name→ObjectId map
- */
 async function _processJobBatches(jobId, rows, companyId, requesterRole, invitedBy, deptMap) {
     const allowedRoles = ASSIGNABLE_ROLES[requesterRole] || [];
     let processedRows = 0;
@@ -203,7 +135,7 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
             { $set: { status: 'processing', startedAt: new Date() } }
         );
 
-        // Fetch company name once for use in welcome emails
+        
         const company = await Company.findById(companyId).select('name').lean();
         const companyName = company?.name || 'your company';
 
@@ -212,7 +144,7 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
 
             for (const row of batch) {
                 try {
-                    // Role sanitization (spec: invalid → member, add warning)
+                    
                     let resolvedRole = row.role;
                     if (!allowedRoles.includes(resolvedRole)) {
                         warnings.push({
@@ -222,7 +154,7 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
                         resolvedRole = 'member';
                     }
 
-                    // Department resolution (name → ObjectId from pre-loaded map)
+                    
                     const departmentIds = [];
                     if (row.department) {
                         const deptId = deptMap.get(row.department.toLowerCase().trim());
@@ -236,28 +168,28 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
                         }
                     }
 
-                    // Generate temp password for bulk import flow
+                    
                     const tempPassword = _generateTempPassword();
                     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
-                    // Core: onboardIndividual (creates user, runs assignMembers)
-                    // We pass the work email as the primary email (login identifier)
+                    
+                    
                     await onboardIndividual({
                         companyId,
                         requesterRole,
                         invitedBy,
-                        email: row.email,                           // work email — login ID
-                        personalEmail: row.personalEmail || '',     // personal email — notification target
+                        email: row.email,                           
+                        personalEmail: row.personalEmail || '',     
                         firstName: row.firstName || row.email.split('@')[0],
                         lastName: row.lastName || '',
                         companyRole: resolvedRole,
                         departmentIds,
                         jobTitle: row.jobTitle || '',
                         joiningDate: row.joiningDate || null,
-                        bulkTempPasswordHash: passwordHash,        // pre-hashed — skip invite token flow
+                        bulkTempPasswordHash: passwordHash,        
                     });
 
-                    // Send welcome email to PERSONAL email (fall back to work email if missing)
+                    
                     const notifyEmail = row.personalEmail || row.email;
                     const fullName = `${row.firstName || ''} ${row.lastName || ''}`.trim() || row.email;
                     await _sendWelcomeEmail({
@@ -285,7 +217,7 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
                 }
             }
 
-            // Persist progress after each batch
+            
             await BulkOnboardingJob.findOneAndUpdate(
                 { jobId },
                 {
@@ -294,19 +226,19 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
                         createdCount,
                         skippedCount,
                         errorCount,
-                        results: results.slice(-500), // cap at 500 to avoid doc bloat
+                        results: results.slice(-500), 
                         warnings: warnings.slice(-200),
                     },
                 }
             );
 
-            // Throttle between batches
+            
             if (i + BATCH_SIZE < rows.length) {
                 await _delay(BATCH_DELAY);
             }
         }
 
-        // Mark complete
+        
         await BulkOnboardingJob.findOneAndUpdate(
             { jobId },
             {
@@ -332,29 +264,8 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
     }
 }
 
-// ============================================================================
-// PUBLIC API
-// ============================================================================
-
-/**
- * Start a bulk import job.
- *
- * 1. Parse the Excel/CSV buffer
- * 2. Validate rows (hard failures only)
- * 3. De-duplicate emails within the file
- * 4. Create BulkOnboardingJob in MongoDB
- * 5. Kick off background worker via setImmediate
- * 6. Return { jobId, total } immediately (HTTP layer returns 202)
- *
- * @param {Object}  params
- * @param {string}  params.companyId
- * @param {string}  params.requesterRole
- * @param {Buffer}  params.fileBuffer
- * @param {string}  params.invitedBy
- * @returns {Promise<{ jobId: string, total: number, validationErrors: Object[] }>}
- */
 async function startBulkJob({ companyId, requesterRole, fileBuffer, invitedBy }) {
-    // 1. Parse file
+    
     const { rows, parseError } = _parseFile(fileBuffer);
     if (parseError) {
         throw Object.assign(new Error(parseError), { status: 400 });
@@ -369,10 +280,10 @@ async function startBulkJob({ companyId, requesterRole, fileBuffer, invitedBy })
         );
     }
 
-    // 2. Hard validation pass
+    
     const { validRows, errors: validationErrors } = _validateRows(rows, requesterRole);
 
-    // 3. De-duplicate by email within the file
+    
     const seenEmails = new Set();
     const deduped = [];
     const dupWarnings = [];
@@ -385,10 +296,10 @@ async function startBulkJob({ companyId, requesterRole, fileBuffer, invitedBy })
         }
     }
 
-    // 4. Pre-resolve department names (done once, reused by all rows)
+    
     const deptMap = await _resolveDeptMap(companyId);
 
-    // 5. Create persistent BulkOnboardingJob record
+    
     const jobId = _makeJobId();
     await BulkOnboardingJob.create({
         jobId,
@@ -400,7 +311,7 @@ async function startBulkJob({ companyId, requesterRole, fileBuffer, invitedBy })
         warnings: dupWarnings,
     });
 
-    // 6. Kick off background worker (non-blocking)
+    
     setImmediate(() => {
         _processJobBatches(jobId, deduped, companyId, requesterRole, invitedBy, deptMap)
             .catch(err => console.error('[BULK] Unhandled worker error:', err.message));
@@ -409,30 +320,18 @@ async function startBulkJob({ companyId, requesterRole, fileBuffer, invitedBy })
     return {
         jobId,
         total: deduped.length,
-        validationErrors, // hard-fail rows returned immediately (not in the async job)
+        validationErrors, 
     };
 }
 
-/**
- * Read job status from MongoDB.
- * Enforces company isolation: returns null if jobId exists but belongs to another company.
- *
- * @param {string} jobId
- * @param {string} companyId
- * @returns {Promise<Object|null>}
- */
 async function getJobStatus(jobId, companyId) {
     const job = await BulkOnboardingJob.findOne({ jobId, companyId }).lean();
     return job || null;
 }
 
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
 module.exports = {
     startBulkJob,
     getJobStatus,
-    _resolveDeptMap, // exported for testing
-    _parseFile,      // exported for testing
+    _resolveDeptMap, 
+    _parseFile,      
 };

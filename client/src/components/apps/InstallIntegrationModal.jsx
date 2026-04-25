@@ -1,16 +1,6 @@
 import React, { useState } from "react";
 import { X, Loader2, CheckCircle2 } from "lucide-react";
 
-/**
- * InstallIntegrationModal
- * Lightweight quick-install confirmation overlay.
- * Used for fast install flows without full details.
- *
- * Props:
- *   integration   – object from mockIntegrations
- *   onClose       – () => void
- *   onInstalled   – (integrationId) => void — called after fake install completes
- */
 export default function InstallIntegrationModal({ integration, onClose, onInstalled }) {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -31,7 +21,7 @@ export default function InstallIntegrationModal({ integration, onClose, onInstal
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[120] backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
 
-        {/* Header */}
+        {}
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-gray-800">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">
             Install Integration
@@ -44,7 +34,7 @@ export default function InstallIntegrationModal({ integration, onClose, onInstal
           </button>
         </div>
 
-        {/* Body */}
+        {}
         <div className="p-6 text-center space-y-4">
           {done ? (
             <div className="flex flex-col items-center gap-3 animate-fade-in">
@@ -78,7 +68,7 @@ export default function InstallIntegrationModal({ integration, onClose, onInstal
           )}
         </div>
 
-        {/* Footer */}
+        {}
         {!done && (
           <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex gap-2">
             <button

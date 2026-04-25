@@ -1,4 +1,3 @@
-// server/src/features/developer/bots.routes.js
 const express = require('express');
 const router = express.Router();
 const Bot = require('./bot.model');
@@ -7,7 +6,6 @@ const logger = require('../../../utils/logger');
 
 router.use(requireAuth);
 
-// GET /api/developer/bots?workspaceId=xxx
 router.get('/bots', async (req, res) => {
   try {
     const { workspaceId } = req.query;
@@ -25,7 +23,6 @@ router.get('/bots', async (req, res) => {
   }
 });
 
-// POST /api/developer/bots — create a bot
 router.post('/bots', async (req, res) => {
   try {
     const { workspaceId, name, description, permissions } = req.body;
@@ -51,7 +48,7 @@ router.post('/bots', async (req, res) => {
 
     res.status(201).json({
       bot: botDoc,
-      rawToken, // shown once
+      rawToken, 
       message: 'Store this bot token securely — it will not be shown again.'
     });
   } catch (err) {
@@ -60,7 +57,6 @@ router.post('/bots', async (req, res) => {
   }
 });
 
-// POST /api/developer/bots/:id/message — send message as bot
 router.post('/bots/:id/message', async (req, res) => {
   try {
     const bot = await Bot.findById(req.params.id).lean();
@@ -70,7 +66,7 @@ router.post('/bots/:id/message', async (req, res) => {
     if (!text) return res.status(400).json({ error: 'text is required' });
     if (!channelId && !dmUserId) return res.status(400).json({ error: 'channelId or dmUserId is required' });
 
-    // Insert bot message into the InternalMessage collection
+    
     const InternalMessage = require('../../models/InternalMessage');
     const message = await InternalMessage.create({
       workspaceId: bot.workspaceId,
@@ -78,11 +74,11 @@ router.post('/bots/:id/message', async (req, res) => {
       content: text,
       type: 'bot',
       botName: bot.name,
-      sender: bot.createdBy, // bot acts on behalf of creator for DB compat
+      sender: bot.createdBy, 
       metadata: { isBot: true, botId: bot._id, botName: bot.name }
     });
 
-    // Emit socket event so connected clients receive it in real-time
+    
     try {
       const { getIO } = require('../../socket/getIO');
       const io = getIO();
@@ -94,10 +90,10 @@ router.post('/bots/:id/message', async (req, res) => {
         });
       }
     } catch {
-      // Socket not available — message still saved
+      
     }
 
-    // Update bot stats
+    
     await Bot.findByIdAndUpdate(bot._id, {
       lastActiveAt: new Date(),
       $inc: { messageCount: 1 }
@@ -110,7 +106,6 @@ router.post('/bots/:id/message', async (req, res) => {
   }
 });
 
-// DELETE /api/developer/bots/:id — deactivate a bot
 router.delete('/bots/:id', async (req, res) => {
   try {
     const bot = await Bot.findById(req.params.id);

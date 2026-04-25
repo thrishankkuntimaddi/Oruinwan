@@ -243,7 +243,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
       <div
         style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', maxWidth: 860, maxHeight: "90vh", width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
-        {/* ── Top bar ── */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0 }}>
           {initialData?.issueKey && (
             <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.12em', textTransform: 'uppercase', background: 'var(--bg-hover)', padding: '2px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -270,7 +270,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </button>
         </div>
 
-        {/* ── Banner alerts ── */}
+        {}
         {isEditing && !isReadOnly && isAssigner && initialData?.status !== "Completed" && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 20px', background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid rgba(59,130,246,0.15)', color: '#3b82f6', fontSize: '12px', fontWeight: 500, flexShrink: 0 }}>
             <Shield size={13} style={{ flexShrink: 0 }} />
@@ -298,13 +298,13 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </div>
         )}
 
-        {/* ── Body: two-column layout ── */}
+        {}
         <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-          {/* LEFT – main content */}
+          {}
           <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', minWidth: 0, scrollbarWidth: 'thin' }}>
 
-            {/* Title */}
+            {}
             <div>
               <input
                 type="text"
@@ -318,7 +318,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               />
             </div>
 
-            {/* Description */}
+            {}
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                 <AlignLeft size={11} /> Description
@@ -335,7 +335,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               />
             </div>
 
-            {/* Attachments / Resources */}
+            {}
             <div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                 <Paperclip size={11} /> Resources
@@ -400,14 +400,14 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               </div>
             </div>
 
-            {/* Member multi-select section — shown inline on left for individual type */}
+            {}
             {assignmentType === "individual" && (
               <div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
                   <Users size={11} /> Assign Members
                 </label>
                 <div style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-                  {/* search */}
+                  {}
                   {!isReadOnly && (
                     <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
                       <input
@@ -452,7 +452,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                   </div>
                 </div>
 
-                {/* Selected summary */}
+                {}
                 {selectedMembers.length > 0 && (
                   <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ display: 'flex', marginLeft: '-8px' }}>
@@ -472,7 +472,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
                   </div>
                 )}
 
-                {/* Task mode toggle for multiple assigns */}
+                {}
                 {selectedMembers.length > 1 && !isReadOnly && (
                   <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#3b82f6', marginBottom: '8px' }}>Task Mode</p>
@@ -490,7 +490,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               </div>
             )}
 
-            {/* Channel assignment */}
+            {}
             {assignmentType === "channel" && (
               <div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>
@@ -514,10 +514,10 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
             )}
           </div>
 
-          {/* RIGHT – metadata sidebar */}
+          {}
           <div style={{ width: '220px', flexShrink: 0, borderLeft: '1px solid var(--border-default)', background: 'var(--bg-surface)', padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px', scrollbarWidth: 'thin' }}>
 
-            {/* Status */}
+            {}
             {isEditing && (
               <div>
                 <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Status</p>
@@ -556,7 +556,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               </div>
             )}
 
-            {/* Priority */}
+            {}
             <div>
               <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Priority</p>
               {isReadOnly ? (
@@ -594,7 +594,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               )}
             </div>
 
-            {/* Channel */}
+            {}
             <div>
               <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Channel</p>
               {isReadOnly ? (
@@ -618,7 +618,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               )}
             </div>
 
-            {/* Due date */}
+            {}
             <div>
               <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Due Date</p>
               {isReadOnly ? (
@@ -644,7 +644,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               )}
             </div>
 
-            {/* Assign to type */}
+            {}
             <div>
               <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>Assignee</p>
               {isReadOnly ? (
@@ -676,7 +676,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
               )}
             </div>
 
-            {/* Assignees avatars (read mode) */}
+            {}
             {isEditing && initialData?.assignees?.length > 0 && (
               <div>
                 <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px', fontFamily: 'monospace' }}>People</p>
@@ -693,7 +693,7 @@ export default function TaskModal({ onClose, onAddTask, onUpdateTask, channels =
           </div>
         </div>
 
-        {/* ── Footer ── */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '12px 20px', borderTop: '1px solid var(--border-default)', background: 'var(--bg-surface)', flexShrink: 0 }}>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             {isEditing && initialData?.updatedAt && (

@@ -1,14 +1,5 @@
-// client/src/utils/uploadHelpers.js
 import api from '@services/api';
 
-/**
- * Upload a file for note attachment
- * @param {File} file - The file to upload
- * @param {string} workspaceId - Workspace ID
- * @param {string} noteId - Note ID (optional)
- * @param {function} onProgress - Progress callback (optional)
- * @returns {Promise} Upload result with URL and metadata
- */
 export const uploadNoteAttachment = async (file, workspaceId, noteId = null, onProgress = null) => {
     try {
         const formData = new FormData();
@@ -37,12 +28,6 @@ export const uploadNoteAttachment = async (file, workspaceId, noteId = null, onP
     }
 };
 
-/**
- * Download a note attachment
- * @param {string} noteId - Note ID
- * @param {string} attachmentId - Attachment ID
- * @param {string} filename - Filename for download
- */
 export const downloadNoteAttachment = async (noteId, attachmentId, filename) => {
     try {
         const response = await api.get(
@@ -50,7 +35,7 @@ export const downloadNoteAttachment = async (noteId, attachmentId, filename) => 
             { responseType: 'blob' }
         );
 
-        // Create download link
+        
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
@@ -65,11 +50,6 @@ export const downloadNoteAttachment = async (noteId, attachmentId, filename) => 
     }
 };
 
-/**
- * Delete a note attachment
- * @param {string} noteId - Note ID
- * @param {string} attachmentId - Attachment ID
- */
 export const deleteNoteAttachment = async (noteId, attachmentId) => {
     try {
         await api.delete(`/api/v2/notes/${noteId}/attachments/${attachmentId}`);
@@ -79,11 +59,6 @@ export const deleteNoteAttachment = async (noteId, attachmentId) => {
     }
 };
 
-/**
- * Get file size in human-readable format
- * @param {number} bytes - File size in bytes
- * @returns {string} Formatted file size
- */
 export const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;

@@ -18,7 +18,7 @@ export default function SlashCommandItem({ command, isActive, onSelect, onHover 
         transition: 'background-color 150ms ease',
       }}
     >
-      {/* Emoji icon */}
+      {}
       <div style={{
         width: 30, height: 30, borderRadius: '2px',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -29,7 +29,7 @@ export default function SlashCommandItem({ command, isActive, onSelect, onHover 
         {command.emoji}
       </div>
 
-      {/* Command + description */}
+      {}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span style={{
@@ -49,7 +49,7 @@ export default function SlashCommandItem({ command, isActive, onSelect, onHover 
         }}>{command.description}</p>
       </div>
 
-      {/* Enter hint */}
+      {}
       <CornerDownLeft size={12} style={{
         flexShrink: 0, color: 'var(--accent)',
         opacity: active ? 1 : 0,

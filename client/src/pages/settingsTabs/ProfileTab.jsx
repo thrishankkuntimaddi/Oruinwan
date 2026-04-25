@@ -7,9 +7,6 @@ import { useToast } from '../../contexts/ToastContext';
 
 const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Avatar config
-// ─────────────────────────────────────────────────────────────────────────────
 const AVATAR_CATEGORIES = {
     'Illustrated': { style: 'lorelei-neutral' },
     'Notion-style': { style: 'notionists-neutral' },
@@ -82,7 +79,6 @@ const avatarUrl = (cat, seed) => {
     return `https://api.dicebear.com/7.x/${style}/svg?seed=${encodeURIComponent(seed)}&size=80&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf,f8f8f8`;
 };
 
-// ─── Avatar Picker Modal (Monolith Flow) ──────────────────────────────────────
 const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
     const [activeCategory, setActiveCategory] = useState('All');
     const [selectedKey, setSelectedKey] = useState(null);
@@ -122,7 +118,7 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
                 flexDirection: 'column',
                 overflow: 'hidden',
             }}>
-                {/* Header */}
+                {}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -151,7 +147,7 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
                     </button>
                 </div>
 
-                {/* Category filter */}
+                {}
                 <div style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -197,7 +193,7 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
                     })}
                 </div>
 
-                {/* Avatar grid */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 8 }}>
                         {filtered.map((avatar) => {
@@ -258,7 +254,7 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
                     )}
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{
                     padding: '12px 20px',
                     borderTop: '1px solid var(--border-default)',
@@ -330,7 +326,6 @@ const AvatarPickerModal = ({ onSelect, onClose, uploading }) => {
     );
 };
 
-// ─── Shared input styles ───────────────────────────────────────────────────────
 const inputClass_style = {
     width: '100%',
     padding: '8px 12px',
@@ -356,7 +351,6 @@ const labelStyle = {
     fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
 };
 
-// ─── ProfileTab ───────────────────────────────────────────────────────────────
 const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileUpdate }) => {
     const { showToast } = useToast();
     const [uploadingImage, setUploadingImage] = useState(false);
@@ -469,10 +463,10 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Profile Photo */}
+            {}
             <Card title="Profile Photo" subtitle="Your identity across all workspaces and channels">
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 20 }}>
-                    {/* Avatar preview */}
+                    {}
                     <div style={{ position: 'relative', flexShrink: 0 }}>
                         {currentPic ? (
                             <img
@@ -518,7 +512,7 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                         )}
                     </div>
 
-                    {/* Actions */}
+                    {}
                     <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', ...S.font }}>{user?.username}</div>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12, ...S.font }}>{user?.email}</div>
@@ -586,7 +580,7 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                 </div>
             </Card>
 
-            {/* Personal Info */}
+            {}
             <Card title="Personal Information" subtitle="Your public profile details">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -694,7 +688,7 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                 </div>
             </Card>
 
-            {/* Avatar Picker Modal */}
+            {}
             {showAvatarPicker && (
                 <AvatarPickerModal
                     onSelect={handleAvatarSelect}
@@ -703,7 +697,7 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                 />
             )}
 
-            {/* Image Crop Editor */}
+            {}
             {cropSrc && (
                 <ImageCropEditor
                     src={cropSrc}
@@ -713,7 +707,7 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
                 />
             )}
 
-            {/* Remove Confirm Modal */}
+            {}
             {showRemoveConfirm && (
                 <div style={{
                     position: 'fixed', inset: 0,

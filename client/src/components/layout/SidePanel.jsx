@@ -4,13 +4,12 @@ import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
 import CreateChannelModal from "../messagesComp/CreateChannelModal";
 
-// Use backend URL for production (Vercel frontend + separate backend)
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
 const SidePanel = ({ title = "Workspace", children }) => {
     return (
         <div className="w-full h-full bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col text-gray-700 dark:text-gray-300">
-            {/* Header */}
+            {}
             <div className="h-12 flex items-center justify-between px-4 font-semibold text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer transition-colors group">
                 <div className="flex items-center">
                     {title} <span className="ml-2 text-xs text-gray-500">▼</span>
@@ -18,7 +17,7 @@ const SidePanel = ({ title = "Workspace", children }) => {
                 <button
                     className="p-1.5 rounded-md hover:bg-gray-200 text-gray-500 hover:text-gray-900 opacity-0 group-hover:opacity-100 transition-all"
                     title="New Message"
-                    onClick={(e) => { e.stopPropagation(); /* Handle new message */ }}
+                    onClick={(e) => { e.stopPropagation();  }}
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -26,7 +25,7 @@ const SidePanel = ({ title = "Workspace", children }) => {
                 </button>
             </div>
 
-            {/* Content Area (Scrollable) */}
+            {}
             <div className="flex-1 overflow-y-auto py-2 custom-scrollbar">
                 {children}
             </div>
@@ -48,7 +47,7 @@ export const ChannelList = () => {
         dms: true,
     });
 
-    // Fetch channels from API
+    
     React.useEffect(() => {
         const fetchChannels = async () => {
             if (!workspaceId) return;
@@ -75,24 +74,24 @@ export const ChannelList = () => {
         fetchChannels();
     }, [workspaceId]);
 
-    // Filter channels based on rules
+    
     const filterChannels = () => {
-        const userId = user?.id || user?._id; // Get userId from AuthContext
+        const userId = user?.id || user?._id; 
 
-        if (!userId) return []; // No user, no channels
+        if (!userId) return []; 
 
         return channels.filter(channel => {
-            // Rule 1: Always show default channels (general, announcements)
+            
             if (channel.isDefault) {
                 return true;
             }
 
-            // Rule 2: Show public discoverable channels to everyone
+            
             if (!channel.isPrivate && channel.isDiscoverable) {
                 return true;
             }
 
-            // Rule 3: Show private channels OR public non-discoverable channels ONLY if user is a member
+            
             const isMember = channel.members?.some(m => {
                 const memberId = m.user?._id || m.user || m._id || m;
                 return String(memberId) === String(userId);
@@ -172,7 +171,7 @@ export const ChannelList = () => {
 
     return (
         <div className="space-y-6">
-            {/* Channels */}
+            {}
             <div>
                 <SectionHeader
                     label="Channels"
@@ -207,13 +206,13 @@ export const ChannelList = () => {
                 )}
             </div>
 
-            {/* Direct Messages */}
+            {}
             <div>
                 <SectionHeader
                     label="Direct Messages"
                     isOpen={expanded.dms}
                     onClick={() => toggle("dms")}
-                    onAdd={(e) => { e.stopPropagation(); /* DM feature coming soon */ }}
+                    onAdd={(e) => { e.stopPropagation();  }}
                 />
                 {expanded.dms && (
                     <div className="mt-1 space-y-0.5">
@@ -224,13 +223,13 @@ export const ChannelList = () => {
                 )}
             </div>
 
-            {/* Modals */}
+            {}
             {showCreateChannelModal && (
                 <CreateChannelModal
                     workspaceId={workspaceId}
                     onClose={() => setShowCreateChannelModal(false)}
                     onCreated={(channel) => {
-                        // Refresh channel list after creation
+                        
                         setChannels(prev => [...prev, channel]);
                         navigate(`/workspace/${workspaceId}/channel/${channel._id}`);
                     }}

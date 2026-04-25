@@ -63,7 +63,7 @@ const AdminsManagement = () => {
                 <div className="sk" style={{ height: '30px', width: '110px' }} />
             </div>
             <div style={{ flex: 1, padding: '20px 28px' }}>
-                {/* 3 stat tiles */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
                     {[1,2,3].map(i => (
                         <div key={i} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
@@ -72,12 +72,12 @@ const AdminsManagement = () => {
                         </div>
                     ))}
                 </div>
-                {/* Search + filter */}
+                {}
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
                     <div className="sk" style={{ height: '32px', flex: 1 }} />
                     <div className="sk" style={{ height: '32px', width: '130px' }} />
                 </div>
-                {/* Table */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 80px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '16px' }}>
                         {[70,60,55,55,0].map((w,i) => <div key={i} className="sk" style={{ height: '9px', width: `${w}px` }} />)}
@@ -102,7 +102,7 @@ const AdminsManagement = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-            {/* Header */}
+            {}
             <header style={{
                 height: '56px', padding: '0 28px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -124,14 +124,14 @@ const AdminsManagement = () => {
                 </div>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                    {/* Stats panel */}
+                    {}
                     {showStats && (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
-                            {/* Total */}
+                            {}
                             <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                                 <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px' }}>Total Administrators</p>
                                 <p style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '4px' }}>{filteredAdmins.length}</p>
@@ -139,7 +139,7 @@ const AdminsManagement = () => {
                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Total in company: {admins.length}</p>
                             </div>
 
-                            {/* Role Distribution */}
+                            {}
                             <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                                 <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '8px' }}>Role Distribution</p>
                                 <ResponsiveContainer width="100%" height={90}>
@@ -163,7 +163,7 @@ const AdminsManagement = () => {
                                 </div>
                             </div>
 
-                            {/* Admin Powers */}
+                            {}
                             <div style={{ background: 'var(--bg-surface)', padding: '20px', position: 'relative' }}>
                                 <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--accent)' }} />
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
@@ -180,7 +180,7 @@ const AdminsManagement = () => {
                         </div>
                     )}
 
-                    {/* Search */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px', padding: '0 14px' }}>
                         <Search size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                         <input
@@ -190,7 +190,7 @@ const AdminsManagement = () => {
                         />
                     </div>
 
-                    {/* Table */}
+                    {}
                     <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
@@ -223,8 +223,6 @@ const AdminsManagement = () => {
         </div>
     );
 };
-
-// ─ Sub-components ─────────────────────────────────────────────────────────────
 
 const AdminRow = ({ admin, menuOpen, onMenuToggle }) => {
     const [hov, setHov] = React.useState(false);

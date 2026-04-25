@@ -1,12 +1,3 @@
-// server/src/features/onboarding/onboarding.service.js
-//
-// Phase 1 — Company Identity Layer
-//
-// Handles individual employee onboarding:
-//   onboardIndividual(params) — creates user with accountStatus:'invited', assigns
-//                               departments via department.service.assignMembers(),
-//                               sends token invite email
-
 const bcrypt = require('bcryptjs');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
@@ -14,19 +5,8 @@ const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
 const { createInviteToken, sendInviteEmail } = require('./invite.service');
 
-// ============================================================================
-// ROLE CEILING
-// ============================================================================
-
-/**
- * Role hierarchy — lowest to highest privilege.
- * Used for ceiling comparisons.
- */
 const ROLE_HIERARCHY = ['guest', 'member', 'manager', 'admin', 'owner'];
 
-/**
- * Roles that can be assigned via onboarding (owner is NEVER assignable via this flow).
- */
 const ASSIGNABLE_ROLES = {
     owner: ['admin', 'manager', 'member', 'guest'],
     admin: ['manager', 'member', 'guest'],
@@ -35,25 +15,11 @@ const ASSIGNABLE_ROLES = {
     guest: [],
 };
 
-/**
- * Check if a requester role can assign a target role.
- * @param {string} requesterRole  — companyRole of the person doing the inviting
- * @param {string} targetRole     — companyRole being assigned to the new user
- * @returns {boolean}
- */
 function checkRoleCeiling(requesterRole, targetRole) {
     const allowed = ASSIGNABLE_ROLES[requesterRole] || [];
     return allowed.includes(targetRole);
 }
 
-// ============================================================================
-// VALIDATION HELPERS
-// ============================================================================
-
-/**
- * Verify all departmentIds exist and belong to this company.
- * Throws 400 if any mismatch is found (cross-company poisoning guard).
- */
 async function validateDepartments(departmentIds, companyId) {
     if (!departmentIds || departmentIds.length === 0) return;
 
@@ -71,10 +37,6 @@ async function validateDepartments(departmentIds, companyId) {
     }
 }
 
-/**
- * Verify all workspaceIds exist and belong to this company.
- * Throws 400 if any mismatch is found.
- */
 async function validateWorkspaces(workspaceIds, companyId) {
     if (!workspaceIds || workspaceIds.length === 0) return;
 
@@ -91,44 +53,13 @@ async function validateWorkspaces(workspaceIds, companyId) {
     }
 }
 
-// ============================================================================
-// ONBOARD INDIVIDUAL
-// ============================================================================
-
-/**
- * Onboard a single employee via token invite.
- *
- * Flow:
- *   1. Role ceiling check
- *   2. Cross-company dept/workspace validation
- *   3. Duplicate email check
- *   4. Create User with accountStatus:'invited', passwordHash:null
- *   5. Call department.service.assignMembers() for Phase 4 workspace join
- *   6. Store additionalWorkspaceIds on user.workspaces[]
- *   7. Generate invite token (SHA-256 on User)
- *   8. Send magic-link invite email
- *
- * @param {Object} params
- * @param {string}   params.companyId
- * @param {string}   params.requesterRole   — companyRole of the admin doing the inviting
- * @param {string}   params.invitedBy       — userId of the admin
- * @param {string}   params.email           — personal/invite email (sent the link)
- * @param {string}   params.firstName
- * @param {string}   params.lastName
- * @param {string}   params.companyRole     — role to assign
- * @param {string[]} params.departmentIds   — validated upstream by route OR here
- * @param {string[]} params.additionalWorkspaceIds
- * @param {string}   [params.jobTitle]
- * @param {Date}     [params.joiningDate]
- * @returns {Promise<{ userId, inviteId, emailSent }>}
- */
 async function onboardIndividual(params) {
     const {
         companyId,
         requesterRole,
         invitedBy,
         email,
-        personalEmail = '',        // personal email — notifications go here in bulk flow
+        personalEmail = '',        
         firstName,
         lastName,
         companyRole = 'member',
@@ -136,10 +67,10 @@ async function onboardIndividual(params) {
         additionalWorkspaceIds = [],
         jobTitle,
         joiningDate,
-        bulkTempPasswordHash = null, // when set: bulk import flow — skip invite token
+        bulkTempPasswordHash = null, 
     } = params;
 
-    // 1. Role ceiling check
+    
     if (!checkRoleCeiling(requesterRole, companyRole)) {
         throw Object.assign(
             new Error(`Your role '${requesterRole}' cannot assign '${companyRole}'. Role ceiling violated.`),
@@ -147,15 +78,15 @@ async function onboardIndividual(params) {
         );
     }
 
-    // 2. Load company
+    
     const company = await Company.findById(companyId).lean();
     if (!company) throw Object.assign(new Error('Company not found.'), { status: 404 });
 
-    // 3. Cross-company poisoning guards
+    
     await validateDepartments(departmentIds, companyId);
     await validateWorkspaces(additionalWorkspaceIds, companyId);
 
-    // 4. Duplicate check — by email
+    
     const normalizedEmail = email.toLowerCase().trim();
     const existing = await User.findOne({ email: normalizedEmail }).lean();
     if (existing) {
@@ -165,7 +96,7 @@ async function onboardIndividual(params) {
         if (existing.companyId && existing.companyId.toString() !== companyId.toString()) {
             throw Object.assign(new Error('This email belongs to a user in another company.'), { status: 409 });
         }
-        // If they're in 'invited' state for this same company — resend path (caller handles)
+        
         if (existing.companyId && existing.companyId.toString() === companyId.toString()) {
             throw Object.assign(
                 new Error('This user is already invited. Use POST /resend/:id to re-send the invite.'),
@@ -174,14 +105,14 @@ async function onboardIndividual(params) {
         }
     }
 
-    // 5. Build workspace memberships (additional only — dept default handled by assignMembers)
+    
     const workspaceMemberships = additionalWorkspaceIds.map(wsId => ({
         workspace: wsId,
         role: 'member',
         joinedAt: new Date(),
     }));
 
-    // 6. Create User record
+    
     const isBulkImport = !!bulkTempPasswordHash;
     const user = new User({
         username: `${firstName} ${lastName}`.trim(),
@@ -195,17 +126,17 @@ async function onboardIndividual(params) {
         joiningDate: joiningDate || new Date(),
         departments: departmentIds,
         workspaces: workspaceMemberships,
-        verified: isBulkImport,                    // bulk = already verified
-        accountStatus: isBulkImport ? 'active' : 'invited', // bulk = active from day 1
+        verified: isBulkImport,                    
+        accountStatus: isBulkImport ? 'active' : 'invited', 
         inviteEmailStatus: isBulkImport ? 'sent' : 'pending',
-        // Temporary password flags — only set for bulk import flow
-        isTemporaryPassword: isBulkImport,          // must change on first login
-        passwordInitialized: !isBulkImport,         // false = password setup required
+        
+        isTemporaryPassword: isBulkImport,          
+        passwordInitialized: !isBulkImport,         
     });
 
     await user.save();
 
-    // 7. Phase 4: dept assignment
+    
     if (departmentIds.length > 0) {
         const { assignMembers } = require('../departments/department.service');
         for (const deptId of departmentIds) {
@@ -217,7 +148,7 @@ async function onboardIndividual(params) {
         }
     }
 
-    // 8. For individual (non-bulk) flow: generate invite token and send magic-link
+    
     if (!isBulkImport) {
         const rawToken = await createInviteToken(user);
         const emailResult = await sendInviteEmail(normalizedEmail, company.name, rawToken, {
@@ -233,10 +164,6 @@ async function onboardIndividual(params) {
         emailSent: true,
     };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     onboardIndividual,

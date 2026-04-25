@@ -1,4 +1,3 @@
-// MentionAutocomplete — Monolith Flow Design System
 import React, { useEffect, useRef } from 'react';
 import { AtSign } from 'lucide-react';
 
@@ -29,7 +28,7 @@ export default function MentionAutocomplete({ suggestions, selectedIndex, onSele
             }}
             onMouseDown={e => e.preventDefault()}
         >
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', borderBottom: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-active)' }}>
                 <AtSign size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                 <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
@@ -37,7 +36,7 @@ export default function MentionAutocomplete({ suggestions, selectedIndex, onSele
                 </span>
             </div>
 
-            {/* List */}
+            {}
             <ul ref={listRef} style={{ maxHeight: '180px', overflowY: 'auto', padding: '4px 0', listStyle: 'none', margin: 0 }} className="custom-scrollbar" role="listbox">
                 {suggestions.map((member, idx) => {
                     const isSelected = idx === selectedIndex;
@@ -58,7 +57,7 @@ export default function MentionAutocomplete({ suggestions, selectedIndex, onSele
                             onMouseEnter={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
                             onMouseLeave={e => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
                         >
-                            {/* Avatar */}
+                            {}
                             {member.profilePicture ? (
                                 <img src={member.profilePicture} alt={member.username}
                                     style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
@@ -69,7 +68,7 @@ export default function MentionAutocomplete({ suggestions, selectedIndex, onSele
                                 </div>
                             )}
 
-                            {/* Name */}
+                            {}
                             <div style={{ flex: 1, minWidth: 0 }}>
                                 <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0 }}>
                                     {member.username}
@@ -87,7 +86,7 @@ export default function MentionAutocomplete({ suggestions, selectedIndex, onSele
                 })}
             </ul>
 
-            {/* Footer hint */}
+            {}
             <div style={{ padding: '5px 12px', borderTop: '1px solid var(--border-subtle)', fontSize: '10px', color: 'var(--text-muted)' }}>
                 ↑↓ navigate &nbsp;·&nbsp; Tab/Enter to select &nbsp;·&nbsp; Esc to close
             </div>

@@ -1,6 +1,3 @@
-// client/src/pages/workspace-os/WorkspaceAnalyticsDashboard.jsx
-// Workspace-level analytics dashboard — charts + KPI cards.
-// Uses Recharts (already bundled in the project via OwnerAnalytics.jsx).
 import React, { useState } from 'react';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -56,7 +53,7 @@ export default function WorkspaceAnalyticsDashboard({ workspaceId, workspaceName
 
     return (
         <div className="space-y-6">
-            {/* Header */}
+            {}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-2">
                     <BarChart2 size={22} className="text-indigo-500" />
@@ -65,7 +62,7 @@ export default function WorkspaceAnalyticsDashboard({ workspaceId, workspaceName
                     </h2>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* Range selector */}
+                    {}
                     <div className="flex bg-slate-100 dark:bg-slate-700 rounded-lg p-1 gap-1">
                         {RANGE_OPTIONS.map(opt => (
                             <button
@@ -98,7 +95,7 @@ export default function WorkspaceAnalyticsDashboard({ workspaceId, workspaceName
                 </div>
             )}
 
-            {/* KPI Grid */}
+            {}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 <KPICard icon={MessageSquare} label="Total Messages" value={summary.totalMessages?.toLocaleString()} color="bg-indigo-500" />
                 <KPICard icon={CheckSquare} label="Total Tasks" value={summary.totalTasks?.toLocaleString()} color="bg-emerald-500" />
@@ -108,7 +105,7 @@ export default function WorkspaceAnalyticsDashboard({ workspaceId, workspaceName
                 <KPICard icon={TrendingUp} label="Task Done" value={summary.taskCompletionRate !== undefined ? `${summary.taskCompletionRate}%` : '—'} color="bg-pink-500" sub="Completion rate" />
             </div>
 
-            {/* Daily Messages Chart */}
+            {}
             <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700">
                 <h3 className="text-base font-semibold text-slate-700 dark:text-slate-300 mb-5">
                     Message Activity ({range} days)
@@ -130,7 +127,7 @@ export default function WorkspaceAnalyticsDashboard({ workspaceId, workspaceName
                             <XAxis
                                 dataKey="date"
                                 tick={{ fontSize: 11, fill: '#94a3b8' }}
-                                tickFormatter={v => v.slice(5)} // MM-DD
+                                tickFormatter={v => v.slice(5)} 
                             />
                             <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} allowDecimals={false} />
                             <Tooltip content={<CustomTooltip />} />

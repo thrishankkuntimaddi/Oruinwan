@@ -1,12 +1,5 @@
-// server/src/features/departments/department.controller.js
-//
-// Phase 2 — Department Management System
-// Thin HTTP layer — extracts params, delegates to service, handles errors.
-
 const { validationResult } = require('express-validator');
 const deptService = require('./department.service');
-
-// ── Validation error responder ───────────────────────────────────────────────
 
 function validationGuard(req, res) {
     const errors = validationResult(req);
@@ -19,8 +12,6 @@ function validationGuard(req, res) {
     return null;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 function handleError(res, err) {
     const status = err.status || 500;
     const message = err.message || 'Server error';
@@ -28,12 +19,6 @@ function handleError(res, err) {
     return res.status(status).json({ success: false, error: message });
 }
 
-// ── Handlers ─────────────────────────────────────────────────────────────────
-
-/**
- * GET /api/departments
- * Returns all active departments for the authenticated user's company.
- */
 exports.getDepartments = async (req, res) => {
     try {
         const departments = await deptService.getDepartments(req.companyId);
@@ -43,10 +28,6 @@ exports.getDepartments = async (req, res) => {
     }
 };
 
-/**
- * GET /api/departments/:id
- * Returns a single department (company-isolated).
- */
 exports.getDepartmentById = async (req, res) => {
     try {
         const dept = await deptService.getDepartmentById(req.params.id, req.companyId);
@@ -56,10 +37,6 @@ exports.getDepartmentById = async (req, res) => {
     }
 };
 
-/**
- * POST /api/departments
- * Admin/owner creates a new department with auto-bootstrapped workspace and channels.
- */
 exports.createDepartment = async (req, res) => {
     if (validationGuard(req, res)) return;
 
@@ -82,10 +59,6 @@ exports.createDepartment = async (req, res) => {
     }
 };
 
-/**
- * PATCH /api/departments/:id
- * Admin/owner updates department metadata.
- */
 exports.updateDepartment = async (req, res) => {
     if (validationGuard(req, res)) return;
 
@@ -97,10 +70,6 @@ exports.updateDepartment = async (req, res) => {
     }
 };
 
-/**
- * DELETE /api/departments/:id
- * Admin/owner soft-deletes a department and cleans up User references.
- */
 exports.deleteDepartment = async (req, res) => {
     try {
         const result = await deptService.deleteDepartment(req.params.id, req.companyId);
@@ -110,11 +79,6 @@ exports.deleteDepartment = async (req, res) => {
     }
 };
 
-/**
- * PATCH /api/departments/:id/members
- * Admin/owner/department-manager assigns or removes members.
- * Body: { userIds: string[], action: 'add' | 'remove' }
- */
 exports.assignMembers = async (req, res) => {
     if (validationGuard(req, res)) return;
 

@@ -1,4 +1,3 @@
-// server/src/features/analytics/analytics.routes.js
 const express = require('express');
 const router = express.Router();
 const analyticsController = require('./analytics.controller');
@@ -7,24 +6,13 @@ const { requireAdmin } = require('../../shared/middleware/permissionMiddleware')
 const analyticsService = require('./analytics.service');
 const User = require('../../../models/User');
 
-/**
- * @route   GET /api/analytics/company/:companyId
- * @desc    Company-level analytics (existing)
- * @access  Private (Admin)
- */
 router.get('/company/:companyId', requireAuth, requireAdmin, analyticsController.getCompanyAnalytics);
 
-// ─── Helper: resolve companyId from JWT ──────────────────────────────────────
 async function resolveCompanyId(userId) {
     const user = await User.findById(userId).select('companyId').lean();
     return user?.companyId?.toString();
 }
 
-/**
- * @route   GET /api/analytics?type=team-activity|communication|productivity|workload|engagement
- * @desc    Unified insights endpoint — dispatches by `type` query param
- * @access  Private (Admin/Manager)
- */
 router.get('/', requireAuth, requireAdmin, async (req, res) => {
     try {
         const companyId = await resolveCompanyId(req.user.sub);
@@ -51,7 +39,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
                 data = await analyticsService.getEngagementTrends(companyId, period);
                 break;
             default:
-                // Return all insights in one payload
+                
                 const [teamActivity, commPatterns, productivity, workload, engagement] = await Promise.all([
                     analyticsService.getTeamActivity(companyId, period),
                     analyticsService.getCommunicationPatterns(companyId, period),
@@ -68,13 +56,6 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
     }
 });
 
-/**
- * @route   GET /api/analytics/insights/team
- * @route   GET /api/analytics/insights/communication
- * @route   GET /api/analytics/insights/productivity
- * @route   GET /api/analytics/insights/workload
- * @route   GET /api/analytics/insights/engagement
- */
 router.get('/insights/team', requireAuth, requireAdmin, async (req, res) => {
     try {
         const companyId = await resolveCompanyId(req.user.sub);

@@ -1,20 +1,18 @@
-// server/src/models/WorkspacePermission.js
-// Granular permission configuration per workspace
 const mongoose = require('mongoose');
 
 const WorkspacePermissionSchema = new mongoose.Schema({
   workspace: { type: mongoose.Schema.Types.ObjectId, ref: 'Workspace', required: true, unique: true },
   company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
 
-  // Channel-level permissions — which roles can post/view in each channel
+  
   channelPermissions: [{
     channel: { type: mongoose.Schema.Types.ObjectId, ref: 'Channel', required: true },
-    canPost: { type: [String], default: ['owner', 'admin', 'member'] }, // workspace roles
+    canPost: { type: [String], default: ['owner', 'admin', 'member'] }, 
     canView: { type: [String], default: ['owner', 'admin', 'member'] },
     canManage: { type: [String], default: ['owner', 'admin'] }
   }],
 
-  // Feature toggles — enable/disable per workspace
+  
   featureToggles: {
     tasks: { type: Boolean, default: true },
     notes: { type: Boolean, default: true },
@@ -28,21 +26,21 @@ const WorkspacePermissionSchema = new mongoose.Schema({
     reminders: { type: Boolean, default: true }
   },
 
-  // Who can invite members to this workspace
+  
   invitePermission: {
     type: String,
     enum: ['owner', 'admin', 'member'],
     default: 'admin'
   },
 
-  // Who can create channels
+  
   channelCreationPermission: {
     type: String,
     enum: ['owner', 'admin', 'member'],
     default: 'member'
   },
 
-  // Last updated by
+  
   updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
 
 }, { timestamps: true });

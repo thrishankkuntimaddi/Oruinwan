@@ -1,7 +1,3 @@
-/**
- * LinkPreviewMessage.jsx — Phase 7.5
- * Renders an Open Graph / link preview card below message text.
- */
 import React, { useState } from 'react';
 import { ExternalLink, Globe } from 'lucide-react';
 
@@ -14,7 +10,7 @@ export default function LinkPreviewMessage({ preview }) {
     let siteLabel = site || '';
     try {
         if (!siteLabel) siteLabel = new URL(url).hostname.replace(/^www\./, '');
-    } catch { /* ignore */ }
+    } catch {  }
 
     const hasImage = image && !imgError;
 
@@ -37,11 +33,11 @@ export default function LinkPreviewMessage({ preview }) {
                 onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
                 onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
             >
-                {/* Left accent bar */}
+                {}
                 <div style={{ display: 'flex' }}>
                     <div style={{ width: '3px', backgroundColor: 'var(--accent)', flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        {/* Image */}
+                        {}
                         {hasImage && (
                             <div style={{ width: '100%', height: '120px', backgroundColor: 'var(--bg-hover)', overflow: 'hidden' }}>
                                 <img
@@ -53,9 +49,9 @@ export default function LinkPreviewMessage({ preview }) {
                             </div>
                         )}
 
-                        {/* Text body */}
+                        {}
                         <div style={{ padding: '8px 10px' }}>
-                            {/* Site */}
+                            {}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '4px' }}>
                                 <Globe size={10} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
                                 <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -63,21 +59,21 @@ export default function LinkPreviewMessage({ preview }) {
                                 </span>
                             </div>
 
-                            {/* Title */}
+                            {}
                             {title && (
                                 <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 3px', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {title}
                                 </p>
                             )}
 
-                            {/* Description */}
+                            {}
                             {description && (
                                 <p style={{ fontSize: '11px', color: 'var(--text-secondary)', margin: '0 0 6px', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                     {description}
                                 </p>
                             )}
 
-                            {/* URL */}
+                            {}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 <ExternalLink size={10} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                                 <span style={{ fontSize: '10px', color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{url}</span>

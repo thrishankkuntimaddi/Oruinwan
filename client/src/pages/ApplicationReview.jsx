@@ -14,7 +14,7 @@ const ApplicationReview = () => {
     });
     const [refreshing, setRefreshing] = useState(false);
 
-    // Fetch company status
+    
     const fetchCompanyStatus = async () => {
         if (!user?.company_Id) return;
 
@@ -30,7 +30,7 @@ const ApplicationReview = () => {
                 submittedAt: res.data.createdAt
             });
 
-            // If approved, redirect to company setup
+            
             if (res.data.verificationStatus === 'verified') {
                 if (!res.data.isSetupComplete) {
                     navigate('/company-setup');
@@ -39,9 +39,9 @@ const ApplicationReview = () => {
                 }
             }
 
-            // If rejected, show rejection reason
+            
             if (res.data.verificationStatus === 'rejected') {
-                // Handle rejection - could show a different page or message
+                
             }
         } catch (error) {
             console.error('Error fetching company status:', error);
@@ -50,16 +50,16 @@ const ApplicationReview = () => {
         }
     };
 
-    // Initial fetch
+    
     useEffect(() => {
         fetchCompanyStatus();
     }, []);
 
-    // Auto-refresh every 30 seconds
+    
     useEffect(() => {
         const interval = setInterval(() => {
             fetchCompanyStatus();
-        }, 30000); // 30 seconds
+        }, 30000); 
 
         return () => clearInterval(interval);
     }, [user]);
@@ -72,7 +72,7 @@ const ApplicationReview = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 flex items-center justify-center p-4">
             <div className="w-full max-w-lg bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {/* Header */}
+                {}
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-8 text-white">
                     <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
@@ -94,9 +94,9 @@ const ApplicationReview = () => {
                     </div>
                 </div>
 
-                {/* Content */}
+                {}
                 <div className="p-8 space-y-6">
-                    {/* Company Info */}
+                    {}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-600 dark:text-gray-400">Company Name</span>
@@ -125,10 +125,10 @@ const ApplicationReview = () => {
                         )}
                     </div>
 
-                    {/* Divider */}
+                    {}
                     <div className="border-t border-gray-200 dark:border-gray-700" />
 
-                    {/* What's Next */}
+                    {}
                     <div className="space-y-4">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">What happens next?</h2>
                         <div className="space-y-3">
@@ -162,7 +162,7 @@ const ApplicationReview = () => {
                         </div>
                     </div>
 
-                    {/* Timeline */}
+                    {}
                     <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-4">
                         <div className="flex items-center gap-2 mb-2">
                             <Clock size={16} className="text-blue-600 dark:text-blue-400" />
@@ -174,7 +174,7 @@ const ApplicationReview = () => {
                         </p>
                     </div>
 
-                    {/* Refresh Button */}
+                    {}
                     <button
                         onClick={fetchCompanyStatus}
                         disabled={refreshing}
@@ -184,7 +184,7 @@ const ApplicationReview = () => {
                         {refreshing ? 'Checking Status...' : 'Refresh Status'}
                     </button>
 
-                    {/* Contact Support */}
+                    {}
                     <div className="text-center">
                         <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Need assistance?</p>
                         <a

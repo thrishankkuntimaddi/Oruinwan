@@ -6,7 +6,7 @@ export default function BroadcastChatWindow({ broadcast }) {
 
     return (
         <div className="flex flex-col h-full bg-white">
-            {/* Header */}
+            {}
             <div className="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white shrink-0">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
@@ -22,11 +22,11 @@ export default function BroadcastChatWindow({ broadcast }) {
                 </div>
             </div>
 
-            {/* Content */}
+            {}
             <div className="flex-1 overflow-y-auto p-8 bg-gray-50/50">
                 <div className="max-w-3xl mx-auto space-y-8">
 
-                    {/* Message Card */}
+                    {}
                     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                         <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/30 flex justify-between items-center">
                             <span className="text-sm font-semibold text-gray-700">Broadcast Message</span>
@@ -39,7 +39,7 @@ export default function BroadcastChatWindow({ broadcast }) {
                         </div>
                     </div>
 
-                    {/* Recipients List */}
+                    {}
                     <div>
                         <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <Users size={16} className="text-gray-500" />

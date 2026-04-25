@@ -1,5 +1,3 @@
-// client/src/components/messagesComp/chatWindowComp/messages/TranslatePopover.jsx
-// Language selection popover — rendered via a fixed portal.
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2, X } from 'lucide-react';
@@ -45,7 +43,7 @@ export default function TranslatePopover({ pos, status, onSelect, onClose, onRet
             }}
             onClick={e => e.stopPropagation()}
         >
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     🌐 Translate to
@@ -61,7 +59,7 @@ export default function TranslatePopover({ pos, status, onSelect, onClose, onRet
                 </button>
             </div>
 
-            {/* Loading state */}
+            {}
             {status === 'loading' && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                     <Loader2 size={13} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
@@ -69,7 +67,7 @@ export default function TranslatePopover({ pos, status, onSelect, onClose, onRet
                 </div>
             )}
 
-            {/* Error state */}
+            {}
             {status === 'error' && (
                 <div style={{ padding: '10px 12px' }}>
                     <p style={{ fontSize: '11px', color: 'var(--state-danger)', marginBottom: '6px', margin: '0 0 6px' }}>Translation failed.</p>
@@ -82,7 +80,7 @@ export default function TranslatePopover({ pos, status, onSelect, onClose, onRet
                 </div>
             )}
 
-            {/* Language grid */}
+            {}
             {!status && (
                 <div style={{ padding: '4px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2px' }}>
                     {SUPPORTED_LANGS.map(lang => (

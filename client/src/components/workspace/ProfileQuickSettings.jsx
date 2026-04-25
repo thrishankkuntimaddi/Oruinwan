@@ -1,4 +1,3 @@
-// client/src/components/workspace/ProfileQuickSettings.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +11,6 @@ import { useToast } from '../../contexts/ToastContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { getAvatarUrl } from '../../utils/avatarUtils';
 
-/* ── Shared style tokens ──────────────────────────────────────── */
 const inp = {
     width: '100%', padding: '8px 10px',
     background: 'var(--bg-input)', border: '1px solid var(--border-default)',
@@ -85,7 +83,7 @@ const ProfileQuickSettings = ({ onClose }) => {
         window.location.href = '/login';
     };
 
-    /* Role badge color — accent only for owner, neutral for rest */
+    
     const getRoleBadge = () => {
         const role = user?.companyRole;
         const label = role ? role.charAt(0).toUpperCase() + role.slice(1) : 'Member';
@@ -101,10 +99,10 @@ const ProfileQuickSettings = ({ onClose }) => {
         );
     };
 
-    /* ── Main View ─────────────────────────────────────────────── */
+    
     const renderMainView = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Avatar + name */}
+            {}
             <div style={{ textAlign: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ position: 'relative', display: 'inline-block', marginBottom: '12px' }}>
                     <div style={{ width: '64px', height: '64px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-accent)', margin: '0 auto' }}>
@@ -126,7 +124,7 @@ const ProfileQuickSettings = ({ onClose }) => {
                 </div>
             </div>
 
-            {/* Info rows */}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                 {user?.phone && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px' }}>
@@ -163,7 +161,7 @@ const ProfileQuickSettings = ({ onClose }) => {
                 )}
             </div>
 
-            {/* Action rows */}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
                 <button onClick={() => { onClose(); navigate('/settings', { state: { from: '/workspaces' } }); }}
                     style={rowBtn}
@@ -209,7 +207,7 @@ const ProfileQuickSettings = ({ onClose }) => {
         </div>
     );
 
-    /* ── Edit View ─────────────────────────────────────────────── */
+    
     const renderEditView = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -222,7 +220,7 @@ const ProfileQuickSettings = ({ onClose }) => {
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', maxHeight: '320px', overflowY: 'auto' }}>
-                {/* Avatar */}
+                {}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <div style={{ position: 'relative' }} className="group">
                         <div style={{ width: '56px', height: '56px', borderRadius: '50%', overflow: 'hidden', border: '1px solid var(--border-accent)' }}>
@@ -316,7 +314,7 @@ const ProfileQuickSettings = ({ onClose }) => {
         </div>
     );
 
-    /* ── Theme View ────────────────────────────────────────────── */
+    
     const renderThemeView = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
@@ -358,7 +356,7 @@ const ProfileQuickSettings = ({ onClose }) => {
     return (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px', fontFamily: 'var(--font)' }}>
             <div style={{ width: '100%', maxWidth: '400px', background: 'var(--bg-base)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)' }}>
                     <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.01em' }}>My Profile</h3>
                     <button onClick={onClose}
@@ -368,7 +366,7 @@ const ProfileQuickSettings = ({ onClose }) => {
                     ><X size={16} /></button>
                 </div>
 
-                {/* Content */}
+                {}
                 <div style={{ padding: '20px' }}>
                     {view === 'main' && renderMainView()}
                     {view === 'edit' && renderEditView()}

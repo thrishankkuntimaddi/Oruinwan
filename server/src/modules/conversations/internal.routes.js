@@ -1,24 +1,12 @@
-/**
- * PHASE 2: Internal Admin Routes for E2EE Repair
- * 
- * Admin-only endpoints for explicitly repairing INV-001 violations
- * DO NOT expose to public API
- */
-
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const repairController = require('./conversationKeys.repair.controller');
 
-/**
- * Middleware: Platform Admin Only
- * 
- * Restricts access to Chttrix platform admin
- */
 function requirePlatformAdmin(req, res, next) {
     const User = require('../../../models/User');
 
-    // Check if user is authenticated
+    
     if (!req.user || !req.user.sub) {
         console.error(`🚫 [AUDIT][PHASE2][AUTH] Unauthorized access attempt`);
         return res.status(401).json({
@@ -27,7 +15,7 @@ function requirePlatformAdmin(req, res, next) {
         });
     }
 
-    // Check if user is platform admin (chttrix_admin role)
+    
     User.findById(req.user.sub).then(user => {
         if (!user || !user.roles || !user.roles.includes('chttrix_admin')) {
             console.error(`🚫 [AUDIT][PHASE2][AUTH] Non-admin access attempt`);
@@ -54,26 +42,6 @@ function requirePlatformAdmin(req, res, next) {
     });
 }
 
-/**
- * POST /internal/e2ee/repair-conversation-key
- * 
- * Explicitly repair INV-001 violation for a single user
- * 
- * Authorization: Platform admin only
- * 
- * Body:
- * {
- *   "channelId": "<string>",
- *   "userId": "<string>"
- * }
- * 
- * Response:
- * {
- *   "success": true/false,
- *   "result": "REPAIR_SUCCESS" | "NO_REPAIR_NEEDED" | "CANNOT_REPAIR_*",
- *   "reason": "<string>"
- * }
- */
 router.post(
     '/repair-conversation-key',
     requireAuth,

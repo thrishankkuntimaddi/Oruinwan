@@ -18,22 +18,20 @@ export default function Messages() {
   const { workspaceId } = useParams();
   const [searchParams] = useSearchParams();
 
-  // Handle Routing for Selected Chat
+  
   useEffect(() => {
     const path = location.pathname;
 
-    // FIRST: Check for query parameters (from universal search)
+    
     const channelParam = searchParams.get('channel');
     const dmParam = searchParams.get('dm');
     const newDMParam = searchParams.get('newDM');
 
-
-
-    // Extract workspaceId from path for query param handling
+    
     const workspaceMatch = path.match(/\/workspace\/([^/]+)/);
     const workspaceId = workspaceMatch ? workspaceMatch[1] : null;
 
-    // Handle channel query parameter
+    
     if (channelParam && workspaceId) {
 
       const fetchChannelDetails = async () => {
@@ -57,7 +55,7 @@ export default function Messages() {
           setCurrentBroadcast(null);
         } catch (error) {
           console.error('❌ [Messages] Failed to fetch channel:', error);
-          // Fallback
+          
           setSelectedChat({
             id: channelParam,
             name: "Channel",
@@ -69,10 +67,10 @@ export default function Messages() {
         }
       };
       fetchChannelDetails();
-      return; // Exit early
+      return; 
     }
 
-    // Handle DM query parameter
+    
     if (dmParam && workspaceId) {
 
       const fetchDMDetails = async () => {
@@ -105,10 +103,10 @@ export default function Messages() {
         }
       };
       fetchDMDetails();
-      return; // Exit early
+      return; 
     }
 
-    // Handle new DM query parameter
+    
     if (newDMParam && workspaceId) {
 
       const fetchUserDetails = async () => {
@@ -140,16 +138,16 @@ export default function Messages() {
         }
       };
       fetchUserDetails();
-      return; // Exit early
+      return; 
     }
 
-    // THEN: Handle path-based routing (existing logic)
+    
     if (path.includes("/broadcast/")) {
       const broadcastId = path.split("/broadcast/")[1];
       if (location.state?.broadcast) {
         setCurrentBroadcast(location.state.broadcast);
       } else {
-        // Fallback for direct access
+        
         setCurrentBroadcast({
           id: broadcastId,
           name: "Broadcast",
@@ -160,7 +158,7 @@ export default function Messages() {
       }
       setSelectedChat(null);
     } else if (path.includes("/channel/")) {
-      // Should not happen in Messages context usually, but handled just in case
+      
       const channelId = decodeURIComponent(path.split("/channel/")[1]);
       setSelectedChat({
         id: channelId,
@@ -171,13 +169,11 @@ export default function Messages() {
       });
       setCurrentBroadcast(null);
     } else if (path.includes("/dm/")) {
-      const dmId = path.split("/dm/").pop();  // Could be session ID or user ID
+      const dmId = path.split("/dm/").pop();  
 
-
-      // Extract workspaceId from path
+      
       const workspaceMatch = path.match(/\/workspace\/([^/]+)/);
       const workspaceId = workspaceMatch ? workspaceMatch[1] : null;
-
 
       if (!workspaceId) {
         console.error('❌ No workspaceId found!');
@@ -185,27 +181,26 @@ export default function Messages() {
         return;
       }
 
-      // Fetch DM sessions to find participant details
+      
       const fetchDMDetails = async () => {
         try {
 
           const response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
           const sessions = response.data.sessions || [];
 
-
-          // Debug: Log session structure to understand data format
+          
           if (sessions.length > 0) {
 
           }
 
-          // Try to find by session ID first
+          
           let dmSession = sessions.find(s => s.id === dmId);
 
           if (dmSession) {
 
           }
 
-          // If not found, try to find by participant user ID (otherUserId)
+          
           if (!dmSession) {
             dmSession = sessions.find(s => {
               const otherUserId = s.otherUserId || s.otherUser?._id || s.otherUser?.id;
@@ -218,59 +213,52 @@ export default function Messages() {
           }
 
           if (dmSession && dmSession.otherUser) {
-            // Extract username with multiple fallback options
+            
             const username = dmSession.otherUser.username
               || dmSession.otherUser.name
               || dmSession.otherUser.email?.split('@')[0]
               || "Unknown User";
 
-
-
             setSelectedChat({
-              id: dmSession.id,  // Use the actual session ID
+              id: dmSession.id,  
               name: username,
               type: "dm",
               avatar: dmSession.otherUser.profilePicture || dmSession.otherUser.avatar,
               status: dmSession.otherUser.isOnline ? "online" : "offline",
-              isNew: false,  // Existing DM session
+              isNew: false,  
               workspaceId: workspaceId
             });
           } else {
-            // If still not found, might be a new DM - fetch user details from workspace members
+            
 
             const userRes = await api.get(`/api/workspaces/${workspaceId}/members`);
             const members = userRes.data.members || [];
 
-
-            // Try to find user by ID with multiple match strategies
+            
             const user = members.find(m => {
               const memberId = m._id || m.id || m.user?._id || m.user?.id;
               return String(memberId) === String(dmId);
             });
 
             if (user) {
-              // Extract username from member data (could be nested in user object)
+              
               const userData = user.user || user;
               const username = userData.username
                 || userData.name
                 || userData.email?.split('@')[0]
                 || "Unknown User";
 
-
-
-
               setSelectedChat({
-                id: dmId,  // Use user ID for new DMs
+                id: dmId,  
                 name: username,
                 type: "dm",
                 avatar: userData.profilePicture || userData.avatar,
                 status: userData.isOnline ? "online" : "offline",
-                isNew: true,  // New DM
+                isNew: true,  
                 workspaceId: workspaceId
               });
             } else {
-              // Ultimate fallback - but log warning
-
+              
 
               setSelectedChat({
                 id: dmId,
@@ -287,7 +275,7 @@ export default function Messages() {
           console.error("❌ [DM Fetch] Failed to fetch DM details:", error);
           console.error("❌ [DM Fetch] Error details:", error.response?.data || error.message);
 
-          // Fallback with error context
+          
           setSelectedChat({
             id: dmId,
             name: "Unknown User",
@@ -311,12 +299,12 @@ export default function Messages() {
   const handleDeleteChat = (chat) => {
     deleteItem(chat.id);
     setSelectedChat(null);
-    navigate("/messages"); // Go back to empty state in messages
+    navigate("/messages"); 
   };
 
   const handleStartDM = (selectedUser) => {
     setShowCreateDM(false);
-    // Navigate to the "new" DM route with the target user's ID
+    
     if (workspaceId) {
       navigate(`/workspace/${workspaceId}/messages/dm/${selectedUser._id || selectedUser.id}`);
     }
@@ -325,7 +313,7 @@ export default function Messages() {
   return (
     <div className="flex flex-col h-full w-full">
       <div className="flex flex-1 overflow-hidden">
-        {/* RIGHT PANE – Chat window */}
+        {}
         <div className="flex-1 flex flex-col">
           {currentBroadcast ? (
             <BroadcastChatWindow broadcast={currentBroadcast} />
@@ -339,11 +327,11 @@ export default function Messages() {
             />
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-base, #0c0c0c)', position: 'relative', overflow: 'hidden' }}>
-              {/* Subtle amber ambient */}
+              {}
               <div style={{ position: 'absolute', top: '30%', left: '40%', width: '320px', height: '320px', background: '#b8956a', opacity: 0.03, borderRadius: '50%', filter: 'blur(100px)', pointerEvents: 'none' }} />
 
               <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '360px', textAlign: 'center', padding: '32px' }}>
-                {/* Icon box */}
+                {}
                 <div style={{ width: '72px', height: '72px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', overflow: 'hidden', flexShrink: 0 }}>
                   <video src="/hover-animation.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
                 </div>
@@ -369,7 +357,7 @@ export default function Messages() {
         </div>
       </div>
 
-      {/* New DM Modal */}
+      {}
       {showCreateDM && (
         <NewDMModal
           onClose={() => setShowCreateDM(false)}

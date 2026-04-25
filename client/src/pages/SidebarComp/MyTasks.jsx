@@ -1,19 +1,3 @@
-/**
- * MyTasks.jsx — Jira-Grade Workspace Task Dashboard
- *
- * Scope: ENTIRE workspace — personal, incoming, delegated, across ALL channels
- *
- * Views:
- *  - My Issues       (self-created self-assigned)
- *  - Incoming        (assigned to me by others)
- *  - Given           (I delegated to others)
- *  - All Issues      (everything I can see — filterable by channel)
- *  - Completed       (done tasks)
- *  - Trash           (deleted tasks with restore/permanent delete)
- *
- * Modes: List view (default) | Board view (Jira Kanban)
- */
-
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   Plus, Search, X, Loader2, CheckCircle2, Clock, Circle,
@@ -38,9 +22,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useContacts } from '../../contexts/ContactsContext';
 import api from '@services/api';
 
-// ─── Design tokens (theme-aware via CSS variables) ────────────────────────────
-
-const JIRA_BLUE = '#b8956a'; // amber accent stays constant
+const JIRA_BLUE = '#b8956a'; 
 const BOARD_BG = 'var(--bg-base)';
 const SIDEBAR_BG = 'var(--bg-surface)';
 const TOOLBAR_BG = 'var(--bg-base)';
@@ -64,7 +46,7 @@ const PRIORITY_META = {
   Medium: { color: '#E2B203', bg: 'rgba(226,178,3,0.08)' },
   Low: { color: '#3E7FC1', bg: 'rgba(62,127,193,0.08)' },
   Lowest: { color: '#7A869A', bg: 'rgba(122,134,154,0.08)' },
-  // Legacy values
+  
   Emergency: { color: '#CD1317', bg: 'rgba(205,19,23,0.08)' },
 };
 
@@ -80,7 +62,7 @@ const SIDEBAR_VIEWS = [
   { key: 'shared-tasks', label: 'Incoming', icon: <Inbox size={15} /> },
   { key: 'assigned-tasks', label: 'Given', icon: <Send size={15} /> },
   { key: 'all-tasks', label: 'All Issues', icon: <Eye size={15} /> },
-  null, // separator
+  null, 
   { key: 'completed-tasks', label: 'Completed', icon: <CheckCircle2 size={15} /> },
   { key: 'deleted-tasks', label: 'Trash', icon: <Trash2 size={15} /> },
 ];
@@ -94,8 +76,6 @@ const SORT_OPTIONS = [
 ];
 
 const PRIORITY_ORDER = { Emergency: 5, Highest: 5, High: 4, Medium: 3, Low: 2, Lowest: 1 };
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function PriorityIcon({ priority, size = 14 }) {
   const p = priority?.toLowerCase();
@@ -136,8 +116,6 @@ function isOverdue(task) {
   return task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'Completed' && task.status !== 'Cancelled';
 }
 
-// ─── Issue Type Icon (Jira-discipline) ────────────────────────────────
-
 const ISSUE_TYPE_META = {
   epic: { label: 'Epic', color: '#6554C0', bg: '#EAE6FF', Icon: Zap },
   bug: { label: 'Bug', color: '#FF5630', bg: '#FFEBE6', Icon: AlertTriangle },
@@ -156,8 +134,6 @@ function IssueTypeIcon({ type = 'task', size = 11 }) {
     </span>
   );
 }
-
-// ─── Transfer Request Banner ───────────────────────────────────────────────
 
 function TransferBanner({ task, onApprove, onReject, onRequest }) {
   if (task.transferRequest?.status === 'pending') {
@@ -183,8 +159,6 @@ function TransferBanner({ task, onApprove, onReject, onRequest }) {
   return null;
 }
 
-// ─── List Row ─────────────────────────────────────────────────────────────────
-
 function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, onTransferRequest, onTransferApprove, onTransferReject, onStatusChange }) {
   const isDeleted = task.deleted;
   const isCompleted = task.status === 'Completed';
@@ -201,20 +175,20 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
       onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
       onClick={() => onEdit(task)}
     >
-      {/* Priority strip */}
+      {}
       <div className="absolute left-0 top-0 bottom-0 w-0.5 rounded-r-full"
         style={{ background: pMeta.color }} />
 
       <div className="flex items-center gap-4 px-4 py-3 pl-5">
-        {/* Issue type icon (replaces plain status dot) */}
+        {}
         <div className="flex-shrink-0">
           <IssueTypeIcon type={task.issueType || 'task'} size={11} />
         </div>
 
-        {/* Main content */}
+        {}
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2">
-            {/* Issue key */}
+            {}
             {task.issueKey && (
               <span className="text-[10px] font-mono font-semibold flex-shrink-0 mt-0.5" style={{ color: '#7A869A' }}>
                 {task.issueKey}
@@ -226,7 +200,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
             </p>
           </div>
 
-          {/* Labels chips */}
+          {}
           {task.labels?.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1">
               {task.labels.slice(0, 4).map(l => (
@@ -235,21 +209,21 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
             </div>
           )}
 
-          {/* Meta row */}
+          {}
           <div className="flex items-center gap-3 mt-1 flex-wrap">
-            {/* Channel / Project */}
+            {}
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: 'var(--text-muted)', background: 'var(--bg-hover)', border: '1px solid var(--border-subtle)', padding: '1px 6px' }}>
               <Hash size={9} /> {task.project || 'General'}
             </span>
 
-            {/* Priority */}
+            {}
             <span className="flex items-center gap-0.5 text-[10px] font-semibold"
               style={{ color: PRIORITY_META[task.priority]?.color || '#E2B203' }}>
               <PriorityIcon priority={task.priority} size={10} />
               {task.priority}
             </span>
 
-            {/* Due date */}
+            {}
             {task.dueDate && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 500, color: isOverdue(task) ? 'var(--state-danger)' : 'var(--text-muted)' }}>
                 <Calendar size={9} />
@@ -258,7 +232,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
               </span>
             )}
 
-            {/* From/To */}
+            {}
             {isIncoming && (
               <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                 From: <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>{task.assigner}</span>
@@ -272,12 +246,12 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
           </div>
         </div>
 
-        {/* Status badge */}
+        {}
         <div className="flex-shrink-0">
           <StatusBadge status={task.status} />
         </div>
 
-        {/* Actions */}
+        {}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
           {isDeleted ? (
             <>
@@ -319,7 +293,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
           )}
         </div>
 
-        {/* Assignee avatar */}
+        {}
         {task.assignee && task.assignee !== 'Self' && (
           <div className="w-6 h-6 rounded-full flex items-center justify-center text-white text-[9px] font-bold flex-shrink-0"
             style={{ background: avatarColor(task.assignee) }}
@@ -329,7 +303,7 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
         )}
       </div>
 
-      {/* Transfer request banner (for given tasks) */}
+      {}
       {isGiven && task.transferRequest?.status === 'pending' && (
         <div className="px-5 pb-2">
           <TransferBanner
@@ -342,8 +316,6 @@ function ListRow({ task, view, onEdit, onDelete, onRestore, onPermanentDelete, o
     </div>
   );
 }
-
-// ─── Board Card ───────────────────────────────────────────────────────────────
 
 function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
   const overdue = isOverdue(task);
@@ -395,8 +367,6 @@ function BoardCard({ task, view, onEdit, onDelete, onRestore }) {
   );
 }
 
-// ─── Board Column ─────────────────────────────────────────────────────────────
-
 function BoardColumn({ col, tasks, view, onEdit, onDelete }) {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0, background: BOARD_BG }}>
@@ -426,8 +396,6 @@ function BoardColumn({ col, tasks, view, onEdit, onDelete }) {
   );
 }
 
-// ─── Stats Strip ──────────────────────────────────────────────────────────────
-
 function StatsStrip({ tasks, currentUserId }) {
   const active = tasks.filter(t => !t.deleted && t.status !== 'Completed');
   const overdue = active.filter(t => isOverdue(t));
@@ -454,8 +422,6 @@ function StatsStrip({ tasks, currentUserId }) {
   );
 }
 
-// ─── Create / Edit Task Modal (wrapper) ───────────────────────────────────────
-
 function CreateTaskModal({ initialData, channels, members, onClose, onSubmit, onUpdate }) {
   return (
     <TaskModal
@@ -469,8 +435,6 @@ function CreateTaskModal({ initialData, channels, members, onClose, onSubmit, on
   );
 }
 
-// ─── Main MyTasks ─────────────────────────────────────────────────────────────
-
 export default function MyTasks() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -479,13 +443,13 @@ export default function MyTasks() {
   const { tasks, loading, createTask, updateTask, deleteTask, restoreTask, permanentlyDeleteTask, handleTransferResponse } = useTasks();
   const { user } = useAuth();
   const { members, channels } = useContacts();
-  // Extract workspaceId from URL for workload/sprint endpoints
+  
   const pathMatch = window.location.pathname.match(/\/workspace\/([^/]+)/);
   const workspaceId = pathMatch ? pathMatch[1] : null;
 
   const isMobile = useIsMobile();
 
-  const [viewMode, setViewMode] = useState('list'); // list | board | sprint | timeline | workload
+  const [viewMode, setViewMode] = useState('list'); 
   const [search, setSearch] = useState('');
   const [sortOrder, setSortOrder] = useState('priority');
   const [channelFilter, setChannelFilter] = useState('all');
@@ -493,9 +457,9 @@ export default function MyTasks() {
   const [showFilters, setShowFilters] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
-  // Mobile nav: false = show sidebar nav, true = show task list
+  
   const [mobileShowList, setMobileShowList] = useState(false);
-  // Right-side detail panel (replaces click-to-edit modal)
+  
   const [selectedTask, setSelectedTask] = useState(null);
   const [completionTask, setCompletionTask] = useState(null);
   const [deletionTask, setDeletionTask] = useState(null);
@@ -503,8 +467,7 @@ export default function MyTasks() {
 
   const currentUserId = user?._id || user?.id;
 
-
-  // Filter logic by view — declared BEFORE channelCounts so it can be used as dependency
+  
   const viewFiltered = useMemo(() => {
     const isAssignee = (t) => {
       if (t.assignees?.length > 0) return t.assignees.some(a => String(a._id || a.id) === String(currentUserId));
@@ -531,7 +494,7 @@ export default function MyTasks() {
     }
   }, [tasks, activeView, currentUserId]);
 
-  // channelCounts: channels that have tasks in the current view, sorted by count
+  
   const channelCounts = useMemo(() => {
     const counts = {};
     viewFiltered.forEach(t => {
@@ -541,12 +504,12 @@ export default function MyTasks() {
     return counts;
   }, [viewFiltered]);
 
-  // channelNames: only channels that appear in this view, sorted by task count desc
+  
   const channelNames = useMemo(() => {
     return Object.keys(channelCounts).sort((a, b) => channelCounts[b] - channelCounts[a]);
   }, [channelCounts]);
 
-  // Second-pass filters: search + channel + priority + sort
+  
   const filtered = useMemo(() => {
     let list = [...viewFiltered];
 
@@ -576,26 +539,26 @@ export default function MyTasks() {
     });
   }, [viewFiltered, search, channelFilter, priorityFilter, sortOrder]);
 
-  // Board grouped by status
+  
   const boardGroups = useMemo(() =>
     Object.fromEntries(BOARD_COLUMNS.map(c => [c.key, filtered.filter(t => t.status === c.key)])),
     [filtered]
   );
 
-  // --- Handlers ---
-  // Clicking a task row opens the right-side detail panel
+  
+  
   const handleEdit = useCallback((task) => {
     setSelectedTask(task);
   }, []);
 
-  // Panel save handler — updates task in context and refreshes selectedTask
+  
   const handlePanelUpdate = useCallback(async (id, updates) => {
     const updated = await updateTask(id, updates);
-    // Keep selectedTask in sync (updateTask returns updated task)
+    
     setSelectedTask(prev => prev?.id === id ? { ...prev, ...updates } : prev);
   }, [updateTask]);
 
-  // Panel delete handler
+  
   const handlePanelDelete = useCallback((id) => {
     const task = tasks.find(t => t.id === id);
     setSelectedTask(null);
@@ -636,7 +599,7 @@ export default function MyTasks() {
     const params = new URLSearchParams(location.search);
     params.set('tab', key);
     navigate(`?${params.toString()}`, { replace: true });
-    // On mobile, switch to list view after selecting a category
+    
     if (isMobile) setMobileShowList(true);
   };
 
@@ -662,15 +625,15 @@ export default function MyTasks() {
     'deleted-tasks': 'Trash — restore or delete permanently.',
   }[activeView] || '';
 
-  // Keep selectedTask in sync when tasks array updates (e.g. after socket push)
-  // Must be BEFORE any early returns to satisfy React hooks rules
+  
+  
   useEffect(() => {
     if (!selectedTask) return;
     const fresh = tasks.find(t => t.id === selectedTask.id);
     if (fresh) setSelectedTask(fresh);
-  }, [tasks]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tasks]); 
 
-  // ── Loading skeleton ──
+  
   if (loading) {
     return (
       <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: BOARD_BG }}>
@@ -693,7 +656,7 @@ export default function MyTasks() {
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden', background: BOARD_BG }}>
 
-      {/* ── Left sidebar ── */}
+      {}
       <div style={{
         width: isMobile ? '100%' : '200px',
         flexShrink: 0, background: SIDEBAR_BG,
@@ -730,12 +693,12 @@ export default function MyTasks() {
             )}
           </nav>
 
-          {/* Channel filter in sidebar — only channels with tasks in current view */}
+          {}
           {channelNames.length > 0 && (
             <div className="mt-4">
               <p className="text-[10px] font-bold uppercase tracking-widest mb-2 px-2" style={{ color: TEXT_MUTED }}>By Channel</p>
               <div className="space-y-0.5">
-                {/* All Channels reset button */}
+                {}
                 <button onClick={() => setChannelFilter('all')}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '5px 10px', background: channelFilter === 'all' ? 'rgba(184,149,106,0.12)' : 'transparent', border: channelFilter === 'all' ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: channelFilter === 'all' ? JIRA_BLUE : 'var(--text-secondary)', fontSize: '12px', fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', transition: 'all 150ms ease', textAlign: 'left' }}
                   onMouseEnter={e => { if (channelFilter !== 'all') e.currentTarget.style.background = 'var(--bg-hover)'; }}
@@ -762,18 +725,18 @@ export default function MyTasks() {
         </div>
       </div>
 
-      {/* ── Main content + optional right panel ── */}
+      {}
       <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden"
         style={{ display: (isMobile && !mobileShowList) ? 'none' : 'flex' }}
       >
         <div className="flex-1 flex flex-col min-h-0 min-w-0 overflow-hidden">
 
-          {/* ── Toolbar ── */}
+          {}
           <div style={{ flexShrink: 0, background: TOOLBAR_BG, borderBottom: `1px solid ${BORDER_COLOR}`, padding: isMobile ? '0' : '10px 20px' }}>
             {isMobile ? (
-              /* ── Mobile toolbar: 2 compact rows ── */
+              
               <>
-                {/* Row 1: back + title + create */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', borderBottom: `1px solid ${BORDER_COLOR}` }}>
                   {mobileShowList && (
                     <button
@@ -795,7 +758,7 @@ export default function MyTasks() {
                     </button>
                   )}
                 </div>
-                {/* Row 2: search + sort compact */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
                     <Search size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
@@ -820,7 +783,7 @@ export default function MyTasks() {
                 </div>
               </>
             ) : (
-              /* ── Desktop toolbar: original single row ── */
+              
               <div className="flex items-center gap-3">
                 <div>
                   <h1 className="text-base font-bold" style={{ color: TEXT_PRIMARY }}>{viewLabel}</h1>
@@ -829,7 +792,7 @@ export default function MyTasks() {
 
                 <div className="flex-1" />
 
-                {/* Search */}
+                {}
                 <div className="relative">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
@@ -842,13 +805,13 @@ export default function MyTasks() {
                   />
                 </div>
 
-                {/* Sort */}
+                {}
                 <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
                   style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
                   {SORT_OPTIONS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
 
-                {/* Priority filter */}
+                {}
                 <select value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}
                   style={{ background: 'var(--bg-input)', border: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontSize: '12px', padding: '5px 8px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif' }}>
                   <option value="all">All Priorities</option>
@@ -857,7 +820,7 @@ export default function MyTasks() {
                   )}
                 </select>
 
-                {/* View toggle */}
+                {}
                 <div style={{ display: 'flex', overflow: 'hidden', border: `1px solid ${BORDER_COLOR}` }}>
                   {[
                     { key: 'list',      Icon: List,         title: 'List view' },
@@ -889,7 +852,7 @@ export default function MyTasks() {
             )}
           </div>
 
-          {/* ── Stats strip ── */}
+          {}
           {activeView === 'all-tasks' && (
             <div style={{ flexShrink: 0, background: TOOLBAR_BG, borderBottom: `1px solid ${BORDER_COLOR}`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
               {[
@@ -909,7 +872,7 @@ export default function MyTasks() {
             </div>
           )}
 
-          {/* ── Content area ── */}
+          {}
           <div className="flex-1 min-h-0 overflow-hidden">
             {filtered.length === 0 && viewMode !== 'workload' ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', background: BOARD_BG }}>
@@ -926,32 +889,32 @@ export default function MyTasks() {
                 </div>
               </div>
             ) : viewMode === 'board' ? (
-              /* Kanban board view */
+              
               <KanbanBoard
                 tasks={filtered}
                 onTaskClick={handleEdit}
                 onTasksUpdate={() => {}}
               />
             ) : viewMode === 'sprint' ? (
-              /* Sprint board view */
+              
               <SprintBoard
                 tasks={filtered}
                 workspaceId={workspaceId}
                 onTaskClick={handleEdit}
               />
             ) : viewMode === 'timeline' ? (
-              /* Timeline / Gantt view */
+              
               <TimelineView
                 tasks={filtered}
                 onTaskClick={handleEdit}
               />
             ) : viewMode === 'workload' ? (
-              /* Workload panel */
+              
               <WorkloadPanel workspaceId={workspaceId} />
             ) : (
-              /* List view (default) */
+              
               <div className="h-full overflow-y-auto" style={{ background: BOARD_BG, scrollbarWidth: 'thin' }}>
-                {/* Table header */}
+                {}
                 <div style={{ position: 'sticky', top: 0, display: 'flex', alignItems: 'center', gap: '16px', padding: '8px 20px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: 'var(--bg-active)', borderBottom: `1px solid ${BORDER_COLOR}`, borderTop: `1px solid ${BORDER_COLOR}`, color: TEXT_MUTED, fontFamily: 'monospace', zIndex: 10 }}>
                   <span style={{ width: '16px', flexShrink: 0 }} />
                   <span style={{ flex: 1 }}>Summary</span>
@@ -983,7 +946,7 @@ export default function MyTasks() {
           </div>
         </div>
 
-        {/* ── Right task detail panel ── */}
+        {}
         {selectedTask && (
           <WorkspaceTaskDetailPanel
             task={selectedTask}
@@ -994,9 +957,9 @@ export default function MyTasks() {
           />
         )}
 
-      </div>{/* end main content + right panel wrapper */}
+      </div>{}
 
-      {/* ── Modals ── */}
+      {}
       {showModal && (
         <CreateTaskModal
           initialData={editingTask}

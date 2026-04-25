@@ -1,12 +1,7 @@
-/**
- * FileMessage.jsx — Phase 7.1 Attachments
- * Renders a clickable file card: icon + name + size + download button.
- */
 import React from "react";
 import { FileText, Film, Archive, Sheet, File, Download } from "lucide-react";
 import { toProxyUrl } from "../../../../../utils/gcsProxy";
 
-// icon + tinted surface using CSS token alpha variants
 const ICON_MAP = {
     pdf:  { Icon: FileText, bg: 'rgba(224,82,82,0.10)',  color: '#e05252' },
     doc:  { Icon: FileText, bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
@@ -52,12 +47,12 @@ export default function FileMessage({ msg }) {
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.backgroundColor = 'var(--bg-active)'; }}
         >
-            {/* File type icon */}
+            {}
             <div style={{ flexShrink: 0, width: '36px', height: '36px', borderRadius: '2px', backgroundColor: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icon size={18} style={{ color }} />
             </div>
 
-            {/* File details */}
+            {}
             <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {name || "Attachment"}
@@ -69,7 +64,7 @@ export default function FileMessage({ msg }) {
                 )}
             </div>
 
-            {/* Download icon */}
+            {}
             <div style={{ flexShrink: 0, color: 'var(--text-muted)' }}>
                 <Download size={15} />
             </div>

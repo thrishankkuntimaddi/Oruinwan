@@ -1,18 +1,12 @@
-// client/src/components/company/ChartComponents.jsx
-
 import React from 'react';
 
-/**
- * Line Chart Component
- * Displays trend data over time
- */
 export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = true }) => {
     if (!data || data.length === 0) {
         return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
     }
 
     const maxValue = Math.max(...data.map(d => d.value), 1);
-    const width = 100; // percentage
+    const width = 100; 
     const padding = 10;
 
     const points = data.map((d, i) => {
@@ -24,7 +18,7 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
     return (
         <div className="relative w-full" style={{ height: `${height}px` }}>
             <svg width="100%" height={height} className="overflow-visible">
-                {/* Grid lines */}
+                {}
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
                     <line
                         key={i}
@@ -38,7 +32,7 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
                     />
                 ))}
 
-                {/* Line */}
+                {}
                 <polyline
                     points={points}
                     fill="none"
@@ -48,14 +42,14 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
                     strokeLinejoin="round"
                 />
 
-                {/* Area under line */}
+                {}
                 <polygon
                     points={`${padding},${height} ${points} ${width - padding},${height}`}
                     fill={color}
                     fillOpacity="0.1"
                 />
 
-                {/* Dots */}
+                {}
                 {showDots && data.map((d, i) => {
                     const x = (i / (data.length - 1)) * (width - padding * 2) + padding;
                     const y = height - ((d.value / maxValue) * (height - padding * 2) + padding);
@@ -76,7 +70,7 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
                 })}
             </svg>
 
-            {/* Y-axis labels */}
+            {}
             <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500 -ml-8">
                 <span>{maxValue}</span>
                 <span>{Math.round(maxValue * 0.5)}</span>
@@ -86,10 +80,6 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
     );
 };
 
-/**
- * Bar Chart Component
- * Displays comparison data
- */
 export const BarChart = ({ data, height = 200, color = '#8b5cf6' }) => {
     if (!data || data.length === 0) {
         return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
@@ -129,10 +119,6 @@ export const BarChart = ({ data, height = 200, color = '#8b5cf6' }) => {
     );
 };
 
-/**
- * Pie Chart Component
- * Displays distribution data
- */
 export const PieChart = ({ data, size = 200 }) => {
     if (!data || data.length === 0) {
         return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
@@ -144,7 +130,7 @@ export const PieChart = ({ data, size = 200 }) => {
     }
 
     const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1'];
-    let currentAngle = -90; // Start from top
+    let currentAngle = -90; 
 
     const slices = data.map((item, index) => {
         const percentage = (item.value / total) * 100;
@@ -208,10 +194,6 @@ export const PieChart = ({ data, size = 200 }) => {
     );
 };
 
-/**
- * Area Chart Component
- * Similar to line chart but with filled area
- */
 export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
     if (!data || data.length === 0) {
         return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
@@ -230,7 +212,7 @@ export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
     return (
         <div className="relative w-full" style={{ height: `${height}px` }}>
             <svg width="100%" height={height} className="overflow-visible">
-                {/* Grid lines */}
+                {}
                 {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
                     <line
                         key={i}
@@ -244,14 +226,14 @@ export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
                     />
                 ))}
 
-                {/* Filled area */}
+                {}
                 <polygon
                     points={`${padding},${height} ${points} ${width - padding},${height}`}
                     fill={color}
                     fillOpacity="0.3"
                 />
 
-                {/* Line */}
+                {}
                 <polyline
                     points={points}
                     fill="none"
@@ -262,7 +244,7 @@ export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
                 />
             </svg>
 
-            {/* Y-axis labels */}
+            {}
             <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500 -ml-8">
                 <span>{maxValue}</span>
                 <span>{Math.round(maxValue * 0.5)}</span>
@@ -272,9 +254,6 @@ export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
     );
 };
 
-/**
- * Simple stat card with trend indicator
- */
 export const StatCard = ({ label, value, trend, icon: Icon, color = 'blue' }) => {
     const colorClasses = {
         blue: 'bg-blue-50 text-blue-600',

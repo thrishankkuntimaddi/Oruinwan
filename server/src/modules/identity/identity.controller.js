@@ -1,24 +1,6 @@
-/**
- * Identity Controller
- * 
- * HTTP endpoints for identity key management
- */
-
 const identityService = require('./identity.service');
 const { handleError } = require('../../../utils/responseHelpers');
 
-// ==================== UPLOAD PUBLIC KEY ====================
-
-/**
- * Upload user's public identity key
- * POST /api/v2/identity/public-key
- * 
- * Body: {
- *   publicKey: string (PEM),
- *   algorithm: 'X25519' | 'RSA-2048',
- *   version: number
- * }
- */
 exports.uploadPublicKey = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -28,7 +10,7 @@ exports.uploadPublicKey = async (req, res) => {
         console.log(`📥 [PHASE 1] Public key upload request from user ${userId}`);
         console.log(`📥 [PHASE 1] Algorithm: ${algorithm}, Version: ${version || 1}`);
 
-        // Validation
+        
         if (!publicKey || !algorithm) {
             console.error('❌ [PHASE 1] Missing required fields');
             return res.status(400).json({
@@ -43,7 +25,7 @@ exports.uploadPublicKey = async (req, res) => {
             });
         }
 
-        // Store key (PURE PHASE 1 OPERATION - NO SIDE EFFECTS)
+        
         const keyDoc = await identityService.storePublicKey(
             userId,
             publicKey,
@@ -54,18 +36,18 @@ exports.uploadPublicKey = async (req, res) => {
         console.log(`✅ [PHASE 1] Public ${algorithm} key stored successfully`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
-        // ============================================================
-        // 🔧 PHASE 2: AUTO-REPAIR - Fix any invariant violations
-        // When a user uploads their public key (possibly late), scan
-        // all channels they're a member of and repair missing keys
-        // ============================================================
+        
+        
+        
+        
+        
         try {
             console.log('🔧 [PHASE 2] Starting auto-repair for late key upload...');
 
             const Channel = require("../../features/channels/channel.model.js");
             const conversationKeysService = require('../conversations/conversationKeys.service');
 
-            // Find all channels user is a member of
+            
             const channels = await Channel.find({
                 'members.user': userId
             }).select('_id name').lean();
@@ -109,13 +91,13 @@ exports.uploadPublicKey = async (req, res) => {
                 console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             }
         } catch (autoRepairError) {
-            // Don't fail the upload if auto-repair fails
+            
             console.error('⚠️ [PHASE 2] Auto-repair failed (non-fatal):', autoRepairError);
             console.error('   Public key upload was successful, but auto-repair skipped');
         }
-        // ============================================================
-        // END PHASE 2
-        // ============================================================
+        
+        
+        
 
         return res.status(201).json({
             message: 'Public key stored successfully',
@@ -130,17 +112,11 @@ exports.uploadPublicKey = async (req, res) => {
     }
 };
 
-// ==================== GET PUBLIC KEY ====================
-
-/**
- * Get a user's public identity key
- * GET /api/v2/identity/users/:userId/public-key
- */
 exports.getUserPublicKey = async (req, res) => {
     try {
         const { userId } = req.params;
 
-        // Fetch key
+        
         const keyDoc = await identityService.getPublicKey(userId);
 
         if (!keyDoc) {
@@ -160,16 +136,6 @@ exports.getUserPublicKey = async (req, res) => {
     }
 };
 
-// ==================== BATCH GET PUBLIC KEYS ====================
-
-/**
- * Batch fetch multiple users' public keys
- * POST /api/v2/identity/public-keys
- * 
- * Body: {
- *   userIds: string[]
- * }
- */
 exports.batchGetPublicKeys = async (req, res) => {
     try {
         const { userIds } = req.body;
@@ -180,17 +146,17 @@ exports.batchGetPublicKeys = async (req, res) => {
             });
         }
 
-        // Limit to 100 keys per request
+        
         if (userIds.length > 100) {
             return res.status(400).json({
                 message: 'Maximum 100 user IDs per request'
             });
         }
 
-        // Fetch keys
+        
         const keyDocs = await identityService.batchGetPublicKeys(userIds);
 
-        // Format response
+        
         const publicKeys = keyDocs.map(doc => ({
             userId: doc.userId,
             publicKey: doc.publicKey,
@@ -207,12 +173,6 @@ exports.batchGetPublicKeys = async (req, res) => {
     }
 };
 
-// ==================== CHECK KEY EXISTENCE ====================
-
-/**
- * Check if user has uploaded public key
- * GET /api/v2/identity/users/:userId/has-key
- */
 exports.checkHasPublicKey = async (req, res) => {
     try {
         const { userId } = req.params;
@@ -227,14 +187,6 @@ exports.checkHasPublicKey = async (req, res) => {
     }
 };
 
-// ==================== DELETE PUBLIC KEY ====================
-
-/**
- * Delete user's public key
- * DELETE /api/v2/identity/public-key
- * 
- * User can only delete their own key
- */
 exports.deletePublicKey = async (req, res) => {
     try {
         const userId = req.user.sub;

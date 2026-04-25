@@ -19,7 +19,7 @@ async function testAPIDirectly() {
             console.log(`   Methods: ${model.supportedGenerationMethods?.join(', ')}`);
         });
 
-        // Find a model that supports generateContent
+        
         const contentModel = data.models?.find(m =>
             m.supportedGenerationMethods?.includes('generateContent')
         );
@@ -27,7 +27,7 @@ async function testAPIDirectly() {
         if (contentModel) {
             console.log(`\n✨ RECOMMENDED MODEL: ${contentModel.name}`);
 
-            // Test it
+            
             await testGeneration(contentModel.name);
         }
     } catch (error) {

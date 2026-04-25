@@ -1,17 +1,3 @@
-// server/src/services/securityNotification.service.js
-
-/**
- * Security Notification Service
- * PHASE 4B: Email notifications for critical security events
- *
- * CRITICAL RULES:
- * - NEVER throw errors
- * - NEVER block request flow
- * - Fire-and-forget delivery
- * - Best-effort only
- * - No sensitive data in emails (no keys, passwords, ciphertext)
- */
-
 const sendEmail = require('../../utils/sendEmail');
 const {
     newDeviceSignInTemplate,
@@ -19,28 +5,19 @@ const {
     allDevicesRevokedTemplate,
 } = require('../../utils/emailTemplates');
 
-/**
- * Send security notification email
- * 
- * @param {Object} params
- * @param {Object} params.user - User object with email
- * @param {string} params.eventType - Type of security event
- * @param {Object} params.auditEvent - Audit event data (optional)
- * @returns {Promise<void>}
- */
 exports.sendSecurityNotification = async ({
     user,
     eventType,
     auditEvent = {}
 }) => {
     try {
-        // Validate user has email
+        
         if (!user || !user.email) {
             console.warn('⚠️ [NOTIFICATION] Cannot send notification - no user email');
             return;
         }
 
-        // Decide if this event should trigger notification
+        
         const notifiableEvents = [
             'LOGIN_NEW_DEVICE',
             'PASSWORD_CHANGED',
@@ -48,11 +25,11 @@ exports.sendSecurityNotification = async ({
         ];
 
         if (!notifiableEvents.includes(eventType)) {
-            // Not a notifiable event, skip silently
+            
             return;
         }
 
-        // Build email content
+        
         const emailContent = buildEmailContent(eventType, auditEvent, user);
 
         if (!emailContent) {
@@ -60,7 +37,7 @@ exports.sendSecurityNotification = async ({
             return;
         }
 
-        // Send email (fire-and-forget)
+        
         await sendEmail({
             to: user.email,
             subject: emailContent.subject,
@@ -70,16 +47,12 @@ exports.sendSecurityNotification = async ({
         console.log(`✅ [NOTIFICATION] Sent ${eventType} notification to ${user.email}`);
 
     } catch (error) {
-        // CRITICAL: Never throw, never block
+        
         console.warn(`⚠️ [NOTIFICATION] Failed to send ${eventType} notification (non-critical):`, error.message);
-        // Continue silently
+        
     }
 };
 
-/**
- * Build email content based on event type
- * @private
- */
 function buildEmailContent(eventType, auditEvent, user) {
     const timestamp = auditEvent.createdAt || new Date();
     const formattedTime = new Date(timestamp).toLocaleString('en-US', {
@@ -108,5 +81,3 @@ function buildEmailContent(eventType, auditEvent, user) {
             return null;
     }
 }
-
-// (all old buildXxx functions and local sendEmail stub removed — using emailTemplates.js and utils/sendEmail.js)

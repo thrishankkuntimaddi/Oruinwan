@@ -1,4 +1,3 @@
-// ToastContext.jsx — Monolith Flow Design System
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import Toast from '../shared/components/ui/Toast';
 
@@ -24,7 +23,7 @@ export const ToastProvider = ({ children }) => {
     return (
         <ToastContext.Provider value={{ showToast }}>
             {children}
-            {/* Fixed toast stack — top-right, token-based positioning */}
+            {}
             <div style={{
                 position: 'fixed',
                 top: '20px',

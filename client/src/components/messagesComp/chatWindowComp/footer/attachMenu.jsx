@@ -1,14 +1,9 @@
-/**
- * attachMenu.jsx — Full Attachment Menu for both channels and DMs
- * Monolith Flow Design System — dark token based
- */
 import React, { useRef, useState } from "react";
 import { Image, FileText, User, BarChart2, Video, Loader2, Mic, Calendar } from "lucide-react";
 import api from '@services/api';
 import CreateGitHubIssueModal from "../../../../components/apps/modals/CreateGitHubIssueModal";
 import CreateJiraTicketModal from "../../../../components/apps/modals/CreateJiraTicketModal";
 
-// Icon background tints mapped to CSS token colors (no Tailwind)
 const ITEM_COLORS = {
     Photo:    { bg: 'rgba(156,127,212,0.12)', color: '#9c7fd4' },
     Video:    { bg: 'rgba(99,179,237,0.12)',  color: '#63b3ed' },
@@ -128,7 +123,7 @@ export default function AttachMenu({
                             ))}
                         </div>
 
-                        {/* Apps divider */}
+                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '8px 0 6px' }}>
                             <div style={{ flex: 1, height: '1px', backgroundColor: 'var(--border-subtle)' }} />
                             <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Apps</span>

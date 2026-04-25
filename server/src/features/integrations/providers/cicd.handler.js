@@ -1,5 +1,3 @@
-// server/src/features/integrations/providers/cicd.handler.js
-// Generic CI/CD pipeline webhook handler (GitHub Actions, Jenkins, CircleCI, etc.)
 async function handleWebhook(payload, headers, integration) {
   const results = [];
   const status = payload.status || payload.state || payload.conclusion || 'unknown';

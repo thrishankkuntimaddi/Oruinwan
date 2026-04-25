@@ -20,10 +20,10 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
     return (
         <div className="group relative my-7">
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Left line */}
+                {}
                 <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
 
-                {/* Center element */}
+                {}
                 {label ? (
                     <input
                         type="text"
@@ -44,7 +44,7 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </button>
                 )}
 
-                {/* Right line */}
+                {}
                 <div style={{ flex: 1, height: '1px', background: 'var(--border-default)' }} />
 
                 <button
@@ -58,7 +58,7 @@ const DividerBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 </button>
             </div>
 
-            {/* Add label prompt */}
+            {}
             {!label && (
                 <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4px' }}>
                     <input

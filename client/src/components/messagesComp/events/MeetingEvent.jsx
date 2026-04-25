@@ -1,14 +1,8 @@
-// client/src/components/messagesComp/events/MeetingEvent.jsx
-// Renders a meeting type event in the conversation stream
-
 import React from 'react';
 import { Video, Calendar, Users, ExternalLink } from 'lucide-react';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
-/**
- * Renders a meeting event from the conversation stream.
- */
 function MeetingEvent({ event, currentUserId }) {
     const { payload } = event;
     const {
@@ -40,7 +34,7 @@ function MeetingEvent({ event, currentUserId }) {
                 fontFamily: FONT,
             }}
         >
-            {/* Header */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <div style={{
                     width: '28px', height: '28px', borderRadius: '2px',
@@ -55,7 +49,7 @@ function MeetingEvent({ event, currentUserId }) {
                 </h4>
             </div>
 
-            {/* Details */}
+            {}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginBottom: '12px' }}>
                 {startTime && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontFamily: FONT }}>
@@ -76,7 +70,7 @@ function MeetingEvent({ event, currentUserId }) {
                 )}
             </div>
 
-            {/* Action Button */}
+            {}
             <button
                 onClick={handleJoin}
                 disabled={!joinUrl}

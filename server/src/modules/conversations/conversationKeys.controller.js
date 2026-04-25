@@ -1,31 +1,13 @@
-/**
- * Conversation Keys Controller
- * 
- * HTTP endpoints for conversation key management
- */
-
 const conversationKeysService = require('./conversationKeys.service');
 const { handleError } = require('../../../utils/responseHelpers');
 
-// ==================== STORE CONVERSATION KEYS ====================
-
-/**
- * Store encrypted conversation keys
- * POST /api/v2/conversations/:id/keys
- * 
- * Body: {
- *   conversationType: 'channel' | 'dm',
- *   workspaceId: string,
- *   encryptedKeys: [{userId, encryptedKey, ephemeralPublicKey?, algorithm}]
- * }
- */
 exports.storeConversationKeys = async (req, res) => {
     try {
         const { id: conversationId } = req.params;
         const { conversationType, workspaceId, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag } = req.body;
         const createdBy = req.user.sub;
 
-        // Validation
+        
         if (!conversationType || !['channel', 'dm'].includes(conversationType)) {
             return res.status(400).json({
                 message: 'Invalid conversationType. Must be "channel" or "dm"'
@@ -44,7 +26,7 @@ exports.storeConversationKeys = async (req, res) => {
             });
         }
 
-        // Validate each encrypted key
+        
         for (const ek of encryptedKeys) {
             if (!ek.userId || !ek.encryptedKey || !ek.algorithm) {
                 return res.status(400).json({
@@ -53,7 +35,7 @@ exports.storeConversationKeys = async (req, res) => {
             }
         }
 
-        // Store keys
+        
         const conversationKey = await conversationKeysService.storeConversationKeys({
             conversationId,
             conversationType,
@@ -71,15 +53,15 @@ exports.storeConversationKeys = async (req, res) => {
             participantCount: conversationKey.encryptedKeys.length
         });
     } catch (err) {
-        // 🔒 SAFEGUARD #1: Return 409 for duplicate key attempts
+        
         if (err.message === 'Conversation keys already exist. Use addParticipant to add new users.') {
             return res.status(409).json({
                 message: 'Conversation keys already exist',
                 error: 'KEY_EXISTS',
                 conversationId: req.params.id,
                 conversationType: req.body.conversationType
-                // ⚠️ Security: Do NOT return existingKey here
-                // Client must fetch via normal GET endpoint
+                
+                
             });
         }
 
@@ -87,12 +69,6 @@ exports.storeConversationKeys = async (req, res) => {
     }
 };
 
-// ==================== GET CONVERSATION KEYS ====================
-
-/**
- * Get user's encrypted key for a conversation
- * GET /api/v2/conversations/:id/keys?type=channel|dm
- */
 exports.getConversationKey = async (req, res) => {
     try {
         const { id: conversationId } = req.params;
@@ -105,14 +81,14 @@ exports.getConversationKey = async (req, res) => {
             });
         }
 
-        // 🔐 CRITICAL PHASE 4 FIX: Check if conversation key EXISTS at all
+        
         const keyExists = await conversationKeysService.hasConversationKeys(
             conversationId,
             conversationType
         );
 
         if (!keyExists) {
-            // 🚨 PHASE 5 INVARIANT CHECK: Log if this is a channel (should NEVER happen post-Phase 5)
+            
             if (conversationType === 'channel') {
                 console.error(`🚨 [INVARIANT VIOLATION] Channel ${conversationId} exists but has NO conversation key`);
                 console.error(`   ⚠️ This should NEVER happen in Phase 5+`);
@@ -120,7 +96,7 @@ exports.getConversationKey = async (req, res) => {
                 console.error(`   📝 User ${userId} attempted to access channel that violated Phase 5`);
             }
 
-            // ✅ PHASE 3: No key exists at all - client should generate
+            
             return res.status(404).json({
                 error: 'KEY_NOT_INITIALIZED',
                 phase: 'UNINITIALIZED',
@@ -128,30 +104,29 @@ exports.getConversationKey = async (req, res) => {
                 hint: 'This is a new conversation. First message will trigger key generation.',
                 conversationId,
                 conversationType,
-                invariantViolation: conversationType === 'channel' // Flag for monitoring
+                invariantViolation: conversationType === 'channel' 
             });
         }
 
-        // Key exists - now check if user has access
+        
         const encryptedKeyData = await conversationKeysService.getUserConversationKey(
             conversationId,
             conversationType,
             userId
         );
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // PHASE 1 AUDIT: Log key fetch authorization decision
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        
+        
         console.log(`🔑 [AUDIT][PHASE1][FETCH] Key fetch request`);
         console.log(`   ├─ User ID: ${userId}`);
         console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
         console.log(`   └─ Checking if user is in encryptedKeys[] array...`);
 
-
         if (!encryptedKeyData) {
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-            // PHASE 1 AUDIT: Log access DENIED
-            // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+            
+            
+            
             console.warn(`🚫 [AUDIT][PHASE1][FETCH] Key access DENIED`);
             console.warn(`   ├─ User ID: ${userId}`);
             console.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
@@ -162,7 +137,7 @@ exports.getConversationKey = async (req, res) => {
             console.warn(`   └─ Response: 403 KEY_NOT_DISTRIBUTED`);
             console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
-            // 🔐 PHASE 4: Key exists but NOT distributed to this user
+            
             return res.status(403).json({
                 error: 'KEY_NOT_DISTRIBUTED',
                 phase: 'AWAITING_DISTRIBUTION',
@@ -173,9 +148,9 @@ exports.getConversationKey = async (req, res) => {
             });
         }
 
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // PHASE 1 AUDIT: Log access GRANTED
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        
+        
+        
         console.log(`✅ [AUDIT][PHASE1][FETCH] Key access GRANTED`);
         console.log(`   ├─ User ID: ${userId}`);
         console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
@@ -183,17 +158,12 @@ exports.getConversationKey = async (req, res) => {
         console.log(`   └─ Response: 200 with encrypted key data`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
-
         return res.json(encryptedKeyData);
     } catch (err) {
         return handleError(res, err, 'GET CONVERSATION KEY ERROR');
     }
 };
 
-/**
- * Add encrypted key for a specific user (client-mediated distribution)
- * POST /api/v2/conversations/:conversationId/keys/add-user
- */
 exports.addUserKey = async (req, res) => {
     try {
         const { conversationId } = req.params;
@@ -202,7 +172,7 @@ exports.addUserKey = async (req, res) => {
 
         console.log(`🔐 Adding encrypted key for user ${userId} in ${conversationType}:${conversationId}`);
 
-        // Verify requesting user has access (can only distribute if you have the key)
+        
         const requestingUserKey = await service.getUserConversationKey(
             conversationId,
             conversationType,
@@ -215,7 +185,7 @@ exports.addUserKey = async (req, res) => {
             });
         }
 
-        // Add encrypted key for the new user
+        
         const added = await service.addEncryptedKeyForUser(
             conversationId,
             conversationType,
@@ -237,12 +207,6 @@ exports.addUserKey = async (req, res) => {
     }
 };
 
-// ==================== GET USER'S WORKSPACE KEYS ====================
-
-/**
- * Get all conversation keys user has access to in workspace
- * GET /api/v2/conversations/workspace/:workspaceId/keys
- */
 exports.getUserWorkspaceKeys = async (req, res) => {
     try {
         const { workspaceId } = req.params;
@@ -263,26 +227,12 @@ exports.getUserWorkspaceKeys = async (req, res) => {
     }
 };
 
-// ==================== ADD PARTICIPANT ====================
-
-/**
- * Add participant to conversation (client encrypts key for them)
- * POST /api/v2/conversations/:id/keys/add-user
- * 
- * Body: {
- *   conversationType: 'channel' | 'dm',
- *   userId: string,
- *   encryptedKey: string,
- *   ephemeralPublicKey?: string,
- *   algorithm: 'X25519' | 'RSA-2048'
- * }
- */
 exports.addParticipant = async (req, res) => {
     try {
         const { id: conversationId } = req.params;
         const { conversationType, userId, encryptedKey, ephemeralPublicKey, algorithm } = req.body;
 
-        // Validation
+        
         if (!conversationType || !['channel', 'dm'].includes(conversationType)) {
             return res.status(400).json({
                 message: 'Invalid conversationType'
@@ -312,12 +262,6 @@ exports.addParticipant = async (req, res) => {
     }
 };
 
-// ==================== REMOVE PARTICIPANT ====================
-
-/**
- * Remove participant from conversation
- * DELETE /api/v2/conversations/:id/keys/user/:userId?type=channel|dm
- */
 exports.removeParticipant = async (req, res) => {
     try {
         const { id: conversationId, userId } = req.params;
@@ -349,12 +293,6 @@ exports.removeParticipant = async (req, res) => {
     }
 };
 
-// ==================== CHECK KEY EXISTS ====================
-
-/**
- * Check if conversation has encryption keys
- * GET /api/v2/conversations/:id/keys/exists?type=channel|dm
- */
 exports.checkKeysExist = async (req, res) => {
     try {
         const { id: conversationId } = req.params;
@@ -379,14 +317,6 @@ exports.checkKeysExist = async (req, res) => {
     }
 };
 
-// ==================== PHASE 2: AUTOMATIC REPAIR ====================
-
-/**
- * Trigger automatic repair for all user's channels
- * POST /api/v2/conversations/repair-access
- * 
- * Called by client after identity initialization to repair any missing keys
- */
 exports.repairUserAccess = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -402,8 +332,8 @@ exports.repairUserAccess = async (req, res) => {
         });
     } catch (err) {
         console.error('❌ [Controller] Repair access failed:', err);
-        // 🔴 FIX 2: Even on error, return 200 to keep client flow non-blocking
-        // Client should treat this as fire-and-forget
+        
+        
         return res.status(200).json({
             success: false,
             message: 'Repair failed (non-critical)',

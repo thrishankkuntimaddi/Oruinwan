@@ -1,4 +1,3 @@
-// server/src/features/knowledge/KnowledgeCategory.js
 const mongoose = require('mongoose');
 
 const knowledgeCategorySchema = new mongoose.Schema({

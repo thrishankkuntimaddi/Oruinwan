@@ -1,4 +1,3 @@
-// server/src/features/milestones/milestones.service.js
 const Milestone = require('../../../models/Milestone');
 const Workspace = require('../../../models/Workspace');
 const User = require('../../../models/User');

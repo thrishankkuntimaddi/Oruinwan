@@ -1,17 +1,5 @@
 import React from 'react';
 
-/**
- * Standardized Button Component
- * 
- * Variants:
- * - primary: Brand color, filled
- * - secondary: Gray/Slate, filled
- * - ghost: Transparent, hover effect
- * - danger: Red, filled
- * - outline: Border only
- * 
- * Sizes: sm, md, lg, icon
- */
 const Button = React.forwardRef(({
     children,
     variant = 'primary',
@@ -41,10 +29,10 @@ const Button = React.forwardRef(({
         sm: "h-9 px-3 text-sm",
         md: "h-10 px-4 py-2 text-sm",
         lg: "h-12 px-6 text-base",
-        icon: "h-10 w-10 p-2", // For usage with icon only
+        icon: "h-10 w-10 p-2", 
     };
 
-    // Combine classes logic
+    
     const variantStyles = variants[variant] || variants.primary;
     const sizeStyles = sizes[size] || sizes.md;
 

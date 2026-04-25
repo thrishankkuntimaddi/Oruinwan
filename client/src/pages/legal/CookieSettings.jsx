@@ -1,4 +1,3 @@
-// CookieSettings.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { Cookie, Shield, BarChart2, Settings, CheckCircle2 } from 'lucide-react';
@@ -43,7 +42,7 @@ export default function CookieSettings() {
     };
 
     const save = () => {
-        // Persist to localStorage
+        
         localStorage.setItem('chttrix_cookie_prefs', JSON.stringify(prefs));
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -52,7 +51,7 @@ export default function CookieSettings() {
     return (
         <PublicPageShell title="Cookie Settings">
             <div style={{ maxWidth: '760px', margin: '0 auto', padding: '64px 24px' }}>
-                {/* Header */}
+                {}
                 <div style={{ marginBottom: '48px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
                         <Cookie size={11} style={{ color: '#b8956a' }} />
@@ -64,7 +63,7 @@ export default function CookieSettings() {
                     </p>
                 </div>
 
-                {/* Cookie Cards */}
+                {}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)', marginBottom: '32px' }}>
                     {COOKIE_TYPES.map(c => {
                         const Icon = c.icon;
@@ -90,7 +89,7 @@ export default function CookieSettings() {
                                         </div>
                                     </div>
 
-                                    {/* Toggle */}
+                                    {}
                                     <button onClick={() => !c.required && toggle(c.id)}
                                         disabled={c.required}
                                         style={{ width: '44px', height: '24px', borderRadius: '12px', background: isOn ? c.color : 'rgba(255,255,255,0.1)', border: 'none', cursor: c.required ? 'default' : 'pointer', position: 'relative', transition: 'background 200ms ease', flexShrink: 0, marginTop: '4px' }}>
@@ -102,7 +101,7 @@ export default function CookieSettings() {
                     })}
                 </div>
 
-                {/* Save button */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <button onClick={save}
                         style={{ padding: '10px 28px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity 150ms ease' }}

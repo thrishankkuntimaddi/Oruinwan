@@ -1,11 +1,3 @@
-// server/src/modules/messages/messages.routes.js
-/**
- * Messages Routes — CANONICAL V2
- * All message-related API endpoints
- *
- * @module messages/routes
- */
-
 const express = require('express');
 const router = express.Router();
 const messagesController = require('./messages.controller');
@@ -16,35 +8,22 @@ const Channel = require('../../features/channels/channel.model');
 const DMSession = require('../../../models/DMSession');
 const mongoose = require('mongoose');
 
-// Apply authentication to all routes
 router.use(requireAuth);
-
-// ==================== PHASE-8: AI MESSAGING (before :messageId catch-alls) ====================
-// Must be before /:messageId to prevent param collision
 
 router.post('/ai/suggestions',    messagesController.getSmartReplies);
 router.post('/ai/translate',      messagesController.translateMessage);
 router.post('/ai/thread-summary', messagesController.getThreadSummary);
 
-// ==================== PHASE-8: REMINDERS (before /:messageId) ====================
-
 router.get('/reminders',                messagesController.getUserReminders);
 router.delete('/reminders/:reminderId', messagesController.cancelReminder);
 
-// ==================== DIRECT MESSAGES ====================
-
-// Send direct message
 router.post('/direct', messagesController.sendDirectMessage);
 
-// Resolve user ID → DM session ID (find or create, with E2EE key bootstrap)
-// IMPORTANT: must be registered BEFORE the /workspace/:workspaceId/dm/:dmId route
-// to prevent ":dmId" from greedily matching "resolve"
 router.get(
     '/workspace/:workspaceId/dm/resolve/:userId',
     messagesController.resolveDMSession
 );
 
-// Get DM conversation
 router.get(
     '/workspace/:workspaceId/dm/:dmId',
     (req, res, next) => {
@@ -59,46 +38,29 @@ router.get(
     messagesController.getDMs
 );
 
-// Get all DM sessions in workspace
 router.get(
     '/workspace/:workspaceId/dms',
     messagesController.getWorkspaceDMList
 );
 
-// ==================== CHANNEL MESSAGES ====================
-
-// Send channel message
 router.post('/channel', messagesController.sendChannelMessage);
 
-// Phase 7.3 — Create a poll-as-message
-// IMPORTANT: must be before /:messageId to prevent 'poll' being captured as a param
 router.post('/poll', messagesController.createPollMessage);
 
-// Get channel messages
 router.get('/channel/:channelId', messagesController.getChannelMessages);
 
-// ==================== THREADS ====================
-
-// Get all replies for a thread (parent message)
 router.get('/thread/:messageId', threadsController.getThread);
 
-// Post a reply into a thread
 router.post('/thread/:messageId', threadsController.postThreadReply);
 
-// Get reply count for a message
-// IMPORTANT: must come before /:messageId catch-all if one exists
 router.get('/:messageId/thread-count', threadsController.getThreadCount);
 
-// ==================== MISSED MESSAGES ====================
-
-// Offline recovery: returns messages created after lastSeenMessageId
-// GET /api/v2/messages/missed?conversationId=<id>&type=channel|dm&lastSeenMessageId=<id>
 router.get('/missed', async (req, res) => {
     try {
         const { conversationId, type, lastSeenMessageId } = req.query;
         const userId = req.user.sub || req.user._id;
 
-        // ── 1. Input validation ──────────────────────────────────────────
+        
         if (!conversationId || !type) {
             return res.status(400).json({ message: 'conversationId and type are required' });
         }
@@ -112,7 +74,7 @@ router.get('/missed', async (req, res) => {
             return res.status(400).json({ message: 'Invalid lastSeenMessageId' });
         }
 
-        // ── 2. Membership check ──────────────────────────────────────────
+        
         if (type === 'channel') {
             const channel = await Channel.findById(conversationId).select('members isPrivate isDefault').lean();
             if (!channel) return res.status(404).json({ message: 'Channel not found' });
@@ -125,7 +87,7 @@ router.get('/missed', async (req, res) => {
 
             if (!isMember) return res.status(403).json({ message: 'Not a member of this channel' });
 
-        } else { // dm
+        } else { 
             const dmSession = await DMSession.findById(conversationId).select('participants').lean();
             if (!dmSession) return res.status(404).json({ message: 'DM session not found' });
 
@@ -133,7 +95,7 @@ router.get('/missed', async (req, res) => {
             if (!isParticipant) return res.status(403).json({ message: 'Not a participant of this DM' });
         }
 
-        // ── 3. Build query ───────────────────────────────────────────────
+        
         const query = type === 'channel'
             ? { channel: conversationId }
             : { dm: conversationId };
@@ -142,10 +104,10 @@ router.get('/missed', async (req, res) => {
             query._id = { $gt: new mongoose.Types.ObjectId(lastSeenMessageId) };
         }
 
-        // Exclude messages hidden from this user
+        
         query.hiddenFor = { $ne: userId };
 
-        // ── 4. Fetch — hard cap at 50, ascending order ───────────────────
+        
         const messages = await Message.find(query)
             .sort({ _id: 1 })
             .limit(50)
@@ -165,44 +127,28 @@ router.get('/missed', async (req, res) => {
     }
 });
 
-// ==================== MESSAGE ACTIONS ====================
-
-// Get message info (readBy, members, reactions)
 router.get('/:messageId/info', messagesController.getMessageInfo);
 
-// Phase 7.3 — Vote on an embedded poll
 router.post('/:messageId/vote', messagesController.voteOnPoll);
 
-// Edit a message (sender only)
 router.patch('/:messageId', messagesController.editMessage);
 
-// Soft-delete a message (sender only)
 router.delete('/:messageId', messagesController.deleteMessage);
 
-// Add a reaction
 router.post('/:messageId/react', messagesController.addReaction);
 
-// Remove a reaction
 router.delete('/:messageId/react', messagesController.removeReaction);
 
-// Pin / unpin a message
 router.post('/:messageId/pin', messagesController.pinMessage);
 
-// Forward message to multiple targets
 router.post('/forward', messagesController.forwardMessage);
 
-// ==================== PHASE-8: MESSAGE-LEVEL ACTIONS ====================
-
-// Schedule a reminder for a message
 router.post('/:messageId/reminder', messagesController.scheduleReminder);
 
-// Toggle a checklist item (checked/unchecked)
 router.post('/:messageId/checklist/:itemIdx', messagesController.checklistToggle);
 
-// Get edit history / diff for a message
 router.get('/:messageId/diff', messagesController.getMessageDiff);
 
-// Convert a message into a Task
 router.post('/:messageId/convert-task', messagesController.convertToTask);
 
 module.exports = router;

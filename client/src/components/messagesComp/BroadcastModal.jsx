@@ -86,7 +86,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '16px' }}>
             <div style={{ background: T.bg, border: `1px solid ${T.border}`, width: '100%', maxWidth: '900px', height: '82vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-                {/* Header */}
+                {}
                 <div style={{ padding: '20px 20px 16px', borderBottom: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', background: T.accentBg, border: `1px solid ${T.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -107,11 +107,11 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                     </button>
                 </div>
 
-                {/* Main Content */}
+                {}
                 <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-                    {/* Left — Contact Selection */}
+                    {}
                     <div style={{ width: '320px', borderRight: `1px solid ${T.border}`, display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-                        {/* Tabs */}
+                        {}
                         <div style={{ display: 'flex', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
                             {tabs.map(({ key, label, Icon, count }) => {
                                 const isActive = activeTab === key;
@@ -131,7 +131,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                             })}
                         </div>
 
-                        {/* Search */}
+                        {}
                         <div style={{ padding: '10px 12px', borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
                             <div style={{ position: 'relative' }}>
                                 <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: T.muted }} />
@@ -147,7 +147,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                             </div>
                         </div>
 
-                        {/* List */}
+                        {}
                         <div style={{ flex: 1, overflowY: 'auto' }}>
                             {loading ? (
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '120px' }}>
@@ -169,7 +169,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                                 onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = T.surface; }}
                                                 onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent'; }}
                                             >
-                                                {/* Avatar/Icon */}
+                                                {}
                                                 {item.type === 'channel' ? (
                                                     <div style={{ width: '28px', height: '28px', background: T.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                         <Hash size={14} style={{ color: T.muted }} />
@@ -189,7 +189,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                                                     </p>
                                                 </div>
 
-                                                {/* Checkbox */}
+                                                {}
                                                 <div style={{ width: '14px', height: '14px', border: `1.5px solid ${isSelected ? T.accent : T.border}`, background: isSelected ? T.accent : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 150ms ease' }}>
                                                     {isSelected && (
                                                         <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
@@ -205,9 +205,9 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                         </div>
                     </div>
 
-                    {/* Right — Message Area */}
+                    {}
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: T.base }}>
-                        {/* Recipients */}
+                        {}
                         <div style={{ borderBottom: `1px solid ${T.border}`, minHeight: '52px', display: 'flex', alignItems: 'center', padding: '8px 16px', flexShrink: 0, flexWrap: 'wrap', gap: '6px' }}>
                             <span style={{ fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font, flexShrink: 0 }}>TO:</span>
                             {selectedItems.length === 0 ? (
@@ -230,7 +230,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                             )}
                         </div>
 
-                        {/* Message Input */}
+                        {}
                         <div style={{ flex: 1, padding: '16px', display: 'flex', flexDirection: 'column' }}>
                             <div style={{ fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font, marginBottom: '10px' }}>
                                 Your Message
@@ -245,7 +245,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                             />
                         </div>
 
-                        {/* Footer */}
+                        {}
                         <div style={{ padding: '12px 16px', borderTop: `1px solid ${T.border}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                             <p style={{ fontSize: '12px', color: T.muted, fontFamily: T.font }}>
                                 {selectedItems.length} recipient{selectedItems.length !== 1 ? 's' : ''} selected

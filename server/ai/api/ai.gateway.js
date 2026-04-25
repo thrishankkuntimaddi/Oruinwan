@@ -1,21 +1,4 @@
-// server/ai/api/ai.gateway.js
-/**
- * AI Gateway — Centralised LLM abstraction layer
- *
- * Framework-agnostic: no Express / Socket.IO imports.
- * All controllers and services call this file; it owns the Gemini client.
- *
- * Exported methods:
- *   chat({ message, history, workspaceId }, { userId })  → { text }
- *   summarize({ text }, { userId })                       → { summary }
- *   generateTask({ context }, { userId })                  → { title, priority, description }
- *
- * All methods degrade gracefully when GEMINI_API_KEY is absent.
- */
-
 'use strict';
-
-// ── Lazy Gemini client ────────────────────────────────────────────────────────
 
 let _genAI = null;
 
@@ -32,28 +15,12 @@ function getModel(modelName = 'gemini-1.5-flash') {
   return _genAI.getGenerativeModel({ model: modelName });
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/**
- * Call Gemini with a plain prompt string.
- * Returns the trimmed response text, or throws so callers can handle fallback.
- */
 async function _generate(prompt) {
   const model = getModel();
   const result = await model.generateContent(prompt);
   return result.response.text().trim();
 }
 
-// ── Public API ────────────────────────────────────────────────────────────────
-
-/**
- * chat({ message, history, workspaceId }, { userId })
- *
- * General-purpose AI chat.  `history` is an array of { role, content } objects
- * (already-formatted conversation context).
- *
- * @returns {{ text: string }}
- */
 async function chat({ message, history = [], workspaceId }, { userId } = {}) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY;
   if (!apiKey) {
@@ -61,7 +28,7 @@ async function chat({ message, history = [], workspaceId }, { userId } = {}) {
   }
 
   try {
-    // Build a single prompt from history + current message
+    
     const historyText = history
       .map(h => `${h.role === 'assistant' ? 'Assistant' : 'User'}: ${h.content}`)
       .join('\n');
@@ -78,13 +45,6 @@ async function chat({ message, history = [], workspaceId }, { userId } = {}) {
   }
 }
 
-/**
- * summarize({ text }, { userId })
- *
- * Summarises arbitrary text in 2–4 sentences.
- *
- * @returns {{ summary: string }}
- */
 async function summarize({ text }, { userId } = {}) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY;
   if (!apiKey || !text?.trim()) {
@@ -109,13 +69,6 @@ async function summarize({ text }, { userId } = {}) {
   }
 }
 
-/**
- * generateTask({ context }, { userId })
- *
- * Given a free-text context, extracts a structured task.
- *
- * @returns {{ title: string, priority: string, description: string }}
- */
 async function generateTask({ context }, { userId } = {}) {
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY;
   if (!apiKey) {
@@ -131,7 +84,7 @@ async function generateTask({ context }, { userId } = {}) {
     ].join('\n');
 
     let raw = await _generate(prompt);
-    // Strip markdown fences if model includes them
+    
     raw = raw.replace(/^```(?:json)?/m, '').replace(/```$/m, '').trim();
 
     const parsed = JSON.parse(raw);
@@ -145,7 +98,5 @@ async function generateTask({ context }, { userId } = {}) {
     return { title: 'New Task', priority: 'medium', description: context || '' };
   }
 }
-
-// ── Exports ───────────────────────────────────────────────────────────────────
 
 module.exports = { chat, summarize, generateTask };

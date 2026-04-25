@@ -1,4 +1,3 @@
-// Status.jsx — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { CheckCircle2, AlertTriangle, XCircle, Activity, Clock, RefreshCw } from 'lucide-react';
@@ -44,7 +43,7 @@ export default function Status() {
 
     return (
         <PublicPageShell title="Status">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '72px 0 56px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
@@ -69,7 +68,7 @@ export default function Status() {
             </div>
 
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px' }}>
-                {/* Services */}
+                {}
                 <div style={{ marginBottom: '56px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
                         <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)' }}>Services</p>
@@ -103,7 +102,7 @@ export default function Status() {
                     </div>
                 </div>
 
-                {/* Incident history */}
+                {}
                 <div>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Recent Incidents & Maintenance</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>

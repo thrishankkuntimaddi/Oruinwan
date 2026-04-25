@@ -1,15 +1,9 @@
-// Phase 2 — Screen Recorder Component
-// Uses browser getDisplayMedia + MediaRecorder to capture screen, then upload as video
-
 import React, { useState, useRef } from "react";
 import { Monitor, Square, Send, Trash2 } from "lucide-react";
 import api from '@services/api';
 
-/**
- * @param {function} props.onSend - Called with { type:'video', url, name, size, mimeType, duration }
- */
 export default function ScreenRecorder({ onSend, disabled = false }) {
-    const [state, setState] = useState("idle"); // idle | recording | preview
+    const [state, setState] = useState("idle"); 
     const [duration, setDuration] = useState(0);
     const [videoUrl, setVideoUrl] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -21,7 +15,7 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
     const startRecording = async () => {
         if (disabled) return;
         try {
-            // Request screen share
+            
             const stream = await navigator.mediaDevices.getDisplayMedia({
                 video: { mediaSource: "screen" },
                 audio: true,
@@ -40,7 +34,7 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
                 stream.getTracks().forEach(t => t.stop());
             };
 
-            // Stop when user closes the browser share picker
+            
             stream.getVideoTracks()[0].addEventListener("ended", () => {
                 if (mr.state === "recording") mr.stop();
                 clearInterval(timerRef.current);

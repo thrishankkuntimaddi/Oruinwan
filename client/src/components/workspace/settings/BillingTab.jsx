@@ -16,7 +16,7 @@ const BillingTab = ({ stats, loadingStats }) => (
             </div>
         ) : (
             <>
-                {/* Plan badge */}
+                {}
                 <div style={{ padding: '20px', marginBottom: '20px', border: '1px solid var(--border-default)', borderRadius: '2px', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', gap: '14px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '2px', background: 'var(--bg-hover)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0 }}>
                         ✨
@@ -27,7 +27,7 @@ const BillingTab = ({ stats, loadingStats }) => (
                     </div>
                 </div>
 
-                {/* Usage stats */}
+                {}
                 {stats && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '4px' }}>

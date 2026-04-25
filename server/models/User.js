@@ -1,4 +1,3 @@
-// server/models/User.js
 const mongoose = require("mongoose");
 
 const RefreshTokenSchema = new mongoose.Schema({
@@ -10,12 +9,12 @@ const RefreshTokenSchema = new mongoose.Schema({
 
 const ProfileSchema = new mongoose.Schema(
   {
-    name: { type: String }, // kept for backward-compatibility
+    name: { type: String }, 
     dob: { type: Date },
     about: { type: String },
     company: { type: String },
     showCompany: { type: Boolean, default: true },
-    // Phase 3: Detailed Profile
+    
     address: { type: String },
     resumeUrl: String,
     socialLinks: {
@@ -30,14 +29,14 @@ const ProfileSchema = new mongoose.Schema(
 
 const PreferencesSchema = new mongoose.Schema({
   theme: { type: String, enum: ['light', 'dark', 'auto'], default: 'light' },
-  // Privacy Settings
+  
   privacy: {
     readReceipts: { type: Boolean, default: true },
     typingIndicators: { type: Boolean, default: true },
     allowDiscovery: { type: Boolean, default: true },
     dataSharing: { type: Boolean, default: false }
   },
-  // Region Settings
+  
   region: {
     language: { type: String, default: 'en' },
     timezone: { type: String, default: 'UTC' },
@@ -47,15 +46,15 @@ const PreferencesSchema = new mongoose.Schema({
 
 const UserSchema = new mongoose.Schema(
   {
-    // Basic Info
-    username: { type: String, required: true }, // primary display name
+    
+    username: { type: String, required: true }, 
     email: { type: String, required: true, unique: true, lowercase: true },
-    personalEmail: { type: String, lowercase: true }, // Verified personal email from registration
-    companyEmail: { type: String, lowercase: true }, // Company-provided email (admin input)
+    personalEmail: { type: String, lowercase: true }, 
+    companyEmail: { type: String, lowercase: true }, 
     phone: { type: String, unique: true, sparse: true },
-    phoneCode: { type: String, default: "+1" }, // Country code
+    phoneCode: { type: String, default: "+1" }, 
 
-    // Multiple Email Addresses
+    
     emails: [{
       email: { type: String, required: true, lowercase: true },
       verified: { type: Boolean, default: false },
@@ -65,63 +64,62 @@ const UserSchema = new mongoose.Schema(
       addedAt: { type: Date, default: Date.now }
     }],
 
-    passwordHash: { type: String, required: false, default: null }, // null for 'invited' users until they set their password
+    passwordHash: { type: String, required: false, default: null }, 
 
-    // Invite Token — Phase 1: Company Identity Layer
-    // Stores SHA-256 hash of the raw token (raw token only in invite email link, never in DB)
-    inviteToken: { type: String, default: null },  // SHA-256 hash
-    inviteTokenExpiry: { type: Date, default: null },  // 72h from invite creation
+    
+    
+    inviteToken: { type: String, default: null },  
+    inviteTokenExpiry: { type: Date, default: null },  
     inviteEmailStatus: {
       type: String,
       enum: ['pending', 'sent', 'failed', 'accepted'],
       default: 'pending',
     },
 
-
-    // User Type
+    
     userType: {
       type: String,
       enum: ["personal", "company"],
       default: "personal"
-    }, // personal users vs company users
+    }, 
 
-    // Company Association
+    
     companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
 
-    // Company Role (within their company)
+    
     companyRole: {
       type: String,
       enum: ["owner", "admin", "manager", "member", "guest"],
       default: "member"
     },
 
-    // For Department Managers: Which departments do they manage?
+    
     managedDepartments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
 
-    // Direct Reporting Line
+    
     reportsTo: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 
-    // For Owners: Co-owner status flag
-    // SECURITY FIX (BUG-4): Changed from a global boolean to a company ObjectId reference.
-    // A bare isCoOwner:true flag was not scoped to a company, meaning if a co-owner of
-    // Company A ever joined Company B, their elevated privileges would carry over.
-    // Now stores the specific companyId they co-own — middleware checks companyId match.
-    // ARCH-FIX: coOwnerOf is the scoped reference — stores the specific companyId they co-own.
-    // Middleware checks companyId match before granting co-owner privileges.
-    // isCoOwner boolean was removed (deprecated — was not company-scoped, security risk).
+    
+    
+    
+    
+    
+    
+    
+    
     coOwnerOf: { type: mongoose.Schema.Types.ObjectId, ref: 'Company', default: null },
 
-    // Permissions override (optional granular control)
+    
     permissions: {
       canCreateWorkspace: { type: Boolean },
       canManageUsers: { type: Boolean },
       customPermissions: [String]
     },
 
-    // Job Title (e.g. CTO, PA, etc)
+    
     jobTitle: { type: String },
 
-    // Phase 3: Employee Details
+    
     joiningDate: { type: Date, default: Date.now },
     employeeCategory: { type: String, enum: ["Full-time", "Part-time", "Contractor", "Intern"], default: "Full-time" },
     workHistory: [{
@@ -132,83 +130,83 @@ const UserSchema = new mongoose.Schema(
       description: String
     }],
 
-    // Departments
+    
     departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
 
-    // Workspace Memberships — single source of truth (assignedWorkspaces removed: dual-write bug)
+    
     workspaces: [{
       workspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace" },
       role: { type: String, enum: ["owner", "admin", "member"], default: "member" },
       joinedAt: { type: Date, default: Date.now }
     }],
 
-    // Personal workspace for personal users
+    
     personalWorkspace: { type: mongoose.Schema.Types.ObjectId, ref: "Workspace", default: null },
 
-    // Legacy/backward compatibility
-    rolesPerCompany: { type: mongoose.Schema.Types.Mixed }, // e.g. { "<companyId>": "admin" }
+    
+    rolesPerCompany: { type: mongoose.Schema.Types.Mixed }, 
 
-    // Verification
+    
     verified: { type: Boolean, default: false },
     verificationTokenHash: String,
     verificationTokenExpires: Date,
 
-    // Password Reset
+    
     resetPasswordTokenHash: String,
     resetPasswordExpires: Date,
 
-    // Refresh Tokens
+    
     refreshTokens: [RefreshTokenSchema],
 
-    // System Roles (for platform admin, etc.)
+    
     roles: { type: [String], default: ["user"] },
 
-    // Security
+    
     failedLoginAttempts: { type: Number, default: 0 },
     lockedUntil: Date,
 
-    // Unverified Account Login Tracking
+    
     unverifiedLoginAttempts: { type: Number, default: 0 },
     lastUnverifiedLoginAttempt: { type: Date },
     lastVerificationEmailSent: { type: Date },
 
-    // Profile
+    
     profile: ProfileSchema,
 
-    // App Preferences
+    
     preferences: { type: PreferencesSchema, default: () => ({}) },
 
-    // Google OAuth fields
+    
     googleId: { type: String, unique: true, sparse: true },
     profilePicture: { type: String },
     googleAccount: { type: Boolean, default: false },
 
-    // End-to-End Encryption Keys
+    
     encryption: {
-      publicKey: { type: String }, // Base64-encoded ECDH public key
-      encryptedPrivateKey: { type: String }, // Private key encrypted with user password
-      keyVersion: { type: Number, default: 1 }, // For future key rotation
+      publicKey: { type: String }, 
+      encryptedPrivateKey: { type: String }, 
+      keyVersion: { type: Number, default: 1 }, 
       createdAt: { type: Date }
     },
 
-    // GitHub OAuth fields
+    
     githubId: { type: String, unique: true, sparse: true },
 
-    // LinkedIn OAuth fields
+    
     linkedinId: { type: String, unique: true, sparse: true },
 
-    // Auth Provider
+    
     authProvider: { type: String, enum: ['local', 'google', 'github', 'linkedin', 'microsoft', 'okta'], default: 'local' },
 
-    // SSO (Single Sign-On) — generic federated identity
+    
     ssoProvider: { type: String, enum: ['google', 'microsoft', 'okta'], default: null },
-    ssoId: { type: String, default: null }, // Provider's unique user ID
+    ssoId: { type: String, default: null }, 
 
-    // Two-Factor Authentication (TOTP)
+    
     twoFactorEnabled: { type: Boolean, default: false },
-    twoFactorSecret: { type: String, default: null }, // AES-256 encrypted TOTP secret
+    twoFactorSecret: { type: String, default: null }, 
 
-    // Device Management
+    
     devices: [{
       deviceId: { type: String },
       userAgent: { type: String },
@@ -217,100 +215,99 @@ const UserSchema = new mongoose.Schema(
       createdAt: { type: Date, default: Date.now }
     }],
 
-    // Multi-Platform: Push Notification Tokens (mobile devices)
+    
     deviceTokens: [{
-      token: { type: String, required: true },        // Expo / FCM / APN push token
+      token: { type: String, required: true },        
       platform: { type: String, enum: ['ios', 'android', 'web', 'unknown'], default: 'unknown' },
       registeredAt: { type: Date, default: Date.now }
     }],
 
-    // Compliance — Legal Hold (prevents data deletion)
+    
     legalHold: { type: Boolean, default: false },
     legalHoldReason: { type: String },
     legalHoldSetBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     legalHoldAt: { type: Date },
 
-    // Compliance — Message Retention Policy (days, null = no policy)
+    
     retentionDays: { type: Number, default: null },
 
-    // Password Set Timestamp (for OAuth users who set a password)
+    
     passwordSetAt: { type: Date, default: null },
 
-    // Password Login Control (for OAuth users)
+    
     passwordLoginEnabled: { type: Boolean, default: true },
 
-    // Password Skip Flag (for OAuth users who chose to skip password setup)
+    
     passwordSkipped: { type: Boolean, default: false },
 
-    // Temporary Password Flags (for bulk-imported company users)
-    // isTemporaryPassword: true  — user was created with a system-generated password
-    // passwordInitialized: false — user has NOT yet set their own password
-    // Both default to false so all existing users are treated as fully initialized.
+    
+    
+    
+    
     isTemporaryPassword: { type: Boolean, default: false },
     passwordInitialized: { type: Boolean, default: false },
 
-    // Last Login Method Tracking
+    
     lastLoginMethod: { type: String, enum: ['oauth', 'password', null], default: null },
     lastLoginMethodAt: { type: Date, default: null },
 
-    // Activity Tracking
+    
     lastLoginAt: { type: Date, default: null },
     lastActivityAt: { type: Date, default: Date.now },
     isOnline: { type: Boolean, default: false },
 
-    // User Status (Active/Away/DND)
+    
     userStatus: {
       type: String,
       enum: ['active', 'away', 'dnd'],
       default: 'active'
     },
 
-    // Account Status
+    
     accountStatus: {
       type: String,
       enum: ["active", "invited", "pending", "pending_company", "suspended", "blocked", "removed"],
       default: "active"
     },
 
-    // Suspension tracking
+    
     suspendedAt: { type: Date },
     suspendedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     suspensionReason: { type: String },
 
-    // Favorites (channels and DMs)
+    
     favorites: [{
       chatId: mongoose.Schema.Types.ObjectId,
       chatType: { type: String, enum: ["dm", "channel"] }
     }],
 
-    // Blocked Users
+    
     blockedUsers: [{
       userId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
       blockedAt: { type: Date, default: Date.now }
     }],
 
-    // Muted Chats (DMs and Channels)
+    
     mutedChats: [{
       chatId: mongoose.Schema.Types.ObjectId,
       chatType: { type: String, enum: ["dm", "channel"] },
       mutedUntil: Date
     }],
 
-
-    // Status
+    
     isActive: { type: Boolean, default: true },
     deactivatedAt: { type: Date, default: null },
 
-    // OTP Codes for various operations (password reset, reactivation, etc.)
+    
     otpCodes: [{
       code: { type: String, required: true },
-      type: { type: String, required: true }, // 'reactivation', 'password_reset', etc.
+      type: { type: String, required: true }, 
       expiresAt: { type: Date, required: true },
       used: { type: Boolean, default: false },
       createdAt: { type: Date, default: Date.now }
     }],
 
-    // Timestamps
+    
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
   },
@@ -319,11 +316,10 @@ const UserSchema = new mongoose.Schema(
   }
 );
 
-// Keep profile.name in sync with username for backward compatibility
 UserSchema.pre("save", function (next) {
   try {
     if (!this.profile) this.profile = {};
-    // If profile.name is missing or different, update it to username
+    
     if (!this.profile.name || this.profile.name !== this.username) {
       this.profile.name = this.username;
     }

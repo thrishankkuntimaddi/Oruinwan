@@ -1,19 +1,3 @@
-/**
- * Repair Script: Fix E2EE Key Distribution Invariant Violations
- * 
- * WHAT THIS DOES:
- * 1. Finds all users who are in channel.members but NOT in encryptedKeys  
- * 2. Calls repairConversationKeyForUser() for each
- * 3. Logs detailed results
- * 
- * WHEN TO RUN:
- * - After fixing the race condition (one-time cleanup)
- * - Manually if KEY_NOT_DISTRIBUTED errors appear
- * 
- * HOW TO RUN:
- * node scripts/repairKeyDistribution.js
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Channel = require("../src/features/channels/channel.model.js");
@@ -25,11 +9,11 @@ async function findViolations() {
 
     const violations = [];
 
-    // Get all channels
+    
     const channels = await Channel.find({}).select('_id name members').lean();
 
     for (const channel of channels) {
-        // Get conversation key for this channel
+        
         const conversationKey = await ConversationKey.findOne({
             conversationId: channel._id.toString(),
             conversationType: 'channel'
@@ -40,18 +24,18 @@ async function findViolations() {
             continue;
         }
 
-        // Extract member user IDs
+        
         const memberIds = channel.members.map(m => {
             const userId = m.user ? m.user.toString() : m.toString();
             return userId;
         });
 
-        // Extract users who have encryption keys
+        
         const usersWithKeys = new Set(
             conversationKey.encryptedKeys.map(ek => ek.userId.toString())
         );
 
-        // Find members without keys (INVARIANT VIOLATION)
+        
         for (const memberId of memberIds) {
             if (!usersWithKeys.has(memberId)) {
                 violations.push({
@@ -152,11 +136,11 @@ async function main() {
         console.log('🔧 E2EE Key Distribution Repair Script');
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
-        // Connect to database
+        
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to database\n');
 
-        // Find violations
+        
         const violations = await findViolations();
 
         if (violations.length === 0) {
@@ -166,17 +150,17 @@ async function main() {
             return;
         }
 
-        // Repair violations
+        
         const results = await repairViolations(violations);
 
-        // Print summary
+        
         printSummary(results);
 
-        // Disconnect
+        
         await mongoose.disconnect();
         console.log('✅ Disconnected from database\n');
 
-        // Exit code
+        
         if (results.errors.length > 0) {
             process.exit(1);
         }

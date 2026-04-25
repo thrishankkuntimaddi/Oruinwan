@@ -12,7 +12,6 @@ import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
 import api from '@services/api';
 
-// Import tab components
 import ProfileTab from './settingsTabs/ProfileTab';
 import NotificationsTab from './settingsTabs/NotificationsTab';
 import PrivacyTab from './settingsTabs/PrivacyTab';
@@ -101,7 +100,7 @@ const Settings = () => {
             const ws = data.workspaces || [];
             setWorkspaces(ws);
             if (ws.length > 0 && !selectedWorkspaceId) setSelectedWorkspaceId(ws[0].id);
-        } catch { /* ignore */ }
+        } catch {  }
     };
 
     const handleProfileUpdate = async () => {
@@ -175,7 +174,7 @@ const Settings = () => {
             paddingBottom: isMobile ? 'calc(56px + env(safe-area-inset-bottom))' : 0,
         }}>
 
-            {/* ── Sidebar ─────────────────────────────────────── */}
+            {}
             <aside style={{
                 position: 'fixed',
                 top: 0,
@@ -192,7 +191,7 @@ const Settings = () => {
             }}
                 className="settings-sidebar"
             >
-                {/* Logo / back */}
+                {}
                 <div style={{
                     height: 48,
                     display: 'flex',
@@ -228,7 +227,7 @@ const Settings = () => {
                     }}>Settings</span>
                 </div>
 
-                {/* Nav items */}
+                {}
                 <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
                     <p style={{
                         fontSize: 9,
@@ -303,7 +302,7 @@ const Settings = () => {
                     })}
                 </nav>
 
-                {/* User footer */}
+                {}
                 <div style={{
                     padding: '12px 16px',
                     borderTop: '1px solid var(--border-default)',
@@ -346,7 +345,7 @@ const Settings = () => {
                 </div>
             </aside>
 
-            {/* Mobile overlay */}
+            {}
             {mobileSidebarOpen && (
                 <div
                     style={{
@@ -358,7 +357,7 @@ const Settings = () => {
                 />
             )}
 
-            {/* ── Main content ───────────────────────────────── */}
+            {}
             <main style={{
                 flex: 1,
                 minWidth: 0,
@@ -369,7 +368,7 @@ const Settings = () => {
             }}
                 className="settings-main"
             >
-                {/* Top bar — fixed height, never moves */}
+                {}
                 <header style={{
                     height: 48,
                     minHeight: 48,
@@ -383,7 +382,7 @@ const Settings = () => {
                     zIndex: 10,
                     gap: 16,
                 }}>
-                    {/* Left: mobile menu + breadcrumb */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                         <button
                             style={{
@@ -415,7 +414,7 @@ const Settings = () => {
                         </div>
                     </div>
 
-                    {/* Center: Search bar */}
+                    {}
                     <div style={{ flex: 1, maxWidth: 360 }}>
                         <div style={{ position: 'relative' }}>
                             <Search
@@ -479,7 +478,7 @@ const Settings = () => {
                         </div>
                     </div>
 
-                    {/* Right: back */}
+                    {}
                     <button
                         onClick={handleBackNavigation}
                         style={{
@@ -511,7 +510,7 @@ const Settings = () => {
                     </button>
                 </header>
 
-                {/* Content — the ONLY scrolling element in the page */}
+                {}
                 <div
                     className="settings-scroll"
                     style={{
@@ -599,7 +598,7 @@ const Settings = () => {
                 </div>
             </main>
 
-            {/* Sidebar desktop offset */}
+            {}
             <style>{`
                 @media (min-width: 768px) {
                     .settings-sidebar { transform: translateX(0) !important; }
@@ -607,7 +606,7 @@ const Settings = () => {
                 }
             `}</style>
 
-            {/* Mobile bottom nav — rendered via portal so iOS Safari overflow:hidden can't clip it */}
+            {}
             {isMobile && createPortal(
                 <MobileBottomNav
                     workspaceId={workspaces[0]?.id || localStorage.getItem('lastWorkspaceId') || ''}

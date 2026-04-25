@@ -1,20 +1,16 @@
 import { useCallback } from 'react';
 import api from '@services/api';
 
-/**
- * Custom hook for header action handlers
- * Handles all 5 DM contact options + channel actions
- */
 export default function useHeaderActions({ chat, showToast, onClose, onDeleteChat }) {
 
-    // ── Channel: Threads view ─────────────────────────────────────────────────
+    
     const handleShowThreadsView = useCallback(() => {
         showToast('Threads view coming soon!', 'info');
     }, [showToast]);
 
     const handleShowMemberList = useCallback(() => true, []);
 
-    // ── Channel: Exit channel ─────────────────────────────────────────────────
+    
     const handleExitChannel = useCallback(async () => {
         if (!window.confirm('Are you sure you want to exit this channel?')) return;
         try {
@@ -26,7 +22,7 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
         }
     }, [chat, onClose, showToast]);
 
-    // ── Channel: Delete channel ───────────────────────────────────────────────
+    
     const handleDeleteChannel = useCallback(async () => {
         if (!window.confirm('Are you sure you want to permanently delete this channel? This cannot be undone.')) return;
         try {
@@ -38,13 +34,13 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
         }
     }, [chat, onClose, showToast]);
 
-    // ── DM: Clear chat ────────────────────────────────────────────────────────
-    // Sets a per-user clearedAt watermark — messages before it are hidden for this user only
+    
+    
     const handleClearChat = useCallback(async () => {
         try {
             await api.post(`/api/v2/dm/${chat.id}/clear`);
             showToast('Chat cleared', 'success');
-            // Reload page so the cleared messages disappear from the list
+            
             window.location.reload();
         } catch (err) {
             console.error('Clear chat error:', err);
@@ -52,8 +48,8 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
         }
     }, [chat, showToast]);
 
-    // ── DM: Delete chat ───────────────────────────────────────────────────────
-    // Hides the DM session from this user's list (soft-delete, other user unaffected)
+    
+    
     const handleDeleteChat = useCallback(async () => {
         try {
             await api.delete(`/api/v2/dm/${chat.id}`);
@@ -62,13 +58,13 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
             if (onDeleteChat) onDeleteChat();
         } catch (err) {
             console.error('Delete chat error:', err);
-            // Fallback: still close the window even if API fails
+            
             onClose?.();
             if (onDeleteChat) onDeleteChat();
         }
     }, [chat, onClose, onDeleteChat, showToast]);
 
-    // ── DM: Block / Unblock ───────────────────────────────────────────────────
+    
     const handleBlockToggle = useCallback(async (currentlyBlocked) => {
         try {
             if (currentlyBlocked) {
@@ -87,7 +83,7 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
         }
     }, [chat, showToast]);
 
-    // ── DM: Mute / Unmute ─────────────────────────────────────────────────────
+    
     const handleMuteToggle = useCallback(async (currentlyMuted) => {
         try {
             if (currentlyMuted) {

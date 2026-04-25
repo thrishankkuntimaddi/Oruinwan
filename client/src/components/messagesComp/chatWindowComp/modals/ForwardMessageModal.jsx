@@ -17,7 +17,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
 
     useEffect(() => {
         if (activeTab === 'dms' && activeWorkspace) loadWorkspaceMembers();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        
     }, [activeTab, activeWorkspace]);
 
     const loadWorkspaceMembers = async () => {
@@ -81,7 +81,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                 display: 'flex', flexDirection: 'column',
                 overflow: 'hidden',
             }}>
-                {/* Header */}
+                {}
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <h3 style={{ margin: 0, fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', fontFamily: FONT }}>
                         Forward message to…
@@ -89,7 +89,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Tabs */}
+                {}
                 <div style={{ display: 'flex', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                     <TabBtn active={activeTab === 'channels'} onClick={() => setActiveTab('channels')}>
                         <Hash size={13} /> Channels
@@ -99,7 +99,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                     </TabBtn>
                 </div>
 
-                {/* Search */}
+                {}
                 <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                     <div style={{ position: 'relative' }}>
                         <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -124,7 +124,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                     </div>
                 </div>
 
-                {/* List */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '6px', minHeight: '200px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                     {loading ? (
                         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)', fontSize: '12px', fontFamily: FONT }}>Loading…</div>
@@ -181,7 +181,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
                     )}
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: FONT }}>
                         {selectedItems.size > 0 && `${selectedItems.size} selected`}
@@ -241,7 +241,7 @@ function ListItem({ isSelected, onClick, avatar, primary, secondary }) {
                 borderLeft: isSelected ? '2px solid var(--accent)' : '2px solid transparent',
                 transition: '80ms ease',
             }}>
-            {/* Checkbox */}
+            {}
             <div style={{
                 width: '14px', height: '14px', borderRadius: '2px', flexShrink: 0,
                 border: `1.5px solid ${isSelected ? 'var(--accent)' : 'var(--border-default)'}`,

@@ -43,7 +43,7 @@ const Broadcast = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* Header */}
+            {}
             <div>
                 <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Megaphone size={18} style={{ color: 'var(--accent)' }} />
@@ -52,7 +52,7 @@ const Broadcast = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Send announcements to companies</p>
             </div>
 
-            {/* Tabs */}
+            {}
             <div style={{ display: 'flex', gap: '0', borderBottom: '1px solid var(--border-subtle)' }}>
                 {['compose', 'history'].map(tab => (
                     <button
@@ -73,10 +73,10 @@ const Broadcast = () => {
                 ))}
             </div>
 
-            {/* Compose Tab */}
+            {}
             {activeTab === 'compose' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', alignItems: 'start' }}>
-                    {/* Form */}
+                    {}
                     <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         <FormField label="Subject *">
                             <input
@@ -143,7 +143,7 @@ const Broadcast = () => {
                         )}
                     </div>
 
-                    {/* Preview & Send */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
                             <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '14px' }}>Preview</div>
@@ -158,7 +158,7 @@ const Broadcast = () => {
                 </div>
             )}
 
-            {/* History Tab */}
+            {}
             {activeTab === 'history' && (
                 <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>

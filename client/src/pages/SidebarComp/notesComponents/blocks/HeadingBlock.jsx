@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Trash2, ChevronDown } from 'lucide-react';
 
-// Heading styles → all dark tokens, no light-mode classes
 const LEVEL_STYLES = {
     1: { fontSize: '2.25rem', fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.15 },
     2: { fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 },
@@ -38,7 +37,7 @@ const HeadingBlock = ({ block, onBlockChange, onRemoveBlock, onAddBlockAfter, re
     return (
         <div className="group relative mb-3">
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Level picker */}
+                {}
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                     <button
                         onClick={() => setShowLevelPicker(v => !v)}

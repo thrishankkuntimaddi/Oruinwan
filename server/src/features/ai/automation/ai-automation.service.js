@@ -1,11 +1,8 @@
-// server/src/features/ai/automation/ai-automation.service.js
 'use strict';
 
 const aiCore   = require('../ai-core.service');
 const meetingsSvc = require('../../meetings/meetings.service');
 const logger   = require('../../../../utils/logger');
-
-// ─── Intent Classification ────────────────────────────────────────────────────
 
 const INTENTS = {
     CREATE_TASK:        'create_task',
@@ -16,13 +13,6 @@ const INTENTS = {
     UNKNOWN:            'unknown',
 };
 
-/**
- * Classify user intent and dispatch to the correct handler.
- * @param {string} command     Natural language command
- * @param {string} userId      Requesting user ID
- * @param {string} workspaceId
- * @returns {Promise<{ intent: string, result: object }>}
- */
 async function parseCommand(command, userId, workspaceId) {
     if (!command) return { intent: INTENTS.UNKNOWN, result: { message: 'No command provided' } };
 
@@ -54,7 +44,7 @@ async function parseCommand(command, userId, workspaceId) {
         intent = _heuristicIntent(command);
     }
 
-    // --- Dispatch ---
+    
     switch (intent) {
         case INTENTS.CREATE_TASK:
             return { intent, result: await _handleCreateTask(command, userId, workspaceId) };
@@ -74,7 +64,6 @@ async function parseCommand(command, userId, workspaceId) {
     }
 }
 
-/** Simple heuristic fallback when Gemini is unavailable */
 function _heuristicIntent(cmd) {
     const c = cmd.toLowerCase();
     if (/\b(create|add|new)\b.*\btask\b/.test(c))       return INTENTS.CREATE_TASK;
@@ -84,8 +73,6 @@ function _heuristicIntent(cmd) {
     if (/\bgenerate\b.*\btask(s)?\b/.test(c))           return INTENTS.GENERATE_TASKS;
     return INTENTS.UNKNOWN;
 }
-
-// ─── Handlers ─────────────────────────────────────────────────────────────────
 
 async function _handleCreateTask(command, userId, workspaceId) {
     try {
@@ -107,10 +94,10 @@ async function _handleCreateTask(command, userId, workspaceId) {
                 const parsed = JSON.parse(raw);
                 if (parsed.title) title = parsed.title;
                 if (parsed.dueDate && parsed.dueDate !== 'null') dueDate = new Date(parsed.dueDate);
-            } catch { /* keep heuristic title */ }
+            } catch {  }
         }
 
-        // Try to find Task model (works if tasks feature is present)
+        
         let task = null;
         try {
             const TaskModel = require('../../../../models/Task');
@@ -155,15 +142,6 @@ async function _handleScheduleMeeting(command, userId, workspaceId) {
     }
 }
 
-// ─── Generate Tasks from Content ──────────────────────────────────────────────
-
-/**
- * Extract tasks from a block of text (message, meeting transcript, document).
- * @param {string} text
- * @param {string} workspaceId
- * @param {string} userId
- * @returns {Promise<{ tasks: string[], message: string }>}
- */
 async function generateTasksFromText(text, workspaceId, userId) {
     const { items } = await aiCore.extractTasks(text);
     return { tasks: items, message: `Extracted ${items.length} task(s) from content` };

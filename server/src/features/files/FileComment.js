@@ -1,4 +1,3 @@
-// server/src/features/files/FileComment.js
 const mongoose = require('mongoose');
 
 const fileCommentSchema = new mongoose.Schema({

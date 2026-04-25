@@ -87,7 +87,7 @@ const PlatformChat = () => {
 
     return (
         <div style={{ height: 'calc(100vh - 140px)', display: 'flex', gap: '1px', background: 'var(--border-subtle)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* User List */}
+            {}
             <div style={{ width: '280px', flexShrink: 0, background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <h2 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '10px' }}>Direct Messages</h2>
@@ -109,10 +109,10 @@ const PlatformChat = () => {
                 </div>
             </div>
 
-            {/* Chat Window */}
+            {}
             {selectedUser ? (
                 <div style={{ flex: 1, background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    {/* Chat Header */}
+                    {}
                     <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div style={{ width: '36px', height: '36px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
                             {selectedUser.username?.charAt(0).toUpperCase()}
@@ -135,7 +135,7 @@ const PlatformChat = () => {
                         </div>
                     </div>
 
-                    {/* Messages */}
+                    {}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', background: 'var(--bg-base)' }} className="custom-scrollbar">
                         {messages.length === 0 ? (
                             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px' }}>
@@ -165,7 +165,7 @@ const PlatformChat = () => {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input */}
+                    {}
                     <form onSubmit={sendMessage} style={{ padding: '14px 16px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', display: 'flex', gap: '8px' }}>
                         <input
                             type="text" value={input} onChange={e => setInput(e.target.value)}

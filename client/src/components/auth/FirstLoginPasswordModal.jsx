@@ -1,4 +1,3 @@
-// client/src/components/auth/FirstLoginPasswordModal.jsx
 import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
@@ -13,7 +12,7 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Password strength indicators
+    
     const hasMinLength = newPassword.length >= 8;
     const hasNumber = /\d/.test(newPassword);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
@@ -37,7 +36,7 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
 
             showToast('Password changed successfully!', 'success');
 
-            // Proceed to dashboard
+            
             setTimeout(() => {
                 onContinue();
             }, 500);
@@ -63,13 +62,13 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
     return (
         <div className="fixed inset-0 bg-black/80 z-[300] flex items-center justify-center backdrop-blur-sm">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-[500px] overflow-hidden transition-colors">
-                {/* Header */}
+                {}
                 <div className="bg-gradient-to-r from-indigo-600 to-black p-8 text-white text-center">
                     <h1 className="text-3xl font-bold mb-2">Welcome to {companyName}!</h1>
                     <p className="text-indigo-100">Let's secure your account</p>
                 </div>
 
-                {/* Content */}
+                {}
                 <div className="p-8">
                     <div className="mb-6">
                         <AlertCircle className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
@@ -79,7 +78,7 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
                         </p>
                     </div>
 
-                    {/* New Password */}
+                    {}
                     <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             New Password
@@ -103,7 +102,7 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
                         </div>
                     </div>
 
-                    {/* Confirm Password */}
+                    {}
                     <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
                             Confirm Password
@@ -127,7 +126,7 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
                         </div>
                     </div>
 
-                    {/* Password Requirements */}
+                    {}
                     {newPassword && (
                         <div className="mb-6 p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-200 dark:border-slate-700">
                             <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Password Requirements:</p>
@@ -158,7 +157,7 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
                         </div>
                     )}
 
-                    {/* Actions */}
+                    {}
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={handleChangePassword}

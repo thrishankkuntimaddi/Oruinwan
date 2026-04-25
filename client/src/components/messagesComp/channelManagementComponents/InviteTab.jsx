@@ -23,7 +23,7 @@ export default function InviteTab({
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* Search */}
+            {}
             <div style={{ position: 'relative' }}>
                 <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                 <input
@@ -52,7 +52,7 @@ export default function InviteTab({
                 )}
             </div>
 
-            {/* Debug Panel */}
+            {}
             {showDebugInfo && (
                 <div style={{ padding: '10px 12px', backgroundColor: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', borderRadius: '2px', fontSize: '11px' }}>
                     <div style={{ fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>Debug Info</div>

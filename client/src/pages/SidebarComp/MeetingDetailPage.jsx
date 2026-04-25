@@ -1,4 +1,3 @@
-// client/src/pages/SidebarComp/MeetingDetailPage.jsx
 import React, { useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -12,7 +11,6 @@ import { useMeeting, useSharedNotes } from '../../hooks/useMeeting';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
 
-// ─── Status Badge ──────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
     const map = {
         scheduled: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -34,7 +32,6 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-// ─── Tab Button ───────────────────────────────────────────────────────────────
 const TabBtn = ({ label, icon: Icon, active, onClick }) => (
     <button
         onClick={onClick}
@@ -49,7 +46,6 @@ const TabBtn = ({ label, icon: Icon, active, onClick }) => (
     </button>
 );
 
-// ─── Overview Tab ─────────────────────────────────────────────────────────────
 const OverviewTab = ({ meeting, onJoin, onEnd, onSuggestTime, suggestLoading }) => {
     const [suggested, setSuggested] = useState(null);
     const [suggestErr, setSuggestErr] = useState('');
@@ -82,7 +78,7 @@ const OverviewTab = ({ meeting, onJoin, onEnd, onSuggestTime, suggestLoading }) 
                 </div>
             </div>
 
-            {/* Participants */}
+            {}
             <div>
                 <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
                     <Users size={15} /> Participants ({meeting.participants?.length || 0})
@@ -103,7 +99,7 @@ const OverviewTab = ({ meeting, onJoin, onEnd, onSuggestTime, suggestLoading }) 
                 </div>
             </div>
 
-            {/* Actions */}
+            {}
             <div className="flex flex-wrap gap-3">
                 {meeting.status === 'scheduled' && (
                     <button
@@ -150,7 +146,6 @@ const OverviewTab = ({ meeting, onJoin, onEnd, onSuggestTime, suggestLoading }) 
     );
 };
 
-// ─── Agenda Tab ───────────────────────────────────────────────────────────────
 const AgendaTab = ({ meeting, onSave }) => {
     const [items, setItems] = useState(meeting.agenda || []);
     const [newTitle, setNewTitle] = useState('');
@@ -237,7 +232,6 @@ const AgendaTab = ({ meeting, onSave }) => {
     );
 };
 
-// ─── Notes Tab ────────────────────────────────────────────────────────────────
 const NotesTab = ({ meetingId, initialNotes }) => {
     const { notes, handleNotesChange } = useSharedNotes(meetingId, initialNotes);
 
@@ -257,7 +251,6 @@ const NotesTab = ({ meetingId, initialNotes }) => {
     );
 };
 
-// ─── Transcript + Summary Tab ─────────────────────────────────────────────────
 const TranscriptTab = ({ meeting, onSaveTranscript, onGenerateSummary }) => {
     const [transcript, setTranscript] = useState(meeting.transcript || '');
     const [summary, setSummary] = useState(meeting.summary || '');
@@ -337,7 +330,6 @@ const TranscriptTab = ({ meeting, onSaveTranscript, onGenerateSummary }) => {
     );
 };
 
-// ─── Action Items Tab ─────────────────────────────────────────────────────────
 const STATUS_COLORS = {
     pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
     in_progress: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -413,7 +405,6 @@ const ActionItemsTab = ({ meeting, onAdd, onUpdate }) => {
     );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
 const TABS = [
     { id: 'overview', label: 'Overview', icon: Calendar },
     { id: 'agenda', label: 'Agenda', icon: FileText },
@@ -485,7 +476,7 @@ const MeetingDetailPage = () => {
 
     return (
         <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-950 overflow-hidden">
-            {/* ── Header ── */}
+            {}
             <header className="flex-none px-6 py-4 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800">
                 <div className="flex items-center gap-3 mb-2">
                     <button
@@ -506,7 +497,7 @@ const MeetingDetailPage = () => {
                     </div>
                 </div>
 
-                {/* ── Tabs ── */}
+                {}
                 <div className="flex gap-1 overflow-x-auto pb-1 mt-2">
                     {TABS.map(tab => (
                         <TabBtn
@@ -520,7 +511,7 @@ const MeetingDetailPage = () => {
                 </div>
             </header>
 
-            {/* ── Tab Content ── */}
+            {}
             <div className="flex-1 overflow-y-auto px-6 py-6">
                 {activeTab === 'overview' && (
                     <OverviewTab

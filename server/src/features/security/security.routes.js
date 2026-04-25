@@ -1,15 +1,3 @@
-// server/src/features/security/security.routes.js
-//
-// Phase 3 — Company Security Layer
-//
-// All routes require: requireAuth → requireCompanyMember → requireCompanyRole('admin')
-//
-// Routes:
-//   GET /api/company/security/events         — paginated security event list
-//   GET /api/company/security/summary        — 30-day event summary for dashboard
-//   GET /api/company/audit-logs              — paginated AuditLog list (admin/owner)
-//   GET /api/company/audit-logs/export       — CSV/JSON export
-
 const express = require('express');
 const router = express.Router();
 const { query, validationResult } = require('express-validator');
@@ -26,10 +14,7 @@ const {
 
 const AuditLog = require('../../../models/AuditLog');
 
-// Shared middleware chain — admin or owner only
 const gate = [requireAuth, requireCompanyMember, requireCompanyRole('admin')];
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function handleError(res, err) {
     console.error('[SECURITY ROUTES]', err.message);
@@ -44,8 +29,6 @@ function validationGuard(req, res) {
     return null;
 }
 
-// ── Security Event queries ────────────────────────────────────────────────────
-
 const eventQueryValidation = [
     query('eventType').optional().isString(),
     query('severity').optional().isIn(['info', 'warning', 'critical']),
@@ -57,11 +40,6 @@ const eventQueryValidation = [
     query('limit').optional().isInt({ min: 1, max: 200 }).toInt(),
 ];
 
-/**
- * @route   GET /api/company/security/events
- * @desc    List security events — paginated, filterable
- * @access  admin / owner
- */
 router.get('/security/events', ...gate, eventQueryValidation, async (req, res) => {
     if (validationGuard(req, res)) return;
     try {
@@ -72,11 +50,6 @@ router.get('/security/events', ...gate, eventQueryValidation, async (req, res) =
     }
 });
 
-/**
- * @route   GET /api/company/security/summary
- * @desc    30-day security summary: counts by type, severity, failed logins
- * @access  admin / owner
- */
 router.get('/security/summary', ...gate, async (req, res) => {
     try {
         const summary = await getSecuritySummary(req.companyId.toString());
@@ -85,8 +58,6 @@ router.get('/security/summary', ...gate, async (req, res) => {
         return handleError(res, err);
     }
 });
-
-// ── Audit Log queries ─────────────────────────────────────────────────────────
 
 const auditQueryValidation = [
     query('actorId').optional().isMongoId(),
@@ -98,11 +69,6 @@ const auditQueryValidation = [
     query('limit').optional().isInt({ min: 1, max: 200 }).toInt(),
 ];
 
-/**
- * @route   GET /api/company/audit-logs
- * @desc    Paginated AuditLog list for this company
- * @access  admin / owner
- */
 router.get('/audit-logs', ...gate, auditQueryValidation, async (req, res) => {
     if (validationGuard(req, res)) return;
     try {
@@ -151,12 +117,6 @@ router.get('/audit-logs', ...gate, auditQueryValidation, async (req, res) => {
     }
 });
 
-/**
- * @route   GET /api/company/audit-logs/export
- * @desc    Export audit logs as CSV or JSON
- * @access  admin / owner
- * @query   format? ('csv' | 'json')
- */
 router.get('/audit-logs/export', ...gate, async (req, res) => {
     try {
         const { format = 'json' } = req.query;

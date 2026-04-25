@@ -1,6 +1,3 @@
-// src/components/messageComp/chatWindow/messages/messageMenu.jsx
-// Monolith Flow Design System
-
 import React, { useState } from "react";
 import {
   Pin, Reply, Forward, Copy, Bookmark, Bell, Clock,
@@ -62,7 +59,7 @@ export default function MessageMenu({
     try {
       await api.post(`/api/messages/${msg.id}/bookmark`);
       onBookmark?.(msg.id);
-    } catch { /* silent */ } finally {
+    } catch {  } finally {
       setBookmarkPending(false);
     }
   };
@@ -83,7 +80,7 @@ export default function MessageMenu({
           animation: 'fadeIn 220ms cubic-bezier(0.16,1,0.3,1)',
         }}
       >
-        {/* Emoji Reactions */}
+        {}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '2px',
           padding: '6px 8px',
@@ -107,7 +104,7 @@ export default function MessageMenu({
           ))}
         </div>
 
-        {/* Actions */}
+        {}
         <MenuItem icon={<Pin size={13} />} label="Pin" onClick={() => pinMessage(msg.id)} />
         <MenuItem icon={<Reply size={13} />} label="Reply" onClick={() => replyToMessage(msg.id)} />
         <MenuItem icon={<Forward size={13} />} label="Forward" onClick={() => forwardMessage(msg.id)} />
@@ -132,7 +129,7 @@ export default function MessageMenu({
         <MenuItem icon={<Trash2 size={13} />} label="Delete" onClick={() => deleteMessage(msg.id)} danger />
         <MenuItem icon={<Info size={13} />} label="Info" onClick={() => infoMessage(msg.id)} />
 
-        {/* Integrations Divider */}
+        {}
         <div style={{
           display: 'flex', alignItems: 'center', gap: '8px',
           padding: '6px 12px', margin: '4px 0',

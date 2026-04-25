@@ -1,7 +1,5 @@
-// src/App.jsx - Recompile Trigger (Updated)
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
 
-// Context Providers  
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import ContactsProvider from "./contexts/ContactsContext";
 import { NotesProvider } from "./contexts/NotesContext";
@@ -9,12 +7,11 @@ import { TasksProvider } from "./contexts/TasksContext";
 import { ToastProvider } from "./contexts/ToastContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { UpdatesProvider } from "./contexts/UpdatesContext";
-import { SocketProvider } from "./contexts/SocketContext"; // ✅ Add real-time support
+import { SocketProvider } from "./contexts/SocketContext"; 
 import { CompanyProvider } from "./contexts/CompanyContext";
 import { DepartmentProvider } from "./contexts/DepartmentContext";
-import { SearchProvider } from "./contexts/SearchContext"; // 🔍 Unified Search
+import { SearchProvider } from "./contexts/SearchContext"; 
 
-// Layout + Components
 import MainLayout from "./components/layout/MainLayout";
 import CompanyAdminLayout from "./components/layout/CompanyAdminLayout";
 import HomePanel from "./components/home/panels/HomePanel";
@@ -30,7 +27,6 @@ import { HuddleProvider } from "./contexts/HuddleContext";
 import { NotificationsProvider } from "./contexts/NotificationsContext";
 import NotificationsPage from "./pages/NotificationsPage";
 
-// Pages (Protected)
 import Home from "./pages/SidebarComp/Home";
 import Messages from "./pages/SidebarComp/Messages";
 import MyTasks from "./pages/SidebarComp/MyTasks";
@@ -49,11 +45,10 @@ import KnowledgeGraph from "./pages/SidebarComp/KnowledgeGraph";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
 import FeatureShowcase from "./pages/FeatureShowcase";
 
-// Auth Pages (Public)
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
 import ResetPassword from "./pages/LoginPageComp/ResetPassword";
-// OAuthPasswordSetup import removed — /setup-password is now the mandatory company first-login gate
+
 import VerifyEmail from "./pages/VerifyEmail";
 import OAuthSuccess from "./pages/LoginPageComp/OAuthSuccess";
 import SetPassword from "./pages/SetPassword";
@@ -66,9 +61,7 @@ import JoinChannel from "./pages/JoinChannel";
 
 import ChttrixDocs from "./pages/ChttrixDocs";
 import Careers from "./pages/Careers";
-// import PagePlaceholder from "./pages/PagePlaceholder"; // Removed unused
 
-// Footer Pages
 import About from "./pages/company/About";
 import Contact from "./pages/company/Contact";
 import Brand from "./pages/company/Brand";
@@ -88,85 +81,72 @@ import RegisterCompany from "./pages/RegisterCompany";
 import PendingVerification from "./pages/PendingVerification";
 import CompanyConfirmation from "./pages/CompanyConfirmation";
 import CompanySetup from "./pages/CompanySetup";
-import DepartmentManagement from "./pages/admin/DepartmentManagement"; // Updated path
-import UserManagement from "./pages/admin/UserManagement"; // NEW
-import OnboardingPage from "./pages/admin/OnboardingPage"; // NEW
-import CompanySettings from "./pages/admin/settings/CompanySettings"; // NEW - 8 section settings
-import AdminProfile from "./pages/admin/AdminProfile"; // Personal profile
-import Analytics from "./pages/admin/Analytics"; // NEW - Analytics dashboard
-import ContactAdmin from "./pages/admin/ContactAdmin"; // NEW - Contact platform admin
-import WorkspacesManagement from "./pages/admin/WorkspacesManagement"; // NEW - Admin workspaces management
-import AuditSecurityPage from "./pages/admin/AuditSecurityPage"; // NEW - Audit & Security
-import AdminSettingsLimited from "./pages/admin/AdminSettingsLimited"; // NEW - Limited settings for admins
+import DepartmentManagement from "./pages/admin/DepartmentManagement"; 
+import UserManagement from "./pages/admin/UserManagement"; 
+import OnboardingPage from "./pages/admin/OnboardingPage"; 
+import CompanySettings from "./pages/admin/settings/CompanySettings"; 
+import AdminProfile from "./pages/admin/AdminProfile"; 
+import Analytics from "./pages/admin/Analytics"; 
+import ContactAdmin from "./pages/admin/ContactAdmin"; 
+import WorkspacesManagement from "./pages/admin/WorkspacesManagement"; 
+import AuditSecurityPage from "./pages/admin/AuditSecurityPage"; 
+import AdminSettingsLimited from "./pages/admin/AdminSettingsLimited"; 
 
-// Workspace Collaboration Extensions (Phase 2)
 import TeamsManagement from "./pages/admin/TeamsManagement";
 import OrgChartPage from "./pages/admin/OrgChartPage";
 import WorkspaceTemplates from "./pages/admin/WorkspaceTemplates";
 import WorkspacePermissions from "./pages/admin/WorkspacePermissions";
 
-// Workspace OS Core (new pages)
 import EmployeeDirectoryPage from "./pages/workspace-os/EmployeeDirectoryPage";
 import PermissionMatrixPage from "./pages/workspace-os/PermissionMatrixPage";
 import AuditLogViewer from "./pages/workspace-os/AuditLogViewer";
 import ComplianceLogViewer from "./pages/workspace-os/ComplianceLogViewer";
 
-
-// Dashboard Pages
 import AdminDashboard from "./pages/AdminDashboard";
 import ManagerLayout from "./components/layout/ManagerLayout.jsx";
 import OwnerDashboard from './pages/OwnerDashboard';
-import OwnerAnalytics from './pages/OwnerDashboard/OwnerAnalytics'; // NEW
-import AdminsManagement from './pages/OwnerDashboard/AdminsManagement'; // NEW - Owner's admin management
-import OwnerBilling from './pages/OwnerDashboard/OwnerBilling'; // NEW - Dedicated billing page
-import OwnerSecurity from './pages/OwnerDashboard/OwnerSecurity'; // NEW - Dedicated security page
-// import ManagerDashboard from "./pages/ManagerDashboard"; // Unused
+import OwnerAnalytics from './pages/OwnerDashboard/OwnerAnalytics'; 
+import AdminsManagement from './pages/OwnerDashboard/AdminsManagement'; 
+import OwnerBilling from './pages/OwnerDashboard/OwnerBilling'; 
+import OwnerSecurity from './pages/OwnerDashboard/OwnerSecurity'; 
+
 import ManagerOverview from "./components/manager/ManagerOverview";
-// import ManagerWorkspaces from "./components/manager/ManagerWorkspaces";
-import ManagerProjects from "./components/manager/ManagerProjects"; // NEW
-// import ManagerLocation from "./components/manager/ManagerLocation"; // NEW - Unused
+
+import ManagerProjects from "./components/manager/ManagerProjects"; 
+
 import ManagerTasks from "./components/manager/ManagerTasks";
 import ManagerReports from "./components/manager/ManagerReports";
-// import ManagerContactAdmin from "./components/manager/ManagerContactAdmin"; // Unused
-import ManagerSettings from "./components/manager/ManagerSettings"; // NEW
+
+import ManagerSettings from "./components/manager/ManagerSettings"; 
 import TeamAllocation from "./components/manager/TeamAllocation";
-import UnassignedMembers from "./components/manager/UnassignedMembers"; // New component
-import ManagerWorkspacePage from "./components/manager/ManagerWorkspacePage"; // My Workspace tab
+import UnassignedMembers from "./components/manager/UnassignedMembers"; 
+import ManagerWorkspacePage from "./components/manager/ManagerWorkspacePage"; 
 import EmployeeDashboard from "./pages/dashboards/EmployeeDashboard";
 import ChttrixAdminDashboard from "./pages/dashboards/ChttrixAdminDashboard";
 import AIInsightsDashboard from "./pages/dashboards/AIInsightsDashboard";
 import InsightsDashboard from "./pages/dashboards/InsightsDashboard";
 
-// ── AI Intelligence Layer ─────────────────────────────────────────────────────
 import AIHub from "./components/ai/AIHub";
 
-// 🔍 Unified Search
 import SearchResultsPage from "./components/search/SearchResultsPage";
 
-// Protected route wrappers
 import RequireAuth from "./components/RequireAuth";
 import RequireWorkspace from "./components/RequireWorkspace";
 import RequireAdmin from "./components/RequireAdmin";
 import RequireOwner from "./components/RequireOwner";
 import RequireChttrixAdmin from "./components/RequireChttrixAdmin";
-import RequireDepartmentManager from "./components/RequireDepartmentManager"; // Restored
-import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; // Block pending users
-import ScrollToTop from "./components/ScrollToTop"; // Fix scroll position on route change
+import RequireDepartmentManager from "./components/RequireDepartmentManager"; 
+import VerifiedOnlyRoute from "./components/VerifiedOnlyRoute"; 
+import ScrollToTop from "./components/ScrollToTop"; 
 
-// E2EE Password Unlock
 import PasswordUnlockModal from "./components/security/PasswordUnlockModal";
 import { useAuth } from "./contexts/AuthContext";
 import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
 
-
-
-// ── Developer Platform Wrapper ─────────────────────────────────────────────────
-// Reads workspaceId from URL params and passes to DeveloperPortalPage
 function DeveloperPortalWrapper() {
   const { workspaceId } = useParams();
   return <DeveloperPortalPage workspaceId={workspaceId} />;
 }
-// ─────────────────────────────────────────────────────────────────────────────
 
 function App() {
 
@@ -185,15 +165,15 @@ function App() {
                           <AppErrorBoundary label="App">
                             <Routes>
 
-                              {/* PROTECTED AREA (requires login) */}
+                              {}
 
-                              {/* Redirect /personal/workspace to /workspaces to prevent white screen */}
+                              {}
                               <Route
                                 path="/personal/workspace"
                                 element={<Navigate to="/workspaces" replace />}
                               />
 
-                          {/* Workspace Selection - Must select workspace first */}
+                          {}
                           <Route
                             path="/workspaces"
                             element={
@@ -205,9 +185,9 @@ function App() {
                             }
                           />
 
-                          {/* WORKSPACE-SPECIFIC ROUTES - All require workspaceId + membership */}
+                          {}
 
-                          {/* Home/Main View */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/home"
                             element={
@@ -225,7 +205,7 @@ function App() {
                             }
                           />
 
-                          {/* Home View - Specific Channel */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/home/channel/:id"
                             element={
@@ -243,7 +223,7 @@ function App() {
                             }
                           />
 
-                          {/* Home View - Specific DM */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/home/dm/:id"
                             element={
@@ -259,7 +239,7 @@ function App() {
                             }
                           />
 
-                          {/* Home View - New DM */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/home/dm/new/:dmId"
                             element={
@@ -275,7 +255,7 @@ function App() {
                             }
                           />
 
-                          {/* Channels View */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/channels"
                             element={
@@ -291,7 +271,7 @@ function App() {
                             }
                           />
 
-                          {/* Specific Channel */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/channel/:id"
                             element={
@@ -309,7 +289,7 @@ function App() {
                             }
                           />
 
-                          {/* Direct Messages View */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/messages"
                             element={
@@ -327,7 +307,7 @@ function App() {
                             }
                           />
 
-                          {/* Specific DM from Messages Panel */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/messages/dm/:dmId"
                             element={
@@ -343,7 +323,7 @@ function App() {
                             }
                           />
 
-                          {/* Specific DM */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/dm/:id"
                             element={
@@ -359,7 +339,7 @@ function App() {
                             }
                           />
 
-                          {/* New DM (Initiation) */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/dm/new/:dmId"
                             element={
@@ -375,7 +355,7 @@ function App() {
                             }
                           />
 
-                          {/* Tasks — MyTasks has its own built-in sidebar */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/tasks"
                             element={
@@ -391,7 +371,7 @@ function App() {
                             }
                           />
 
-                          {/* Notes */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/notes"
                             element={
@@ -407,7 +387,7 @@ function App() {
                             }
                           />
 
-                          {/* Specific Note */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/notes/:id"
                             element={
@@ -423,9 +403,9 @@ function App() {
                             }
                           />
 
-                           {/* Updates — self-contained layout with its own filter sidebar */}
+                           {}
                            
-                           {/* ── FILE MANAGEMENT ── */}
+                           {}
                            <Route
                              path="/workspace/:workspaceId/files"
                              element={
@@ -455,7 +435,7 @@ function App() {
                              }
                            />
 
-                           {/* ── KNOWLEDGE BASE ── */}
+                           {}
                            <Route
                              path="/workspace/:workspaceId/knowledge"
                              element={
@@ -513,7 +493,7 @@ function App() {
                              }
                            />
 
-                           {/* Apps & Integrations */}
+                           {}
                            <Route
                              path="/workspace/:workspaceId/apps"
                              element={
@@ -529,8 +509,8 @@ function App() {
                              }
                            />
 
-                           {/* ── WORKFLOW AUTOMATIONS ── */}
-                            {/* ── TEMPLATE MARKETPLACE ── */}
+                           {}
+                            {}
                             <Route
                               path="/workspace/:workspaceId/templates"
                               element={
@@ -589,7 +569,7 @@ function App() {
                              }
                            />
 
-                           {/* 🔍 Unified Search Results Page */}
+                           {}
                            <Route
                              path="/workspace/:workspaceId/search"
                              element={
@@ -605,7 +585,7 @@ function App() {
                              }
                            />
 
-                            {/* ⚡ Developer Platform */}
+                            {}
                             <Route
                               path="/workspace/:workspaceId/developer"
                               element={
@@ -621,7 +601,7 @@ function App() {
                               }
                             />
 
-                           {/* Apps & Integrations */}
+                           {}
                           <Route
                             path="/workspace/:workspaceId/apps"
                             element={
@@ -637,7 +617,7 @@ function App() {
                             }
                           />
 
-                          {/* Huddles / Meetings */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/huddles"
                             element={
@@ -651,7 +631,7 @@ function App() {
                             }
                           />
 
-                          {/* Meeting Detail Page */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/meetings/:meetingId"
                             element={
@@ -665,7 +645,7 @@ function App() {
                             }
                           />
 
-                          {/* Notifications Page */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/notifications"
                             element={
@@ -683,7 +663,7 @@ function App() {
                             }
                           />
 
-                          {/* Legacy routes - redirect to workspaces */}
+                          {}
                           <Route
                             path="/home"
                             element={
@@ -693,13 +673,12 @@ function App() {
                             }
                           />
 
-                          {/* PUBLIC ROUTES */}
+                          {}
                           <Route path="/" element={<FeatureShowcase />} />
                           <Route path="/features" element={<FeatureShowcase />} />
                           <Route path="/chttrix-docs" element={<ChttrixDocs />} />
 
-
-                          {/* Footer Routes */}
+                          {}
                           <Route path="/about" element={<About />} />
                           <Route path="/contact" element={<Contact />} />
                           <Route path="/brand" element={<Brand />} />
@@ -716,7 +695,7 @@ function App() {
                           <Route path="/terms" element={<Terms />} />
                           <Route path="/cookies" element={<CookieSettings />} />
 
-                          {/* COMPANY SETUP ROUTES */}
+                          {}
                           <Route
                             path="/company/confirm"
                             element={
@@ -734,8 +713,8 @@ function App() {
                             }
                           />
 
-                          {/* PUBLIC ROUTES */}
-                          {/* Authentication */}
+                          {}
+                          {}
                           <Route path="/login" element={<LoginPage />} />
                           <Route path="/register-company" element={<RegisterCompany />} />
                           <Route path="/pending-verification" element={<PendingVerification />} />
@@ -754,7 +733,7 @@ function App() {
                               </RequireAuth>
                             }
                           />
-                          {/* Mandatory first-login password setup for bulk-imported company users */}
+                          {}
                           <Route
                             path="/setup-password"
                             element={
@@ -773,7 +752,7 @@ function App() {
                               </RequireAuth>
                             }
                           />
-                          {/* Route join-workspace duplicate removed */}
+                          {}
                           <Route
                             path="/join-channel"
                             element={
@@ -783,11 +762,11 @@ function App() {
                             }
                           />
 
-                          {/* ============================================ */}
-                          {/* DASHBOARD ROUTES - SEPARATED BY ROLE        */}
-                          {/* ============================================ */}
+                          {}
+                          {}
+                          {}
 
-                          {/* OWNER ROUTES - Wrapped in CompanyAdminLayout */}
+                          {}
                           <Route
                             element={
                               <RequireAuth>
@@ -812,20 +791,20 @@ function App() {
                             <Route path="/owner/onboard" element={<OnboardingPage />} />
                             <Route path="/owner/settings" element={<CompanySettings />} />
 
-                            {/* Workspace Collaboration Extensions */}
+                            {}
                             <Route path="/owner/teams" element={<TeamsManagement />} />
                             <Route path="/owner/org-chart" element={<OrgChartPage />} />
                             <Route path="/owner/workspace-templates" element={<WorkspaceTemplates />} />
                             <Route path="/owner/workspace-permissions" element={<WorkspacePermissions />} />
 
-                            {/* Workspace OS Core — Governance */}
+                            {}
                             <Route path="/owner/employees" element={<EmployeeDirectoryPage />} />
                             <Route path="/owner/permission-matrix" element={<PermissionMatrixPage />} />
                             <Route path="/owner/audit-logs" element={<AuditLogViewer />} />
                             <Route path="/owner/compliance-logs" element={<ComplianceLogViewer />} />
                           </Route>
 
-                          {/* ADMIN DASHBOARD & TOOLS - Admin + Owner */}
+                          {}
                           <Route
                             element={
                               <RequireAuth>
@@ -849,14 +828,14 @@ function App() {
                             <Route path="/admin/profile" element={<AdminProfile />} />
                             <Route path="/contact-admin" element={<ContactAdmin />} />
 
-                            {/* Workspace Collaboration Extensions */}
+                            {}
                             <Route path="/admin/teams" element={<TeamsManagement />} />
                             <Route path="/admin/org-chart" element={<OrgChartPage />} />
                             <Route path="/admin/workspace-templates" element={<WorkspaceTemplates />} />
                             <Route path="/admin/workspace-permissions" element={<WorkspacePermissions />} />
                           </Route>
 
-                          {/* MANAGER DASHBOARD - Manager + Admin + Owner */}
+                          {}
                           <Route
                             path="/manager/dashboard"
                             element={
@@ -877,9 +856,9 @@ function App() {
                             <Route path="reports" element={<ManagerReports />} />
                             <Route path="settings" element={<ManagerSettings />} />
 
-                            {/* Manager sub-routes */}
+                            {}
                             <Route path="projects" element={<ManagerProjects />} />
-                            <Route path="unassigned" element={<UnassignedMembers />} /> {/* Distinct Component */}
+                            <Route path="unassigned" element={<UnassignedMembers />} /> {}
                           </Route>
 
                           <Route
@@ -893,7 +872,7 @@ function App() {
                             }
                           />
 
-                          {/* ── AI INSIGHTS DASHBOARD ── */}
+                          {}
                           <Route
                             path="/workspace/:workspaceId/ai-insights"
                             element={
@@ -909,7 +888,7 @@ function App() {
                             }
                           />
 
-                          {/* Chttrix Super Admin - Nested Routes */}
+                          {}
                           <Route
                             path="/chttrix-admin/*"
                             element={
@@ -922,9 +901,9 @@ function App() {
                             </Routes>
                           </AppErrorBoundary>
 
-                        {/* 🔐 Global Password Unlock Modal (E2EE) - Renders across all routes */}
+                        {}
                         <GlobalPasswordUnlockModal />
-                        {/* 🤖 Global AI Hub — Cmd+K search, Cmd+/ commands */}
+                        {}
                         <AIHub />
                       </UpdatesProvider>
                     </TasksProvider>
@@ -939,7 +918,6 @@ function App() {
   );
 }
 
-// Global Password Unlock Component
 function GlobalPasswordUnlockModal() {
   const { requiresPassword, unlockEncryption } = useAuth();
 
@@ -948,7 +926,6 @@ function GlobalPasswordUnlockModal() {
   return <PasswordUnlockModal onSubmit={unlockEncryption} />;
 }
 
-// Huddles Route Wrapper — provides shared HuddleContext to both side panel and main panel
 function HuddleRouteWrapper() {
   const { workspaceId } = useParams();
   return (
@@ -960,7 +937,6 @@ function HuddleRouteWrapper() {
   );
 }
 
-// Meeting Detail Route Wrapper — provides HuddleContext with workspaceId
 function MeetingDetailWrapper() {
   const { workspaceId } = useParams();
   return (
@@ -972,7 +948,6 @@ function MeetingDetailWrapper() {
   );
 }
 
-// AI Insights Dashboard Wrapper — reads workspaceId from URL params + token from localStorage
 function AIInsightsDashboardWrapper() {
   const { workspaceId } = useParams();
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';

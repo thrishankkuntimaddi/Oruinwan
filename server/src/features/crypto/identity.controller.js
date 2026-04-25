@@ -1,15 +1,6 @@
-// server/src/features/crypto/identity.controller.js
-
 const crypto = require('crypto');
 const UserCryptoState = require('../../models/UserCryptoState');
 
-// PHASE 4D: KEK management is now handled by kekManager.service.js
-// (No longer using legacy SERVER_CRYPTO_KEK constant)
-
-/**
- * Initialize or update user's identity crypto state
- * POST /api/v2/crypto/identity/init
- */
 exports.initIdentityCryptoState = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -23,35 +14,35 @@ exports.initIdentityCryptoState = async (req, res) => {
             umekProtectionType,
             algorithm,
             version,
-            allowOverwrite // Explicit flag for key rotation/recovery
+            allowOverwrite 
         } = req.body;
 
-        // Validate required fields
+        
         if (!identityPublicKey || !encryptedIdentityPrivateKey || !identityPrivateKeyIv || !umekEnvelope || !umekProtectionType) {
             return res.status(400).json({
                 message: 'Missing required fields'
             });
         }
 
-        // Validate umekProtectionType
+        
         if (!['PASSWORD', 'SERVER_KEK'].includes(umekProtectionType)) {
             return res.status(400).json({
                 message: 'Invalid umekProtectionType'
             });
         }
 
-        // Validate PASSWORD protection has salt
+        
         if (umekProtectionType === 'PASSWORD' && !umekSalt) {
             return res.status(400).json({
                 message: 'umekSalt required for PASSWORD protection'
             });
         }
 
-        // Check if crypto state already exists
+        
         let cryptoState = await UserCryptoState.findOne({ userId });
 
         if (cryptoState) {
-            // ⚠️ ISSUE 2 FIX: Prevent accidental identity overwrite
+            
             if (!allowOverwrite) {
                 return res.status(409).json({
                     message: 'Identity crypto state already exists. Set allowOverwrite=true to rotate keys.',
@@ -61,7 +52,7 @@ exports.initIdentityCryptoState = async (req, res) => {
 
             console.log(`⚠️ Overwriting crypto state for user ${userId} (explicit recovery/rotation)`);
 
-            // Update existing state (key rotation scenario)
+            
             cryptoState.identityPublicKey = identityPublicKey;
             cryptoState.encryptedIdentityPrivateKey = encryptedIdentityPrivateKey;
             cryptoState.identityPrivateKeyIv = identityPrivateKeyIv;
@@ -70,14 +61,14 @@ exports.initIdentityCryptoState = async (req, res) => {
             cryptoState.umekSalt = umekSalt || null;
             cryptoState.umekProtectionType = umekProtectionType;
             cryptoState.algorithm = algorithm || 'X25519';
-            cryptoState.version = (cryptoState.version || 1) + 1; // Increment version
+            cryptoState.version = (cryptoState.version || 1) + 1; 
             cryptoState.updatedAt = new Date();
 
             await cryptoState.save();
 
             console.log(`✅ Updated crypto state for user ${userId} (version ${cryptoState.version})`);
         } else {
-            // Create new crypto state
+            
             cryptoState = await UserCryptoState.create({
                 userId,
                 identityPublicKey,
@@ -107,10 +98,6 @@ exports.initIdentityCryptoState = async (req, res) => {
     }
 };
 
-/**
- * Get user's identity crypto state
- * GET /api/v2/crypto/identity
- */
 exports.getIdentityCryptoState = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -123,7 +110,7 @@ exports.getIdentityCryptoState = async (req, res) => {
             });
         }
 
-        // PHASE 4A: Log identity recovery (best-effort, non-blocking)
+        
         try {
             const securityAudit = require('../../services/securityAudit.service');
             securityAudit.logSecurityEvent({
@@ -136,10 +123,10 @@ exports.getIdentityCryptoState = async (req, res) => {
                 }
             });
         } catch (_auditError) {
-            // Silent fail (non-critical)
+            
         }
 
-        // Return crypto state (client will decrypt locally)
+        
         return res.json({
             identityPublicKey: cryptoState.identityPublicKey,
             encryptedIdentityPrivateKey: cryptoState.encryptedIdentityPrivateKey,
@@ -160,12 +147,6 @@ exports.getIdentityCryptoState = async (req, res) => {
     }
 };
 
-/**
- * Wrap UMEK with server KEK (for OAuth skip-password users)
- * This is called internally, not exposed as API
- * 
- * PHASE 4D: Now uses active KEK version
- */
 exports.wrapUmekWithServerKEK = (umekBytes) => {
     try {
         const kekManager = require('../../services/kekManager.service');
@@ -173,7 +154,7 @@ exports.wrapUmekWithServerKEK = (umekBytes) => {
 
         console.log(`🔐 [PHASE 4D] Wrapping UMEK with KEK version ${version}`);
 
-        // Use AES-256-GCM to wrap UMEK
+        
         const iv = crypto.randomBytes(12);
         const cipher = crypto.createCipheriv(
             'aes-256-gcm',
@@ -188,7 +169,7 @@ exports.wrapUmekWithServerKEK = (umekBytes) => {
 
         const authTag = cipher.getAuthTag();
 
-        // Return envelope (iv + authTag + encrypted) and version
+        
         const envelope = Buffer.concat([iv, authTag, encrypted]).toString('base64');
 
         return { envelope, kekVersion: version };
@@ -198,13 +179,6 @@ exports.wrapUmekWithServerKEK = (umekBytes) => {
     }
 };
 
-/**
- * Unwrap UMEK with server KEK and re-wrap with client ephemeral session key
- * POST /api/v2/crypto/identity/unwrap-umek
- * 
- * SECURITY: Server NEVER returns plaintext UMEK over network
- * Instead, re-wraps UMEK with client's ephemeral public key (ESK)
- */
 exports.unwrapUmekWithServerKEK = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -216,7 +190,7 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
             });
         }
 
-        // Verify this user's UMEK is protected by SERVER_KEK
+        
         const cryptoState = await UserCryptoState.findOne({ userId });
 
         if (!cryptoState) {
@@ -225,7 +199,7 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
             });
         }
 
-        // ⚠️ DOWNGRADE PROTECTION: Reject if user has migrated to PASSWORD
+        
         if (cryptoState.umekProtectionType !== 'SERVER_KEK') {
             console.warn(`⚠️ Attempted SERVER_KEK unwrap for user ${userId} who has ${cryptoState.umekProtectionType} protection`);
             return res.status(403).json({
@@ -234,9 +208,9 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
             });
         }
 
-        // PHASE 4D: Get KEK by version
+        
         const kekManager = require('../../services/kekManager.service');
-        const kekVersion = cryptoState.kekVersion || 1;  // Default to v1 for legacy
+        const kekVersion = cryptoState.kekVersion || 1;  
 
         let kekKey;
         try {
@@ -250,7 +224,7 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
             });
         }
 
-        // Unwrap UMEK using versioned KEK
+        
         const envelopeBuffer = Buffer.from(umekEnvelope, 'base64');
         const iv = envelopeBuffer.slice(0, 12);
         const authTag = envelopeBuffer.slice(12, 28);
@@ -268,17 +242,17 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
             decipher.final()
         ]);
 
-        // ⚠️ CRITICAL: Server NEVER sends plaintext UMEK over network
-        // Instead, re-wrap UMEK using client's ephemeral public key (ESK)
+        
+        
 
-        // Decode client's ephemeral public key
+        
         const clientPubKeyBytes = Buffer.from(clientEphemeralPublicKey, 'base64');
 
-        // Generate ephemeral server keypair for ECDH
+        
         const { publicKey: serverEphemeralPublicKey, privateKey: serverEphemeralPrivateKey } =
             crypto.generateKeyPairSync('x25519');
 
-        // Perform ECDH
+        
         const sharedSecret = crypto.diffieHellman({
             privateKey: serverEphemeralPrivateKey,
             publicKey: crypto.createPublicKey({
@@ -288,10 +262,10 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
             })
         });
 
-        // Derive session key from shared secret
+        
         const sessionKey = crypto.createHash('sha256').update(sharedSecret).digest();
 
-        // Encrypt UMEK with session key
+        
         const wrappedIv = crypto.randomBytes(12);
         const sessionCipher = crypto.createCipheriv('aes-256-gcm', sessionKey, wrappedIv);
         const wrappedUmek = Buffer.concat([
@@ -315,19 +289,6 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
     }
 };
 
-/**
- * Rotate UMEK protection (password change or OAuth-to-password migration)
- * POST /api/v2/crypto/identity/rotate-umek
- * 
- * PHASE 2: Support password changes without regenerating identity keys
- * 
- * Flow:
- * 1. Client decrypts identity private key with OLD UMEK
- * 2. Client re-encrypts with NEW UMEK
- * 3. Client sends re-encrypted artifacts + version
- * 4. Server validates version (optimistic locking)
- * 5. Server updates UMEK protection (identity keys unchanged)
- */
 exports.rotateUMEK = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -339,28 +300,28 @@ exports.rotateUMEK = async (req, res) => {
             currentVersion
         } = req.body;
 
-        // Validate required fields
+        
         if (!encryptedIdentityPrivateKey || !identityPrivateKeyIv || !umekProtectionType || currentVersion === undefined) {
             return res.status(400).json({
                 message: 'Missing required fields: encryptedIdentityPrivateKey, identityPrivateKeyIv, umekProtectionType, currentVersion'
             });
         }
 
-        // Validate umekProtectionType
+        
         if (!['PASSWORD', 'SERVER_KEK'].includes(umekProtectionType)) {
             return res.status(400).json({
                 message: 'Invalid umekProtectionType'
             });
         }
 
-        // Validate PASSWORD protection has salt
+        
         if (umekProtectionType === 'PASSWORD' && !umekSalt) {
             return res.status(400).json({
                 message: 'umekSalt required for PASSWORD protection'
             });
         }
 
-        // Fetch current crypto state
+        
         const cryptoState = await UserCryptoState.findOne({ userId });
 
         if (!cryptoState) {
@@ -369,7 +330,7 @@ exports.rotateUMEK = async (req, res) => {
             });
         }
 
-        // ⚠️ OPTIMISTIC LOCKING: Prevent concurrent updates
+        
         if (cryptoState.version !== currentVersion) {
             console.warn(`⚠️ Version conflict for user ${userId}: current=${cryptoState.version}, provided=${currentVersion}`);
             return res.status(409).json({
@@ -381,17 +342,17 @@ exports.rotateUMEK = async (req, res) => {
 
         console.log(`🔄 [PHASE 2] Rotating UMEK for user ${userId} (${cryptoState.umekProtectionType} → ${umekProtectionType})`);
 
-        // Update UMEK protection (identity keys UNCHANGED)
+        
         cryptoState.encryptedIdentityPrivateKey = encryptedIdentityPrivateKey;
         cryptoState.identityPrivateKeyIv = identityPrivateKeyIv;
         cryptoState.umekProtectionType = umekProtectionType;
         cryptoState.version += 1;
 
-        // For PASSWORD protection: IRREVERSIBLE migration from SERVER_KEK
+        
         if (umekProtectionType === 'PASSWORD') {
             cryptoState.umekSalt = umekSalt;
 
-            // ⚠️ EXPLICITLY WIPE SERVER_KEK envelope (prevents downgrade attacks)
+            
             const hadServerKEK = cryptoState.umekEnvelope !== null;
             cryptoState.umekEnvelope = null;
             cryptoState.umekEnvelopeIv = null;
@@ -401,16 +362,16 @@ exports.rotateUMEK = async (req, res) => {
             }
         } else {
 
-            // For SERVER_KEK protection (rare case: password → server KEK)
+            
             cryptoState.umekSalt = null;
-            // Note: umekEnvelope should be provided in this case via separate flow
+            
         }
 
         cryptoState.updatedAt = new Date();
 
         await cryptoState.save();
 
-        // PHASE 4A: Log UMEK rotation or migration (best-effort, non-blocking)
+        
         let wasMigration = false;
         try {
             const securityAudit = require('../../services/securityAudit.service');
@@ -427,17 +388,17 @@ exports.rotateUMEK = async (req, res) => {
                 }
             });
         } catch (_auditError) {
-            // Silent fail (non-critical)
+            
         }
 
-        // PHASE 4B: Send notification for password change (best-effort, non-blocking)
-        // Only notify for actual password changes, not OAuth migrations
+        
+        
         if (!wasMigration) {
             try {
                 const User = require('../../models/User');
                 const securityNotification = require('../../services/securityNotification.service');
 
-                // Fetch user for email
+                
                 const user = await User.findById(userId).lean();
 
                 if (user) {
@@ -451,7 +412,7 @@ exports.rotateUMEK = async (req, res) => {
                     });
                 }
             } catch (_notificationError) {
-                // Silent fail (non-critical)
+                
             }
         }
 
@@ -472,4 +433,3 @@ exports.rotateUMEK = async (req, res) => {
         });
     }
 };
-

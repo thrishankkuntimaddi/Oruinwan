@@ -1,9 +1,3 @@
-/**
- * mockIntegrations.js
- * Static mock data for the Visual Integration Ecosystem prototype.
- * NO real API calls. All state is managed locally in components.
- */
-
 export const INTEGRATION_CATEGORIES = [
   { id: "all", label: "All" },
   { id: "developer", label: "Developer Tools" },
@@ -14,7 +8,7 @@ export const INTEGRATION_CATEGORIES = [
 ];
 
 export const MOCK_INTEGRATIONS = [
-  // ── Developer Tools ─────────────────────────────────────────────────────────
+  
   {
     id: "github",
     name: "GitHub",
@@ -123,7 +117,7 @@ export const MOCK_INTEGRATIONS = [
     connected: true,
   },
 
-  // ── Productivity ─────────────────────────────────────────────────────────────
+  
   {
     id: "google-drive",
     name: "Google Drive",
@@ -221,7 +215,7 @@ export const MOCK_INTEGRATIONS = [
     connected: false,
   },
 
-  // ── Communication / Meetings ──────────────────────────────────────────────────
+  
   {
     id: "zoom",
     name: "Zoom",
@@ -293,7 +287,7 @@ export const MOCK_INTEGRATIONS = [
     connected: false,
   },
 
-  // ── AI Tools ─────────────────────────────────────────────────────────────────
+  
   {
     id: "chatgpt",
     name: "ChatGPT",
@@ -368,7 +362,7 @@ export const MOCK_INTEGRATIONS = [
     connected: false,
   },
 
-  // ── Automation ────────────────────────────────────────────────────────────────
+  
   {
     id: "zapier",
     name: "Zapier",
@@ -441,10 +435,8 @@ export const MOCK_INTEGRATIONS = [
   },
 ];
 
-// Helper: find integration by id
 export const findIntegration = (id) => MOCK_INTEGRATIONS.find((i) => i.id === id);
 
-// Map of channel-level integration toggles (mock state initial values)
 export const CHANNEL_INTEGRATION_DEFAULTS = {
   github: false,
   jira: false,

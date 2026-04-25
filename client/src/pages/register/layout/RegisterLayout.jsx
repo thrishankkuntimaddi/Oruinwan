@@ -1,4 +1,3 @@
-// RegisterLayout.jsx — Monolith Flow Design System
 import React, { useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Sparkles } from 'lucide-react';
 import ProgressHeader from './ProgressHeader';
@@ -10,10 +9,10 @@ const RegisterLayout = ({
     showBackButton = true,
     showNextButton = true,
     showSubmitButton = false,
-    // Accept and ignore legacy theme/toggleTheme props so parent doesn't break
+    
     theme, toggleTheme,
 }) => {
-    // Enable scroll
+    
     useEffect(() => {
         document.documentElement.classList.add('public-scroll');
         return () => document.documentElement.classList.remove('public-scroll');
@@ -23,11 +22,11 @@ const RegisterLayout = ({
         <div style={{ minHeight: '100vh', width: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <style>{`* { box-sizing: border-box; } ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }`}</style>
 
-            {/* Ambient glow */}
+            {}
             <div style={{ position: 'fixed', top: '-10%', left: '-5%', width: '50%', height: '60%', background: 'radial-gradient(circle, rgba(184,149,106,0.04) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
             <div style={{ position: 'fixed', bottom: '0', right: '-5%', width: '40%', height: '50%', background: 'radial-gradient(circle, rgba(110,168,254,0.03) 0%, transparent 70%)', pointerEvents: 'none', zIndex: 0 }} />
 
-            {/* Nav */}
+            {}
             <nav style={{ position: 'relative', zIndex: 10, padding: '18px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div onClick={() => onNavigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                     <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
@@ -44,19 +43,19 @@ const RegisterLayout = ({
                 </div>
             </nav>
 
-            {/* Card */}
+            {}
             <div style={{ position: 'relative', zIndex: 10, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
                 <div style={{ width: '100%', maxWidth: '860px', background: '#111', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 140px)', overflow: 'hidden' }}>
 
-                    {/* Progress header */}
+                    {}
                     <ProgressHeader currentStep={currentStep} />
 
-                    {/* Scrollable form */}
+                    {}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '32px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(184,149,106,0.2) transparent' }}>
                         {children}
                     </div>
 
-                    {/* Footer nav */}
+                    {}
                     <div style={{ padding: '20px 32px', borderTop: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, background: 'rgba(0,0,0,0.2)' }}>
                         {showBackButton && currentStep > 1 ? (
                             <button onClick={onBack}

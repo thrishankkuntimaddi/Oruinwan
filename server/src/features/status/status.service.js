@@ -1,31 +1,11 @@
-// server/src/features/status/status.service.js
-/**
- * Status Service - System Health Monitoring
- * 
- * Behavior-preserving migration from controllers/statusController.js
- * 
- * Provides system health status for monitoring and status pages.
- * 
- * @module features/status/status.service
- */
-
 const mongoose = require('mongoose');
 
-// ============================================================================
-// HEALTH CHECK HELPERS
-// ============================================================================
-
-/**
- * Check if MongoDB is connected and responsive
- * 
- * @returns {Promise<Object>} { status: string, responseTime: number }
- */
 async function checkDatabaseHealth() {
     try {
         const state = mongoose.connection.readyState;
-        // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+        
         if (state === 1) {
-            // Ping the database
+            
             await mongoose.connection.db.admin().ping();
             return { status: 'operational', responseTime: 10 };
         }
@@ -35,35 +15,15 @@ async function checkDatabaseHealth() {
     }
 }
 
-/**
- * Check API server health
- * 
- * @returns {Object} { status: string, responseTime: number }
- */
 function checkAPIHealth() {
-    // If this code is running, API is operational
+    
     return { status: 'operational', responseTime: 5 };
 }
 
-// ============================================================================
-// SERVICE METHODS
-// ============================================================================
-
-/**
- * Get system health status
- * 
- * Business Rules:
- * - Checks multiple services (API, Database, Web App, Mobile App, Notifications, Integrations)
- * - Determines overall status based on service health
- * - Returns hardcoded uptime percentages (could be calculated from logs)
- * - Overall status: outage > degraded > operational
- * 
- * @returns {Promise<Object>} System health data
- */
 async function getSystemHealth() {
     const startTime = Date.now();
 
-    // Check service statuses
+    
     const [dbHealth, apiHealth] = await Promise.all([
         checkDatabaseHealth(),
         Promise.resolve(checkAPIHealth())
@@ -74,7 +34,7 @@ async function getSystemHealth() {
             name: 'API Server',
             status: apiHealth.status,
             responseTime: apiHealth.responseTime,
-            uptime: 99.98 // This could be calculated from logs/monitoring
+            uptime: 99.98 
         },
         {
             name: 'Database',
@@ -84,13 +44,13 @@ async function getSystemHealth() {
         },
         {
             name: 'Web App',
-            status: 'operational', // Always operational if serving this request
+            status: 'operational', 
             responseTime: 8,
             uptime: 99.99
         },
         {
             name: 'Mobile App',
-            status: apiHealth.status, // Depends on API
+            status: apiHealth.status, 
             responseTime: apiHealth.responseTime + 5,
             uptime: 99.97
         },
@@ -108,7 +68,7 @@ async function getSystemHealth() {
         }
     ];
 
-    // Determine overall status
+    
     const hasOutage = services.some(s => s.status === 'outage');
     const hasDegraded = services.some(s => s.status === 'degraded');
 
@@ -120,14 +80,10 @@ async function getSystemHealth() {
         status: overallStatus,
         timestamp: new Date().toISOString(),
         services,
-        incidents: [], // Could be populated from a database
+        incidents: [], 
         responseTime: Date.now() - startTime
     };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     getSystemHealth

@@ -1,6 +1,3 @@
-// Phase 2 — Unified Attachment Preview Component
-// Renders image lightbox, PDF embed, video player, audio player in one component
-
 import React, { useState } from "react";
 import { FileText, Download, X, PlayCircle, Volume2 } from "lucide-react";
 
@@ -11,10 +8,6 @@ const BYTES_LABEL = (n) => {
     return `${(n / 1024 / 1024).toFixed(1)} MB`;
 };
 
-/**
- * @param {object} props
- * @param {object} props.attachment - { type, url, name, size, mimeType, duration, thumbnail }
- */
 export default function AttachmentPreview({ attachment }) {
     const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -22,7 +15,7 @@ export default function AttachmentPreview({ attachment }) {
 
     const { type, url, name, size, mimeType, duration, thumbnail } = attachment;
 
-    /* ── IMAGE ──────────────────────────────────────────────────────────── */
+    
     if (type === "image") {
         return (
             <>
@@ -68,7 +61,7 @@ export default function AttachmentPreview({ attachment }) {
         );
     }
 
-    /* ── VIDEO ──────────────────────────────────────────────────────────── */
+    
     if (type === "video") {
         return (
             <div className="mt-1 max-w-xs rounded-xl overflow-hidden border border-gray-100 bg-black">
@@ -91,7 +84,7 @@ export default function AttachmentPreview({ attachment }) {
         );
     }
 
-    /* ── AUDIO ──────────────────────────────────────────────────────────── */
+    
     if (type === "audio" || type === "voice") {
         return (
             <div className="mt-1 flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-3 py-2.5 max-w-xs">
@@ -106,7 +99,7 @@ export default function AttachmentPreview({ attachment }) {
         );
     }
 
-    /* ── PDF embed ──────────────────────────────────────────────────────── */
+    
     if (mimeType === "application/pdf" || name?.endsWith(".pdf")) {
         return (
             <div className="mt-1 rounded-xl overflow-hidden border border-gray-200 max-w-sm">
@@ -127,7 +120,7 @@ export default function AttachmentPreview({ attachment }) {
         );
     }
 
-    /* ── GENERIC FILE ───────────────────────────────────────────────────── */
+    
     return (
         <div className="mt-1 flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-xl px-3 py-3 max-w-xs hover:bg-gray-100 transition-colors group">
             <div className="w-9 h-9 bg-violet-100 rounded-lg flex items-center justify-center flex-shrink-0">

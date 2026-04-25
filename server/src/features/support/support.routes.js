@@ -3,16 +3,10 @@ const router = express.Router();
 const SupportTicket = require('../../../models/SupportTicket');
 const logger = require('../../../utils/logger');
 
-// Middleware to ensure user is logged in
 const requireAuth = require('../../shared/middleware/auth');
 
 router.use(requireAuth);
 
-/**
- * @route   POST /api/support/tickets
- * @desc    Create a new support ticket
- * @access  Company Owner/Admin
- */
 router.post('/tickets', async (req, res) => {
     try {
         const { subject, description, priority } = req.body;
@@ -42,11 +36,6 @@ router.post('/tickets', async (req, res) => {
     }
 });
 
-/**
- * @route   GET /api/support/tickets
- * @desc    Get all tickets for the company
- * @access  Company Owner/Admin
- */
 router.get('/tickets', async (req, res) => {
     try {
         const companyId = req.user.companyId;
@@ -61,11 +50,6 @@ router.get('/tickets', async (req, res) => {
     }
 });
 
-/**
- * @route   GET /api/support/tickets/:id
- * @desc    Get single ticket details
- * @access  Company Owner/Admin
- */
 router.get('/tickets/:id', async (req, res) => {
     try {
         const companyId = req.user.companyId;
@@ -84,11 +68,6 @@ router.get('/tickets/:id', async (req, res) => {
     }
 });
 
-/**
- * @route   POST /api/support/tickets/:id/message
- * @desc    Add a message to the ticket
- * @access  Company Owner/Admin
- */
 router.post('/tickets/:id/message', async (req, res) => {
     try {
         const { message } = req.body;
@@ -110,7 +89,7 @@ router.post('/tickets/:id/message', async (req, res) => {
             createdAt: new Date()
         });
 
-        // Re-open if closed ? (Optional logic)
+        
         if (ticket.status === 'resolved' || ticket.status === 'closed') {
             ticket.status = 'in-progress';
         }

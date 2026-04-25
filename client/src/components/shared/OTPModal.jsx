@@ -3,14 +3,14 @@ import { X, RefreshCw, CheckCircle, AlertCircle, Mail, Phone } from 'lucide-reac
 
 const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
-    const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState(300); 
     const [isVerifying, setIsVerifying] = useState(false);
     const [isResending, setIsResending] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState(false);
     const inputRefs = useRef([]);
 
-    // Timer countdown
+    
     useEffect(() => {
         if (!isOpen || success) return;
 
@@ -27,7 +27,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
         return () => clearInterval(timer);
     }, [isOpen, success]);
 
-    // Reset state when modal opens
+    
     useEffect(() => {
         if (isOpen) {
             setOtp(['', '', '', '', '', '']);
@@ -118,13 +118,13 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
             padding: '16px', fontFamily: 'Inter, system-ui, sans-serif',
             animation: 'otpFadeIn 0.2s ease-out',
         }}>
-            {/* Backdrop */}
+            {}
             <div
                 style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
                 onClick={!success ? onClose : undefined}
             />
 
-            {/* Modal card */}
+            {}
             <div style={{
                 position: 'relative', width: '100%', maxWidth: '400px',
                 background: '#111', border: '1px solid var(--border-default)',
@@ -135,7 +135,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
 
                 {!success ? (
                     <>
-                        {/* Header bar */}
+                        {}
                         <div style={{
                             padding: '20px 24px 18px',
                             borderBottom: '1px solid var(--border-subtle)',
@@ -143,7 +143,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                             display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                {/* Icon badge */}
+                                {}
                                 <div style={{
                                     width: '38px', height: '38px', background: 'rgba(184,149,106,0.12)',
                                     border: '1px solid rgba(184,149,106,0.25)',
@@ -181,9 +181,9 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                             </button>
                         </div>
 
-                        {/* Body */}
+                        {}
                         <div style={{ padding: '28px 24px 24px' }}>
-                            {/* OTP digit inputs */}
+                            {}
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
                                 {otp.map((digit, index) => (
                                     <input
@@ -222,7 +222,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                                 ))}
                             </div>
 
-                            {/* Error */}
+                            {}
                             {error && (
                                 <div style={{
                                     marginBottom: '16px', padding: '10px 14px',
@@ -236,13 +236,13 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                                 </div>
                             )}
 
-                            {/* Timer row */}
+                            {}
                             <div style={{
                                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                 marginBottom: '20px',
                             }}>
                                 <div style={{ flex: 1, marginRight: '12px' }}>
-                                    {/* Progress bar */}
+                                    {}
                                     <div style={{ height: '2px', background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
                                         <div style={{
                                             height: '100%',
@@ -261,7 +261,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                                 </span>
                             </div>
 
-                            {/* Verify button */}
+                            {}
                             <button
                                 onClick={handleVerify}
                                 disabled={otp.join('').length !== 6 || isVerifying}
@@ -283,7 +283,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                                 ) : 'Verify Code'}
                             </button>
 
-                            {/* Resend */}
+                            {}
                             <div style={{ textAlign: 'center' }}>
                                 {timeLeft > 0 ? (
                                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>
@@ -314,7 +314,7 @@ const OTPModal = ({ isOpen, onClose, target, targetType, onVerify, onResend }) =
                         </div>
                     </>
                 ) : (
-                    /* Success state */
+                    
                     <div style={{ padding: '48px 24px', textAlign: 'center' }}>
                         <div style={{
                             width: '52px', height: '52px', margin: '0 auto 16px',

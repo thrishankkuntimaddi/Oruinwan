@@ -1,6 +1,3 @@
-// server/seed.js
-// Run with: node seed.js
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
@@ -10,19 +7,19 @@ const Workspace = require('./models/Workspace');
 
 const seedData = async () => {
     try {
-        // Connect to MongoDB (use same URI as server)
+        
         const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI || 'mongodb://localhost:27017/chttrix';
         await mongoose.connect(mongoUri);
         console.log('✅ MongoDB Connected');
 
-        // Clear existing data (optional - comment out to keep existing)
+        
         console.log('🗑️  Clearing existing data...');
         await User.deleteMany({});
         await Company.deleteMany({});
         await Workspace.deleteMany({});
         console.log('✅ Data cleared');
 
-        // 1. CREATE COMPANY
+        
         console.log('🏢 Creating company...');
         const company = await Company.create({
             name: 'Chttrix Technologies',
@@ -33,13 +30,13 @@ const seedData = async () => {
             allowedEmails: ['admin@chttrix.com', 'employee@chttrix.com'],
             settings: {
                 allowSelfRegistration: true,
-                requireEmailVerification: false, // For testing
+                requireEmailVerification: false, 
                 defaultUserRole: 'member',
             }
         });
         console.log(`✅ Company created: ${company.name} (${company._id})`);
 
-        // 2. CREATE ADMIN USER FIRST (needed for workspace createdBy)
+        
         console.log('👤 Creating admin user...');
         const adminPassword = await bcrypt.hash('admin123', 12);
         const adminUser = await User.create({
@@ -49,8 +46,8 @@ const seedData = async () => {
             verified: true,
             userType: 'company',
             companyId: company._id,
-            companyRole: 'owner', // IMPORTANT: owner role
-            workspaces: [], // Will add workspace after it's created
+            companyRole: 'owner', 
+            workspaces: [], 
             profile: {
                 name: 'Admin User',
                 jobTitle: 'System Administrator',
@@ -61,7 +58,7 @@ const seedData = async () => {
         console.log(`   🔑 Password: admin123`);
         console.log(`   👑 Role: ${adminUser.companyRole}`);
 
-        // 3. CREATE DEFAULT WORKSPACE (using admin as creator)
+        
         console.log('🏗️  Creating default workspace...');
         const workspace = await Workspace.create({
             name: 'General',
@@ -69,7 +66,7 @@ const seedData = async () => {
             company: company._id,
             type: 'company',
             icon: '🏢',
-            createdBy: adminUser._id, // IMPORTANT: Set creator
+            createdBy: adminUser._id, 
             members: [{
                 user: adminUser._id,
                 role: 'owner',
@@ -78,11 +75,11 @@ const seedData = async () => {
         });
         console.log(`✅ Workspace created: ${workspace.name} (${workspace._id})`);
 
-        // Update company with default workspace
+        
         company.defaultWorkspace = workspace._id;
         await company.save();
 
-        // Update admin user with workspace
+        
         adminUser.workspaces.push({
             workspace: workspace._id,
             role: 'owner',
@@ -90,7 +87,7 @@ const seedData = async () => {
         });
         await adminUser.save();
 
-        // 4. CREATE REGULAR EMPLOYEE
+        
         console.log('👤 Creating regular employee...');
         const employeePassword = await bcrypt.hash('employee123', 12);
         const employeeUser = await User.create({
@@ -100,7 +97,7 @@ const seedData = async () => {
             verified: true,
             userType: 'company',
             companyId: company._id,
-            companyRole: 'member', // Regular member
+            companyRole: 'member', 
             workspaces: [{
                 workspace: workspace._id,
                 role: 'member',
@@ -116,7 +113,7 @@ const seedData = async () => {
         console.log(`   🔑 Password: employee123`);
         console.log(`   👤 Role: ${employeeUser.companyRole}`);
 
-        // 5. CREATE ANOTHER ADMIN
+        
         console.log('👤 Creating another admin...');
         const admin2Password = await bcrypt.hash('admin456', 12);
         const admin2User = await User.create({
@@ -126,7 +123,7 @@ const seedData = async () => {
             verified: true,
             userType: 'company',
             companyId: company._id,
-            companyRole: 'admin', // Admin role (not owner)
+            companyRole: 'admin', 
             workspaces: [{
                 workspace: workspace._id,
                 role: 'admin',
@@ -142,7 +139,7 @@ const seedData = async () => {
         console.log(`   🔑 Password: admin456`);
         console.log(`   👤 Role: ${admin2User.companyRole}`);
 
-        // 6. UPDATE WORKSPACE WITH NEW MEMBERS (admin already added)
+        
         workspace.members.push(
             { user: admin2User._id, role: 'admin', joinedAt: new Date() },
             { user: employeeUser._id, role: 'member', joinedAt: new Date() }
@@ -150,7 +147,7 @@ const seedData = async () => {
         await workspace.save();
         console.log(`✅ Workspace members updated`);
 
-        // SUMMARY
+        
         console.log('\n' + '='.repeat(60));
         console.log('🎉 DATABASE SEEDED SUCCESSFULLY!');
         console.log('='.repeat(60));

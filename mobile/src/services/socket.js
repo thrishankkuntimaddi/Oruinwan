@@ -1,7 +1,3 @@
-/**
- * Chttrix Mobile — Socket.IO Client
- * Real-time WebSocket connection for messages, presence, and notifications.
- */
 import { io } from 'socket.io-client';
 import { getToken } from './storage';
 
@@ -9,10 +5,6 @@ const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:5001'
 
 let socket = null;
 
-/**
- * Connect to the Chttrix Socket.IO server with an authenticated JWT.
- * Returns the socket instance (idempotent — reuses existing connection).
- */
 export async function connectSocket() {
   if (socket?.connected) return socket;
 
@@ -26,31 +18,20 @@ export async function connectSocket() {
     reconnectionDelay: 1500,
   });
 
-  socket.on('connect', () => {
-    console.log('[Socket] Connected:', socket.id);
-  });
-
-  socket.on('disconnect', (reason) => {
-    console.warn('[Socket] Disconnected:', reason);
-  });
-
-  socket.on('connect_error', (err) => {
-    console.error('[Socket] Connection error:', err.message);
-  });
+  socket.on('connect', () => console.log('[Socket] Connected:', socket.id));
+  socket.on('disconnect', (reason) => console.warn('[Socket] Disconnected:', reason));
+  socket.on('connect_error', (err) => console.error('[Socket] Error:', err.message));
+  socket.on('join-error', ({ event, code, message }) =>
+    console.warn(`[Socket] Join error on ${event} (${code}): ${message}`)
+  );
 
   return socket;
 }
 
-/**
- * Return the current socket instance (may be null if not yet connected).
- */
 export function getSocket() {
   return socket;
 }
 
-/**
- * Cleanly disconnect and reset the socket reference.
- */
 export function disconnectSocket() {
   if (socket) {
     socket.disconnect();
@@ -58,26 +39,63 @@ export function disconnectSocket() {
   }
 }
 
-/**
- * Join a DM session room for real-time messages.
- * @param {string} dmSessionId
- */
+export function joinWorkspace(workspaceId) {
+  socket?.emit('join-workspace', { workspaceId });
+}
+
+export function leaveWorkspace(workspaceId) {
+  
+}
+
+export function joinChannel(channelId, ackCallback) {
+  if (!socket) return;
+  if (typeof ackCallback === 'function') {
+    socket.emit('chat:join', channelId, ackCallback);
+  } else {
+    socket.emit('chat:join', channelId);
+  }
+}
+
+export function leaveChannel(channelId) {
+  if (socket) socket.emit('chat:leave', channelId); 
+}
+
 export function joinDM(dmSessionId) {
   socket?.emit('join-dm', { dmSessionId });
 }
 
-/**
- * Join a channel room.
- * @param {string} channelId
- */
-export function joinChannel(channelId) {
-  socket?.emit('chat:join', channelId);
+export function leaveDM(dmSessionId) {
+  if (socket) socket.emit('leave-dm', { dmSessionId });
 }
 
-/**
- * Send a typing indicator.
- * @param {{ dmSessionId?: string, channelId?: string }} params
- */
-export function sendTyping(params) {
-  socket?.emit('typing', params);
+export function socketSendMessage(payload) {
+  socket?.emit('send-message', payload);
+}
+
+export function markRead(type, id) {
+  socket?.emit('mark-chat-read', { type, id });
+}
+
+export function sendTyping({ dmSessionId, channelId }) {
+  socket?.emit('typing', { dmSessionId, channelId });
+}
+
+export function addReaction(messageId, emoji) {
+  socket?.emit('add-reaction', { messageId, emoji });
+}
+
+export function removeReaction(messageId) {
+  socket?.emit('remove-reaction', { messageId });
+}
+
+export function deleteMessage(params) {
+  socket?.emit('delete-message', params);
+}
+
+export function signalIdle() {
+  socket?.emit('user:idle');
+}
+
+export function signalActive() {
+  socket?.emit('user:active');
 }

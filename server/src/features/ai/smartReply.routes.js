@@ -1,8 +1,3 @@
-// Phase 4 — Smart Reply Suggestions server handler
-// POST /api/ai/smart-reply
-// Body: { messages: [{sender, text}], context?: 'channel'|'dm' }
-// Returns: { suggestions: string[] }
-
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
@@ -16,11 +11,11 @@ router.post('/smart-reply', requireAuth, async (req, res) => {
       return res.json({ suggestions: ['👍', 'Sounds good!', 'On it!'] });
     }
 
-    // Build conversation snippet (last 5 messages max)
+    
     const recent = messages.slice(-5);
     const transcript = recent.map(m => `${m.sender || 'User'}: ${m.text || ''}`).join('\n');
 
-    // Try OpenAI, fall back to static suggestions
+    
     const { default: OpenAI } = await import('openai').catch(() => ({ default: null }));
 
     if (!OpenAI || !process.env.OPENAI_API_KEY) {
@@ -54,19 +49,15 @@ router.post('/smart-reply', requireAuth, async (req, res) => {
       if (Array.isArray(arr) && arr.length >= 3) {
         suggestions = arr.slice(0, 3).map(s => String(s));
       }
-    } catch { /* keep fallback */ }
+    } catch {  }
 
     res.json({ suggestions });
   } catch (err) {
     logger.error('Smart reply error:', err);
-    res.json({ suggestions: ['Got it!', 'Thanks!', 'Will do!'] }); // never 500
+    res.json({ suggestions: ['Got it!', 'Thanks!', 'Will do!'] }); 
   }
 });
 
-// Phase 4 — Auto Translate
-// POST /api/ai/translate
-// Body: { text: string, targetLanguage: string }
-// Returns: { translated: string, detectedLanguage?: string }
 router.post('/translate', requireAuth, async (req, res) => {
   try {
     const { text, targetLanguage = 'English' } = req.body;

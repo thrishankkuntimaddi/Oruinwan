@@ -3,13 +3,6 @@ import { useToast } from '../../../contexts/ToastContext';
 import api from '@services/api';
 import { Shield, Mail, Clock, CheckCircle, XCircle, RotateCw, Search, Trash, Link2, AlertTriangle, Trash2, Users } from 'lucide-react';
 
-/**
- * InvitationsTab Component
- * Manages workspace invitations with filtering, search, and bulk actions
- * @param {Object} props
- * @param {Object} props.activeWorkspace - Current workspace object
- * @param {boolean} props.isAdmin - Whether current user is admin
- */
 const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
     const { showToast } = useToast();
     const [invitations, setInvitations] = useState({ pending: [], accepted: [], revoked: [], expired: [], duplicateEmails: [], duplicateCount: 0 });
@@ -137,20 +130,20 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
         setSelectedInvites(newSelected);
     };
 
-    // ✅ FIXED: Filter and search invitations with proper categorization
-    // Accepted invitations should NOT appear in pending
+    
+    
     const allInvites = [
-        // Only truly pending invitations (not used/accepted)
+        
         ...invitations.pending.filter(inv => inv.status === 'pending' && !inv.used).map(inv => ({ ...inv, filterStatus: 'pending' })),
-        // Accepted invitations (status=accepted OR used flag is true)
+        
         ...invitations.accepted.map(inv => ({ ...inv, filterStatus: 'accepted' })),
-        // Also check for used invitations that might be in pending
+        
         ...invitations.pending.filter(inv => inv.used || inv.status === 'accepted').map(inv => ({ ...inv, filterStatus: 'accepted' })),
         ...invitations.expired.map(inv => ({ ...inv, filterStatus: 'expired' })),
         ...invitations.revoked.map(inv => ({ ...inv, filterStatus: 'revoked' }))
     ];
 
-    // Remove duplicates (in case an invitation appears in both pending and accepted)
+    
     const uniqueInvites = allInvites.reduce((acc, inv) => {
         if (!acc.find(existing => existing.id === inv.id)) {
             acc.push(inv);
@@ -168,7 +161,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
         return matchesFilter && matchesSearch;
     });
 
-    // Count selected by type for button enabling
+    
     const selectedPending = Array.from(selectedInvites).filter(id => {
         const invite = uniqueInvites.find(inv => inv.id === id);
         return invite?.filterStatus === 'pending';
@@ -176,7 +169,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
 
     const selectedDeletable = Array.from(selectedInvites).filter(id => {
         const invite = uniqueInvites.find(inv => inv.id === id);
-        // Can delete: expired, revoked, or accepted invitations
+        
         return invite?.filterStatus === 'expired' || invite?.filterStatus === 'revoked' || invite?.filterStatus === 'accepted';
     }).length;
 
@@ -235,7 +228,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
 
     return (
         <div className="h-full flex flex-col">
-            {/* Bulk Actions Bar - Modern Design */}
+            {}
             {selectedInvites.size > 0 && (
                 <div style={{ margin: '8px 32px', padding: '12px 16px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -282,9 +275,9 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                 </div>
             )}
 
-            {/* Search and Filters Container */}
+            {}
             <div style={{ padding: '20px 32px 14px', borderBottom: '1px solid var(--border-subtle)' }}>
-                {/* Search + Clean button */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                     <div style={{ position: 'relative', flex: 1 }}>
                         <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', width: '15px', height: '15px' }} />
@@ -310,7 +303,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                     )}
                 </div>
 
-                {/* Filter pills */}
+                {}
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
                     {[
                         { value: 'all',        label: 'All',         count: uniqueInvites.length },
@@ -344,7 +337,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                     })}
                 </div>
             </div>
-            {/* Invitations List - Card Based Layout */}
+            {}
             <div className="flex-1 overflow-auto px-8 py-6">
                 {loading ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '16px 0' }}>
@@ -384,7 +377,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                 >
                                     <div style={{ padding: '12px 14px' }}>
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                            {/* Checkbox */}
+                                            {}
                                             <div style={{ paddingTop: '2px' }}>
                                                 <input
                                                     type="checkbox"
@@ -394,9 +387,9 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                 />
                                             </div>
 
-                                            {/* Main Content */}
+                                            {}
                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                {/* Identity row */}
+                                                {}
                                                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '6px' }}>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
@@ -425,7 +418,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                             )}
                                                         </div>
 
-                                                        {/* Metadata row */}
+                                                        {}
                                                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
                                                             <span style={{ padding: '1px 6px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', fontSize: '10px', fontWeight: 700, color: '#b8956a', textTransform: 'capitalize' }}>
                                                                 {invite.role}
@@ -442,13 +435,13 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
                                                         </div>
                                                     </div>
 
-                                                    {/* Status badge */}
+                                                    {}
                                                     <div style={{ flexShrink: 0 }}>
                                                         {getStatusBadge(invite.filterStatus)}
                                                     </div>
                                                 </div>
 
-                                                {/* Action buttons */}
+                                                {}
                                                 {(invite.filterStatus === 'pending' || invite.filterStatus === 'expired') && (
                                                     <div style={{ display: 'flex', gap: '6px', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
                                                         <button

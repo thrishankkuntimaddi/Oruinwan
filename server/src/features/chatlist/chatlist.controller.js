@@ -6,9 +6,7 @@ exports.getChatList = async (req, res) => {
   try {
     const userId = req.user.sub;
 
-    /* -------------------------------------------------------
-       1️⃣ DIRECT MESSAGES
-    -------------------------------------------------------- */
+    
     const dmPartners = await Message.aggregate([
       {
         $match: {
@@ -74,9 +72,7 @@ exports.getChatList = async (req, res) => {
       };
     });
 
-    /* -------------------------------------------------------
-       2️⃣ CHANNELS
-    -------------------------------------------------------- */
+    
     const myChannels = await Channel.find({ 'members.user': userId });
 
     const channelIds = myChannels.map(c => c._id);
@@ -117,9 +113,7 @@ exports.getChatList = async (req, res) => {
       };
     });
 
-    /* -------------------------------------------------------
-       FINAL LIST (Slack style)
-    -------------------------------------------------------- */
+    
     const finalList = [...dmList, ...channelList]
       .sort((a, b) => new Date(b.lastMessageAt || 0) - new Date(a.lastMessageAt || 0));
 
@@ -129,7 +123,6 @@ exports.getChatList = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
-
 
 exports.resetUnread = async (req, res) => {
   try {

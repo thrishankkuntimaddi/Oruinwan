@@ -1,9 +1,5 @@
 import React from 'react';
 
-/**
- * PasswordInput Component
- * Reusable password input field with show/hide toggle
- */
 const PasswordInput = ({
     label,
     value,

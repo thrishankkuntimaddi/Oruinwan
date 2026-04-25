@@ -5,7 +5,7 @@ import { API_BASE } from '@services/api';
 
 const DomainSettings = ({ companyId }) => {
     const { showToast } = useToast();
-    const [status, setStatus] = useState(null); // null, loading, generated, verified
+    const [status, setStatus] = useState(null); 
     const [tokenData, setTokenData] = useState(null);
     const [loading, setLoading] = useState(false);
 

@@ -1,4 +1,3 @@
-// Terms.jsx — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { ScrollText, Scale, AlertOctagon, FileText, AlertTriangle, Mail } from 'lucide-react';
@@ -49,7 +48,7 @@ export default function Terms() {
     return (
         <PublicPageShell title="Terms of Service">
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px', display: 'flex', gap: '64px', alignItems: 'flex-start' }}>
-                {/* Sidebar */}
+                {}
                 <aside style={{ width: '220px', flexShrink: 0, position: 'sticky', top: '88px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '16px' }}>Contents</p>
                     <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -68,7 +67,7 @@ export default function Terms() {
                     </div>
                 </aside>
 
-                {/* Content */}
+                {}
                 <main style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ marginBottom: '48px' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>

@@ -1,4 +1,3 @@
-// server/controllers/workspaceController.js
 const Workspace = require("../../../models/Workspace");
 const Channel = require("../channels/channel.model.js");
 const User = require("../../../models/User");
@@ -15,10 +14,6 @@ const { handleError, _notFound, _badRequest, _forbidden } = require("../../../ut
 const { _isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");
 const conversationKeysService = require("../../modules/conversations/conversationKeys.service");
 
-/**
- * Create new workspace (Personal or Company)
- * POST /api/workspaces
- */
 exports.createWorkspace = async (req, res) => {
   try {
     const {
@@ -36,19 +31,19 @@ exports.createWorkspace = async (req, res) => {
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // IMPORTANT: Always derive the company from the authenticated user's DB record.
-    // We intentionally do NOT trust req.body.companyId as the source of truth:
-    //   1. The /me endpoint returns companyId as a populated Company object, so if the
-    //      frontend sends it back, String(companyId) = "[object Object]" — a mismatch.
-    //   2. Security: a client should never be able to claim membership of a different company.
-    // The raw ObjectId is always correct on the DB record fetched by User.findById above.
+    
+    
+    
+    
+    
+    
     const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
-    // Determine workspace type — based on DB record, not client payload
+    
     const isCompanyWorkspace = !!resolvedCompanyId;
     const isPersonalWorkspace = !isCompanyWorkspace;
 
-    // If company workspace, verify the user has permission to create workspaces
+    
     if (isCompanyWorkspace) {
       const role = user.companyRole;
       if (!role || (role !== "admin" && role !== "owner" && role !== "manager")) {
@@ -56,7 +51,7 @@ exports.createWorkspace = async (req, res) => {
       }
     }
 
-    // LIMIT CHECK: Only for personal (non-company) users
+    
     if (isPersonalWorkspace) {
       const ownedWorkspacesCount = await Workspace.countDocuments({ createdBy: userId });
       if (ownedWorkspacesCount >= 3) {
@@ -67,10 +62,10 @@ exports.createWorkspace = async (req, res) => {
       }
     }
 
-    // ✅ Check if user already OWNS a workspace with this name (not just member of)
+    
     const existingWorkspace = await Workspace.findOne({
       name: name.trim(),
-      createdBy: userId  // Only check workspaces this user created
+      createdBy: userId  
     });
 
     if (existingWorkspace) {
@@ -79,26 +74,26 @@ exports.createWorkspace = async (req, res) => {
       });
     }
 
-    // Create workspace with icon and color
+    
     const workspace = await Workspace.create({
       company: resolvedCompanyId || null,
       type: isPersonalWorkspace ? "personal" : "company",
       name: name.trim(),
       description: description || "",
-      icon: icon || "🚀", // Default icon
-      color: color || "#2563eb", // Workspace brand color
-      rules: rules || "", // Workspace rules and guidelines
+      icon: icon || "🚀", 
+      color: color || "#2563eb", 
+      rules: rules || "", 
       createdBy: userId,
       members: [{ user: userId, role: "owner" }],
       settings: {
-        isPrivate: true, // Workspaces are private by default
+        isPrivate: true, 
         allowMemberInvite: true
       }
     });
 
     console.log("🏗 [PHASE 2] Workspace created:", workspace._id.toString());
 
-    // Create default channels (#general and #announcements)
+    
     const creationDate = new Date();
     const generalChannel = await Channel.create({
       workspace: workspace._id,
@@ -134,8 +129,8 @@ exports.createWorkspace = async (req, res) => {
 
     console.log("📢 [PHASE 2] Default channels created: general, announcements");
 
-    // 🔐 PHASE 5: Generate conversation keys for default channels
-    // This ensures ALL channels have encryption keys at creation time
+    
+    
     console.log(`🔐 [PHASE 5] Generating conversation keys for default channels...`);
 
     const channelsToBootstrap = [
@@ -153,26 +148,26 @@ exports.createWorkspace = async (req, res) => {
         });
         console.log(`✅ [PHASE 5] Bootstrapped conversation key for #${name}`);
       } catch (keyError) {
-        // NON-FATAL: Log the error but do NOT rollback workspace creation.
-        // Keys can be distributed later via the automatic repair mechanism.
-        // This prevents a single crypto service failure from blocking workspace creation.
+        
+        
+        
         console.error(`⚠️ [PHASE 5] Failed to bootstrap key for #${name} (non-fatal):`, keyError.message);
         console.warn(`   Workspace will be created without E2EE keys for #${name}.`);
         console.warn(`   Keys will be distributed via repair when E2EE is configured.`);
       }
     }
 
-    // Update workspace with default channels
+    
     workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
     await workspace.save();
 
-    // Add workspace to user's workspaces list
+    
     user.workspaces.push({
       workspace: workspace._id,
       role: "owner"
     });
 
-    // If personal workspace, set as personalWorkspace
+    
     if (isPersonalWorkspace && !user.personalWorkspace) {
       user.personalWorkspace = workspace._id;
     }
@@ -197,10 +192,6 @@ exports.createWorkspace = async (req, res) => {
   }
 };
 
-/**
- * List workspaces for current user (ONLY workspaces user is a member of)
- * GET /api/workspaces/my
- */
 exports.listMyWorkspaces = async (req, res) => {
   try {
     const userId = req.user?.sub;
@@ -214,12 +205,12 @@ exports.listMyWorkspaces = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Filter to only return workspaces where user is actually a member
+    
     const workspacesWithOwner = await Promise.all(
       user.workspaces
-        .filter(ws => ws.workspace) // Remove null/deleted workspaces
+        .filter(ws => ws.workspace) 
         .map(async (ws) => {
-          // Populate the createdBy field separately
+          
           const workspace = await Workspace.findById(ws.workspace._id)
             .populate('createdBy', 'username')
             .lean();
@@ -235,8 +226,8 @@ exports.listMyWorkspaces = async (req, res) => {
             role: ws.role,
             memberCount: ws.workspace.members?.length || 0,
             isPersonal: ws.workspace.type === 'personal',
-            ownerName: workspace?.createdBy?.username || 'Unknown',  // ✅ Owner name
-            isOwner: String(workspace?.createdBy?._id) === String(userId)  // ✅ Is owner check
+            ownerName: workspace?.createdBy?.username || 'Unknown',  
+            isOwner: String(workspace?.createdBy?._id) === String(userId)  
           };
         })
     );
@@ -262,13 +253,9 @@ exports.listWorkspaces = async (req, res) => {
   }
 };
 
-/**
- * Get workspace members
- * GET /api/workspaces/:id/members
- */
 exports.getWorkspaceMembers = async (req, res) => {
   try {
-    // Support both :workspaceId (new routes) and :id (legacy routes)
+    
     const workspaceId = req.params.workspaceId || req.params.id;
     const userId = req.user.sub;
 
@@ -279,13 +266,13 @@ exports.getWorkspaceMembers = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Check if requester is a member
+    
     const isMember = workspace.members.some(m => String(m.user._id) === String(userId));
     if (!isMember) {
       return res.status(403).json({ message: "Not a workspace member" });
     }
 
-    // Format members — normalise to the shape expected by the settings modal
+    
     const formattedMembers = workspace.members.map(m => ({
       _id: m.user._id,
       username: m.user.username,
@@ -305,10 +292,6 @@ exports.getWorkspaceMembers = async (req, res) => {
   }
 };
 
-/**
- * Delete workspace (only owner can delete)
- * DELETE /api/workspaces/:id
- */
 exports.deleteWorkspace = async (req, res) => {
   try {
     const workspaceId = req.params.id;
@@ -319,55 +302,55 @@ exports.deleteWorkspace = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Check if user is the owner
+    
     const memberData = workspace.members.find(m => String(m.user) === String(userId));
     if (!memberData || memberData.role !== "owner") {
       return res.status(403).json({ message: "Only workspace owner can delete the workspace" });
     }
 
-    // Delete all channels in this workspace
+    
     const _deletedChannels = await Channel.deleteMany({ workspace: workspaceId });
 
-    // Delete all messages in this workspace
+    
     const _deletedMessages = await Message.deleteMany({ workspace: workspaceId });
 
-    // Delete all DM sessions in this workspace
+    
     const _deletedDMSessions = await DMSession.deleteMany({ workspace: workspaceId });
 
-    // Delete all tasks in this workspace
+    
     const _deletedTasks = await Task.deleteMany({ workspace: workspaceId });
 
-    // Delete all notes in this workspace
+    
     const _deletedNotes = await Note.deleteMany({ workspace: workspaceId });
 
-    // Delete all updates in this workspace
+    
     const _deletedUpdates = await Update.deleteMany({ workspace: workspaceId });
 
-    // Delete all favorites in this workspace
+    
     const _deletedFavorites = await Favorite.deleteMany({ workspace: workspaceId });
 
-    // Delete all pending invites for this workspace
+    
     const _deletedInvites = await Invite.deleteMany({ workspace: workspaceId });
 
-    // Remove workspace from all users
+    
     await User.updateMany(
       { "workspaces.workspace": workspaceId },
       { $pull: { workspaces: { workspace: workspaceId } } }
     );
 
-    // Remove as personalWorkspace if applicable
+    
     await User.updateMany(
       { personalWorkspace: workspaceId },
       { $unset: { personalWorkspace: "" } }
     );
 
-    // Emit socket event BEFORE deletion so clients can react
+    
     const io = req.app?.get("io");
     if (io) {
       io.to(`workspace_${workspaceId}`).emit("workspace-deleted", { workspaceId });
     }
 
-    // Delete the workspace itself
+    
     await Workspace.findByIdAndDelete(workspaceId);
 
     return res.json({ message: "Workspace deleted successfully" });
@@ -376,10 +359,6 @@ exports.deleteWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Create workspace invites (supports both email and link-based invites)
- * POST /api/workspaces/:id/invite
- */
 exports.inviteToWorkspace = async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId || req.params.id;
@@ -389,7 +368,7 @@ exports.inviteToWorkspace = async (req, res) => {
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: "Workspace not found" });
 
-    // Check if inviter is a member of the workspace
+    
     const isWorkspaceMember = workspace.members.some(m => String(m.user) === String(inviterId));
     if (!isWorkspaceMember) {
       return res.status(403).json({ message: "You must be a member to invite others" });
@@ -401,11 +380,11 @@ exports.inviteToWorkspace = async (req, res) => {
     const sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
 
     if (inviteType === "email" && emails) {
-      // Email-based invites
+      
       const emailList = emails.split(',').map(e => e.trim()).filter(Boolean);
 
       for (const email of emailList) {
-        // Check if user exists in database
+        
         const userExists = await User.findOne({ email });
 
         const raw = crypto.randomBytes(32).toString("hex");
@@ -425,11 +404,11 @@ exports.inviteToWorkspace = async (req, res) => {
 
         const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
 
-        // Get inviter's name for the email
+        
         const inviter = await User.findById(req.user.sub).select('username');
         const inviterName = inviter ? inviter.username : 'A team member';
 
-        // Send email using professional template
+        
         try {
           const { workspaceInvitationTemplate } = require('../../../utils/emailTemplates');
           const template = workspaceInvitationTemplate(
@@ -460,7 +439,7 @@ exports.inviteToWorkspace = async (req, res) => {
         invites
       });
     } else {
-      // Link-based invite (one-time use)
+      
       const raw = crypto.randomBytes(32).toString("hex");
       const tokenHash = sha256(raw);
       const expiresAt = new Date(Date.now() + daysValid * 24 * 60 * 60 * 1000);
@@ -489,10 +468,6 @@ exports.inviteToWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Get workspace details for invite preview
- * GET /api/workspaces/invite/:token
- */
 exports.getInviteDetails = async (req, res) => {
   try {
     const { token } = req.params;
@@ -534,10 +509,6 @@ exports.getInviteDetails = async (req, res) => {
   }
 };
 
-/**
- * Accept workspace invite and join
- * POST /api/workspaces/join
- */
 exports.joinWorkspace = async (req, res) => {
   try {
     const { token } = req.body;
@@ -571,19 +542,19 @@ exports.joinWorkspace = async (req, res) => {
       return res.status(400).json({ message: "This invitation link has expired" });
     }
 
-    // Get workspace
+    
     const workspace = await Workspace.findById(invite.workspace);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Check if user is already a member
+    
     const alreadyMember = workspace.members.some(m => String(m.user) === String(userId));
     if (alreadyMember) {
       return res.status(400).json({ message: "You are already a member of this workspace" });
     }
 
-    // Add user to workspace
+    
     workspace.members.push({
       user: userId,
       role: invite.role,
@@ -591,7 +562,7 @@ exports.joinWorkspace = async (req, res) => {
     });
     await workspace.save();
 
-    // Add workspace to user's workspaces
+    
     user.workspaces.push({
       workspace: workspace._id,
       role: invite.role,
@@ -599,25 +570,25 @@ exports.joinWorkspace = async (req, res) => {
     });
     await user.save();
 
-    // Auto-join default channels (#general and #announcements)
+    
     const defaultChannels = await Channel.find({
       workspace: workspace._id,
       isDefault: true
     });
 
     for (const channel of defaultChannels) {
-      // Check if already member (handle both old and new format)
+      
       const isAlreadyMember = channel.members.some(m => {
         const memberId = m.user ? m.user.toString() : m.toString();
         return memberId === userId.toString();
       });
 
       if (!isAlreadyMember) {
-        // 🔧 FIX: Convert all existing members to new format before adding new member
-        // This prevents validation errors when Mongoose validates the entire array
+        
+        
         channel.members = normalizeMemberFormat(channel.members, channel.createdAt);
 
-        // Now add the new member
+        
         channel.members.push({
           user: userId,
           joinedAt: new Date()
@@ -627,17 +598,17 @@ exports.joinWorkspace = async (req, res) => {
       }
     }
 
-    // 🔐 PHASE 4: Distribute conversation keys to new member
-    // After adding user to default channels, distribute existing conversation keys
-    // This uses SERVER_KEK to unwrap workspace-encrypted keys and re-encrypt for new user
+    
+    
+    
     console.log(`🔐 [PHASE 4] Distributing conversation keys to user ${userId}...`);
     for (const channel of defaultChannels) {
       try {
-        // Check if conversation keys exist for this channel
+        
         const hasKeys = await conversationKeysService.hasConversationKeys(channel._id, 'channel');
 
         if (hasKeys) {
-          // Distribute existing key to new user (idempotent)
+          
           const distributed = await conversationKeysService.distributeKeyToNewMember(
             channel._id,
             'channel',
@@ -653,18 +624,18 @@ exports.joinWorkspace = async (req, res) => {
           console.log(`ℹ️ [PHASE 4] No conversation key exists for #${channel.name} yet (will be created on first message)`);
         }
       } catch (keyError) {
-        // Non-blocking: log error but don't fail workspace join
+        
         console.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
       }
     }
 
-    // Mark invite as used
+    
     invite.used = true;
     invite.usedBy = userId;
     invite.usedAt = new Date();
     await invite.save();
 
-    // 📣 Real-time notification: Notify the workspace room that someone joined
+    
     const io = req.app.get("io");
     if (io) {
       io.to(`workspace_${workspace._id.toString()}`).emit("workspace-joined", {
@@ -690,10 +661,6 @@ exports.joinWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Get workspace members (for DM filtering - only show people in same workspace)
- * GET /api/workspaces/:workspaceId/members
- */
 exports.getWorkspaceMembers = async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -708,23 +675,23 @@ exports.getWorkspaceMembers = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Verify user is a member of this workspace
+    
     const isMember = workspace.members.some(m => String(m.user._id) === String(userId));
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    // Return all members except current user (for DM list)
+    
     const members = workspace.members
       .filter(m => String(m.user._id) !== String(userId))
       .map(m => ({
-        _id: m.user._id,  // Changed from 'id' to '_id'
-        username: m.user.username,  // Changed from 'name' to 'username'
+        _id: m.user._id,  
+        username: m.user.username,  
         email: m.user.email,
-        phone: m.user.phone,  // Include phone
-        profilePicture: m.user.profilePicture,  // Changed from 'avatar' to 'profilePicture'
-        userStatus: m.user.userStatus,  // Include user status
-        profile: m.user.profile,  // Include profile
+        phone: m.user.phone,  
+        profilePicture: m.user.profilePicture,  
+        userStatus: m.user.userStatus,  
+        profile: m.user.profile,  
         status: m.user.isOnline ? 'online' : 'offline',
         lastSeen: m.user.lastLoginAt,
         role: m.role
@@ -737,38 +704,34 @@ exports.getWorkspaceMembers = async (req, res) => {
   }
 };
 
-/**
- * Get workspace channels (only channels for this workspace)
- * GET /api/workspaces/:workspaceId/channels
- */
 exports.getWorkspaceChannels = async (req, res) => {
   try {
     const { workspaceId } = req.params;
     const userId = req.user?.sub;
 
-    // Verify workspace exists
+    
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Verify user is a member of this workspace
+    
     const isMember = workspace.members.some(m => String(m.user) === String(userId));
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    // Fetch ALL channels for this workspace
+    
     const allChannels = await Channel.find({ workspace: workspaceId })
       .select('name description isPrivate isDefault isDiscoverable members createdBy createdAt workspace admins systemEvents')
       .populate('createdBy', 'firstName lastName')
-      .sort({ isDefault: -1, createdAt: 1 }) // Default channels first, then by creation time
+      .sort({ isDefault: -1, createdAt: 1 }) 
       .lean();
 
-    // Populate systemEvents user names — batch query to avoid N+1
+    
     const User = require('../../../models/User');
 
-    // Collect all unique userIds referenced in systemEvents across all channels
+    
     const eventUserIds = new Set();
     for (const channel of allChannels) {
       if (channel.systemEvents && channel.systemEvents.length > 0) {
@@ -780,7 +743,7 @@ exports.getWorkspaceChannels = async (req, res) => {
       }
     }
 
-    // Single batch query for all referenced users
+    
     let userMap = new Map();
     if (eventUserIds.size > 0) {
       const eventUsers = await User.find(
@@ -794,7 +757,7 @@ exports.getWorkspaceChannels = async (req, res) => {
       });
     }
 
-    // Apply creator names and resolved event usernames in-memory (no more per-event DB calls)
+    
     for (const channel of allChannels) {
       if (channel.createdBy) {
         channel.creatorName = `${channel.createdBy.firstName || ''} ${channel.createdBy.lastName || ''}`.trim() || 'Unknown';
@@ -808,34 +771,34 @@ exports.getWorkspaceChannels = async (req, res) => {
       }
     }
 
-    // 🔒 CRITICAL: Filter channels based on privacy AND discoverability
-    // - Public channels (isPrivate = false):
-    //   - If isDiscoverable = true: Show to all workspace members
-    //   - If isDiscoverable = false: Show ONLY to channel members
-    // - Private channels (isPrivate = true): Show ONLY to members of that channel
+    
+    
+    
+    
+    
     const visibleChannels = allChannels.filter(channel => {
-      // Check if user is a member of this channel
+      
       const isMemberOfChannel = channel.members.some(m => {
         const memberId = m.user ? m.user.toString() : m.toString();
         return memberId === userId.toString();
       });
 
       if (!channel.isPrivate) {
-        // Public channel
+        
         if (channel.isDiscoverable) {
-          // Discoverable public channel - visible to all workspace members
+          
           return true;
         } else {
-          // Non-discoverable public channel - only visible to members
+          
           return isMemberOfChannel;
         }
       } else {
-        // Private channel - only visible if user is a member
+        
         return isMemberOfChannel;
       }
     });
 
-    // Add isMember flag to each visible channel
+    
     const channelsWithMembershipInfo = visibleChannels.map(channel => {
       const isMember = channel.members.some(m => {
         const memberId = m.user ? m.user.toString() : m.toString();
@@ -844,7 +807,7 @@ exports.getWorkspaceChannels = async (req, res) => {
 
       return {
         ...channel,
-        isMember // Add membership flag for frontend
+        isMember 
       };
     });
 
@@ -855,10 +818,6 @@ exports.getWorkspaceChannels = async (req, res) => {
   }
 };
 
-/**
- * Create channel in workspace
- * POST /api/workspaces/:workspaceId/channels
- */
 exports.createWorkspaceChannel = async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -869,19 +828,19 @@ exports.createWorkspaceChannel = async (req, res) => {
       return res.status(400).json({ message: "Channel name is required" });
     }
 
-    // Verify workspace exists
+    
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Verify user is a member of this workspace
+    
     const isMember = workspace.members.some(m => String(m.user) === String(userId));
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    // Check if channel name already exists in this workspace
+    
     const existingChannel = await Channel.findOne({
       workspace: workspaceId,
       name: name.toLowerCase().trim()
@@ -891,8 +850,8 @@ exports.createWorkspaceChannel = async (req, res) => {
       return res.status(400).json({ message: "A channel with this name already exists" });
     }
 
-    // 🔒 CRITICAL VALIDATION: Channel members must be subset of workspace members
-    // This prevents adding users who are not in the workspace
+    
+    
     if (channelMembers && channelMembers.length > 0) {
       const workspaceMemberIds = workspace.members.map(m => String(m.user));
       const invalidMembers = channelMembers.filter(memberId =>
@@ -911,13 +870,13 @@ exports.createWorkspaceChannel = async (req, res) => {
       }
     }
 
-    // Determine if channel is private based on explicit isPrivate flag
+    
     const isPrivateChannel = isPrivate === true;
 
-    // For BOTH public and private channels: only add selected members + creator
-    // The difference is in discoverability (controlled by isPrivate flag)
-    // Public channels: discoverable + self-joinable by workspace members
-    // Private channels: invite-only, not visible to non-members
+    
+    
+    
+    
 
     console.log(`🔍 [DEBUG] Channel creation request:`, {
       channelMembers,
@@ -927,10 +886,10 @@ exports.createWorkspaceChannel = async (req, res) => {
       isPrivate: isPrivateChannel
     });
 
-    // Ensure creator is always included
+    
     const finalMemberIds = channelMembers && channelMembers.length > 0
       ? [...new Set([userId, ...channelMembers])]
-      : [userId]; // If no members specified, just the creator
+      : [userId]; 
 
     console.log(`🔍 [DEBUG] finalMemberIds:`, finalMemberIds);
 
@@ -939,34 +898,34 @@ exports.createWorkspaceChannel = async (req, res) => {
       joinedAt: new Date()
     }));
 
-    // Create channel
+    
     const channel = await Channel.create({
       workspace: workspaceId,
       company: workspace.company || null,
       name: name.toLowerCase().trim(),
       description: description || "",
-      isPrivate: isPrivateChannel, // Use explicit flag from request
-      isDiscoverable: isPrivateChannel ? false : (isDiscoverable !== undefined ? isDiscoverable : true), // Private channels are never discoverable
-      isDefault: false, // User-created channels are not default
+      isPrivate: isPrivateChannel, 
+      isDiscoverable: isPrivateChannel ? false : (isDiscoverable !== undefined ? isDiscoverable : true), 
+      isDefault: false, 
       createdBy: userId,
       members: finalMembers,
-      admins: [userId] // Creator is initial admin
+      admins: [userId] 
     });
 
-    // 🔐 PHASE 5: Generate conversation key immediately at channel birth
-    // This ensures every channel is encrypted BEFORE any member can join or send messages
-    // Encrypts for ALL initial members (Phase 5 invariant)
+    
+    
+    
     try {
       console.log(`🔐 [PHASE 5] Channel created, generating conversation key for "${channel.name}"...`);
 
-      // Generate conversation key server-side (PHASE 5)
-      // Pass ALL initial member IDs for encryption (Phase 5 invariant)
+      
+      
       await conversationKeysService.generateConversationKeyServerSide(
         channel._id.toString(),
         'channel',
         workspaceId,
-        finalMemberIds,  // ALL initial members (not just creator)
-        userId           // Creator ID for validation
+        finalMemberIds,  
+        userId           
       );
 
       console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
@@ -974,10 +933,10 @@ exports.createWorkspaceChannel = async (req, res) => {
     } catch (keyError) {
       console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
 
-      // Rollback channel creation
+      
       await Channel.findByIdAndDelete(channel._id);
 
-      // Check for specific error types
+      
       if (keyError.message && keyError.message.includes('IDENTITY_KEY_REQUIRED')) {
         return res.status(400).json({
           message: 'Cannot create encrypted channel: Identity key not found. Please ensure E2EE is initialized.',
@@ -1008,10 +967,6 @@ exports.createWorkspaceChannel = async (req, res) => {
   }
 };
 
-/**
- * Get ALL workspace members including current user (for settings modal)
- * GET /api/workspaces/:workspaceId/all-members
- */
 exports.getAllWorkspaceMembers = async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -1026,32 +981,32 @@ exports.getAllWorkspaceMembers = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Verify user is a member of this workspace
+    
     const isMember = workspace.members.some(m => String(m.user._id) === String(userId));
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    // Return ALL members including current user
+    
     const members = workspace.members
       .map(m => ({
-        _id: m.user._id,  // Primary ID field
-        id: m.user._id,   // Add 'id' as alias for frontend compatibility
-        name: m.user.username,  // Add 'name' mapped from username for MessageInfoModal
-        username: m.user.username,  // Keep username for backward compatibility
+        _id: m.user._id,  
+        id: m.user._id,   
+        name: m.user.username,  
+        username: m.user.username,  
         email: m.user.email,
-        profilePicture: m.user.profilePicture,  // Changed from 'avatar' to 'profilePicture' for consistency
+        profilePicture: m.user.profilePicture,  
         status: m.user.isOnline ? 'online' : 'offline',
         lastSeen: m.user.lastLoginAt,
         role: m.role,
         isCurrentUser: String(m.user._id) === String(userId)
       }))
-      // Sort by role (owner first, then admin, then members) and then by name
+      
       .sort((a, b) => {
         const roleOrder = { owner: 0, admin: 1, member: 2 };
         const roleCompare = (roleOrder[a.role] || 2) - (roleOrder[b.role] || 2);
         if (roleCompare !== 0) return roleCompare;
-        return a.username.localeCompare(b.username);  // Changed from 'name' to 'username'
+        return a.username.localeCompare(b.username);  
       });
 
     return res.json({ members });
@@ -1061,10 +1016,6 @@ exports.getAllWorkspaceMembers = async (req, res) => {
   }
 };
 
-/**
- * Rename workspace (admin/owner only)
- * PUT /api/workspaces/:id/rename
- */
 exports.renameWorkspace = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1080,15 +1031,15 @@ exports.renameWorkspace = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Check if user is admin or owner
+    
     const member = workspace.members.find(m => String(m.user) === String(userId));
     if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
       return res.status(403).json({ message: "Only admins and owners can rename the workspace" });
     }
 
-    // Check if user already has another workspace with this name
+    
     const existingWorkspace = await Workspace.findOne({
-      _id: { $ne: id }, // Exclude current workspace
+      _id: { $ne: id }, 
       name: name.trim(),
       'members.user': userId
     });
@@ -1099,7 +1050,7 @@ exports.renameWorkspace = async (req, res) => {
       });
     }
 
-    // Update workspace name
+    
     workspace.name = name.trim();
     await workspace.save();
 
@@ -1124,10 +1075,6 @@ exports.renameWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Update workspace settings (admin/owner only)
- * PUT /api/workspaces/:id
- */
 exports.updateWorkspace = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1139,13 +1086,13 @@ exports.updateWorkspace = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Check if user is admin or owner
+    
     const member = workspace.members.find(m => String(m.user) === String(userId));
     if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
       return res.status(403).json({ message: "Only admins and owners can update workspace settings" });
     }
 
-    // Update fields if provided
+    
     if (icon !== undefined) workspace.icon = icon;
     if (req.body.color !== undefined) workspace.color = req.body.color;
     if (description !== undefined) workspace.description = description;
@@ -1194,10 +1141,6 @@ exports.updateWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Get workspace statistics
- * GET /api/workspaces/:id/stats
- */
 exports.getWorkspaceStats = async (req, res) => {
   try {
     const id = req.params.workspaceId || req.params.id;
@@ -1208,16 +1151,16 @@ exports.getWorkspaceStats = async (req, res) => {
       return res.status(404).json({ message: "Workspace not found" });
     }
 
-    // Verify user is a member
+    
     const isMember = workspace.members.some(m => String(m.user) === String(userId));
     if (!isMember) {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    // Get channel count
+    
     const channelCount = await Channel.countDocuments({ workspace: id });
 
-    // Get message count
+    
     const messageCount = await Message.countDocuments({ workspace: id });
 
     return res.json({
@@ -1238,14 +1181,6 @@ exports.getWorkspaceStats = async (req, res) => {
   }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WORKSPACE MANAGEMENT EXTENSIONS (additive — Phase 2 features)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Clone a workspace — copies structure (channels) but NOT messages or members.
- * POST /api/workspaces/:id/clone
- */
 exports.cloneWorkspace = async (req, res) => {
   try {
     const sourceId = req.params.id;
@@ -1267,14 +1202,14 @@ exports.cloneWorkspace = async (req, res) => {
 
     const user = await User.findById(userId);
 
-    // Resolve companyId from DB record (same secure pattern as createWorkspace)
+    
     const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
-    // Check name uniqueness for this user
+    
     const existing = await Workspace.findOne({ name: name.trim(), createdBy: userId });
     if (existing) return res.status(400).json({ message: 'Workspace name already exists in your account' });
 
-    // Create cloned workspace
+    
     const cloneMembers = includeMembership
       ? source.members.map(m => ({ user: m.user, role: m.role, status: 'active', joinedAt: new Date() }))
       : [{ user: userId, role: 'owner' }];
@@ -1292,7 +1227,7 @@ exports.cloneWorkspace = async (req, res) => {
       settings: { ...source.settings.toObject() }
     });
 
-    // Copy channel structure (no messages, no members from source)
+    
     const sourceChannels = await Channel.find({ workspace: sourceId }).lean();
     const clonedChannelIds = [];
 
@@ -1314,7 +1249,7 @@ exports.cloneWorkspace = async (req, res) => {
     clone.defaultChannels = clonedChannelIds.slice(0, 2);
     await clone.save();
 
-    // Add clone to creator's workspaces
+    
     user.workspaces.push({ workspace: clone._id, role: 'owner' });
     await user.save();
 
@@ -1338,10 +1273,6 @@ exports.cloneWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Export workspace as JSON snapshot (structure only).
- * GET /api/workspaces/:id/export
- */
 exports.exportWorkspace = async (req, res) => {
   try {
     const workspaceId = req.params.id;
@@ -1386,10 +1317,6 @@ exports.exportWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Import a workspace from a JSON snapshot.
- * POST /api/workspaces/import
- */
 exports.importWorkspace = async (req, res) => {
   try {
     const userId = req.user?.sub;
@@ -1405,7 +1332,7 @@ exports.importWorkspace = async (req, res) => {
     const resolvedCompanyId = user.companyId ? String(user.companyId) : null;
 
     if (!resolvedCompanyId) {
-      // Personal accounts: check limit
+      
       const owned = await Workspace.countDocuments({ createdBy: userId });
       if (owned >= 3) {
         return res.status(403).json({ message: 'Free plan limit: max 3 workspaces', isLimitReached: true });
@@ -1415,7 +1342,7 @@ exports.importWorkspace = async (req, res) => {
     const { workspace: ws, channels = [] } = snapshot;
     const name = (ws.name || 'Imported Workspace').trim();
 
-    // Uniqueness check
+    
     const existing = await Workspace.findOne({ name, createdBy: userId });
     if (existing) return res.status(400).json({ message: 'Workspace name already exists — rename before importing' });
 
@@ -1464,10 +1391,6 @@ exports.importWorkspace = async (req, res) => {
   }
 };
 
-/**
- * Get detailed workspace analytics.
- * GET /api/workspaces/:workspaceId/analytics
- */
 exports.getWorkspaceAnalytics = async (req, res) => {
   try {
     const workspaceId = req.params.workspaceId;
@@ -1486,21 +1409,21 @@ exports.getWorkspaceAnalytics = async (req, res) => {
       Note.countDocuments({ workspace: workspaceId })
     ]);
 
-    // Member growth: group members by joinedAt month
+    
     const memberGrowth = workspace.members.reduce((acc, m) => {
       if (!m.joinedAt) return acc;
-      const key = new Date(m.joinedAt).toISOString().slice(0, 7); // YYYY-MM
+      const key = new Date(m.joinedAt).toISOString().slice(0, 7); 
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
 
-    // Role breakdown
+    
     const roleBreakdown = workspace.members.reduce((acc, m) => {
       acc[m.role] = (acc[m.role] || 0) + 1;
       return acc;
     }, {});
 
-    // Activity score (simple composite)
+    
     const activityScore = Math.min(100, Math.round(
       (messageCount / 10) * 0.4 +
       (taskCount / 5) * 0.3 +

@@ -26,8 +26,6 @@ import {
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { Avatar, Input } from "../../../../shared/components/ui";
 
-
-
 export default function Header({
   chat,
   onClose,
@@ -122,7 +120,7 @@ export default function Header({
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-          {/* Channel/DM Avatar with Type Indicators */}
+          {}
           {chat.type === 'channel' ? (
             chat.image ? (
               <img src={chat.image} alt={chat.name} style={{
@@ -191,10 +189,10 @@ export default function Header({
           </div>
         </div>
 
-        {/* Action Buttons Group */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
 
-          {/* Selection Mode Actions */}
+          {}
           {selectMode && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span style={{
@@ -221,11 +219,11 @@ export default function Header({
             </div>
           )}
 
-          {/* Normal Actions */}
+          {}
           {!selectMode && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
 
-              {/* Channel Specific Actions */}
+              {}
               {chat.type === "channel" && (
                 <>
                   {onStartHuddle && (
@@ -265,7 +263,7 @@ export default function Header({
                 </>
               )}
 
-              {/* DM Specific Actions */}
+              {}
               {chat.type === "dm" && (
                 <>
                   <button
@@ -300,7 +298,7 @@ export default function Header({
                 </>
               )}
 
-              {/* Search */}
+              {}
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={(e) => {
@@ -344,7 +342,7 @@ export default function Header({
                 )}
               </div>
 
-              {/* Threads Button */}
+              {}
               {chat.type === "channel" && (
                 <button
                   title={isThreadsOnly ? "Show all messages" : "Show threads only"}
@@ -362,7 +360,7 @@ export default function Header({
                 </button>
               )}
 
-              {/* Bookmarks Button */}
+              {}
               {onShowBookmarks && (
                 <button
                   className="hdr-extra"
@@ -380,7 +378,7 @@ export default function Header({
                 </button>
               )}
 
-              {/* Global Menu */}
+              {}
               <div style={{ position: 'relative' }}>
                 <button
                   onClick={(e) => {
@@ -496,7 +494,7 @@ export default function Header({
                 )}
               </div>
 
-              {/* Close Button */}
+              {}
               {onClose && (
                 <button
                   onClick={onClose}
@@ -535,7 +533,7 @@ export default function Header({
         />
       </div>
 
-      {/* Typing Indicator */}
+      {}
       {typingText && (
         <div style={{
           position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',

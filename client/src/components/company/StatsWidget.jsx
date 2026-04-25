@@ -1,5 +1,3 @@
-// client/src/components/company/StatsWidget.jsx
-
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 

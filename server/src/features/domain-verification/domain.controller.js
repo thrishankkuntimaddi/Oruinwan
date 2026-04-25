@@ -1,11 +1,5 @@
-// src/features/domain-verification/domain.controller.js
-
 const domainService = require("./domain.service");
 
-/**
- * Generate domain verification token
- * POST /api/companies/:id/domain/generate
- */
 exports.generateDomainVerification = async (req, res) => {
     try {
         const companyId = req.params.id;
@@ -42,10 +36,6 @@ exports.generateDomainVerification = async (req, res) => {
     }
 };
 
-/**
- * Verify domain via DNS TXT record
- * POST /api/companies/:id/domain/verify
- */
 exports.verifyDomain = async (req, res) => {
     try {
         const companyId = req.params.id;
@@ -80,10 +70,6 @@ exports.verifyDomain = async (req, res) => {
     }
 };
 
-/**
- * Enable/disable auto-join by domain
- * PUT /api/companies/:id/domain/auto-join
- */
 exports.setAutoJoinPolicy = async (req, res) => {
     try {
         const companyId = req.params.id;

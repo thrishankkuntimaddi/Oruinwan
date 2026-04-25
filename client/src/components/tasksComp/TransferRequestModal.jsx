@@ -19,7 +19,7 @@ export default function TransferRequestModal({ task, members = [], onClose, onCo
         >
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '420px', overflow: 'hidden', boxShadow: 'var(--card-shadow)', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-default)' }}>
                     <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>
                         <Send size={16} style={{ color: '#3b82f6' }} />
@@ -36,13 +36,13 @@ export default function TransferRequestModal({ task, members = [], onClose, onCo
                 </div>
 
                 <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {/* Task Info */}
+                    {}
                     <div style={{ padding: '10px 14px', background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.18)' }}>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Task</p>
                         <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>{task.title}</p>
                     </div>
 
-                    {/* Select New Assignee */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <User size={13} />
@@ -67,7 +67,7 @@ export default function TransferRequestModal({ task, members = [], onClose, onCo
                         </select>
                     </div>
 
-                    {/* Reason Note */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>
                             Reason (Optional):
@@ -83,7 +83,7 @@ export default function TransferRequestModal({ task, members = [], onClose, onCo
                     </div>
                 </div>
 
-                {/* Actions */}
+                {}
                 <div style={{ display: 'flex', gap: '10px', padding: '12px 20px', borderTop: '1px solid var(--border-default)', background: 'var(--bg-base)' }}>
                     <button
                         onClick={onClose}

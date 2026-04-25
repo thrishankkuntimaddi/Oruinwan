@@ -1,9 +1,5 @@
 import React from 'react';
 
-/**
- * Card — Monolith Flow flat section card
- * No shadows, no rounded corners, divider-based layout
- */
 const Card = ({ title, subtitle, action, children, className = '' }) => (
     <div style={{
         backgroundColor: 'var(--bg-surface)',

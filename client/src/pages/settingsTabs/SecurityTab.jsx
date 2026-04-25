@@ -5,7 +5,6 @@ import api from '@services/api';
 
 const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 
-// ── Password strength calculator ─────────────────────────────────────────────
 const calculatePasswordStrength = (password) => {
     if (!password) return { score: 0, label: '', color: '' };
     const checks = {
@@ -196,7 +195,7 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* ── Password Section ──────────────────────────────────────── */}
+            {}
             <Card title="Change Password" subtitle="Update your account password">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480 }}>
                     <PasswordInput label="Current Password" fieldKey="currentPassword" show={showCurrentPassword} setShow={setShowCurrentPassword} placeholder="Enter current password" />
@@ -253,9 +252,9 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                 </div>
             </Card>
 
-            {/* ── 2FA Section ───────────────────────────────────────────── */}
+            {}
             <Card title="Two-Factor Authentication" subtitle="Add extra security with a one-time password app">
-                {/* Status header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{
@@ -323,7 +322,7 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                     )}
                 </div>
 
-                {/* Error */}
+                {}
                 {tfaError && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: 8,
@@ -337,7 +336,7 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                     </div>
                 )}
 
-                {/* Setup step */}
+                {}
                 {tfaStep === STEP.SETUP && tfaSetup && (
                     <div style={{
                         display: 'flex', flexDirection: 'column', gap: 16,
@@ -419,7 +418,7 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                     </div>
                 )}
 
-                {/* Disabling step */}
+                {}
                 {tfaStep === STEP.DISABLING && (
                     <div style={{
                         display: 'flex', flexDirection: 'column', gap: 12,
@@ -459,7 +458,7 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                     </div>
                 )}
 
-                {/* Idle + enabled info */}
+                {}
                 {tfaStep === STEP.IDLE && tfaEnabled && (
                     <div style={{
                         padding: 12,
@@ -473,7 +472,7 @@ const SecurityTab = ({ passwordData, setPasswordData, showCurrentPassword, setSh
                     </div>
                 )}
 
-                {/* Idle + disabled warning */}
+                {}
                 {tfaStep === STEP.IDLE && !tfaEnabled && (
                     <div style={{
                         padding: 12,

@@ -1,4 +1,3 @@
-// client/src/components/layout/panels/KnowledgePanel.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { BookOpen, Plus, ChevronRight, ChevronDown, Network, RefreshCw, Search, Book } from 'lucide-react';
@@ -70,7 +69,7 @@ const KnowledgePanel = ({ title }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {/* Header */}
+            {}
             <div style={{ padding: '12px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                     <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -100,7 +99,7 @@ const KnowledgePanel = ({ title }) => {
                 </div>
             </div>
 
-            {/* Special sections */}
+            {}
             <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <button onClick={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 8px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
@@ -111,7 +110,7 @@ const KnowledgePanel = ({ title }) => {
                 </button>
             </div>
 
-            {/* Page tree */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
                 {loading && (
                     <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
@@ -143,7 +142,7 @@ const KnowledgePanel = ({ title }) => {
                 }
             </div>
 
-            {/* Footer */}
+            {}
             <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px 12px' }}>
                 <button onClick={handleCreatePage} disabled={creating}
                     style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px', background: 'transparent', border: 'none', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}

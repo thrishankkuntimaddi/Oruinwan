@@ -58,7 +58,7 @@ const SupportTickets = () => {
 
     return (
         <div style={{ height: 'calc(100vh - 140px)', display: 'flex', gap: '1px', background: 'var(--border-subtle)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* Ticket List */}
+            {}
             <div style={{ width: '320px', flexShrink: 0, background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>Support Tickets</span>
@@ -79,10 +79,10 @@ const SupportTickets = () => {
                 </div>
             </div>
 
-            {/* Ticket Detail */}
+            {}
             {selectedTicket ? (
                 <div style={{ flex: 1, background: 'var(--bg-surface)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    {/* Detail Header */}
+                    {}
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                             <StatusBadge status={selectedTicket.status} />
@@ -97,9 +97,9 @@ const SupportTickets = () => {
                         </p>
                     </div>
 
-                    {/* Thread */}
+                    {}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }} className="custom-scrollbar">
-                        {/* Original */}
+                        {}
                         <div style={{ background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
                             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '8px' }}>Issue Description</div>
                             <p style={{ fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>{selectedTicket.description}</p>
@@ -120,7 +120,7 @@ const SupportTickets = () => {
                         })}
                     </div>
 
-                    {/* Reply Box */}
+                    {}
                     <div style={{ padding: '16px 20px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
                             {['open', 'in-progress', 'resolved'].map(s => (

@@ -1,30 +1,9 @@
-/**
- * server/src/features/ai/ai.controller.js
- *
- * AI Controller — Transport / Delegate Layer
- *
- * Architecture (Phase 3B):
- *   client → server route (/api/ai/*) → ai.controller.js (this file)
- *                                      → ai/api/ai.gateway.js
- *                                      → AI orchestrator / agents / memory
- *
- * DESIGN RULES:
- *   - This file is a pure transport layer. No AI logic lives here.
- *   - It unpacks HTTP req/res and delegates to the AI gateway.
- *   - The gateway is framework-agnostic and testable in isolation.
- *   - Activity events are emitted here after gateway responses so the
- *     gateway stays free of Express/Socket.IO coupling.
- */
-
 'use strict';
 
 const gateway = require('../../../../ai/api/ai.gateway');
 const activityService = require('../../features/activity/activity.service');
 const aiSummarizer = require('./ai.summarizer.service');
 
-// ---------------------------------------------------------------------------
-// POST /api/ai/chat
-// ---------------------------------------------------------------------------
 exports.chat = async (req, res) => {
   try {
     console.log('➡️  [AI Controller] Delegating chat → AI Gateway');
@@ -37,14 +16,14 @@ exports.chat = async (req, res) => {
       { userId, req }
     );
 
-    // Emit activity event (fire-and-forget, never blocks response)
+    
     activityService.emit(req, {
       type: 'ai',
       subtype: 'chat',
       workspaceId: workspaceId || null,
       actor: userId,
       payload: { prompt: message, response: result.text?.substring(0, 200) },
-    }).catch(() => {}); // silent — activity is non-critical
+    }).catch(() => {}); 
 
     return res.status(200).json(result);
   } catch (error) {
@@ -57,9 +36,6 @@ exports.chat = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// POST /api/ai/summarize
-// ---------------------------------------------------------------------------
 exports.summarize = async (req, res) => {
   try {
     console.log('➡️  [AI Controller] Delegating summarize → AI Gateway');
@@ -69,7 +45,7 @@ exports.summarize = async (req, res) => {
 
     const result = await gateway.summarize({ text }, { userId: req.user.sub });
 
-    // Emit activity event
+    
     activityService.emit(req, {
       type: 'ai',
       subtype: 'summary',
@@ -85,9 +61,6 @@ exports.summarize = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// POST /api/ai/generate-task
-// ---------------------------------------------------------------------------
 exports.generateTask = async (req, res) => {
   try {
     console.log('➡️  [AI Controller] Delegating generateTask → AI Gateway');
@@ -95,7 +68,7 @@ exports.generateTask = async (req, res) => {
     const { context } = req.body;
     const result = await gateway.generateTask({ context }, { userId: req.user.sub });
 
-    // Emit activity event
+    
     activityService.emit(req, {
       type: 'ai',
       subtype: 'task_generated',
@@ -111,10 +84,6 @@ exports.generateTask = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// POST /api/ai/summarize-document
-// Summarise any raw text or document content with TTL caching.
-// ---------------------------------------------------------------------------
 exports.summarizeDocument = async (req, res) => {
   try {
     const { text, title, type, noCache } = req.body;
@@ -128,10 +97,6 @@ exports.summarizeDocument = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// POST /api/ai/semantic-search
-// Re-rank candidate docs by semantic relevance to query.
-// ---------------------------------------------------------------------------
 exports.semanticSearch = async (req, res) => {
   try {
     const { query, docs, topK, noCache } = req.body;
@@ -148,9 +113,6 @@ exports.semanticSearch = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// GET /api/ai/cache-stats  (admin/debug — returns in-memory cache metrics)
-// ---------------------------------------------------------------------------
 exports.cacheStats = async (_req, res) => {
   return res.status(200).json(aiSummarizer.cacheStats());
 };

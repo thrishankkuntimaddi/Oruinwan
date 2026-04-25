@@ -27,7 +27,7 @@ const ProfileView = ({
             boxShadow: '0 24px 80px rgba(0,0,0,0.75)', overflow: 'hidden', display: 'flex',
             flexDirection: 'column', maxHeight: '80vh', fontFamily: 'Inter, system-ui, sans-serif',
         }}>
-            {/* Header */}
+            {}
             <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', flexShrink: 0 }}>
                 <button onClick={onBack}
                     style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', transition: '150ms ease' }}
@@ -40,10 +40,10 @@ const ProfileView = ({
                 <div style={{ width: '40px' }} />
             </div>
 
-            {/* Scrollable body */}
+            {}
             <div style={{ padding: '16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1 }} className="custom-scrollbar">
 
-                {/* Avatar */}
+                {}
                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <div style={{ position: 'relative' }} title="Profile Picture Upload coming soon">
                         <div style={{ width: '52px', height: '52px', borderRadius: '50%', overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.12)', backgroundImage: `url(${getAvatarUrl(user)})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
@@ -53,14 +53,14 @@ const ProfileView = ({
                     </div>
                 </div>
 
-                {/* Full Name */}
+                {}
                 <div>
                     <label style={lbl}>Full Name</label>
                     <input type="text" value={formData.username} onChange={e => setFormData({ ...formData, username: e.target.value })}
                         style={inp} onFocus={focusAmber} onBlur={blurDefault} />
                 </div>
 
-                {/* Date of Birth */}
+                {}
                 <div>
                     <label style={lbl}>Date of Birth</label>
                     <input type="date" value={formData.dob || ''} onChange={e => setFormData({ ...formData, dob: e.target.value })}
@@ -68,7 +68,7 @@ const ProfileView = ({
                         style={inp} onFocus={focusAmber} onBlur={blurDefault} />
                 </div>
 
-                {/* Phone */}
+                {}
                 <div>
                     <label style={lbl}>Phone</label>
                     <div style={{ display: 'flex' }}>
@@ -87,7 +87,7 @@ const ProfileView = ({
                     </div>
                 </div>
 
-                {/* Email Addresses */}
+                {}
                 <div>
                     <label style={lbl}>Email Addresses</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -145,7 +145,7 @@ const ProfileView = ({
                                 )}
                             </div>
                         ))}
-                        {/* Add email */}
+                        {}
                         <div style={{ display: 'flex', gap: '6px' }}>
                             <input type="email" value={newEmail} onChange={e => setNewEmail(e.target.value)}
                                 placeholder="Add another email..." style={{ ...inp, flex: 1 }}
@@ -159,7 +159,7 @@ const ProfileView = ({
                     </div>
                 </div>
 
-                {/* About */}
+                {}
                 <div>
                     <label style={lbl}>About</label>
                     <textarea value={formData.about || ''} onChange={e => setFormData({ ...formData, about: e.target.value })}
@@ -172,7 +172,7 @@ const ProfileView = ({
                 </div>
             </div>
 
-            {/* Footer */}
+            {}
             <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'flex-end', flexShrink: 0 }}>
                 <button onClick={onSaveProfile}
                     style={{ padding: '8px 20px', fontSize: '13px', fontWeight: 700, background: '#b8956a', color: '#0c0c0c', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}

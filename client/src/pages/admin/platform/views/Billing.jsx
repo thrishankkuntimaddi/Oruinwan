@@ -56,7 +56,7 @@ const Billing = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Track revenue, billing, and financial analytics</p>
             </div>
 
-            {/* Stats */}
+            {}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
                 <StatCell icon={DollarSign} label="Total Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} sub="All time" />
                 <StatCell icon={Calendar} label="Monthly Revenue" value={`$${stats.monthlyRevenue.toLocaleString()}`} sub="Current month" trend={stats.growthRate} />
@@ -71,9 +71,9 @@ const Billing = () => {
                 </div>
             )}
 
-            {/* Table */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-                {/* Filters */}
+                {}
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <SearchInput value={searchTerm} onChange={setSearchTerm} placeholder="Search companies..." />
                     <div style={{ display: 'flex', gap: '4px', flex: 1 }}>

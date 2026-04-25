@@ -1,5 +1,3 @@
-// server/src/features/developer/apiKeys.routes.js
-// Authenticated routes for workspace owners/admins to manage API keys
 const express = require('express');
 const router = express.Router();
 const ApiKey = require('./apiKey.model');
@@ -8,7 +6,6 @@ const logger = require('../../../utils/logger');
 
 router.use(requireAuth);
 
-// GET /api/developer/api-keys — list API keys for the user's workspace
 router.get('/api-keys', async (req, res) => {
   try {
     const { workspaceId } = req.query;
@@ -26,7 +23,6 @@ router.get('/api-keys', async (req, res) => {
   }
 });
 
-// POST /api/developer/api-keys — create a new API key (raw key returned once)
 router.post('/api-keys', async (req, res) => {
   try {
     const { workspaceId, name, permissions } = req.body;
@@ -49,10 +45,10 @@ router.post('/api-keys', async (req, res) => {
       .select('name keyPrefix permissions createdAt')
       .lean();
 
-    // Return rawKey ONLY on creation — never stored again
+    
     res.status(201).json({
       key: keyDoc,
-      rawKey, // shown once
+      rawKey, 
       message: 'Store this key securely — it will not be shown again.'
     });
   } catch (err) {
@@ -61,13 +57,12 @@ router.post('/api-keys', async (req, res) => {
   }
 });
 
-// DELETE /api/developer/api-keys/:id — revoke an API key
 router.delete('/api-keys/:id', async (req, res) => {
   try {
     const key = await ApiKey.findById(req.params.id);
     if (!key) return res.status(404).json({ error: 'API key not found' });
 
-    // Soft-delete (deactivate)
+    
     key.isActive = false;
     await key.save();
 

@@ -1,4 +1,3 @@
-// client/src/components/manager/ManagerWorkspacePage.jsx — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Users, CheckCircle2, MessageSquare, Globe, RefreshCw, AlertCircle, ArrowRight } from 'lucide-react';
@@ -26,7 +25,7 @@ export default function ManagerWorkspacePage() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -37,7 +36,7 @@ export default function ManagerWorkspacePage() {
                 <RefreshBtn onClick={() => { setLoading(true); fetchWorkspaces(); }} loading={loading} />
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                 <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
 
@@ -121,7 +120,7 @@ const WsCard = ({ ws, accentColor, isActive, onOpen }) => {
                     <OpenBtn onClick={onOpen} color={accentColor} />
                 </div>
 
-                {/* Stats */}
+                {}
                 <div style={{ display: 'flex', gap: '20px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
                     {[
                         { Icon: Users,        val: ws.memberCount ?? 0, label: 'Members',      color: accentColor },

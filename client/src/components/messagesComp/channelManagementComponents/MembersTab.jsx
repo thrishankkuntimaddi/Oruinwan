@@ -14,7 +14,7 @@ export default function MembersTab({
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-            {/* Private Channel Notice */}
+            {}
             {!isAdmin && channel.isPrivate && (
                 <div style={{
                     display: 'flex', alignItems: 'center', gap: '12px',
@@ -47,7 +47,7 @@ export default function MembersTab({
                 </div>
             )}
 
-            {/* Members List */}
+            {}
             <div>
                 <div style={{
                     fontSize: '9px', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase',
@@ -100,7 +100,7 @@ function MemberRow({ member, isOwner, isMemberAdmin, isCurrentUser, isAdmin, mem
                 transition: 'background-color 150ms ease',
             }}
         >
-            {/* Member Info */}
+            {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{
                     width: 36, height: 36, borderRadius: '2px',
@@ -143,7 +143,7 @@ function MemberRow({ member, isOwner, isMemberAdmin, isCurrentUser, isAdmin, mem
                 </div>
             </div>
 
-            {/* Admin actions for other members */}
+            {}
             {isAdmin && !isCurrentUser && !isOwner && hovered && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     {!isMemberAdmin ? (
@@ -155,7 +155,7 @@ function MemberRow({ member, isOwner, isMemberAdmin, isCurrentUser, isAdmin, mem
                 </div>
             )}
 
-            {/* Self-demotion */}
+            {}
             {isCurrentUser && isMemberAdmin && !isOwner && hovered && (() => {
                 const totalAdmins = members.filter(m => m.isAdmin).length;
                 if (totalAdmins === 1) return null;

@@ -73,7 +73,7 @@ const UsersAccess = ({ data }) => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
-                {/* Stats Grid — 2 cols of 3 stat cells + 1 recent invites panel */}
+                {}
                 <div style={{
                     gridColumn: 'span 2',
                     display: 'grid',
@@ -86,7 +86,7 @@ const UsersAccess = ({ data }) => {
                     ))}
                 </div>
 
-                {/* Recent Invites */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                     <h4 style={S.label}>Recent Invites</h4>
                     <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>

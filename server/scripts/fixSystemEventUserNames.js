@@ -1,9 +1,3 @@
-// server/scripts/fixSystemEventUserNames.js
-/**
- * Direct MongoDB Update: Add userName to systemEvents
- * This uses direct MongoDB operations to ensure the update works
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 
@@ -18,7 +12,7 @@ async function fixSystemEventUserNames() {
         const channelsCollection = db.collection('channels');
         const usersCollection = db.collection('users');
 
-        // Find all channels with systemEvents
+        
         const channels = await channelsCollection.find({
             'systemEvents.0': { $exists: true }
         }).toArray();
@@ -30,10 +24,10 @@ async function fixSystemEventUserNames() {
         for (const channel of channels) {
             let updated = false;
 
-            // Update each systemEvent
+            
             for (const event of channel.systemEvents) {
                 if (event.userId && !event.userName) {
-                    // Fetch user
+                    
                     const user = await usersCollection.findOne(
                         { _id: event.userId },
                         { projection: { firstName: 1, lastName: 1, username: 1 } }
@@ -46,7 +40,7 @@ async function fixSystemEventUserNames() {
                 }
             }
 
-            // Save back to database with direct update
+            
             if (updated) {
                 await channelsCollection.updateOne(
                     { _id: channel._id },

@@ -1,10 +1,6 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
 
-/**
- * DeleteAccountModal Component
- * Confirmation modal for permanent account deletion
- */
 const DeleteAccountModal = ({
     show,
     onClose,

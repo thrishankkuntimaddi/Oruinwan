@@ -36,7 +36,7 @@ const ManagerLayout = () => {
         return () => window.removeEventListener('resize', onResize);
     }, []);
 
-    // Auto-close on navigation
+    
     useEffect(() => {
         if (isMobile) setSidebarOpen(false);
     }, [location.pathname, isMobile]);
@@ -50,7 +50,7 @@ const ManagerLayout = () => {
             fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
             position: 'relative',
         }}>
-            {/* Mobile Backdrop */}
+            {}
             {isMobile && sidebarOpen && (
                 <div
                     onClick={closeSidebar}
@@ -62,7 +62,7 @@ const ManagerLayout = () => {
                 />
             )}
 
-            {/* Sidebar */}
+            {}
             <div style={{
                 ...(isMobile ? {
                     position: 'fixed', top: 0, left: 0, height: '100%', zIndex: 40,
@@ -75,7 +75,7 @@ const ManagerLayout = () => {
             </div>
 
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', minWidth: 0 }}>
-                {/* Top Context Bar */}
+                {}
                 <header style={{
                     height: '56px', flexShrink: 0,
                     padding: isMobile ? '0 16px' : '0 28px',
@@ -122,7 +122,7 @@ const ManagerLayout = () => {
                     </div>
                 </header>
 
-                {/* Main Content */}
+                {}
                 <main style={{ flex: 1, overflow: 'hidden', background: 'var(--bg-base)', position: 'relative' }}>
                     <Outlet context={{ selectedDepartment: selectedDept }} />
                 </main>

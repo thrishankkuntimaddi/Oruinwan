@@ -1,6 +1,5 @@
-// ChttrixDocs.jsx — Monolith Flow Design System
 import React, { useState, useEffect } from 'react';
-// Standalone docs page — manages its own scroll via useEffect
+
 import {
     BookOpen, MessageSquare, Hash, GitBranch, Users, CheckSquare, FileText,
     Shield, Sparkles, BellRing, Settings, Building2, Lock, UserCheck,
@@ -59,7 +58,6 @@ function DocSection({ id, title, icon: Icon, children }) {
     );
 }
 
-// Fix the import path - this component imports from its own directory
 const ChttrixDocs = () => {
     const [active, setActive] = useState('intro');
     const [search, setSearch] = useState('');
@@ -88,12 +86,12 @@ const ChttrixDocs = () => {
         <div style={{ minHeight: '100vh', background: 'var(--bg-base)', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>
             <style>{`* { box-sizing: border-box; margin: 0; padding: 0; } ::selection { background: rgba(184,149,106,0.3); }`}</style>
 
-            {/* Inline header for docs (already has public-scroll applied) */}
+            {}
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px', display: 'flex', gap: '56px', alignItems: 'flex-start' }}>
 
-                {/* Sidebar */}
+                {}
                 <aside style={{ width: '220px', flexShrink: 0, position: 'sticky', top: '24px' }}>
-                    {/* Back to home */}
+                    {}
                     <button onClick={() => window.location.href = '/'} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '28px', background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease', padding: 0 }}
                         onMouseEnter={e => e.currentTarget.style.color = '#e4e4e4'}
                         onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}>
@@ -101,13 +99,13 @@ const ChttrixDocs = () => {
                         Back to Chttrix
                     </button>
 
-                    {/* Logo */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
                         <img src="/chttrix-logo.jpg" alt="" style={{ width: '24px', height: '24px', objectFit: 'cover' }} />
                         <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>Docs</span>
                     </div>
 
-                    {/* Search */}
+                    {}
                     <div style={{ position: 'relative', marginBottom: '20px' }}>
                         <Search size={11} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search docs..."
@@ -135,9 +133,9 @@ const ChttrixDocs = () => {
                     </div>
                 </aside>
 
-                {/* Main docs content */}
+                {}
                 <main style={{ flex: 1, minWidth: 0, paddingTop: '0' }}>
-                    {/* Doc header */}
+                    {}
                     <div style={{ marginBottom: '48px' }}>
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '16px' }}>
                             <BookOpen size={11} style={{ color: '#b8956a' }} />
@@ -296,7 +294,7 @@ const ChttrixDocs = () => {
                 </main>
             </div>
 
-            {/* Simple footer */}
+            {}
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '24px', textAlign: 'center' }}>
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>© 2026 Chttrix Inc. · <button onClick={() => window.location.href = '/privacy'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Privacy</button> · <button onClick={() => window.location.href = '/terms'} style={{ background: 'none', border: 'none', color: 'rgba(184,149,106,0.5)', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit' }}>Terms</button></p>
             </div>

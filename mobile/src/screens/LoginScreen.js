@@ -1,7 +1,3 @@
-/**
- * Chttrix Mobile — Login Screen
- * Authenticates the user against the Chttrix backend and stores the JWT.
- */
 import React, { useState } from 'react';
 import {
   View,
@@ -15,12 +11,14 @@ import {
   Alert,
 } from 'react-native';
 import { login } from '../services/api';
-import { saveToken, saveUser } from '../services/storage';
+import { saveToken } from '../services/storage';
+import { useApp } from '../context/AppContext';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { setUser, workspace } = useApp();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -30,12 +28,12 @@ export default function LoginScreen({ navigation }) {
     try {
       setLoading(true);
       const { data } = await login(email.trim(), password);
-      // Backend returns { token, user } or similar — adapt if needed
       const token = data.token || data.accessToken;
       const user = data.user;
       await saveToken(token);
-      if (user) await saveUser(user);
-      navigation.replace('Main');
+      if (user) await setUser(user);
+      
+      navigation.replace(workspace ? 'Main' : 'WorkspaceSelect');
     } catch (err) {
       const msg =
         err.response?.data?.message || 'Login failed. Please try again.';
@@ -51,7 +49,7 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.card}>
-        {/* Logo / Brand */}
+        {}
         <View style={styles.brand}>
           <View style={styles.logoCircle}>
             <Text style={styles.logoText}>C</Text>
@@ -60,7 +58,7 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.subtitle}>Company Workspace OS</Text>
         </View>
 
-        {/* Fields */}
+        {}
         <TextInput
           style={styles.input}
           placeholder="Work email"
@@ -80,7 +78,7 @@ export default function LoginScreen({ navigation }) {
           onChangeText={setPassword}
         />
 
-        {/* Button */}
+        {}
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}

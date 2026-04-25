@@ -1,12 +1,5 @@
-// server/src/features/people/people.controller.js
-//
-// Phase 3 — Company People Management
-// Thin HTTP handlers — extract params, call service, return consistent shape.
-
 const { validationResult } = require('express-validator');
 const peopleService = require('./people.service');
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function validationGuard(req, res) {
     const errors = validationResult(req);
@@ -25,12 +18,6 @@ function handleError(res, err) {
     return res.status(status).json({ success: false, error: err.message || 'Server error' });
 }
 
-// ── Handlers ─────────────────────────────────────────────────────────────────
-
-/**
- * POST /api/company/invite
- * Admin/owner invites a new employee. Creates account with accountStatus='invited'.
- */
 exports.inviteEmployee = async (req, res) => {
     if (validationGuard(req, res)) return;
 
@@ -55,11 +42,6 @@ exports.inviteEmployee = async (req, res) => {
     }
 };
 
-/**
- * GET /api/company/members
- * Returns all company members. Guests are blocked by requireMinMember middleware.
- * Supports ?status=, ?role=, ?search= filters.
- */
 exports.listMembers = async (req, res) => {
     if (validationGuard(req, res)) return;
 
@@ -77,10 +59,6 @@ exports.listMembers = async (req, res) => {
     }
 };
 
-/**
- * GET /api/company/members/:id
- * Returns a single member (company-isolated).
- */
 exports.getMember = async (req, res) => {
     try {
         const member = await peopleService.getMember(req.params.id, req.companyId);
@@ -90,11 +68,6 @@ exports.getMember = async (req, res) => {
     }
 };
 
-/**
- * PATCH /api/company/members/:id/role
- * Admin/owner changes a member's company role.
- * Body: { newRole: string, managedDepartments?: string[] }
- */
 exports.changeRole = async (req, res) => {
     if (validationGuard(req, res)) return;
 
@@ -118,11 +91,6 @@ exports.changeRole = async (req, res) => {
     }
 };
 
-/**
- * PATCH /api/company/members/:id/status
- * Admin/owner suspends, reactivates, or removes a member.
- * Body: { status: 'active'|'suspended'|'removed', reason?: string }
- */
 exports.updateStatus = async (req, res) => {
     if (validationGuard(req, res)) return;
 

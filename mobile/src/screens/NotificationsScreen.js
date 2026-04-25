@@ -1,7 +1,3 @@
-/**
- * Chttrix Mobile — Notifications Screen
- * Displays push notification history and manages Expo push token registration.
- */
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -18,7 +14,6 @@ import Constants from 'expo-constants';
 import { registerDeviceToken } from '../services/api';
 import { cacheGet, cacheSet } from '../services/storage';
 
-// Configure how notifications are handled when the app is in the foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -37,7 +32,7 @@ export default function NotificationsScreen() {
     loadCached();
     registerForPushNotifications();
 
-    // Listen for incoming notifications (foreground)
+    
     notificationListener.current = Notifications.addNotificationReceivedListener((n) => {
       const item = {
         id: n.request.identifier,
@@ -49,7 +44,7 @@ export default function NotificationsScreen() {
       persistNotification(item);
     });
 
-    // Listen for notification responses (user tapped)
+    
     responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
       console.log('[Notifications] User tapped notification:', response.notification.request.identifier);
     });
@@ -69,7 +64,7 @@ export default function NotificationsScreen() {
 
   async function persistNotification(item) {
     const existing = (await cacheGet('notifications_history')) || [];
-    const updated = [item, ...existing].slice(0, 100); // Keep last 100
+    const updated = [item, ...existing].slice(0, 100); 
     await cacheSet('notifications_history', updated);
   }
 

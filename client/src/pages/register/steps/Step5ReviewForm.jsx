@@ -1,4 +1,3 @@
-// Step5ReviewForm.jsx — Monolith Flow Design System
 import React from 'react';
 import { Building, User, ShieldCheck, FileText, Edit3 } from 'lucide-react';
 
@@ -31,7 +30,6 @@ const Field = ({ label, value }) => (
     </div>
 );
 
-// Ignore legacy theme prop
 const Step5ReviewForm = ({ formData, onEdit, theme }) => (
     <div style={{ maxWidth: '680px', margin: '0 auto' }}>
         <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '28px' }}>

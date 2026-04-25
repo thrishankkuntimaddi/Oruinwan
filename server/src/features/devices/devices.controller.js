@@ -1,11 +1,5 @@
-// server/src/features/devices/devices.controller.js
-
 const deviceSessionService = require('../../services/deviceSession.service');
 
-/**
- * Get all device sessions for current user
- * GET /api/v2/devices
- */
 exports.getDevices = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -13,7 +7,7 @@ exports.getDevices = async (req, res) => {
 
         const sessions = await deviceSessionService.getDeviceSessions(userId, false);
 
-        // Transform sessions for client response
+        
         const devices = sessions.map(session => ({
             deviceId: session.deviceId,
             deviceName: session.deviceName,
@@ -37,10 +31,6 @@ exports.getDevices = async (req, res) => {
     }
 };
 
-/**
- * Revoke a device session
- * POST /api/v2/devices/revoke
- */
 exports.revokeDevice = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -53,7 +43,7 @@ exports.revokeDevice = async (req, res) => {
             });
         }
 
-        // Revoke the device
+        
         const result = await deviceSessionService.revokeDeviceSession(userId, targetDeviceId);
 
         const isCurrentDevice = targetDeviceId === currentDeviceId;
@@ -62,7 +52,7 @@ exports.revokeDevice = async (req, res) => {
         console.log(`   - Is current device: ${isCurrentDevice}`);
         console.log(`   - Refresh tokens revoked: ${result.tokensRevoked}`);
 
-        // PHASE 4A: Log device revocation (best-effort, non-blocking)
+        
         try {
             const securityAudit = require('../../services/securityAudit.service');
             securityAudit.logSecurityEvent({
@@ -76,7 +66,7 @@ exports.revokeDevice = async (req, res) => {
                 }
             });
         } catch (_auditError) {
-            // Silent fail (non-critical)
+            
         }
 
         return res.json({
@@ -103,10 +93,6 @@ exports.revokeDevice = async (req, res) => {
     }
 };
 
-/**
- * Revoke all other device sessions
- * POST /api/v2/devices/revoke-others
- */
 exports.revokeOtherDevices = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -122,7 +108,7 @@ exports.revokeOtherDevices = async (req, res) => {
 
         console.log(`✅ [revokeOtherDevices] Revoked ${revokedCount} other device(s) for user ${userId}`);
 
-        // PHASE 4A: Log revoke all others (best-effort, non-blocking)
+        
         try {
             const securityAudit = require('../../services/securityAudit.service');
             securityAudit.logSecurityEvent({
@@ -135,15 +121,15 @@ exports.revokeOtherDevices = async (req, res) => {
                 }
             });
         } catch (_auditError) {
-            // Silent fail (non-critical)
+            
         }
 
-        // PHASE 4B: Send notification for all devices revoked (best-effort, non-blocking)
+        
         try {
             const User = require('../../models/User');
             const securityNotification = require('../../services/securityNotification.service');
 
-            // Fetch user for email
+            
             const user = await User.findById(userId).lean();
 
             if (user) {
@@ -160,7 +146,7 @@ exports.revokeOtherDevices = async (req, res) => {
                 });
             }
         } catch (_notificationError) {
-            // Silent fail (non-critical)
+            
         }
 
         return res.json({

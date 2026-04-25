@@ -22,21 +22,17 @@ export const WorkspaceProvider = ({ children }) => {
     const [error, setError] = useState(null);
     const { socket } = useSocket();
 
-    // Fetch user's workspaces
+    
     useEffect(() => {
         const fetchWorkspaces = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
-
-
                 const response = await api.get('/api/workspaces/my');
 
-
-
                 if (response.data.workspaces && response.data.workspaces.length > 0) {
-                    // Map to consistent format
+                    
                     const mapped = response.data.workspaces.map(ws => ({
                         id: ws.id,
                         name: ws.name,
@@ -45,19 +41,18 @@ export const WorkspaceProvider = ({ children }) => {
                         type: ws.type,
                         members: ws.members,
                         rules: ws.rules,
-                        role: ws.role // User's role in this workspace (owner, admin, member)
+                        role: ws.role 
                     }));
 
                     setWorkspaces(mapped);
 
-                    // Set active workspace based on URL param
+                    
                     if (workspaceId) {
                         const active = mapped.find(ws =>
                             ws.id === workspaceId || ws.id.toString() === workspaceId
                         );
 
                         if (active) {
-
 
                             setActiveWorkspace(active);
                         } else {
@@ -79,7 +74,7 @@ export const WorkspaceProvider = ({ children }) => {
         fetchWorkspaces();
     }, [workspaceId]);
 
-    // WebSocket Listeners
+    
     useEffect(() => {
         if (!socket) return;
 
@@ -89,7 +84,7 @@ export const WorkspaceProvider = ({ children }) => {
                     ? { ...ws, ...data, id: ws.id }
                     : ws
             ));
-            // Update active workspace using functional updater to avoid stale closure
+            
             setActiveWorkspace(prev =>
                 prev && prev.id === data.workspaceId ? { ...prev, ...data } : prev
             );
@@ -97,7 +92,7 @@ export const WorkspaceProvider = ({ children }) => {
 
         const handleWorkspaceDeleted = (data) => {
             setWorkspaces(prev => prev.filter(ws => ws.id !== data.workspaceId));
-            // Use functional updater to read current active workspace without capturing stale state
+            
             setActiveWorkspace(prev => {
                 if (prev && prev.id === data.workspaceId) {
                     navigate('/');
@@ -114,14 +109,14 @@ export const WorkspaceProvider = ({ children }) => {
             socket.off('workspace-updated', handleWorkspaceUpdated);
             socket.off('workspace-deleted', handleWorkspaceDeleted);
         };
-    }, [socket, navigate]); // Removed stale `activeWorkspace` dep — use functional updater instead
+    }, [socket, navigate]); 
 
-    // Helper: Check if user is member of a workspace
+    
     const isMemberOf = (wsId) => {
         return workspaces.some(ws => ws.id === wsId || ws.id.toString() === wsId);
     };
 
-    // Helper: Refresh workspace data (useful after role changes)
+    
     const refreshWorkspace = async () => {
         try {
 
@@ -141,7 +136,7 @@ export const WorkspaceProvider = ({ children }) => {
 
                 setWorkspaces(mapped);
 
-                // Update active workspace if it exists
+                
                 if (workspaceId) {
                     const active = mapped.find(ws =>
                         ws.id === workspaceId || ws.id.toString() === workspaceId

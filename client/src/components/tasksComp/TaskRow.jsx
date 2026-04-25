@@ -1,4 +1,3 @@
-// components/TaskRow.jsx
 const priorityColors = {
   Emergency: "bg-red-500 text-white",
   High: "bg-orange-500 text-white",

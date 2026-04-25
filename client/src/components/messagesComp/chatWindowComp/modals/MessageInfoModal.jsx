@@ -3,15 +3,6 @@ import { X, CheckCircle2, Clock, Lock, Smile, MessageSquare } from "lucide-react
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
-/**
- * MessageInfoModal
- * Props from backend /api/v2/messages/:id/info:
- *   msg      - { _id, text, payload, createdAt, sender, reactions, readBy: string[] }
- *   members  - [{ _id, username, profilePicture }]
- *   readBy   - string[]  (same as msg.readBy, duped for convenience)
- *   currentUserId - string
- *   onClose  - fn
- */
 export default function MessageInfoModal({ msg, members = [], readBy = [], currentUserId, onClose }) {
     if (!msg) return null;
 
@@ -37,10 +28,10 @@ export default function MessageInfoModal({ msg, members = [], readBy = [], curre
             display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
             fontFamily: FONT,
         }}>
-            {/* Backdrop */}
+            {}
             <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
 
-            {/* Panel */}
+            {}
             <div style={{
                 position: 'relative', zIndex: 10,
                 width: '100%', maxWidth: '380px',
@@ -51,7 +42,7 @@ export default function MessageInfoModal({ msg, members = [], readBy = [], curre
                 boxShadow: '0 -16px 48px rgba(0,0,0,0.5)',
                 overflow: 'hidden',
             }}>
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-default)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <MessageSquare size={14} style={{ color: 'var(--accent)' }} />
@@ -60,7 +51,7 @@ export default function MessageInfoModal({ msg, members = [], readBy = [], curre
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Message preview */}
+                {}
                 <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)' }}>
                     <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', fontFamily: FONT }}>
                         &ldquo;{displayText}&rdquo;
@@ -74,10 +65,10 @@ export default function MessageInfoModal({ msg, members = [], readBy = [], curre
                     </div>
                 </div>
 
-                {/* Scrollable body */}
+                {}
                 <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
 
-                    {/* Reactions */}
+                    {}
                     {msg.reactions && msg.reactions.length > 0 && (
                         <Section>
                             <SectionHeader icon={<Smile size={13} style={{ color: 'var(--accent)' }} />}>
@@ -101,7 +92,7 @@ export default function MessageInfoModal({ msg, members = [], readBy = [], curre
                         </Section>
                     )}
 
-                    {/* Seen by */}
+                    {}
                     <Section>
                         <SectionHeader icon={<CheckCircle2 size={13} style={{ color: 'var(--accent)' }} />}>
                             Seen by {seenByList.length}
@@ -117,7 +108,7 @@ export default function MessageInfoModal({ msg, members = [], readBy = [], curre
                         )}
                     </Section>
 
-                    {/* Delivered to */}
+                    {}
                     <Section>
                         <SectionHeader>Delivered to ({deliveredToList.length})</SectionHeader>
                         {deliveredToList.length > 0 ? (
@@ -132,7 +123,7 @@ export default function MessageInfoModal({ msg, members = [], readBy = [], curre
                     </Section>
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)' }}>
                     <FooterBtn onClick={onClose}>Close</FooterBtn>
                 </div>

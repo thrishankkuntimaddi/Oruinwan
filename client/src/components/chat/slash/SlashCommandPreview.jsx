@@ -1,22 +1,13 @@
 import React from "react";
 import { ArrowRight } from "lucide-react";
 
-/**
- * SlashCommandPreview
- * Preview card shown above the composer after a command is highlighted/selected.
- * Pure mock UI — no backend logic.
- *
- * Props:
- *   command – the full command object (with .preview)
- *   onClose – () => void
- */
 export default function SlashCommandPreview({ command, onClose }) {
   if (!command?.preview) return null;
   const { preview } = command;
 
   return (
     <div className="mx-4 mb-1 bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-bottom-2">
-      {/* Header */}
+      {}
       <div
         className={`flex items-center gap-2.5 px-4 py-2.5 border-b border-gray-100 dark:border-gray-700/60`}
         style={{ background: "linear-gradient(135deg, rgba(59,130,246,0.06) 0%, rgba(139,92,246,0.04) 100%)" }}
@@ -43,7 +34,7 @@ export default function SlashCommandPreview({ command, onClose }) {
         </button>
       </div>
 
-      {/* Action list */}
+      {}
       <div className="px-4 py-2.5 space-y-1.5">
         {preview.actions.map((action, i) => (
           <div key={i} className="flex items-center gap-2.5 group cursor-default">
@@ -61,7 +52,7 @@ export default function SlashCommandPreview({ command, onClose }) {
         ))}
       </div>
 
-      {/* Usage hint */}
+      {}
       {preview.hint && (
         <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700/60 bg-gray-50 dark:bg-gray-800/40">
           <p className="text-[10px] font-mono text-gray-400 dark:text-gray-500 truncate">

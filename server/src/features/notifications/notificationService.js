@@ -1,26 +1,6 @@
-/**
- * notificationService.js
- *
- * Central helper for creating and push-delivering notifications.
- * Usage: await notificationService.create(io, { recipient, workspaceId, type, title, body, link, meta })
- *
- * Also exposes helper methods for common notification patterns:
- *   - mention(io, { mentionedUserId, senderUsername, workspaceId, channelName, channelId, snippet })
- *   - dmReceived(io, { recipientId, senderUsername, workspaceId, dmSessionId, snippet })
- *   - taskAssigned(io, { assigneeId, assignerUsername, workspaceId, taskTitle, taskId })
- *   - taskComment(io, { recipientId, commenterUsername, workspaceId, taskTitle, taskId })
- *   - memberJoined(io, { newUserId, newUsername, workspaceId, recipientIds })
- *   - channelPinned(io, { recipientIds, workspaceId, channelName, channelId, pinnedBy })
- *   - huddleStarted(io, { recipientIds, workspaceId, channelId, channelName, startedBy })
- *   - scheduleCreated(io, { recipientIds, workspaceId, title, scheduledMeetingId })
- */
-
 const Notification = require('../../models/Notification');
 const logger = require('../../../utils/logger');
 
-/**
- * Core create function. Saves to DB and emits via socket.
- */
 async function create(io, { recipient, workspaceId, type, title, body = '', link = null, meta = {} }) {
     try {
         const notif = await Notification.create({
@@ -34,7 +14,7 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
             read: false,
         });
 
-        // Push to user's personal room
+        
         if (io) {
             io.to(`user:${recipient}`).emit('notification:new', {
                 notification: notif.toObject(),
@@ -48,17 +28,12 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
     }
 }
 
-/**
- * Create notifications for multiple recipients at once.
- */
 async function createMany(io, recipients, payload) {
     const results = await Promise.allSettled(
         recipients.map(recipientId => create(io, { ...payload, recipient: recipientId }))
     );
     return results.filter(r => r.status === 'fulfilled').map(r => r.value);
 }
-
-// ── Typed helpers ──────────────────────────────────────────────────────────
 
 async function mention(io, { mentionedUserId, senderUsername, workspaceId, channelName, channelId, snippet }) {
     return create(io, {
@@ -152,12 +127,6 @@ async function scheduleCreated(io, { recipientIds, workspaceId, title, scheduled
     });
 }
 
-/**
- * Notify all thread followers (except the sender) when a new reply is posted.
- *
- * @param {object} io
- * @param {{ followerIds: string[], senderUsername: string, workspaceId: string, channelId: string|null, channelName: string, parentMessageId: string }} opts
- */
 async function threadReply(io, { followerIds, senderUsername, workspaceId, channelId, channelName, parentMessageId }) {
     if (!followerIds || followerIds.length === 0) return;
     return createMany(io, followerIds, {

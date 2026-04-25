@@ -1,10 +1,5 @@
-// client/src/services/auditService.js
-// refactor(consistency): replace raw axios with canonical api.js client
-// Auth token injection and 401 handling now managed by api.js interceptors.
-
 import api from './api';
 
-// Get audit logs with filters
 export const getAuditLogs = async (companyId, filters = {}) => {
     const params = new URLSearchParams();
 
@@ -19,8 +14,6 @@ export const getAuditLogs = async (companyId, filters = {}) => {
     return response.data;
 };
 
-// Export audit logs as CSV
-// NOTE: responseType 'blob' is preserved — api.js supports axios config options
 export const exportAuditLogs = async (companyId, format = 'csv') => {
     const response = await api.get(
         `/api/audit/${companyId}/export?format=${format}`,

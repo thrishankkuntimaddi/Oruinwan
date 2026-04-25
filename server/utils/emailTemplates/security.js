@@ -1,6 +1,3 @@
-// server/utils/emailTemplates/security.js
-// Security notification email templates — Chttrix dark theme
-
 const YEAR = new Date().getFullYear();
 const APP  = 'Chttrix';
 
@@ -109,7 +106,6 @@ function p(text, { size = '14px', color = T.textSub, mt = '0', mb = '16px' } = {
   return `<p style="margin:${mt} 0 ${mb};font-size:${size};color:${color};line-height:1.7">${text}</p>`;
 }
 
-// ─── Login Detection ──────────────────────────────────────────────────────────
 const loginDetectionTemplate = (username, ipAddress, deviceInfo, timestamp, loginUrl) => {
   const formattedTime = new Date(timestamp).toLocaleString('en-US', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',

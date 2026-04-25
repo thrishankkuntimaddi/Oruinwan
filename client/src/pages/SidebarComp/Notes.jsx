@@ -4,7 +4,6 @@ import { useNotes } from "../../contexts/NotesContext";
 import { useToast } from "../../contexts/ToastContext";
 import ConfirmationModal from "../../shared/components/ui/ConfirmationModal";
 
-// Block components
 import TextBlock from "./notesComponents/blocks/TextBlock";
 import ImageBlock from "./notesComponents/blocks/ImageBlock";
 import VideoBlock from "./notesComponents/blocks/VideoBlock";
@@ -17,7 +16,6 @@ import ToggleBlock from "./notesComponents/blocks/ToggleBlock";
 import DividerBlock from "./notesComponents/blocks/DividerBlock";
 import TableBlock from "./notesComponents/blocks/TableBlock";
 
-// UI components
 import EmptyState from "./notesComponents/ui/EmptyState";
 import NoteInfoModal from "./notesComponents/ui/NoteInfoModal";
 import ShareNoteModal from "./notesComponents/ui/ShareNoteModal";
@@ -25,7 +23,6 @@ import SlashCommandMenu from "./notesComponents/ui/SlashCommandMenu";
 import AIPanel from "./notesComponents/ui/AIPanel";
 import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
 
-// Icons
 import {
     Sparkles, Share2, Check, Trash2, MoreHorizontal, Copy, Download,
     Info, Clock, Tag, X, Plus, History, GripVertical, Users,
@@ -50,24 +47,24 @@ const Notes = () => {
     const { allNotes, notes, updateNote, deleteNote, addNote, shareNote, loading, noteVersions, addVersion, loadVersions, togglePin, toggleArchive } = useNotes();
     const { showToast } = useToast();
 
-    // Navigate from universal search
+    
     useEffect(() => {
         const noteIdParam = searchParams.get('noteId');
         if (noteIdParam && noteIdParam !== id) navigate(`/workspace/${workspaceId}/notes/${noteIdParam}`, { replace: true });
     }, [searchParams, id, workspaceId, navigate]);
 
-    // IMPORTANT: Use allNotes (not filteredNotes) so the note resolves regardless of
-    // which section/type filter is active in the sidebar.
+    
+    
     const note = (allNotes || notes).find(n => n.id === id);
 
-    // ── Editor State ──────────────────────────────────────────────────────────
+    
     const [title, setTitle] = useState("");
     const [blocks, setBlocks] = useState([]);
     const [tags, setTags] = useState([]);
     const [tagInput, setTagInput] = useState("");
     const [showTagInput, setShowTagInput] = useState(false);
 
-    // ── UI State ──────────────────────────────────────────────────────────────
+    
     const [showMenu, setShowMenu] = useState(false);
     const [showShareModal, setShowShareModal] = useState(false);
     const [showShareTooltip, setShowShareTooltip] = useState(false);
@@ -77,24 +74,24 @@ const Notes = () => {
     const [showHistory, setShowHistory] = useState(false);
     const [uploadProgress, setUploadProgress] = useState({});
 
-    // ── Slash menu state ──────────────────────────────────────────────────────
+    
     const [slashMenu, setSlashMenu] = useState({ open: false, query: '', blockId: null, position: { x: 0, y: 0 } });
 
-    // ── Block refs (for auto-focus after adding new block) ────────────────────
-    const blockRefsMap = useRef({});  // { [blockId]: domNode }
+    
+    const blockRefsMap = useRef({});  
 
     const registerBlockRef = useCallback((blockId, node) => {
         if (node) blockRefsMap.current[blockId] = node;
         else delete blockRefsMap.current[blockId];
     }, []);
 
-    // ── Drag state ────────────────────────────────────────────────────────────
+    
     const [dragOverId, setDragOverId] = useState(null);
     const dragBlockId = useRef(null);
 
     const menuRef = useRef(null);
 
-    // ── Load note ─────────────────────────────────────────────────────────────
+    
     useEffect(() => {
         if (note) {
             setTitle(note.title || "");
@@ -108,12 +105,12 @@ const Notes = () => {
         }
     }, [note?.id]);
 
-    // Load version history from DB whenever note changes
+    
     useEffect(() => {
         if (id && loadVersions) loadVersions(id);
-    }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [id]); 
 
-    // ── Click outside menu ────────────────────────────────────────────────────
+    
     useEffect(() => {
         const handler = (e) => {
             if (menuRef.current && !menuRef.current.contains(e.target)) setShowMenu(false);
@@ -122,21 +119,21 @@ const Notes = () => {
         return () => document.removeEventListener("mousedown", handler);
     }, []);
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    
     const persistBlocks = useCallback((newBlocks) => {
         const content = JSON.stringify(newBlocks);
-        // Save version snapshot before update
+        
         if (addVersion && id) {
             addVersion(id, { title, content, timestamp: Date.now() });
         }
         updateNote(id, { content });
     }, [id, title, updateNote, addVersion]);
 
-    // updateBlocks: save + take version snapshot on every meaningful change
+    
     const updateBlocks = useCallback((newBlocks) => {
         setBlocks(newBlocks);
         const content = JSON.stringify(newBlocks);
-        // Snapshot for version history (addVersion is stable via useCallback)
+        
         if (addVersion && id) addVersion(id, { title, content, timestamp: Date.now() });
         updateNote(id, { content });
     }, [id, title, updateNote, addVersion]);
@@ -151,7 +148,7 @@ const Notes = () => {
             const newBlocks = prev.map(b =>
                 b.id === blockId ? { ...b, content: newContent, meta: newMeta !== undefined ? newMeta : b.meta } : b
             );
-            // Debounced save — updateNote handles its own debounce
+            
             updateNote(id, { content: JSON.stringify(newBlocks) });
             return newBlocks;
         });
@@ -168,7 +165,7 @@ const Notes = () => {
         return newBlock;
     }, [id, title, updateNote, addVersion]);
 
-    // insertBlockAfter — uses functional setState so never stale
+    
     const insertBlockAfter = useCallback((afterId, type, content = '', meta = {}) => {
         const newBlock = { id: Date.now(), type, content, meta };
         setBlocks(prev => {
@@ -178,7 +175,7 @@ const Notes = () => {
                 : [...prev.slice(0, idx + 1), newBlock, ...prev.slice(idx + 1)];
             if (addVersion && id) addVersion(id, { title, content: JSON.stringify(newBlocks), timestamp: Date.now() });
             updateNote(id, { content: JSON.stringify(newBlocks) });
-            // Auto-focus in next tick
+            
             setTimeout(() => {
                 const node = blockRefsMap.current[newBlock.id];
                 if (node) {
@@ -190,7 +187,7 @@ const Notes = () => {
                         range.collapse(false);
                         sel.removeAllRanges();
                         sel.addRange(range);
-                    } catch { /* input elements don't use range API */ }
+                    } catch {  }
                 }
             }, 50);
             return newBlocks;
@@ -210,7 +207,7 @@ const Notes = () => {
         });
     }, [id, updateNote]);
 
-    // ── Slash command ─────────────────────────────────────────────────────────
+    
     const openSlashMenu = (blockId, query, position) => {
         setSlashMenu({ open: true, query, blockId, position });
     };
@@ -223,12 +220,12 @@ const Notes = () => {
             : '';
 
         if (slashMenu.blockId) {
-            // Check if the triggering block is truly empty (strip HTML tags for TextBlock)
+            
             const domNode = blockRefsMap.current[slashMenu.blockId];
             const isBlocking = domNode ? (domNode.innerText || '').trim() === '' : false;
 
             if (isBlocking) {
-                // Replace the empty block with the selected type
+                
                 setBlocks(prev => {
                     const newBlocks = prev.map(b =>
                         b.id === slashMenu.blockId
@@ -247,7 +244,7 @@ const Notes = () => {
         closeSlashMenu();
     }, [slashMenu.blockId, id, updateNote, insertBlockAfter, addBlock, blockRefsMap]);
 
-    // ── Tags ──────────────────────────────────────────────────────────────────
+    
     const addTag = () => {
         const t = tagInput.trim().replace(/^#/, '').toLowerCase();
         if (t && !tags.includes(t)) {
@@ -265,14 +262,14 @@ const Notes = () => {
         updateNote(id, { tags: newTags });
     };
 
-    // ── Share ─────────────────────────────────────────────────────────────────
+    
     const handleShareModalSave = async (userIds, isPublic) => {
         if (shareNote) await shareNote(id, userIds);
         await updateNote(id, { isPublic, sharedWith: userIds });
         showToast(isPublic ? 'Note visible to entire workspace' : `Shared with ${userIds.length} member${userIds.length !== 1 ? 's' : ''}`, 'success');
     };
 
-    // Copy link to clipboard
+    
     const handleCopyLink = () => {
         navigator.clipboard.writeText(`${window.location.origin}/workspace/${workspaceId}/notes/${id}`);
         setShowShareTooltip(true);
@@ -280,7 +277,7 @@ const Notes = () => {
         showToast('Link copied to clipboard', 'success');
     };
 
-    // ── Duplicate ─────────────────────────────────────────────────────────────
+    
     const handleDuplicate = async () => {
         const newNote = await addNote();
         if (!newNote) return;
@@ -289,7 +286,7 @@ const Notes = () => {
         showToast("Note duplicated", "success");
     };
 
-    // ── PDF download ── full fidelity across all block types ──────────────────
+    
     const handleDownloadPDF = () => {
         const esc = (s) => (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -375,14 +372,14 @@ ${blockHtml}
         setShowMenu(false);
     };
 
-    // ── Delete ────────────────────────────────────────────────────────────────
+    
     const handleDeleteConfirm = () => {
         deleteNote(id);
         setIsDeleteModalOpen(false);
         showToast("Note deleted", "success");
     };
 
-    // ── Version restore ───────────────────────────────────────────────────────
+    
     const handleRestore = (version) => {
         setTitle(version.title || '');
         try {
@@ -394,7 +391,7 @@ ${blockHtml}
         setShowHistory(false);
     };
 
-    // ── Drag-to-reorder ───────────────────────────────────────────────────────
+    
     const handleDragStart = useCallback((e, blockId) => {
         dragBlockId.current = blockId;
         e.dataTransfer.effectAllowed = 'move';
@@ -423,13 +420,13 @@ ${blockHtml}
         dragBlockId.current = null;
     }, [id, updateNote]);
 
-    // ── Insert AI result ──────────────────────────────────────────────────────
+    
     const handleAIInsertBlock = (type, content, meta) => {
         addBlock(type, content, meta);
         showToast("AI result inserted", "success");
     };
 
-    // ── Empty state ───────────────────────────────────────────────────────────
+    
     if (!id || !note) return <EmptyState loading={loading} />;
 
     const typeConf = NOTE_TYPE_CONFIG[note.type] || DEFAULT_TYPE;
@@ -468,7 +465,7 @@ ${blockHtml}
                 onDrop={e => handleDrop(e, block.id)}
                 onDragLeave={() => setDragOverId(null)}
             >
-                {/* Drag handle */}
+                {}
                 <div className="absolute -left-7 top-2 opacity-0 group-hover/block:opacity-40 hover:!opacity-100 cursor-grab active:cursor-grabbing transition-opacity z-10">
                     <GripVertical size={14} style={{ color: 'var(--text-muted)' }} />
                 </div>
@@ -479,12 +476,12 @@ ${blockHtml}
 
     return (
         <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)', position: 'relative', overflow: 'hidden' }}>
-            {/* Main editor column */}
+            {}
             <div className="flex flex-col flex-1 min-w-0">
-                {/* ── Toolbar ── */}
+                {}
                 <div style={{ height: '52px', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-base)', flexShrink: 0, zIndex: 10, position: 'relative' }}>
                     <div className="flex items-center gap-3">
-                        {/* Note type badge — Lucide icon */}
+                        {}
                         <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${typeConf.color}`}>
                             <typeConf.Icon size={12} />
                             {typeConf.label}
@@ -496,7 +493,7 @@ ${blockHtml}
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                        {/* AI button */}
+                        {}
                         <button
                             onClick={() => { setShowAI(v => !v); setShowHistory(false); }}
                             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: showAI ? 'rgba(184,149,106,0.2)' : '#b8956a', border: showAI ? '1px solid rgba(184,149,106,0.4)' : 'none', color: showAI ? '#b8956a' : '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
@@ -508,7 +505,7 @@ ${blockHtml}
 
                         <div className="w-px h-4 bg-gray-200 dark:bg-gray-700 mx-1" />
 
-                        {/* Share */}
+                        {}
                         <button
                             onClick={() => setShowShareModal(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: '1px solid var(--border-default)', cursor: 'pointer', transition: 'all 150ms ease', fontFamily: 'Inter, system-ui, sans-serif' }}
@@ -519,7 +516,7 @@ ${blockHtml}
                             <Users size={13} /> Share
                         </button>
 
-                        {/* History */}
+                        {}
                         <button
                             onClick={() => { setShowHistory(v => !v); setShowAI(false); }}
                             style={{ padding: '6px', background: showHistory ? 'rgba(184,149,106,0.15)' : 'transparent', border: 'none', color: showHistory ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
@@ -530,7 +527,7 @@ ${blockHtml}
                             <History size={16} />
                         </button>
 
-                        {/* Pin / Favorite */}
+                        {}
                         <button
                             onClick={() => togglePin && togglePin(id)}
                             style={{ padding: '6px', background: note.isPinned ? 'rgba(251,191,36,0.1)' : 'transparent', border: 'none', color: note.isPinned ? '#fbbf24' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
@@ -541,7 +538,7 @@ ${blockHtml}
                             <Star size={16} className={note.isPinned ? 'fill-current' : ''} />
                         </button>
 
-                        {/* Archive */}
+                        {}
                         <button
                             onClick={() => toggleArchive && toggleArchive(id)}
                             style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
@@ -552,7 +549,7 @@ ${blockHtml}
                             <Archive size={16} />
                         </button>
 
-                        {/* Delete */}
+                        {}
                         <button onClick={() => setIsDeleteModalOpen(true)}
                             style={{ padding: '6px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
                             title="Delete note"
@@ -562,7 +559,7 @@ ${blockHtml}
                             <Trash2 size={16} />
                         </button>
 
-                        {/* More menu */}
+                        {}
                         <div className="relative" ref={menuRef}>
                             <button onClick={() => setShowMenu(v => !v)}
                                 style={{ padding: '6px', background: showMenu ? 'rgba(255,255,255,0.07)' : 'transparent', border: 'none', color: showMenu ? 'var(--text-primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
@@ -599,10 +596,10 @@ ${blockHtml}
                     </div>
                 </div>
 
-                {/* ── Editor area ── */}
+                {}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     <div className="max-w-3xl mx-auto px-12 py-10 min-h-full flex flex-col">
-                        {/* Title */}
+                        {}
                         <input
                             type="text"
                             value={title}
@@ -617,7 +614,7 @@ ${blockHtml}
                             placeholder="Untitled Note"
                         />
 
-                        {/* Tags row */}
+                        {}
                         <div className="flex flex-wrap items-center gap-2 mb-6 min-h-[28px]">
                             {tags.map(tag => (
                                 <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 10px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', color: '#b8956a', fontSize: '11px', fontWeight: 600, fontFamily: 'monospace' }}>
@@ -650,12 +647,12 @@ ${blockHtml}
                             )}
                         </div>
 
-                        {/* Blocks */}
+                        {}
                         <div className="space-y-1 flex-1 pl-8 -ml-8">
                             {blocks.map(block => renderBlock(block))}
                         </div>
 
-                        {/* Add block prompt */}
+                        {}
                         <div
                             style={{ marginTop: '24px', padding: '12px 0', fontSize: '12px', color: 'var(--text-muted)', cursor: 'text', userSelect: 'none', transition: 'color 150ms ease' }}
                             onClick={() => addBlock('text', '')}
@@ -667,7 +664,7 @@ ${blockHtml}
                             </span>
                         </div>
 
-                        {/* Block type quick-add bar */}
+                        {}
                         <div className="mt-4 flex items-center gap-1.5 opacity-40 hover:opacity-100 transition-opacity flex-wrap">
                             {[
                                 { type: 'text', label: 'Text', emoji: 'T' },
@@ -695,7 +692,7 @@ ${blockHtml}
                 </div>
             </div>
 
-            {/* ── AI Panel ── */}
+            {}
             {showAI && (
                 <AIPanel
                     blocks={blocks}
@@ -705,7 +702,7 @@ ${blockHtml}
                 />
             )}
 
-            {/* ── Version History Panel ── */}
+            {}
             {showHistory && (
                 <VersionHistoryPanel
                     versions={versions}
@@ -716,7 +713,7 @@ ${blockHtml}
                 />
             )}
 
-            {/* ── Slash Command Menu ── */}
+            {}
             {slashMenu.open && (
                 <SlashCommandMenu
                     position={slashMenu.position}
@@ -726,7 +723,7 @@ ${blockHtml}
                 />
             )}
 
-            {/* ── Modals ── */}
+            {}
             <NoteInfoModal note={note} blocks={blocks} showInfoModal={showInfoModal} setShowInfoModal={setShowInfoModal} />
             {showShareModal && (
                 <ShareNoteModal

@@ -10,7 +10,7 @@ export default function TaskCompletionModal({ task, onClose, onConfirm, mode = "
         onConfirm(note);
     };
 
-    // Theme-aware accent colours
+    
     const accentColor  = isDeletion ? 'var(--state-danger)'  : isPersonal ? 'var(--state-success)' : '#3b82f6';
     const accentBg     = isDeletion ? 'rgba(201,64,64,0.07)' : isPersonal ? 'rgba(58,143,106,0.07)' : 'rgba(59,130,246,0.07)';
     const accentBorder = isDeletion ? 'rgba(201,64,64,0.15)' : isPersonal ? 'rgba(58,143,106,0.15)' : 'rgba(59,130,246,0.15)';
@@ -22,7 +22,7 @@ export default function TaskCompletionModal({ task, onClose, onConfirm, mode = "
         >
             <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '420px', overflow: 'hidden', boxShadow: 'var(--card-shadow)' }}>
 
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border-subtle)', background: accentBg }}>
                     <h2 style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif', margin: 0 }}>
                         <span style={{ padding: '6px', background: accentBorder, display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentColor }}>
@@ -40,7 +40,7 @@ export default function TaskCompletionModal({ task, onClose, onConfirm, mode = "
                     </button>
                 </div>
 
-                {/* Body */}
+                {}
                 <div style={{ padding: '20px' }}>
                     {isDeletion ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
@@ -89,7 +89,7 @@ export default function TaskCompletionModal({ task, onClose, onConfirm, mode = "
                     )}
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '12px 20px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-base)' }}>
                     <button
                         onClick={onClose}

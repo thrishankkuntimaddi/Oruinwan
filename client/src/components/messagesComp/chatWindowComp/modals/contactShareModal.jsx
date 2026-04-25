@@ -1,4 +1,3 @@
-// src/components/messageComp/chatWindow/modals/contactShareModal.jsx
 import React, { useState } from "react";
 import { X } from "lucide-react";
 
@@ -27,13 +26,13 @@ export default function ContactShareModal({ contacts, onShare, onClose }) {
                 overflow: 'hidden',
                 position: 'relative',
             }}>
-                {/* Header */}
+                {}
                 <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                     <h4 style={{ margin: 0, fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)', fontFamily: FONT }}>Share Contact</h4>
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* List */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     {list.map((c, i) => (
                         <ContactRow key={i} contact={c} onShare={onShare} />

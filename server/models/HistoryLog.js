@@ -1,13 +1,12 @@
-// server/models/HistoryLog.js
 const mongoose = require("mongoose");
 
 const HistoryLogSchema = new mongoose.Schema({
     company: { type: mongoose.Schema.Types.ObjectId, ref: "Company", default: null },
 
-    // Who performed the action
+    
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
 
-    // Action details
+    
     action: {
         type: String,
         required: true,
@@ -45,27 +44,26 @@ const HistoryLogSchema = new mongoose.Schema({
         ]
     },
 
-    // Resource affected
+    
     resourceType: {
         type: String,
         enum: ["user", "company", "workspace", "channel", "message", "task", "note", "update", "invite", "other"]
     },
     resourceId: { type: mongoose.Schema.Types.ObjectId },
 
-    // Details
+    
     description: { type: String, required: true },
-    metadata: { type: mongoose.Schema.Types.Mixed }, // additional context
+    metadata: { type: mongoose.Schema.Types.Mixed }, 
 
-    // IP and device info
+    
     ipAddress: { type: String },
     userAgent: { type: String },
 
-    // Timestamp
+    
     timestamp: { type: Date, default: Date.now }
 
-}, { timestamps: false }); // We're using custom timestamp field
+}, { timestamps: false }); 
 
-// Indexes for querying
 HistoryLogSchema.index({ company: 1, timestamp: -1 });
 HistoryLogSchema.index({ user: 1, timestamp: -1 });
 HistoryLogSchema.index({ action: 1, timestamp: -1 });

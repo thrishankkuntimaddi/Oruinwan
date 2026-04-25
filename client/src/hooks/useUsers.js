@@ -1,15 +1,14 @@
-// client/src/hooks/useUsers.js
 import { useState, useEffect, useCallback } from 'react';
 import { userService } from '../services/userService';
 
 export const useUsers = (companyId) => {
     const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(false); // false initially
+    const [loading, setLoading] = useState(false); 
     const [error, setError] = useState(null);
 
     const loadUsers = useCallback(async () => {
         if (!companyId) {
-            // No company ID - personal user, no users to load
+            
             setUsers([]);
             setLoading(false);
             return;
@@ -21,7 +20,7 @@ export const useUsers = (companyId) => {
 
             const response = await userService.getCompanyMembers(companyId);
 
-            // Transform to expected format
+            
             const formattedUsers = response.data.members.map(member => ({
                 id: member._id,
                 name: member.username,
@@ -45,7 +44,7 @@ export const useUsers = (companyId) => {
         if (companyId) {
             loadUsers();
         } else {
-            // No companyId - set empty users and not loading
+            
             setUsers([]);
             setLoading(false);
         }

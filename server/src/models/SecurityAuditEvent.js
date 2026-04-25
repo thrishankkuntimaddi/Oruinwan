@@ -1,23 +1,6 @@
-// server/src/models/SecurityAuditEvent.js
-
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-/**
- * SecurityAuditEvent Model
- * 
- * PHASE 4A: Security observability and audit logging
- * 
- * Purpose:
- * - Record sensitive security events for observability
- * - Append-only, read-only audit trail
- * - Help users track security-related activities
- * 
- * CRITICAL:
- * - This is observability ONLY, not enforcement
- * - Failures MUST NOT affect main execution paths
- * - Never store secrets, keys, or sensitive crypto material
- */
 const SecurityAuditEventSchema = new Schema({
     userId: {
         type: String,
@@ -37,7 +20,7 @@ const SecurityAuditEventSchema = new Schema({
             'IDENTITY_RECOVERED',
             'DEVICE_REVOKED_ACCESS_BLOCKED',
             'FAILED_CRYPTO_ACCESS',
-            // PHASE 4D: KEK rotation events
+            
             'SERVER_KEK_ROTATION_STARTED',
             'SERVER_KEK_ROTATION_COMPLETED',
             'SERVER_KEK_ROTATION_FAILED'
@@ -75,10 +58,8 @@ const SecurityAuditEventSchema = new Schema({
     }
 });
 
-// Compound index for efficient user queries
 SecurityAuditEventSchema.index({ userId: 1, createdAt: -1 });
 
-// Virtual: formatted event type for display
 SecurityAuditEventSchema.virtual('eventDescription').get(function () {
     const descriptions = {
         'LOGIN_NEW_DEVICE': 'New device login',

@@ -7,7 +7,6 @@ import { useToast } from '../../contexts/ToastContext';
 
 const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 
-// ── Shared inline styles ──────────────────────────────────────────────────────
 const inputStyle = {
     width: '100%',
     padding: '8px 12px',
@@ -23,7 +22,6 @@ const inputStyle = {
     transition: 'border-color 150ms ease',
 };
 
-// ── Confirm modal ─────────────────────────────────────────────────────────────
 const ConfirmModal = ({ title, body, confirmLabel, confirmDanger, onCancel, onConfirm, loading, confirmWord, confirmText, setConfirmText }) => (
     <div style={{
         position: 'fixed', inset: 0,
@@ -97,7 +95,6 @@ const ConfirmModal = ({ title, body, confirmLabel, confirmDanger, onCancel, onCo
     </div>
 );
 
-// ── AdvancedTab ───────────────────────────────────────────────────────────────
 const AdvancedTab = () => {
     const { logout } = useAuth();
     const { showToast } = useToast();
@@ -149,7 +146,7 @@ const AdvancedTab = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* ── Data Export ──────────────────────────────────────────── */}
+            {}
             <Card title="Data Export" subtitle="Download your personal data (GDPR compliant)">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
                     <div>
@@ -189,7 +186,7 @@ const AdvancedTab = () => {
                 </div>
             </Card>
 
-            {/* ── Deactivate Account ───────────────────────────────────── */}
+            {}
             <Card title="Deactivate Account" subtitle="Temporarily disable your account">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
                     <div>
@@ -219,7 +216,7 @@ const AdvancedTab = () => {
                 </div>
             </Card>
 
-            {/* ── Delete Account ────────────────────────────────────────── */}
+            {}
             <Card title="Delete Account" subtitle="Permanently remove your account and all data">
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 24 }}>
                     <div>
@@ -253,7 +250,7 @@ const AdvancedTab = () => {
                 </div>
             </Card>
 
-            {/* ── Deactivate Modal ─────────────────────────────────────── */}
+            {}
             {showDeactivateModal && (
                 <ConfirmModal
                     title="Deactivate Account?"
@@ -266,7 +263,7 @@ const AdvancedTab = () => {
                 />
             )}
 
-            {/* ── Delete Modal ──────────────────────────────────────────── */}
+            {}
             {showDeleteModal && (
                 <ConfirmModal
                     title="Delete Account Permanently?"

@@ -1,24 +1,3 @@
-/**
- * notificationEventEmitter.js
- *
- * Singleton centralized EventEmitter for the Chttrix notification system.
- * Modules emit named events; this file subscribes and calls notificationService.
- *
- * USAGE — in any module:
- *   const notifEmitter = require('../notifications/notificationEventEmitter');
- *   notifEmitter.emit('task.assigned', { io, assigneeId, assignerUsername, workspaceId, taskTitle, taskId });
- *
- * EVENTS HANDLED:
- *   message.sent         → mention / dm notification
- *   thread.reply         → thread follower notification
- *   task.assigned        → task_assigned notification + email
- *   task.due_soon        → task_due_soon notification
- *   meeting.scheduled    → schedule_created notification + email
- *   meeting.reminder     → meeting_reminder notification
- *   integration.webhook_failed → integration_alert notification
- *   ai.suggestion        → ai_suggestion notification
- */
-
 const EventEmitter = require('events');
 const logger = require('../../../utils/logger');
 const { taskAssignedTemplate, meetingScheduledTemplate } = require('../../../utils/emailTemplates');
@@ -28,23 +7,20 @@ class NotificationEventEmitter extends EventEmitter {}
 const emitter = new NotificationEventEmitter();
 emitter.setMaxListeners(50);
 
-// Lazy-load to avoid circular dependency issues
 const getNotifService = () => require('./notificationService');
 const getEmailService = () => require('./emailNotificationService');
 const getPrefs = () => require('./notificationPreferenceService');
 
-// ─── Helper: check user pref before creating notification ─────────────────────
 async function shouldNotify(userId, workspaceId, prefKey) {
     try {
         const prefService = getPrefs();
         const prefs = await prefService.getUserPreferences(userId, workspaceId);
-        return prefs[prefKey] !== false; // default true if not set
+        return prefs[prefKey] !== false; 
     } catch {
-        return true; // fail-open: always notify if prefs unavailable
+        return true; 
     }
 }
 
-// ─── message.sent ─────────────────────────────────────────────────────────────
 emitter.on('message.sent', async ({ io, mentionedUserIds = [], senderUsername, workspaceId, channelName, channelId, snippet, recipientId, dmSessionId, isMention }) => {
     try {
         const notifService = getNotifService();
@@ -65,7 +41,6 @@ emitter.on('message.sent', async ({ io, mentionedUserIds = [], senderUsername, w
     }
 });
 
-// ─── thread.reply ─────────────────────────────────────────────────────────────
 emitter.on('thread.reply', async ({ io, followerIds = [], senderUsername, workspaceId, channelId, channelName, parentMessageId }) => {
     try {
         const notifService = getNotifService();
@@ -81,7 +56,6 @@ emitter.on('thread.reply', async ({ io, followerIds = [], senderUsername, worksp
     }
 });
 
-// ─── task.assigned ────────────────────────────────────────────────────────────
 emitter.on('task.assigned', async ({ io, assigneeId, assignerUsername, workspaceId, taskTitle, taskId, assigneeEmail }) => {
     try {
         const notifService = getNotifService();
@@ -89,11 +63,11 @@ emitter.on('task.assigned', async ({ io, assigneeId, assignerUsername, workspace
             await notifService.taskAssigned(io, { assigneeId, assignerUsername, workspaceId, taskTitle, taskId });
         }
 
-        // Email notification
+        
         const emailService = getEmailService();
         if (await shouldNotify(assigneeId, workspaceId, 'email') && assigneeEmail) {
             const tpl = taskAssignedTemplate(
-                null,         // we don't have assignee name here, falls back to generic
+                null,         
                 taskTitle,
                 assignerUsername,
                 `${process.env.FRONTEND_URL || '#'}/tasks/${taskId || ''}`
@@ -109,7 +83,6 @@ emitter.on('task.assigned', async ({ io, assigneeId, assignerUsername, workspace
     }
 });
 
-// ─── task.due_soon ────────────────────────────────────────────────────────────
 emitter.on('task.due_soon', async ({ io, assigneeId, workspaceId, taskTitle, taskId, dueDate }) => {
     try {
         const notifService = getNotifService();
@@ -129,7 +102,6 @@ emitter.on('task.due_soon', async ({ io, assigneeId, workspaceId, taskTitle, tas
     }
 });
 
-// ─── meeting.scheduled ────────────────────────────────────────────────────────
 emitter.on('meeting.scheduled', async ({ io, recipientIds = [], workspaceId, title, meetingId, recipientEmails = [] }) => {
     try {
         const notifService = getNotifService();
@@ -143,7 +115,7 @@ emitter.on('meeting.scheduled', async ({ io, recipientIds = [], workspaceId, tit
             await notifService.scheduleCreated(io, { recipientIds: allowed, workspaceId, title, scheduledMeetingId: meetingId });
         }
 
-        // Email to recipients who have email enabled
+        
         for (let i = 0; i < recipientIds.length; i++) {
             const email = recipientEmails[i];
             if (email && await shouldNotify(recipientIds[i], workspaceId, 'email')) {
@@ -160,7 +132,6 @@ emitter.on('meeting.scheduled', async ({ io, recipientIds = [], workspaceId, tit
     }
 });
 
-// ─── meeting.reminder ─────────────────────────────────────────────────────────
 emitter.on('meeting.reminder', async ({ io, recipientIds = [], workspaceId, title, meetingId, startsIn }) => {
     try {
         const notifService = getNotifService();
@@ -183,7 +154,6 @@ emitter.on('meeting.reminder', async ({ io, recipientIds = [], workspaceId, titl
     }
 });
 
-// ─── integration.webhook_failed ──────────────────────────────────────────────
 emitter.on('integration.webhook_failed', async ({ io, adminIds = [], workspaceId, integrationName, errorMessage }) => {
     try {
         const notifService = getNotifService();
@@ -202,7 +172,6 @@ emitter.on('integration.webhook_failed', async ({ io, adminIds = [], workspaceId
     }
 });
 
-// ─── ai.suggestion ───────────────────────────────────────────────────────────
 emitter.on('ai.suggestion', async ({ io, userId, workspaceId, title, body, link }) => {
     try {
         const notifService = getNotifService();
@@ -222,14 +191,10 @@ emitter.on('ai.suggestion', async ({ io, userId, workspaceId, title, body, link 
     }
 });
 
-// ─── Error handler ────────────────────────────────────────────────────────────
 emitter.on('error', (err) => {
     logger.error('[NotificationEventEmitter] Unhandled error:', err.message);
 });
 
-// ─── Automation Hooks ─────────────────────────────────────────────────────────
-// These are PURELY ADDITIVE — no existing handlers are modified.
-// Lazy-load automationService to avoid circular dependency issues.
 const getAutomationService = () => {
     try { return require('../automations/automation.service'); } catch { return null; }
 };

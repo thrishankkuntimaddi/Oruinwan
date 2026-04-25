@@ -1,23 +1,11 @@
-/**
- * Chttrix — Push Notification Routes
- * Allows mobile clients to register/unregister device tokens.
- *
- * POST /api/push/register   — register a device push token
- * POST /api/push/unregister — remove a device push token
- */
 'use strict';
 
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 
-// Middleware: require authenticated user (matches server.js pattern)
 const requireAuth = require('../src/shared/middleware/auth');
 
-/**
- * POST /api/push/register
- * Body: { token: string, platform: 'ios' | 'android' | 'web' }
- */
 router.post('/register', requireAuth, async (req, res) => {
   try {
     const { token, platform } = req.body;
@@ -42,10 +30,6 @@ router.post('/register', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * POST /api/push/unregister
- * Body: { token: string }
- */
 router.post('/unregister', requireAuth, async (req, res) => {
   try {
     const { token } = req.body;

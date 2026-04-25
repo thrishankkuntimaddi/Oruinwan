@@ -28,16 +28,16 @@ const NotesToolbar = ({
       background: '#0e0e0e', borderBottom: '1px solid var(--border-subtle)',
       flexShrink: 0, zIndex: 10, position: 'relative',
     }}>
-      {/* Left: last edited */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
         <Clock size={12} />
         <span>Last edited {formattedDate}</span>
       </div>
 
-      {/* Right: action buttons */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
 
-        {/* AI Button */}
+        {}
         <button onClick={handleAI}
           style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 12px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.02em', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
           onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
@@ -49,7 +49,7 @@ const NotesToolbar = ({
 
         <div style={{ width: '1px', height: '20px', background: 'var(--bg-active)', margin: '0 4px' }} />
 
-        {/* Share */}
+        {}
         <button onClick={handleShare}
           style={{ ...BTN.base, padding: '6px' }}
           title="Copy Link"
@@ -61,7 +61,7 @@ const NotesToolbar = ({
             : <Share2 size={17} />}
         </button>
 
-        {/* Delete */}
+        {}
         <button onClick={() => setIsDeleteModalOpen(true)}
           style={{ ...BTN.base, padding: '6px' }}
           title="Delete Note"
@@ -71,7 +71,7 @@ const NotesToolbar = ({
           <Trash2 size={17} />
         </button>
 
-        {/* More ⋯ */}
+        {}
         <div style={{ position: 'relative' }} ref={menuRef}>
           <button onClick={() => setShowMenu(!showMenu)}
             style={{ ...BTN.base, padding: '6px', background: showMenu ? 'rgba(255,255,255,0.07)' : 'transparent', color: showMenu ? '#e4e4e4' : 'rgba(228,228,228,0.35)' }}

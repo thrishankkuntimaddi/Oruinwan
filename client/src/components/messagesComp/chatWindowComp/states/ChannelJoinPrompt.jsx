@@ -1,20 +1,7 @@
-// client/src/components/messagesComp/chatWindowComp/states/ChannelJoinPrompt.jsx
-
-// ⚠️ UI-ONLY COMPONENT
-// Do NOT add business logic, socket handlers, or state management here.
-// This component must remain props-only.
-
 import { Lock, Loader2 } from 'lucide-react';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
-/**
- * ChannelJoinPrompt - Gate screen for non-members viewing discoverable public channels
- * @param {string} chatName - Name of the channel
- * @param {boolean} isJoining - Whether join operation is in progress
- * @param {function} onJoinChannel - Join button click handler
- * @param {function} onIgnore - Ignore button click handler
- */
 function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
     return (
         <div style={{
@@ -28,7 +15,7 @@ function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
             backgroundColor: 'var(--bg-primary)',
             fontFamily: FONT,
         }}>
-            {/* Lock Icon */}
+            {}
             <div style={{
                 width: '80px',
                 height: '80px',
@@ -44,7 +31,7 @@ function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
                 <Lock size={36} style={{ color: 'var(--accent)' }} />
             </div>
 
-            {/* Message */}
+            {}
             <h2 style={{
                 color: 'var(--text-primary)',
                 fontSize: '1.25rem',
@@ -69,7 +56,7 @@ function ChannelJoinPrompt({ chatName, isJoining, onJoinChannel, onIgnore }) {
                 Would you like to join <strong style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{chatName}</strong> to start viewing and sending messages?
             </p>
 
-            {/* Action Buttons */}
+            {}
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', width: '100%', maxWidth: '340px' }}>
                 <button
                     onClick={onJoinChannel}

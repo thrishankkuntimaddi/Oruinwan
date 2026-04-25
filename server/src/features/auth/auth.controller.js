@@ -1,5 +1,3 @@
-// server/controllers/authController.js
-
 'use strict';
 
 const crypto = require('crypto');
@@ -18,7 +16,6 @@ const {
 const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
 
-// Production hardening utilities
 const { saveWithRetry } = require('../../../utils/mongooseRetry');
 const { setRefreshTokenCookie, clearRefreshTokenCookie } = require('../../../utils/cookieHelper');
 const { _TIME } = require('../../../constants');
@@ -28,9 +25,6 @@ const logger = require('../../shared/utils/logger');
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// ----------------------------------------------------
-// HELPERS
-// ----------------------------------------------------
 const ACCESS_EXPIRES = process.env.ACCESS_EXPIRES || "15m";
 const REFRESH_DAYS = parseInt(process.env.REFRESH_TOKEN_DAYS || "7", 10);
 
@@ -39,10 +33,10 @@ function generateAccessToken(user) {
     {
       sub: user._id.toString(),
       roles: user.roles,
-      // SECURITY FIX (BUG-3): Embed companyRole in JWT so checkRole middleware
-      // can evaluate it without an extra DB call. This also eliminates the extra
-      // User.findById() call inside requireOwner/requireAdmin/requireManager when
-      // they fall back to DB lookup because companyRole was absent from the token.
+      
+      
+      
+      
       companyRole: user.companyRole || null
     },
     process.env.ACCESS_TOKEN_SECRET,
@@ -58,9 +52,6 @@ function generateRefreshToken(user) {
   );
 }
 
-// ----------------------------------------------------
-// SIGNUP (with Company Assignment Logic)
-// ----------------------------------------------------
 exports.signup = async (req, res) => {
   logger.debug('signup invoked');
   try {
@@ -72,11 +63,11 @@ exports.signup = async (req, res) => {
     if (await User.findOne({ email }))
       return res.status(409).json({ message: "Email already in use" });
 
-    // Check for duplicate username
+    
     if (await User.findOne({ username }))
       return res.status(409).json({ message: "Username already in use" });
 
-    // Check for duplicate phone number (if provided)
+    
     if (phone) {
       const existingPhone = await User.findOne({ phone: phone });
       if (existingPhone) {
@@ -89,7 +80,7 @@ exports.signup = async (req, res) => {
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = sha256(rawToken);
 
-    // Initialize user data
+    
     let userType = "personal";
     let companyId = null;
     let companyRole = "member";
@@ -97,7 +88,7 @@ exports.signup = async (req, res) => {
     let assignedDepartment = null;
     let assignedManager = null;
 
-    // ==================== COMPANY ASSIGNMENT LOGIC ====================
+    
 
     const emailLower = email.toLowerCase();
     const Company = require("../../../models/Company");
@@ -105,13 +96,13 @@ exports.signup = async (req, res) => {
     const Workspace = require("../../../models/Workspace");
     const Channel = require("../channels/channel.model.js");
 
-    // Helper to extract domain
+    
     const extractDomain = (email) => {
       const match = email.match(/@(.+)$/);
       return match ? match[1].toLowerCase() : null;
     };
 
-    // 1. Check for pending invite (highest priority)
+    
     if (inviteToken) {
       const inviteHash = sha256(inviteToken);
       const invite = await Invite.findOne({
@@ -132,19 +123,17 @@ exports.signup = async (req, res) => {
           workspacesToJoin.push(invite.workspace);
         }
 
-        // Mark invite as used
-        invite.status = 'accepted'; // Update status
+        
+        invite.status = 'accepted'; 
         invite.used = true;
-        invite.usedBy = null; // Will be set after user creation (requires slight flow adjustment or 2nd save)
+        invite.usedBy = null; 
         await invite.save();
       } else {
-        // ... invalid token logic
+        
       }
     }
 
-
-
-    // 2. Check if email is in any company's allowedEmails list
+    
     if (!companyId) {
       const companyWithAllowedEmail = await Company.findOne({
         allowedEmails: emailLower,
@@ -163,7 +152,7 @@ exports.signup = async (req, res) => {
       }
     }
 
-    // 3. Check for domain-based auto-join (if domain verified + auto-join enabled)
+    
     if (!companyId) {
       const domain = extractDomain(emailLower);
 
@@ -188,9 +177,9 @@ exports.signup = async (req, res) => {
       }
     }
 
-    // If no company match, user remains personal
+    
 
-    // ==================== CREATE USER ====================
+    
 
     const user = new User({
       username,
@@ -203,48 +192,48 @@ exports.signup = async (req, res) => {
       companyRole,
       verificationTokenHash: tokenHash,
       verificationTokenExpires: Date.now() + 86400000,
-      verified: false, // Users must verify email before logging in,
+      verified: false, 
       departments: assignedDepartment ? [assignedDepartment] : [],
       reportsTo: assignedManager
     });
 
-    // ==================== ASSIGN RANDOM AVATAR ====================
-    // Ensure no user ever starts with a blank profile picture.
-    // Pick from the same 100-avatar professional library used in the Settings picker.
+    
+    
+    
     const AVATAR_POOL = [
-      // Illustrated — lorelei-neutral
+      
       ['lorelei-neutral', 'Alexandra'], ['lorelei-neutral', 'Jordan'], ['lorelei-neutral', 'Morgan'],
       ['lorelei-neutral', 'Cameron'], ['lorelei-neutral', 'Avery'], ['lorelei-neutral', 'Quinn'],
       ['lorelei-neutral', 'Riley'], ['lorelei-neutral', 'Reese'], ['lorelei-neutral', 'Sage'],
       ['lorelei-neutral', 'Emery'], ['lorelei-neutral', 'Parker'], ['lorelei-neutral', 'Hayden'],
       ['lorelei-neutral', 'Finley'], ['lorelei-neutral', 'River'], ['lorelei-neutral', 'Kendall'],
-      // Notion-style — notionists-neutral
+      
       ['notionists-neutral', 'Atlas'], ['notionists-neutral', 'Cleo'], ['notionists-neutral', 'Darwin'],
       ['notionists-neutral', 'Elliot'], ['notionists-neutral', 'Fable'], ['notionists-neutral', 'Glen'],
       ['notionists-neutral', 'Haven'], ['notionists-neutral', 'Inigo'], ['notionists-neutral', 'Jules'],
       ['notionists-neutral', 'Knox'], ['notionists-neutral', 'Lael'], ['notionists-neutral', 'Maren'],
       ['notionists-neutral', 'Noel'], ['notionists-neutral', 'Orion'], ['notionists-neutral', 'Piper'],
-      // Minimal — micah
+      
       ['micah', 'Adam'], ['micah', 'Benjamin'], ['micah', 'Charles'], ['micah', 'Daniel'],
       ['micah', 'Edward'], ['micah', 'Francis'], ['micah', 'George'], ['micah', 'Hannah'],
       ['micah', 'Isabelle'], ['micah', 'Julian'], ['micah', 'Katrina'], ['micah', 'Leonard'],
       ['micah', 'Margaret'], ['micah', 'Nathan'], ['micah', 'Olivia'],
-      // Geometric — identicon
+      
       ['identicon', 'Alpha01'], ['identicon', 'Beta02'], ['identicon', 'Gamma03'], ['identicon', 'Delta04'],
       ['identicon', 'Epsilon05'], ['identicon', 'Zeta06'], ['identicon', 'Eta07'], ['identicon', 'Theta08'],
       ['identicon', 'Iota09'], ['identicon', 'Kappa10'], ['identicon', 'Lambda11'], ['identicon', 'Mu12'],
       ['identicon', 'Nu13'], ['identicon', 'Xi14'], ['identicon', 'Omicron15'],
-      // Abstract — rings
+      
       ['rings', 'Cobalt'], ['rings', 'Crimson'], ['rings', 'Dune'], ['rings', 'Eclipse'],
       ['rings', 'Flux'], ['rings', 'Granite'], ['rings', 'Horizon'], ['rings', 'Indigo'],
       ['rings', 'Jasper'], ['rings', 'Lunar'], ['rings', 'Marble'], ['rings', 'Nordic'],
       ['rings', 'Onyx'], ['rings', 'Prism'],
-      // Shapes
+      
       ['shapes', 'Apex'], ['shapes', 'Bolt'], ['shapes', 'Core'], ['shapes', 'Drive'],
       ['shapes', 'Edge'], ['shapes', 'Forge'], ['shapes', 'Grid'], ['shapes', 'Hub'],
       ['shapes', 'Ion'], ['shapes', 'Jolt'], ['shapes', 'Key'], ['shapes', 'Link'],
       ['shapes', 'Matrix'], ['shapes', 'Node'],
-      // Classic — miniavs
+      
       ['miniavs', 'Prof1'], ['miniavs', 'Prof2'], ['miniavs', 'Prof3'], ['miniavs', 'Prof4'],
       ['miniavs', 'Prof5'], ['miniavs', 'Prof6'], ['miniavs', 'Prof7'], ['miniavs', 'Prof8'],
       ['miniavs', 'Prof9'], ['miniavs', 'Prof10'], ['miniavs', 'Prof11'], ['miniavs', 'Prof12'],
@@ -255,42 +244,41 @@ exports.signup = async (req, res) => {
 
     await saveWithRetry(user);
 
-
-    // ==================== WORKSPACE ASSIGNMENT ====================
+    
 
     if (companyId && workspacesToJoin.length > 0) {
       for (const workspaceId of workspacesToJoin) {
         const workspace = await Workspace.findById(workspaceId);
 
         if (workspace && !workspace.isMember(user._id)) {
-          // Add user to workspace
+          
           workspace.members.push({
             user: user._id,
             role: "member"
           });
           await workspace.save();
 
-          // Add workspace to user's workspaces array
+          
           user.workspaces.push({
             workspace: workspaceId,
             role: "member"
           });
 
-          // Add to default channels in this workspace
+          
           const defaultChannels = await Channel.find({
             workspace: workspaceId,
             isDefault: true
           });
 
           for (const channel of defaultChannels) {
-            // Check if already member (handle both old and new format)
+            
             const isAlreadyMember = channel.members.some(m => {
               const memberId = m.user ? m.user.toString() : m.toString();
               return memberId === user._id.toString();
             });
 
             if (!isAlreadyMember) {
-              // 🔧 FIX: Convert all existing members to new format before adding new member
+              
               channel.members = channel.members.map(m => {
                 if (m.user) return m;
                 return {
@@ -314,14 +302,14 @@ exports.signup = async (req, res) => {
       await saveWithRetry(user);
     }
 
-    // NOTE: Removed automatic personal workspace creation
-    // Users will now create workspaces manually from the /workspaces page
+    
+    
 
-    // ==================== EMAIL VERIFICATION (OPTIONAL) ====================
+    
 
     const verifyUrl = `${process.env.FRONTEND_URL}/verify-email?token=${rawToken}&email=${encodeURIComponent(email)}`;
 
-    // Send verification email (or log to console in development)
+    
     try {
       const emailTpl = verifyEmailTemplate(username, verifyUrl);
       await sendEmail({
@@ -347,9 +335,6 @@ exports.signup = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// VERIFY EMAIL
-// ----------------------------------------------------
 exports.verifyEmail = async (req, res) => {
   logger.debug('verifyEmail invoked');
   try {
@@ -384,9 +369,6 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// LOGIN
-// ----------------------------------------------------
 exports.login = async (req, res) => {
   logger.debug('login invoked');
   try {
@@ -395,11 +377,11 @@ exports.login = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: "Email and password required" });
 
-    // -------------------------------------------------------------------------
-    // STRICT AUTHENTICATION LOGIC
-    // -------------------------------------------------------------------------
+    
+    
+    
 
-    // 1. EXTRACT DOMAIN & IDENTIFY TYPE
+    
     const matchDomain = email.match(/@(.+)$/);
     const domain = matchDomain ? matchDomain[1].toLowerCase() : null;
     let isCompanyAccount = false;
@@ -407,11 +389,11 @@ exports.login = async (req, res) => {
 
     const Company = require("../../../models/Company");
 
-    // Check if strict public provider (gmail, outlook, etc.) - Simplified check
-    // In a real app we might have a list of public providers. 
-    // For now, we check if the domain exists in our Company DB.
+    
+    
+    
     if (domain) {
-      // Find company by domain
+      
       const company = await Company.findOne({ domain: domain, isActive: true });
       if (company) {
         if (company.verificationStatus === 'rejected') {
@@ -422,17 +404,17 @@ exports.login = async (req, res) => {
       }
     }
 
-    // 2. FIND USER
-    // We search by email. 
+    
+    
     const user = await User.findOne({ email }).populate("companyId");
 
     if (!user) {
-      // Security: Don't reveal if user exists vs wrong password, but for dev clarity:
+      
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // SECURITY FIX (C-2): Enforce brute-force lockout BEFORE running bcrypt.
-    // bcrypt is deliberately slow; skipping it on locked accounts avoids DoS amplification.
+    
+    
     if (user.lockedUntil && user.lockedUntil > new Date()) {
       const minutesLeft = Math.ceil((user.lockedUntil - Date.now()) / 60000);
       return res.status(429).json({
@@ -440,13 +422,13 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 3. VALIDATE PASSWORD
+    
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) {
-      // Increment failed attempt counter
+      
       user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
 
-      // Lock account after 5 consecutive failures (15-minute cooldown)
+      
       if (user.failedLoginAttempts >= 5) {
         user.lockedUntil = new Date(Date.now() + 15 * 60 * 1000);
         user.failedLoginAttempts = 0;
@@ -455,7 +437,7 @@ exports.login = async (req, res) => {
 
       await user.save();
 
-      // Phase 3 — Security: log failed login attempt (non-blocking)
+      
       if (user.companyId) {
         const { logSecurityEvent } = require('../security/security.service');
         logSecurityEvent({
@@ -471,35 +453,35 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // 🔒 Check if password login is disabled for OAuth users
+    
     if (user.authProvider && user.authProvider !== 'local' && !user.passwordLoginEnabled) {
       return res.status(403).json({
         message: "Password login has been disabled for this account. Please use OAuth login."
       });
     }
 
-    // 🔒 CHECK IF ACCOUNT IS DEACTIVATED
+    
     if (user.deactivatedAt) {
-      // Generate OTP for reactivation
+      
       const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-      // Initialize otpCodes array if it doesn't exist
+      
       if (!user.otpCodes) {
         user.otpCodes = [];
       }
 
-      // Save OTP to user record
+      
       user.otpCodes.push({
         code: otpCode,
         type: 'reactivation',
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), 
         used: false
       });
 
       await user.save();
       logger.info({ email }, '[LOGIN] OTP saved for deactivated user reactivation');
 
-      // Send OTP email
+      
       try {
         const reactivateTpl = reactivateAccountTemplate(user.username, otpCode);
         await sendEmail({
@@ -526,41 +508,41 @@ exports.login = async (req, res) => {
       return res.status(403).json({ message: "Account Suspended." });
     }
 
-    // 4. CROSS-CHECK WITH DETECTED COMPANY CONTEXT
-    // The user provided logic: "if it is a company's account... check password... open gate"
-    // We implicitly did this. Now we define the redirect.
+    
+    
+    
 
-    let redirectTo = "/workspaces"; // Default for personal/member/guest
+    let redirectTo = "/workspaces"; 
     let isAdmin = false;
 
     if (isCompanyAccount) {
-      // Ensure the user actually belongs to this company in the DB
+      
       if (!user.companyId || user.companyId._id.toString() !== targetCompanyId.toString()) {
-        // Domain matches a company, but user record isn't linked to it?
-        // This implies a mismatch or they are a guest/personal user using a company email (unlikely if verified).
-        // However, per logic "Thrishank is present inside that companies users...".
-        // We'll trust the User record's role mapping.
+        
+        
+        
+        
       }
 
-      // Strict Role Redirection
-      const role = user.companyRole; // owner, admin, manager, member, guest
+      
+      const role = user.companyRole; 
 
-      // 🔧 Check setup completion for owners and admins
-      const company = user.companyId; // Already populated from line 372
+      
+      const company = user.companyId; 
       const needsSetup = company && !company.isSetupComplete;
 
       if (role === 'owner' || role === 'admin') {
         isAdmin = true;
 
         if (needsSetup) {
-          // Redirect to confirmation/setup flow
+          
           if (!company.setupStep || company.setupStep === 0) {
-            redirectTo = "/company/confirm";  // Start with confirmation
+            redirectTo = "/company/confirm";  
           } else {
-            redirectTo = "/company/setup";    // Resume setup
+            redirectTo = "/company/setup";    
           }
         } else {
-          // Setup complete, go to appropriate dashboard
+          
           if (role === 'owner') {
             redirectTo = "/owner/dashboard";
           } else {
@@ -570,28 +552,28 @@ exports.login = async (req, res) => {
       } else if (role === 'manager') {
         redirectTo = "/manager/dashboard";
       } else {
-        // member, guest
+        
         redirectTo = "/workspaces";
       }
     } else {
-      // Personal Account
+      
       redirectTo = "/workspaces";
     }
 
-    // Special Override: Platform Admin
+    
     if (user.roles && user.roles.includes('chttrix_admin')) {
       redirectTo = "/chttrix-admin";
     }
 
-    // -------------------------------------------------------------------------
-    // SESSION & TOKENS (Existing Logic)
-    // -------------------------------------------------------------------------
+    
+    
+    
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
     const refreshHash = sha256(refreshToken);
 
-    // Enforce Max 3 Sessions
+    
     if (user.refreshTokens.length >= 3) {
       user.refreshTokens.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
       while (user.refreshTokens.length >= 3) {
@@ -605,24 +587,24 @@ exports.login = async (req, res) => {
       deviceInfo: req.get("User-Agent") || "Unknown",
     });
 
-    // Capture first-login BEFORE overwriting lastLoginAt
+    
     const isFirstLogin = user.lastLoginAt === null || user.lastLoginAt === undefined;
 
-    // SECURITY FIX (C-2): Reset brute-force counters on successful login
+    
     user.failedLoginAttempts = 0;
     user.lockedUntil = null;
 
     user.lastLoginAt = new Date();
     user.isOnline = true;
 
-    // 📊 Track login method (password login)
+    
     user.lastLoginMethod = 'password';
     user.lastLoginMethodAt = new Date();
 
     await saveWithRetry(user);
     setRefreshTokenCookie(res, refreshToken);
 
-    // Phase 3 — Security: log successful login (non-blocking)
+    
     if (user.companyId) {
       const { logSecurityEvent } = require('../security/security.service');
       logSecurityEvent({
@@ -635,7 +617,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Prepare User Object for Response
+    
     const responseUser = {
       id: user._id,
       username: user.username,
@@ -648,23 +630,23 @@ exports.login = async (req, res) => {
       profilePicture: user.profilePicture,
       userStatus: user.userStatus,
       preferences: user.preferences,
-      // Temporary password flags — needed by frontend for gating
+      
       isTemporaryPassword: user.isTemporaryPassword || false,
-      passwordInitialized: user.passwordInitialized !== false, // safe default = true for existing users
+      passwordInitialized: user.passwordInitialized !== false, 
     };
 
     const response = {
       message: "Login successful",
       accessToken,
-      // SECURITY FIX (H-1): refreshToken intentionally excluded from JSON body.
-      // It is already set securely via HttpOnly cookie by setRefreshTokenCookie() above.
-      // Returning it in the response body would expose it to XSS attacks.
+      
+      
+      
       user: responseUser,
       redirectTo: redirectTo,
       isAdmin: isAdmin
     };
 
-    // Add Company Data if exists
+    
     if (user.companyId) {
       response.company = {
         id: user.companyId._id,
@@ -676,21 +658,21 @@ exports.login = async (req, res) => {
       };
       response.user.companyStatus = user.companyId.verificationStatus;
 
-      // Safety check for pending companies
+      
       if (user.companyId.verificationStatus === 'pending') {
         response.redirectTo = "/pending-verification";
       }
     }
 
-    // ─── TEMPORARY PASSWORD GATE ─────────────────────────────────────────────
-    // If the user was bulk-imported and hasn't set their own password yet,
-    // override the redirect to force them through the mandatory setup page.
-    // The access token is still issued so they can call /setup-temp-password.
+    
+    
+    
+    
     if (user.isTemporaryPassword && !user.passwordInitialized) {
       response.redirectTo = '/setup-password';
       response.requiresPasswordSetup = true;
     }
-    // ─────────────────────────────────────────────────────────────────────────
+    
 
     return res.json(response);
 
@@ -699,9 +681,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// REFRESH TOKEN
-// ----------------------------------------------------
 exports.refresh = async (req, res) => {
   logger.debug('refresh invoked');
   const MAX_RETRIES = 3;
@@ -709,7 +688,7 @@ exports.refresh = async (req, res) => {
 
   while (attempts < MAX_RETRIES) {
     try {
-      // Accept refresh token from cookie (same-origin) OR request body (cross-origin fallback)
+      
       const refreshToken = req.cookies?.jwt || req.body?.refreshToken;
 
       if (!refreshToken) {
@@ -733,7 +712,7 @@ exports.refresh = async (req, res) => {
 
       logger.debug({ email: user.email }, '[REFRESH] User found');
 
-      // Verify JWT signature
+      
       try {
         jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET);
         logger.debug('[REFRESH] JWT signature valid');
@@ -760,7 +739,7 @@ exports.refresh = async (req, res) => {
         deviceInfo: req.get('User-Agent') || 'Unknown'
       });
 
-      // Clean up truly expired tokens
+      
       const beforeCleanup = user.refreshTokens.length;
       user.refreshTokens = user.refreshTokens.filter(
         t => t.expiresAt > new Date()
@@ -773,7 +752,7 @@ exports.refresh = async (req, res) => {
       await user.save();
       logger.debug('[REFRESH] User tokens persisted');
 
-      // Always set the cookie (works for same-origin)
+      
       setRefreshTokenCookie(res, newRefresh);
 
       logger.debug('[REFRESH] Token refresh completed successfully');
@@ -793,9 +772,6 @@ exports.refresh = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// LOGOUT
-// ----------------------------------------------------
 exports.logout = async (req, res) => {
   try {
     const token = req.cookies?.jwt;
@@ -818,9 +794,6 @@ exports.logout = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// LOGOUT ALL
-// ----------------------------------------------------
 exports.logoutAll = async (req, res) => {
   try {
     const token = req.cookies?.jwt;
@@ -834,15 +807,15 @@ exports.logoutAll = async (req, res) => {
       return res.json({ message: "Logged out" });
     }
 
-    // SECURITY FIX (BUG-9): Verify the token hash exists in the DB before wiping all sessions.
-    // Previously, any JWT-valid refresh token (even a stale/rotated one no longer in the DB)
-    // could trigger a logoutAll for the decoded user. An attacker who obtained an old rotated
-    // token could use it to force-logout all of a victim's active sessions (targeted DoS).
+    
+    
+    
+    
     const tokenHash = sha256(token);
     const user = await User.findOne({ 'refreshTokens.tokenHash': tokenHash });
 
     if (!user) {
-      // Token not found in DB — already rotated or invalid. Treat as already logged out.
+      
       clearRefreshTokenCookie(res);
       return res.json({ message: 'Logged out' });
     }
@@ -858,9 +831,6 @@ exports.logoutAll = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// FORGOT PASSWORD
-// ----------------------------------------------------
 exports.forgotPassword = async (req, res) => {
   console.log('🔄 [MODULAR AUTH] Function invoked: forgotPassword');
   try {
@@ -882,7 +852,7 @@ exports.forgotPassword = async (req, res) => {
 
     const url = `${process.env.FRONTEND_URL}/reset-password?token=${raw}&email=${encodeURIComponent(email)}`;
 
-    // Send reset email (or log to console in development)
+    
     try {
       const template = passwordResetTemplate(user.username, url);
       await sendEmail({
@@ -893,7 +863,7 @@ exports.forgotPassword = async (req, res) => {
       });
       console.log(`✅ Password reset email sent to ${email}`);
     } catch (_emailError) {
-      // If SMTP not configured, log the link to console (for development)
+      
       console.log("\n" + "=".repeat(80));
       console.log("🔐 PASSWORD RESET LINK (SMTP not configured)");
       console.log("=".repeat(80));
@@ -909,9 +879,6 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// RESET PASSWORD
-// ----------------------------------------------------
 exports.resetPassword = async (req, res) => {
   console.log('🔄 [MODULAR AUTH] Function invoked: resetPassword');
   try {
@@ -941,35 +908,32 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// GET /me
-// ----------------------------------------------------
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub)
       .select("-passwordHash -refreshTokens")
       .populate('companyId');
 
-    // Migration: Ensure primary email is in emails array
+    
     if (!user.emails || user.emails.length === 0) {
       user.emails = [{
         email: user.email,
-        verified: true, // Assume existing emails are verified
+        verified: true, 
         isPrimary: true,
         addedAt: user.createdAt || new Date()
       }];
       await saveWithRetry(user);
     } else {
-      // Check if primary email exists in array
+      
       const primaryExists = user.emails.some(e => e.isPrimary);
       if (!primaryExists) {
-        // Find if main email is in array
+        
         const mainEmailEntry = user.emails.find(e => e.email === user.email);
         if (mainEmailEntry) {
           mainEmailEntry.isPrimary = true;
           await saveWithRetry(user);
         } else {
-          // Add main email as primary
+          
           user.emails.unshift({
             email: user.email,
             verified: true,
@@ -981,10 +945,10 @@ exports.getMe = async (req, res) => {
       }
     }
 
-    // Convert user to plain object and map emails with id field
+    
     const userObject = user.toObject();
 
-    // Normalize company data
+    
     if (userObject.companyId && typeof userObject.companyId === 'object') {
       userObject.company = {
         id: userObject.companyId._id,
@@ -994,11 +958,11 @@ exports.getMe = async (req, res) => {
         isSetupComplete: userObject.companyId.isSetupComplete,
         setupStep: userObject.companyId.setupStep
       };
-      // Keep companyId as ID string for consistency with some checks if needed, 
-      // or just leave it as object. 
-      // For now, let's keep it consistent with Login which seems to return ID string in user.companyId
-      // But populate() replaced it. 
-      // Let's just rely on user.company for the rich data.
+      
+      
+      
+      
+      
     }
 
     if (userObject.emails) {
@@ -1011,54 +975,54 @@ exports.getMe = async (req, res) => {
       }));
     }
 
-    // Migration: Handle legacy phone format (combined phone+code in phone field)
+    
     if (userObject.phone && userObject.phone.startsWith('+')) {
-      // Phone is in old format: "+919381870544"
-      // Parse it to split into phoneCode and phone
+      
+      
       const phoneMatch = userObject.phone.match(/^(\+\d{1,3})(\d+)$/);
 
       if (phoneMatch) {
-        const extractedCode = phoneMatch[1]; // e.g., "+91"
-        const extractedPhone = phoneMatch[2]; // e.g., "9381870544"
+        const extractedCode = phoneMatch[1]; 
+        const extractedPhone = phoneMatch[2]; 
 
-        // Update user in database with split format
+        
         user.phoneCode = extractedCode;
         user.phone = extractedPhone;
         await saveWithRetry(user);
 
-        // Update the response object
+        
         userObject.phoneCode = extractedCode;
         userObject.phone = extractedPhone;
 
         console.log(`📞 Migrated phone for user ${user.email}: ${extractedCode} ${extractedPhone}`);
       }
     } else if (userObject.phone && /^\d{11,13}$/.test(userObject.phone)) {
-      // Phone is stored as plain number without + (e.g., "918989898989")
-      // Try to detect country code from the number itself
-      let extractedCode = "+1"; // Default
+      
+      
+      let extractedCode = "+1"; 
       let extractedPhone = userObject.phone;
 
-      // Check for common country code patterns
+      
       if (userObject.phone.startsWith('91') && userObject.phone.length === 12) {
-        // Indian number: 91 + 10 digits
+        
         extractedCode = "+91";
         extractedPhone = userObject.phone.substring(2);
       } else if (userObject.phone.startsWith('44') && userObject.phone.length === 12) {
-        // UK number: 44 + 10 digits
+        
         extractedCode = "+44";
         extractedPhone = userObject.phone.substring(2);
       } else if (userObject.phone.startsWith('1') && userObject.phone.length === 11) {
-        // US/Canada number: 1 + 10 digits
+        
         extractedCode = "+1";
         extractedPhone = userObject.phone.substring(1);
       }
 
-      // Update user in database
+      
       user.phoneCode = extractedCode;
       user.phone = extractedPhone;
       await saveWithRetry(user);
 
-      // Update response object
+      
       userObject.phoneCode = extractedCode;
       userObject.phone = extractedPhone;
 
@@ -1072,27 +1036,24 @@ exports.getMe = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// UPDATE PROFILE
-// ----------------------------------------------------
 exports.updateMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub);
 
-    // Basic Info Updates
+    
     if (req.body.username !== undefined) user.username = req.body.username;
     if (req.body.phone !== undefined) user.phone = req.body.phone;
     if (req.body.phoneCode !== undefined) user.phoneCode = req.body.phoneCode;
 
-    // Profile Updates
+    
     if (!user.profile) user.profile = {};
 
-    // Date of Birth validation - only update if a valid non-empty value is provided
+    
     if (req.body.dob !== undefined && req.body.dob !== "") {
       const dob = new Date(req.body.dob);
       const today = new Date();
 
-      // Check if date is valid
+      
       if (isNaN(dob.getTime())) {
         return res.status(400).json({ message: "Invalid date of birth" });
       }
@@ -1109,7 +1070,7 @@ exports.updateMe = async (req, res) => {
       user.profile.dob = dob;
     }
 
-    // About field with character limit - only update if provided
+    
     if (req.body.about !== undefined && req.body.about !== "") {
       const about = req.body.about.trim();
       if (about.length > 500) {
@@ -1118,7 +1079,7 @@ exports.updateMe = async (req, res) => {
       user.profile.about = about;
     }
 
-    // Address update
+    
     if (req.body.address !== undefined) {
       user.profile.address = req.body.address;
     }
@@ -1126,17 +1087,17 @@ exports.updateMe = async (req, res) => {
     if (req.body.company !== undefined) user.profile.company = req.body.company;
     if (req.body.showCompany !== undefined) user.profile.showCompany = req.body.showCompany;
 
-    // Preference Updates
+    
     if (!user.preferences) user.preferences = {};
     if (req.body.preferences) {
       if (req.body.preferences.theme) user.preferences.theme = req.body.preferences.theme;
     }
 
-    // Check for duplicate phone number before saving (if phone is being updated)
+    
     if (req.body.phone !== undefined && req.body.phone) {
       const existingUser = await User.findOne({
         phone: req.body.phone,
-        _id: { $ne: user._id } // Exclude current user
+        _id: { $ne: user._id } 
       });
 
       if (existingUser) {
@@ -1174,7 +1135,7 @@ exports.updateMe = async (req, res) => {
       message: _err.message
     });
 
-    // Handle MongoDB duplicate key errors
+    
     if (_err.code === 11000) {
       const field = Object.keys(_err.keyPattern || {})[0];
       return res.status(409).json({
@@ -1186,12 +1147,9 @@ exports.updateMe = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// UPDATE PASSWORD
-// ----------------------------------------------------
 exports.updatePassword = async (req, res) => {
   try {
-    // Support both currentPassword (from client) and oldPassword (legacy)
+    
     const { currentPassword, oldPassword, newPassword } = req.body;
     const passwordToCheck = currentPassword || oldPassword;
 
@@ -1222,9 +1180,6 @@ exports.updatePassword = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// SET PASSWORD (For OAuth Users)
-// ----------------------------------------------------
 exports.setPassword = async (req, res) => {
   console.log('🔄 [MODULAR AUTH] Function invoked: setPassword (OAuth)');
   try {
@@ -1240,14 +1195,14 @@ exports.setPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if user is OAuth user (Google/GitHub/LinkedIn)
+    
     if (!user.authProvider || user.authProvider === 'local') {
       return res.status(400).json({
         message: "This endpoint is only for OAuth users. Use password change endpoint instead."
       });
     }
 
-    // Validate password strength (same as updatePassword)
+    
     const strong =
       password.length >= 8 &&
       password.length <= 16 &&
@@ -1261,15 +1216,15 @@ exports.setPassword = async (req, res) => {
       });
     }
 
-    // Set the password and timestamp
+    
     user.passwordHash = await bcrypt.hash(password, 12);
-    user.passwordSetAt = new Date(); // Track when password was set
-    user.passwordLoginEnabled = true; // ✅ Enable password login for OAuth user
+    user.passwordSetAt = new Date(); 
+    user.passwordLoginEnabled = true; 
     await saveWithRetry(user);
 
     console.log(`✅ Password set for OAuth user: ${user.email} (${user.authProvider})`);
 
-    // Send confirmation email
+    
     try {
       const { passwordSetTemplate } = require('../../../utils/emailTemplates');
       const template = passwordSetTemplate(user.username, user.authProvider);
@@ -1283,7 +1238,7 @@ exports.setPassword = async (req, res) => {
 
       console.log(`📧 Password set confirmation email sent to ${user.email}`);
     } catch (emailErr) {
-      // Email not critical - don't fail the request
+      
       console.warn('⚠️ Failed to send password set confirmation email:', emailErr.message);
       console.log(`💡 Password was set successfully for ${user.email}, but email notification failed (SMTP may not be configured)`);
     }
@@ -1298,9 +1253,6 @@ exports.setPassword = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// GOOGLE LOGIN (FINAL)
-// ----------------------------------------------------
 exports.googleLogin = async (req, res) => {
   console.log('🔄 [MODULAR AUTH] Function invoked: googleLogin');
   try {
@@ -1332,11 +1284,11 @@ exports.googleLogin = async (req, res) => {
 
     let user = await User.findOne({ email });
 
-    // Track if this is a new user
+    
     let isNewUser = false;
     let needsPasswordSetup = false;
 
-    // CREATE USER IF NEW
+    
     if (!user) {
       isNewUser = true;
       needsPasswordSetup = true;
@@ -1351,18 +1303,18 @@ exports.googleLogin = async (req, res) => {
         googleId,
         profilePicture: picture,
         googleAccount: true,
-        authProvider: "google", // ✅ Required for setPassword endpoint to work
-        passwordHash: randomHash, // <-- SAFE DEFAULT
+        authProvider: "google", 
+        passwordHash: randomHash, 
       });
     } else {
-      // Existing user - check if they need to set up password
-      // If they only have Google login (no custom password), they might need to set one
+      
+      
       if (user.googleAccount && !user.passwordHash) {
         needsPasswordSetup = true;
       }
     }
 
-    // TOKENS
+    
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
 
@@ -1371,20 +1323,20 @@ exports.googleLogin = async (req, res) => {
       expiresAt: new Date(Date.now() + 7 * 86400000),
     });
 
-    // 📊 Track login method (OAuth login)
+    
     user.lastLoginMethod = 'oauth';
     user.lastLoginMethodAt = new Date();
 
     await saveWithRetry(user);
 
-    // Set refresh token cookie
+    
     setRefreshTokenCookie(res, refreshToken);
 
     return res.json({
       message: "Google login success",
       accessToken,
-      isFirstLogin: isNewUser,  // Client checks for isFirstLogin
-      requiresPasswordSetup: needsPasswordSetup,  // Client checks for requiresPasswordSetup
+      isFirstLogin: isNewUser,  
+      requiresPasswordSetup: needsPasswordSetup,  
       user: {
         username: user.username,
         email: user.email,
@@ -1400,41 +1352,33 @@ exports.googleLogin = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// OPTIONAL REDIRECT GOOGLE FLOW
-// ----------------------------------------------------
 exports.googleAuth = exports.googleLogin;
 
-// ----------------------------------------------------
-// SESSION MANAGEMENT
-// ----------------------------------------------------
-
-// GET /sessions
 exports.getSessions = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Identify current session
+    
     const currentToken = req.cookies?.jwt;
     const currentHash = currentToken ? sha256(currentToken) : null;
 
-    // ---------------------------------------------------------
-    // DEDUPLICATION & CLEANUP:
-    // Remove duplicate tokens (same hash) to prevent "double current" bugs
-    // ---------------------------------------------------------
+    
+    
+    
+    
 
     const seenHashes = new Set();
     const uniqueTokens = [];
     let isDirty = false;
 
-    // Process from newest to oldest (if we assume array is roughly ordered)
-    // or just iterate and keep first.
-    // Let's iterate normally.
+    
+    
+    
     for (const t of user.refreshTokens) {
       if (seenHashes.has(t.tokenHash)) {
 
-        isDirty = true; // Found a duplicate, will need to save
+        isDirty = true; 
         continue;
       }
       seenHashes.add(t.tokenHash);
@@ -1444,22 +1388,22 @@ exports.getSessions = async (req, res) => {
     if (isDirty) {
 
       user.refreshTokens = uniqueTokens;
-      user.markModified('refreshTokens'); // Explicitly mark as modified
+      user.markModified('refreshTokens'); 
       await saveWithRetry(user);
     }
-    // ---------------------------------------------------------
+    
 
     const sessions = user.refreshTokens.map(t => {
-      // Simple parser for device info (User-Agent)
+      
       let deviceType = "desktop";
       const ua = (t.deviceInfo || "").toLowerCase();
 
-      // Basic Detection
+      
       if (ua.includes("mobile") || ua.includes("iphone") || ua.includes("android")) {
         deviceType = "mobile";
       }
 
-      // Detailed OS Name
+      
       let deviceName = "Unknown Device";
       if (ua.includes("mac os")) deviceName = "MacBook / Mac";
       else if (ua.includes("windows")) deviceName = "Windows PC";
@@ -1468,7 +1412,7 @@ exports.getSessions = async (req, res) => {
       else if (ua.includes("linux")) deviceName = "Linux Machine";
       else if (ua.includes("cros")) deviceName = "Chromebook";
 
-      // Browser Detection to differentiate "MacBook" sessions
+      
       let browser = "";
       if (ua.includes("chrome") && !ua.includes("edg") && !ua.includes("opr")) browser = "Chrome";
       else if (ua.includes("safari") && !ua.includes("chrome")) browser = "Safari";
@@ -1479,7 +1423,7 @@ exports.getSessions = async (req, res) => {
       return {
         id: t._id,
         device: deviceName,
-        browser: browser, // Send specific browser info
+        browser: browser, 
         os: deviceType,
         location: "Unknown",
         lastActive: t.createdAt,
@@ -1487,7 +1431,7 @@ exports.getSessions = async (req, res) => {
       };
     });
 
-    // Sort for Response: Current first, then by date desc
+    
     sessions.sort((a, b) => {
       if (a.current) return -1;
       if (b.current) return 1;
@@ -1501,15 +1445,14 @@ exports.getSessions = async (req, res) => {
   }
 };
 
-// DELETE /sessions/:id
 exports.revokeSession = async (req, res) => {
   try {
     const sessionId = req.params.id;
     const user = await User.findById(req.user.sub);
 
-    // If session ID matches current session, maybe we should warn or just do it (logout)
-    // But usually client handles "current" logout via /logout endpoint
-    // This endpoint is for revoking *other* sessions usually
+    
+    
+    
 
     user.refreshTokens.pull({ _id: sessionId });
     await saveWithRetry(user);
@@ -1521,7 +1464,6 @@ exports.revokeSession = async (req, res) => {
   }
 };
 
-// DELETE /sessions/others
 exports.revokeOtherSessions = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub);
@@ -1533,13 +1475,13 @@ exports.revokeOtherSessions = async (req, res) => {
 
     const currentHash = sha256(currentToken);
 
-    // Keep ONLY the current session (Strict: Find first match and discard EVERYTHING else)
+    
     const activeToken = user.refreshTokens.find(t => t.tokenHash === currentHash);
 
     if (activeToken) {
-      user.refreshTokens = [activeToken]; // Reset array to just this one
+      user.refreshTokens = [activeToken]; 
     } else {
-      // Should be impossible if logged in, but safe fallback
+      
       user.refreshTokens = [];
     }
 
@@ -1553,11 +1495,6 @@ exports.revokeOtherSessions = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// EMAIL MANAGEMENT
-// ----------------------------------------------------
-
-// Add new email
 exports.addEmail = async (req, res) => {
   try {
     const { email } = req.body;
@@ -1567,7 +1504,7 @@ exports.addEmail = async (req, res) => {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    // Validate email format
+    
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return res.status(400).json({ message: "Invalid email format" });
@@ -1576,17 +1513,17 @@ exports.addEmail = async (req, res) => {
     const normalizedEmail = email.toLowerCase();
     const user = await User.findById(userId);
 
-    // Check if user already has 5 emails
+    
     if (user.emails && user.emails.length >= 5) {
       return res.status(400).json({ message: "Maximum 5 email addresses allowed" });
     }
 
-    // Check if email already exists for this user
+    
     if (user.emails && user.emails.some(e => e.email === normalizedEmail)) {
       return res.status(400).json({ message: "Email already added to your account" });
     }
 
-    // Check if email exists for any other user (in email field or emails array)
+    
     const existingUser = await User.findOne({
       $or: [
         { email: normalizedEmail },
@@ -1598,12 +1535,12 @@ exports.addEmail = async (req, res) => {
       return res.status(400).json({ message: "Email already in use" });
     }
 
-    // Generate verification code
+    
     const code = generateVerificationCode();
     const tokenHash = sha256(code);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
 
-    // Add email to array
+    
     if (!user.emails) user.emails = [];
 
     user.emails.push({
@@ -1616,9 +1553,9 @@ exports.addEmail = async (req, res) => {
 
     await saveWithRetry(user);
 
-    // Send verification email
+    
     let devCode = null;
-    // Development Log (Always show code in console)
+    
     console.log("\n" + "=".repeat(80));
     console.log(`📧 VERIFICATION CODE: ${code}`);
     console.log("=".repeat(80) + "\n");
@@ -1634,7 +1571,7 @@ exports.addEmail = async (req, res) => {
     } catch (emailErr) {
       console.error("Failed to send verification email:", emailErr);
 
-      // Development mode: Always log code when email fails (SMTP not configured)
+      
       console.log("\n" + "=".repeat(80));
       console.log(`📧 EMAIL VERIFICATION CODE (SMTP not configured)`);
       console.log("=".repeat(80));
@@ -1665,7 +1602,6 @@ exports.addEmail = async (req, res) => {
   }
 };
 
-// Verify email with code
 exports.verifyEmailCode = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1687,18 +1623,18 @@ exports.verifyEmailCode = async (req, res) => {
       return res.status(400).json({ message: "Email already verified" });
     }
 
-    // Check if code matches
+    
     const codeHash = sha256(code);
     if (emailEntry.verificationTokenHash !== codeHash) {
       return res.status(400).json({ message: "Invalid verification code" });
     }
 
-    // Check if code expired
+    
     if (new Date() > emailEntry.verificationTokenExpires) {
       return res.status(400).json({ message: "Verification code expired. Please request a new one." });
     }
 
-    // Mark as verified
+    
     emailEntry.verified = true;
     emailEntry.verificationTokenHash = undefined;
     emailEntry.verificationTokenExpires = undefined;
@@ -1722,7 +1658,6 @@ exports.verifyEmailCode = async (req, res) => {
   }
 };
 
-// Resend verification code
 exports.resendVerification = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1739,22 +1674,22 @@ exports.resendVerification = async (req, res) => {
       return res.status(400).json({ message: "Email already verified" });
     }
 
-    // Generate new code
+    
     const code = generateVerificationCode();
     const tokenHash = sha256(code);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); 
 
     emailEntry.verificationTokenHash = tokenHash;
     emailEntry.verificationTokenExpires = expiresAt;
 
     await saveWithRetry(user);
 
-    // Development Log (Always show code in console)
+    
     console.log("\n" + "=".repeat(80));
     console.log(`📧 VERIFICATION CODE: ${code}`);
     console.log("=".repeat(80) + "\n");
 
-    // Send verification email
+    
     try {
       const template = emailVerificationTemplate(user.username, code);
       await sendEmail({
@@ -1768,7 +1703,7 @@ exports.resendVerification = async (req, res) => {
     } catch (emailErr) {
       console.error("Failed to send verification email:", emailErr);
 
-      // Development mode: Always log code when email fails
+      
       console.log("\n" + "=".repeat(80));
       console.log(`📧 EMAIL VERIFICATION CODE (SMTP not configured)`);
       console.log("=".repeat(80));
@@ -1784,7 +1719,6 @@ exports.resendVerification = async (req, res) => {
   }
 };
 
-// Set email as primary
 exports.setPrimaryEmail = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1801,15 +1735,15 @@ exports.setPrimaryEmail = async (req, res) => {
       return res.status(400).json({ message: "Cannot set unverified email as primary" });
     }
 
-    // Set all emails to not primary
+    
     user.emails.forEach(e => {
       e.isPrimary = false;
     });
 
-    // Set target email as primary
+    
     emailEntry.isPrimary = true;
 
-    // Update main email field
+    
     user.email = emailEntry.email;
 
     await saveWithRetry(user);
@@ -1831,7 +1765,6 @@ exports.setPrimaryEmail = async (req, res) => {
   }
 };
 
-// Delete email
 exports.deleteEmail = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1848,13 +1781,13 @@ exports.deleteEmail = async (req, res) => {
       return res.status(400).json({ message: "Cannot delete primary email. Set another email as primary first." });
     }
 
-    // Check if this is the only verified email (excluding primary)
+    
     const verifiedEmails = user.emails.filter(e => e.verified);
     if (verifiedEmails.length === 1 && emailEntry.verified) {
       return res.status(400).json({ message: "Cannot delete your only verified email" });
     }
 
-    // Remove email
+    
     user.emails.pull(id);
     await saveWithRetry(user);
 
@@ -1875,9 +1808,6 @@ exports.deleteEmail = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// SKIP PASSWORD SETUP (OAuth Users)
-// ----------------------------------------------------
 exports.skipPassword = async (req, res) => {
   console.log('🔄 [MODULAR AUTH] Function invoked: skipPassword');
   try {
@@ -1888,7 +1818,7 @@ exports.skipPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Only allow for OAuth users who haven't set a password
+    
     if (user.authProvider === 'local') {
       return res.status(400).json({
         message: "This endpoint is only for OAuth users"
@@ -1901,7 +1831,7 @@ exports.skipPassword = async (req, res) => {
       });
     }
 
-    // Mark password as skipped
+    
     user.passwordSkipped = true;
     await saveWithRetry(user);
 
@@ -1916,21 +1846,8 @@ exports.skipPassword = async (req, res) => {
   }
 };
 
-// ----------------------------------------------------
-// BACKWARD COMPATIBILITY ALIASES
-// ----------------------------------------------------
-// Legacy routes expect 'setOAuthPassword' but modular uses 'setPassword'
 exports.setOAuthPassword = exports.setPassword;
 
-// ----------------------------------------------------
-// SETUP TEMPORARY PASSWORD (Bulk-Import First Login)
-// POST /api/auth/setup-temp-password  (requireAuth)
-//
-// Called by the mandatory SetupPassword page shown to bulk-imported users
-// on their first login. Replaces the temporary password with the user's chosen
-// password and marks passwordInitialized = true / isTemporaryPassword = false.
-// After this, the temporary password from the welcome email no longer works.
-// ----------------------------------------------------
 exports.setupTempPassword = async (req, res) => {
   console.log('\uD83D\uDD04 [MODULAR AUTH] Function invoked: setupTempPassword');
   try {
@@ -1946,16 +1863,16 @@ exports.setupTempPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Guard: only allow if user is in the temporary-password state.
-    // If passwordInitialized is already true the temp-password gate has been
-    // passed — reject the call to prevent accidental re-use of this endpoint.
+    
+    
+    
     if (!user.isTemporaryPassword || user.passwordInitialized) {
       return res.status(400).json({
         message: 'Password setup is not required for this account. Use the regular password-change flow.'
       });
     }
 
-    // Password strength validation (same rules as updatePassword)
+    
     const strong =
       password.length >= 8 &&
       /[A-Z]/.test(password) &&
@@ -1968,10 +1885,10 @@ exports.setupTempPassword = async (req, res) => {
       });
     }
 
-    // Hash and save the new password
+    
     user.passwordHash = await bcrypt.hash(password, 12);
-    user.isTemporaryPassword = false;  // temp password is now invalidated
-    user.passwordInitialized = true;   // user has set their own password
+    user.isTemporaryPassword = false;  
+    user.passwordInitialized = true;   
     user.passwordSetAt = new Date();
 
     await saveWithRetry(user);
@@ -1988,29 +1905,21 @@ exports.setupTempPassword = async (req, res) => {
   }
 };
 
-
-// ----------------------------------------------------
-// OAUTH CALLBACKS & HELPERS (Phase 2D Extraction)
-// ----------------------------------------------------
-// Extracted from routes/auth.js to centralize OAuth logic
-
 const _passport = require("../../config/passport");
 
-// Helper to generate token (used by OAuth callbacks)
 exports.generateToken = (user) => {
   return jwt.sign(
     { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
     process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: '15m' } // Short lived access token, frontend should exchange/use it
+    { expiresIn: '15m' } 
   );
 };
 
-// USERS LIST (for DMs and channel in invitations)
 exports.getUsersList = async (req, res) => {
   try {
     const currentUserId = req.user.sub;
 
-    // Get all users except the current user
+    
     const users = await User.find({ _id: { $ne: currentUserId } })
       .select("_id username email profilePicture")
       .limit(100)
@@ -2023,12 +1932,11 @@ exports.getUsersList = async (req, res) => {
   }
 };
 
-// GITHUB CALLBACK
 exports.githubCallback = async (req, res) => {
-  // Successful authentication
+  
   const token = exports.generateToken(req.user);
 
-  // Check if password setup required (skip if already set OR explicitly skipped)
+  
   const requiresPasswordSetup = req.user.authProvider !== 'local' && !req.user.passwordSetAt && !req.user.passwordSkipped;
   const params = new URLSearchParams({
     access: token,
@@ -2038,14 +1946,13 @@ exports.githubCallback = async (req, res) => {
   res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?${params.toString()}`);
 };
 
-// LINKEDIN OAUTH INITIATE
 exports.linkedinInitiate = (req, res) => {
   const params = new URLSearchParams({
     response_type: "code",
     client_id: process.env.LINKEDIN_CLIENT_ID,
     redirect_uri: `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/auth/linkedin/callback`,
     scope: "openid profile email",
-    state: Math.random().toString(36).substring(7), // Simple random state for CSRF protection
+    state: Math.random().toString(36).substring(7), 
   });
 
   res.redirect(
@@ -2053,7 +1960,6 @@ exports.linkedinInitiate = (req, res) => {
   );
 };
 
-// LINKEDIN CALLBACK
 exports.linkedinCallback = async (req, res) => {
   try {
     const { code, error, error_description } = req.query;
@@ -2063,7 +1969,7 @@ exports.linkedinCallback = async (req, res) => {
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
     }
 
-    // Exchange code for access token
+    
     const tokenRes = await axios.post(
       "https://www.linkedin.com/oauth/v2/accessToken",
       new URLSearchParams({
@@ -2082,7 +1988,7 @@ exports.linkedinCallback = async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
-    // Fetch user info using OpenID Connect userinfo endpoint
+    
     const userInfoRes = await axios.get(
       "https://api.linkedin.com/v2/userinfo",
       {
@@ -2095,11 +2001,11 @@ exports.linkedinCallback = async (req, res) => {
     const linkedinUser = userInfoRes.data;
     console.log('LinkedIn user profile:', linkedinUser);
 
-    // Find or create user
+    
     let user = await User.findOne({ linkedinId: linkedinUser.sub });
 
     if (!user && linkedinUser.email) {
-      // Try to find by email to link accounts
+      
       user = await User.findOne({ email: linkedinUser.email });
       if (user) {
         user.linkedinId = linkedinUser.sub;
@@ -2109,7 +2015,7 @@ exports.linkedinCallback = async (req, res) => {
     }
 
     if (!user) {
-      // Create new user
+      
       user = await User.create({
         linkedinId: linkedinUser.sub,
         username: linkedinUser.name || linkedinUser.given_name || `linkedin_${linkedinUser.sub}`,
@@ -2118,14 +2024,14 @@ exports.linkedinCallback = async (req, res) => {
         authProvider: "linkedin",
         passwordHash: "oauth-linkedin-" + linkedinUser.sub,
         verified: true,
-        passwordSetAt: null,  // Password not set yet
-        passwordLoginEnabled: false  // Disable password login until set
+        passwordSetAt: null,  
+        passwordLoginEnabled: false  
       });
     }
 
     const token = exports.generateToken(user);
 
-    // Check if password setup required (skip if already set OR explicitly skipped)
+    
     const requiresPasswordSetup = user.authProvider !== 'local' && !user.passwordSetAt && !user.passwordSkipped;
     const params = new URLSearchParams({
       access: token,
@@ -2139,14 +2045,6 @@ exports.linkedinCallback = async (req, res) => {
   }
 };
 
-// ============================================================
-// ACCOUNT DEACTIVATION & REACTIVATION
-// ============================================================
-
-/**
- * Deactivate user account (temporary)
- * POST /api/auth/me/deactivate
- */
 exports.deactivateAccount = async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -2156,10 +2054,10 @@ exports.deactivateAccount = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Set deactivation timestamp
+    
     user.deactivatedAt = new Date();
 
-    // Clear all refresh tokens (logout from all sessions)
+    
     user.refreshTokens = [];
 
     await user.save();
@@ -2176,11 +2074,6 @@ exports.deactivateAccount = async (req, res) => {
   }
 };
 
-/**
- * Verify reactivation OTP and reactivate account
- * POST /api/auth/reactivate/verify-otp
- * Body: { email, otpCode, password }
- */
 exports.verifyReactivationOTP = async (req, res) => {
   try {
     const { email, otpCode, password } = req.body;
@@ -2189,18 +2082,18 @@ exports.verifyReactivationOTP = async (req, res) => {
       return res.status(400).json({ message: "Email, OTP code, and password required" });
     }
 
-    // Find user by email
+    
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if account is actually deactivated
+    
     if (!user.deactivatedAt) {
       return res.status(400).json({ message: "Account is not deactivated" });
     }
 
-    // Verify OTP
+    
     if (!user.otpCodes || user.otpCodes.length === 0) {
       console.log('❌ No OTP codes found for user:', email);
       return res.status(400).json({ message: "No OTP found. Please try logging in again." });
@@ -2222,20 +2115,20 @@ exports.verifyReactivationOTP = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired OTP" });
     }
 
-    // Verify password
+    
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    // Mark OTP as used
+    
     otpRecord.used = true;
     otpRecord.usedAt = new Date();
 
-    // Reactivate account
+    
     user.deactivatedAt = null;
 
-    // Generate new tokens
+    
     const accessToken = jwt.sign(
       { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
       process.env.ACCESS_TOKEN_SECRET,
@@ -2250,22 +2143,22 @@ exports.verifyReactivationOTP = async (req, res) => {
 
     const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
 
-    // Add new refresh token
+    
     user.refreshTokens.push({
       tokenHash: hashedRefreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
       deviceInfo: req.get('user-agent') || 'Unknown',
       createdAt: new Date()
     });
 
     await user.save();
 
-    // Set refresh token cookie
+    
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000 
     });
 
     console.log(`✅ Account reactivated for user: ${user.username} (${user._id})`);

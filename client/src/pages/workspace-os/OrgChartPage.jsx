@@ -1,6 +1,3 @@
-// client/src/pages/workspace-os/OrgChartPage.jsx
-// Interactive org chart tree visualization.
-// Pure CSS/flex tree — no external dependency required.
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -65,7 +62,7 @@ const DepartmentNode = ({ dept, isRoot = false }) => {
 
     return (
         <div className={`relative ${isRoot ? '' : 'ml-6 pl-4 border-l-2 border-slate-200 dark:border-slate-700'}`}>
-            {/* Department Card */}
+            {}
             <div className={`mb-3 rounded-2xl border overflow-hidden ${
                 isRoot
                     ? 'border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/40'
@@ -90,7 +87,7 @@ const DepartmentNode = ({ dept, isRoot = false }) => {
                     </div>
                 </button>
 
-                {/* Managers row */}
+                {}
                 {expanded && dept.managers?.length > 0 && (
                     <div className="px-5 pb-4 flex flex-wrap gap-2">
                         {dept.managers.map(mgr => (
@@ -103,7 +100,7 @@ const DepartmentNode = ({ dept, isRoot = false }) => {
                 )}
             </div>
 
-            {/* Teams */}
+            {}
             {expanded && hasTeams && (
                 <div className="ml-6 pl-4 border-l-2 border-slate-200 dark:border-slate-700 space-y-2 mb-3">
                     {dept.teams.map(team => <TeamCard key={team.id} team={team} />)}
@@ -116,7 +113,7 @@ const DepartmentNode = ({ dept, isRoot = false }) => {
 export default function OrgChartPage({ companyId }) {
     const { user } = useAuth();
     const rawCompanyId = companyId || user?.companyId;
-    // Safely extract string ID — user.companyId may be a Mongoose ObjectId object
+    
     const resolvedCompanyId = typeof rawCompanyId === 'object' && rawCompanyId !== null
         ? (rawCompanyId._id || rawCompanyId.id || String(rawCompanyId))
         : rawCompanyId;
@@ -155,7 +152,7 @@ export default function OrgChartPage({ companyId }) {
 
     return (
         <div className="space-y-6">
-            {/* Header */}
+            {}
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -174,7 +171,7 @@ export default function OrgChartPage({ companyId }) {
                 </button>
             </div>
 
-            {/* Company Root */}
+            {}
             {data?.company && (
                 <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-5 text-white flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
@@ -190,7 +187,7 @@ export default function OrgChartPage({ companyId }) {
                 </div>
             )}
 
-            {/* Department Tree */}
+            {}
             <div className="space-y-3">
                 {data?.departments?.length > 0 ? (
                     data.departments.map(dept => <DepartmentNode key={dept.id} dept={dept} />)

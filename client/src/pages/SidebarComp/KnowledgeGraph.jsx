@@ -1,10 +1,8 @@
-// client/src/pages/SidebarComp/KnowledgeGraph.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Network, ZoomIn, ZoomOut, RefreshCw, BookOpen } from 'lucide-react';
 import { useKnowledge } from '../../hooks/useKnowledge';
 
-// ── Force-directed graph (vanilla JS, no extra deps) ──────────────────────────
 function runForce(nodes, edges, width, height, iterations = 200) {
     const k = Math.sqrt((width * height) / Math.max(nodes.length, 1));
     const positions = nodes.map((_, i) => ({
@@ -19,7 +17,7 @@ function runForce(nodes, edges, width, height, iterations = 200) {
     for (let iter = 0; iter < iterations; iter++) {
         const temp = 1 - iter / iterations;
 
-        // Repulsion
+        
         for (let i = 0; i < positions.length; i++) {
             for (let j = i + 1; j < positions.length; j++) {
                 const dx = positions[i].x - positions[j].x || 0.01;
@@ -33,7 +31,7 @@ function runForce(nodes, edges, width, height, iterations = 200) {
             }
         }
 
-        // Attraction (edges)
+        
         for (const edge of edges) {
             const ai = nodeById[edge.from?.toString()];
             const bi = nodeById[edge.to?.toString()];
@@ -48,7 +46,7 @@ function runForce(nodes, edges, width, height, iterations = 200) {
             positions[bi].vy -= (dy / dist) * force * 0.5;
         }
 
-        // Apply velocities with cooling
+        
         for (const pos of positions) {
             const speed = Math.sqrt(pos.vx * pos.vx + pos.vy * pos.vy) || 1;
             const capped = Math.min(speed, temp * 30);
@@ -138,7 +136,7 @@ const KnowledgeGraph = () => {
         setHovered(found);
     };
 
-    // Color palette for nodes
+    
     const nodeColors = [
         '#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b',
         '#ef4444', '#ec4899', '#14b8a6', '#f97316', '#3b82f6',
@@ -146,7 +144,7 @@ const KnowledgeGraph = () => {
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-gray-900">
-            {/* Header */}
+            {}
             <div className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
                 <h1 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                     <Network size={18} className="text-indigo-600 dark:text-indigo-400" />
@@ -161,7 +159,7 @@ const KnowledgeGraph = () => {
                 </div>
             </div>
 
-            {/* Graph canvas */}
+            {}
             <div className="flex-1 overflow-hidden relative">
                 {loading && (
                     <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-900 z-10">
@@ -197,7 +195,7 @@ const KnowledgeGraph = () => {
                         onMouseLeave={() => setHovered(null)}
                         className="bg-gradient-to-br from-gray-50 to-white dark:from-gray-950 dark:to-gray-900"
                     >
-                        {/* Edges */}
+                        {}
                         {graphData.edges.map((edge, ei) => {
                             const ai = graphData.nodes.findIndex(n => n.id?.toString() === edge.from?.toString());
                             const bi = graphData.nodes.findIndex(n => n.id?.toString() === edge.to?.toString());
@@ -223,7 +221,7 @@ const KnowledgeGraph = () => {
                             </linearGradient>
                         </defs>
 
-                        {/* Nodes */}
+                        {}
                         {graphData.nodes.map((node, ni) => {
                             const pos = positions[ni];
                             if (!pos) return null;
@@ -232,14 +230,14 @@ const KnowledgeGraph = () => {
                             const r = isHov ? 26 : 22;
                             return (
                                 <g key={node.id} transform={`translate(${pos.x / zoom}, ${pos.y / zoom})`}>
-                                    {/* Glow ring on hover */}
+                                    {}
                                     {isHov && <circle r={r + 8} fill={color} fillOpacity={0.12} />}
                                     <circle r={r} fill={color} fillOpacity={isHov ? 1 : 0.82} stroke="white" strokeWidth={2} />
-                                    {/* Emoji icon */}
+                                    {}
                                     <text textAnchor="middle" dominantBaseline="middle" fontSize={isHov ? 16 : 14} y={0}>
                                         {node.icon || '📄'}
                                     </text>
-                                    {/* Label */}
+                                    {}
                                     <text
                                         y={r + 14}
                                         textAnchor="middle"
@@ -256,7 +254,7 @@ const KnowledgeGraph = () => {
                 )}
             </div>
 
-            {/* Legend */}
+            {}
             {!loading && graphData.nodes.length > 0 && (
                 <div className="border-t border-gray-100 dark:border-gray-800 px-6 py-3 flex items-center gap-4 text-xs text-gray-400">
                     <span className="flex items-center gap-1.5">

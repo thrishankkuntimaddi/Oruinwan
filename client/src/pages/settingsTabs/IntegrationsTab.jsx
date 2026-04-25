@@ -1,4 +1,3 @@
-// IntegrationsTab — Monolith Flow design system
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cloud, Zap, Bot, Link2, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Eye, EyeOff, AlertCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
@@ -6,7 +5,6 @@ import { getIntegrations, connectIntegration, disconnectIntegration, getWebhooks
 
 const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 
-// ── Provider catalogue ────────────────────────────────────────────────────────
 const PROVIDER_CATALOGUE = [
     { category: 'Developer', providers: [
         { type: 'github',   label: 'GitHub',        icon: '🐙', desc: 'Sync issues → tasks, PRs → activity',       fields: [{ key: 'token',         label: 'Personal Access Token', type: 'password' }] },
@@ -45,7 +43,6 @@ const AI_PROVIDERS = [
     { id: 'local_llm', label: 'Local LLM', icon: '🖥️', desc: 'Ollama or custom endpoint' },
 ];
 
-// ── Shared input style ────────────────────────────────────────────────────────
 const inputS = {
     width: '100%', padding: '7px 10px',
     backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)',
@@ -54,7 +51,6 @@ const inputS = {
     transition: 'border-color 150ms ease', ...S.font,
 };
 
-// ── StatusBadge ───────────────────────────────────────────────────────────────
 const StatusBadge = ({ status }) => {
     const map = {
         connected:    { Icon: CheckCircle, color: 'var(--state-success)', bg: 'rgba(90,186,138,0.12)',  border: 'rgba(90,186,138,0.3)',  label: 'Connected' },
@@ -69,7 +65,6 @@ const StatusBadge = ({ status }) => {
     );
 };
 
-// ── IntegrationCard ───────────────────────────────────────────────────────────
 function IntegrationCard({ provider, integration, workspaceId, onRefresh }) {
     const { showToast } = useToast();
     const [open, setOpen] = useState(false);
@@ -189,7 +184,6 @@ function IntegrationCard({ provider, integration, workspaceId, onRefresh }) {
     );
 }
 
-// ── WebhookManager ────────────────────────────────────────────────────────────
 function WebhookManager({ workspaceId }) {
     const { showToast } = useToast();
     const [webhooks, setWebhooks] = useState([]);
@@ -285,7 +279,6 @@ function WebhookManager({ workspaceId }) {
     );
 }
 
-// ── AIProvidersPanel ──────────────────────────────────────────────────────────
 function AIProvidersPanel({ workspaceId }) {
     const { showToast } = useToast();
     const [providers, setProviders] = useState([]);
@@ -420,7 +413,6 @@ function AIProvidersPanel({ workspaceId }) {
     );
 }
 
-// ── Main IntegrationsTab ──────────────────────────────────────────────────────
 const TABS = [
     ...PROVIDER_CATALOGUE.map(c => ({ id: c.category, label: c.category })),
     { id: 'Webhooks', label: '⚡ Webhooks' },
@@ -452,7 +444,7 @@ const IntegrationsTab = ({ workspaceId }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            {/* Header */}
+            {}
             <div>
                 <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px', letterSpacing: '-0.01em', ...S.font }}>Integration Ecosystem</h2>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, ...S.font }}>
@@ -460,7 +452,7 @@ const IntegrationsTab = ({ workspaceId }) => {
                 </p>
             </div>
 
-            {/* Category tab bar */}
+            {}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {TABS.map(tab => {
                     const isActive = activeCategory === tab.id;
@@ -482,7 +474,7 @@ const IntegrationsTab = ({ workspaceId }) => {
                 })}
             </div>
 
-            {/* Content */}
+            {}
             {activeCategory === 'Webhooks' ? (
                 <WebhookManager workspaceId={workspaceId} />
             ) : activeCategory === 'AI' ? (

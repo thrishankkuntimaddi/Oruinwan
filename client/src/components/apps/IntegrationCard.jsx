@@ -13,7 +13,6 @@ const T = {
   font: 'Inter, system-ui, sans-serif',
 };
 
-
 export default function IntegrationCard({ integration, connected, onCardClick }) {
   return (
     <button
@@ -33,7 +32,7 @@ export default function IntegrationCard({ integration, connected, onCardClick })
         e.currentTarget.style.borderColor = T.border;
       }}
     >
-      {/* Connected badge */}
+      {}
       {connected && (
         <span style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', padding: '2px 7px' }}>
           <CheckCircle2 size={10} /> Connected
@@ -45,27 +44,27 @@ export default function IntegrationCard({ integration, connected, onCardClick })
         </span>
       )}
 
-      {/* Icon */}
+      {}
       <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '14px', flexShrink: 0 }}>
         {integration.emoji}
       </div>
 
-      {/* Name */}
+      {}
       <h3 style={{ fontSize: '13px', fontWeight: 700, color: T.text, marginBottom: '3px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', paddingRight: '60px' }}>
         {integration.name}
       </h3>
 
-      {/* Category */}
+      {}
       <span style={{ fontSize: '10px', color: T.muted, marginBottom: '8px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
         {integration.categoryLabel}
       </span>
 
-      {/* Description */}
+      {}
       <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: 1.55, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
         {integration.description}
       </p>
 
-      {/* Footer CTA */}
+      {}
       <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: '11px', fontWeight: 600, color: connected ? '#34d399' : T.accent }}>
           {connected ? 'Manage →' : 'Connect →'}

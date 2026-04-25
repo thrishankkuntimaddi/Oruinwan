@@ -1,23 +1,7 @@
-// server/src/features/tasks/tasks.controller.js
-/**
- * Tasks Controller - HTTP Request/Response Layer
- * 
- * STEP 4: Thin wrappers that extract req params and call service methods.
- * 
- * Rules:
- * - NO business logic (delegated to service)
- * - NO direct database calls
- * - Extract params, validate, call service, return response
- * - Handle errors and HTTP status codes
- * 
- * @module features/tasks/tasks.controller
- */
-
 const tasksService = require('./tasks.service');
 const validator = require('./tasks.validator');
 const activityService = require('../activity/activity.service');
 
-// Integration Ecosystem — fire-and-forget webhook trigger (never blocks responses)
 let webhookTrigger;
 try { webhookTrigger = require('../integrations/webhook.trigger'); }
 catch { webhookTrigger = null; }
@@ -25,16 +9,11 @@ const _fireWebhook = (workspaceId, event, data) => {
   if (webhookTrigger && workspaceId) webhookTrigger.fire(workspaceId, event, data);
 };
 
-
-// ============================================================================
-// HELPER: Error Response Handler
-// ============================================================================
-
 function handleError(res, error) {
     const statusCode = error.statusCode || 500;
     const message = error.message || 'Internal server error';
 
-    // Include additional error details if present
+    
     const response = { message };
     if (error.allowedTransitions) {
         response.allowedTransitions = error.allowedTransitions;
@@ -46,14 +25,6 @@ function handleError(res, error) {
     return res.status(statusCode).json(response);
 }
 
-// ============================================================================
-// CONTROLLERS
-// ============================================================================
-
-/**
- * GET /api/v2/tasks
- * Get tasks for a workspace
- */
 async function getTasks(req, res) {
     try {
         const userId = req.user.sub;
@@ -73,10 +44,6 @@ async function getTasks(req, res) {
     }
 }
 
-/**
- * GET /api/v2/tasks/my
- * Get user's assigned tasks
- */
 async function getMyTasks(req, res) {
     try {
         const userId = req.user.sub;
@@ -93,16 +60,12 @@ async function getMyTasks(req, res) {
     }
 }
 
-/**
- * POST /api/v2/tasks
- * Create a new task
- */
 async function createTask(req, res) {
     try {
         const userId = req.user.sub;
         const taskData = req.body;
 
-        // Validate input
+        
         const validation = validator.validateCreateTask(taskData);
         if (!validation.valid) {
             const error = new Error('Validation failed');
@@ -113,7 +76,7 @@ async function createTask(req, res) {
 
         const result = await tasksService.createTask(userId, taskData, req.io, req);
 
-        // Emit activity event — fire-and-forget, never blocks response
+        
         activityService.emit(req, {
             type: 'task',
             subtype: 'created',
@@ -126,7 +89,7 @@ async function createTask(req, res) {
             },
         }).catch(() => {});
 
-        // Integration Ecosystem — fire webhook event
+        
         _fireWebhook(taskData.workspaceId, 'task.created', {
             taskId: result.task?._id || result._id,
             title: taskData.title,
@@ -141,17 +104,13 @@ async function createTask(req, res) {
     }
 }
 
-/**
- * PUT /api/v2/tasks/:id
- * Update a task
- */
 async function updateTask(req, res) {
     try {
         const userId = req.user.sub;
         const taskId = req.params.id;
         const updates = req.body;
 
-        // Validate input
+        
         const validation = validator.validateUpdateTask(updates);
         if (!validation.valid) {
             const error = new Error('Validation failed');
@@ -162,7 +121,7 @@ async function updateTask(req, res) {
 
         const result = await tasksService.updateTask(userId, taskId, updates, req.io, req);
 
-        // Emit activity — subtype 'completed' when status flips to done
+        
         const subtype = updates.status === 'completed' ? 'completed' : 'updated';
         activityService.emit(req, {
             type: 'task',
@@ -172,7 +131,7 @@ async function updateTask(req, res) {
             payload: { taskId, title: updates.title, status: updates.status },
         }).catch(() => {});
 
-        // Integration Ecosystem — fire webhook event
+        
         const webhookEvent = updates.status === 'completed' ? 'task.completed' : 'task.updated';
         _fireWebhook(updates.workspaceId, webhookEvent, {
             taskId,
@@ -188,10 +147,6 @@ async function updateTask(req, res) {
     }
 }
 
-/**
- * DELETE /api/v2/tasks/:id
- * Delete a task (3-tier system)
- */
 async function deleteTask(req, res) {
     try {
         const userId = req.user.sub;
@@ -205,10 +160,6 @@ async function deleteTask(req, res) {
     }
 }
 
-/**
- * POST /api/v2/tasks/:id/restore
- * Restore a soft-deleted task
- */
 async function restoreTask(req, res) {
     try {
         const userId = req.user.sub;
@@ -222,10 +173,6 @@ async function restoreTask(req, res) {
     }
 }
 
-/**
- * DELETE /api/v2/tasks/:id/permanent
- * Permanently delete a task
- */
 async function permanentDeleteTask(req, res) {
     try {
         const userId = req.user.sub;
@@ -239,10 +186,6 @@ async function permanentDeleteTask(req, res) {
     }
 }
 
-/**
- * POST /api/v2/tasks/:id/revoke
- * Revoke a task (bring back to creator)
- */
 async function revokeTask(req, res) {
     try {
         const userId = req.user.sub;
@@ -256,17 +199,13 @@ async function revokeTask(req, res) {
     }
 }
 
-/**
- * POST /api/v2/tasks/:id/transfer/request
- * Request task transfer
- */
 async function requestTransfer(req, res) {
     try {
         const userId = req.user.sub;
         const taskId = req.params.id;
         const { newAssigneeId, note } = req.body;
 
-        // Validate input
+        
         const validation = validator.validateTransferRequest({ newAssigneeId, note });
         if (!validation.valid) {
             const error = new Error('Validation failed');
@@ -283,10 +222,6 @@ async function requestTransfer(req, res) {
     }
 }
 
-/**
- * POST /api/v2/tasks/:id/transfer/:action
- * Handle transfer request (approve/reject)
- */
 async function handleTransferRequest(req, res) {
     try {
         const userId = req.user.sub;
@@ -301,17 +236,13 @@ async function handleTransferRequest(req, res) {
     }
 }
 
-/**
- * POST /api/v2/tasks/:id/subtasks
- * Create a subtask
- */
 async function createSubtask(req, res) {
     try {
         const userId = req.user.sub;
         const parentId = req.params.id;
         const subtaskData = req.body;
 
-        // Validate input
+        
         const validation = validator.validateCreateSubtask(subtaskData);
         if (!validation.valid) {
             const error = new Error('Validation failed');
@@ -328,10 +259,6 @@ async function createSubtask(req, res) {
     }
 }
 
-/**
- * GET /api/v2/tasks/:id/activity
- * Get task activity history
- */
 async function getTaskActivity(req, res) {
     try {
         const userId = req.user.sub;
@@ -341,7 +268,7 @@ async function getTaskActivity(req, res) {
             offset: req.query.offset
         };
 
-        // Validate pagination
+        
         const validation = validator.validatePagination(pagination);
         if (!validation.valid) {
             const error = new Error('Validation failed');
@@ -358,11 +285,6 @@ async function getTaskActivity(req, res) {
     }
 }
 
-// ============================================================================
-// LINK + WATCHER CONTROLLERS
-// ============================================================================
-
-/** POST /api/v2/tasks/:id/links */
 async function addLink(req, res) {
     try {
         const userId = req.user.sub;
@@ -377,7 +299,6 @@ async function addLink(req, res) {
     }
 }
 
-/** DELETE /api/v2/tasks/:id/links/:linkId */
 async function removeLink(req, res) {
     try {
         const result = await tasksService.removeLink(req.user.sub, req.params.id, req.params.linkId);
@@ -387,7 +308,6 @@ async function removeLink(req, res) {
     }
 }
 
-/** POST /api/v2/tasks/:id/watchers */
 async function addWatcher(req, res) {
     try {
         const result = await tasksService.addWatcher(req.user.sub, req.params.id);
@@ -397,7 +317,6 @@ async function addWatcher(req, res) {
     }
 }
 
-/** DELETE /api/v2/tasks/:id/watchers */
 async function removeWatcher(req, res) {
     try {
         const result = await tasksService.removeWatcher(req.user.sub, req.params.id);
@@ -407,11 +326,6 @@ async function removeWatcher(req, res) {
     }
 }
 
-// ============================================================================
-// ADV: TIME TRACKING + DEPENDENCY + WORKLOAD CONTROLLERS
-// ============================================================================
-
-/** POST /api/v2/tasks/:id/dependency */
 async function addDependency(req, res) {
     try {
         const { dependencyTaskId } = req.body;
@@ -421,7 +335,6 @@ async function addDependency(req, res) {
     } catch (error) { return handleError(res, error); }
 }
 
-/** POST /api/v2/tasks/:id/time/start */
 async function startTimer(req, res) {
     try {
         const result = await tasksService.startTimer(req.user.sub, req.params.id);
@@ -429,7 +342,6 @@ async function startTimer(req, res) {
     } catch (error) { return handleError(res, error); }
 }
 
-/** POST /api/v2/tasks/:id/time/stop */
 async function stopTimer(req, res) {
     try {
         const result = await tasksService.stopTimer(req.user.sub, req.params.id);
@@ -437,17 +349,12 @@ async function stopTimer(req, res) {
     } catch (error) { return handleError(res, error); }
 }
 
-/** GET /api/v2/tasks/workload */
 async function getWorkload(req, res) {
     try {
         const result = await tasksService.getWorkload(req.user.sub, req.query.workspaceId);
         return res.json(result);
     } catch (error) { return handleError(res, error); }
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     getTasks,

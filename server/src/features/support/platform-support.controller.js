@@ -1,28 +1,22 @@
-// server/controllers/platformSupportController.js
 const _mongoose = require('mongoose');
 
-// Models
 const SupportMessage = require('../../../models/SupportMessage');
 const SupportTicket = require('../../../models/SupportTicket');
 const _User = require('../../../models/User');
 const _Company = require('../../../models/Company');
 
-/**
- * Get all support messages for a ticket
- * GET /api/platform/support/tickets/:ticketId/messages
- */
 exports.getTicketMessages = async (req, res) => {
     try {
         const { ticketId } = req.params;
         const { limit = 50, before, after } = req.query;
 
-        // Verify ticket exists and user has access
+        
         const ticket = await SupportTicket.findById(ticketId);
         if (!ticket) {
             return res.status(404).json({ message: 'Ticket not found' });
         }
 
-        // Use static method for paginated retrieval
+        
         const messages = await SupportMessage.getTicketTimeline(ticketId, {
             limit: parseInt(limit),
             before,
@@ -39,11 +33,6 @@ exports.getTicketMessages = async (req, res) => {
     }
 };
 
-/**
- * Get all support messages for a company (legacy support)
- * GET /api/platform/support/messages/:companyId
- * Note: This returns messages across all tickets for the company
- */
 exports.getMessages = async (req, res) => {
     try {
         const { companyId } = req.params;
@@ -65,27 +54,23 @@ exports.getMessages = async (req, res) => {
     }
 };
 
-/**
- * Send a message within a ticket
- * POST /api/platform/support/tickets/:ticketId/messages
- */
 exports.sendTicketMessage = async (req, res) => {
     try {
         const { ticketId } = req.params;
         const { content, attachments } = req.body;
 
-        // Validate user authentication
+        
         if (!req.user || !req.user.sub) {
             console.error('SEND MESSAGE ERROR: User not authenticated', { user: req.user });
             return res.status(401).json({ message: 'Authentication required' });
         }
 
-        // Validate content
+        
         if (!content || !content.trim()) {
             return res.status(400).json({ message: 'Message content is required' });
         }
 
-        // Verify ticket exists
+        
         const ticket = await SupportTicket.findById(ticketId).populate('companyId');
         if (!ticket) {
             return res.status(404).json({ message: 'Ticket not found' });
@@ -97,7 +82,7 @@ exports.sendTicketMessage = async (req, res) => {
             userRoles: req.user.roles
         });
 
-        // Determine sender role (platform admin vs company user)
+        
         const isPlatformAdmin = req.user.roles && req.user.roles.includes('platform-admin');
         const senderRole = isPlatformAdmin ? 'platform' : 'company';
 
@@ -114,23 +99,23 @@ exports.sendTicketMessage = async (req, res) => {
 
         console.log('[PLATFORM SUPPORT] Message created successfully:', message._id);
 
-        // Update ticket status if needed
+        
         if (ticket.status === 'open' && isPlatformAdmin) {
             ticket.status = 'in-progress';
             await ticket.save();
         }
 
-        // Emit socket event
+        
         if (req.app.get('io')) {
             const io = req.app.get('io');
 
-            // Notify company users
+            
             io.to(`company-${ticket.companyId._id}`).emit('support-message', {
                 ticketId,
                 message
             });
 
-            // Notify platform admins
+            
             if (!isPlatformAdmin) {
                 io.to('platform-admins').emit('support-message', {
                     ticketId,
@@ -149,26 +134,22 @@ exports.sendTicketMessage = async (req, res) => {
     }
 };
 
-/**
- * Send a message to platform admin (legacy - creates ticket automatically)
- * POST /api/platform/support/messages
- */
 exports.sendMessage = async (req, res) => {
     try {
         const { companyId, content } = req.body;
 
-        // Validate user authentication
+        
         if (!req.user || !req.user.sub) {
             console.error('SEND MESSAGE ERROR: User not authenticated', { user: req.user });
             return res.status(401).json({ message: 'Authentication required' });
         }
 
-        // Validate content
+        
         if (!content || !content.trim()) {
             return res.status(400).json({ message: 'Message content is required' });
         }
 
-        // Validate companyId
+        
         if (!companyId) {
             return res.status(400).json({ message: 'Company ID is required' });
         }
@@ -179,7 +160,7 @@ exports.sendMessage = async (req, res) => {
             userRoles: req.user.roles
         });
 
-        // Find or create a default "Chat" ticket for this company
+        
         let ticket = await SupportTicket.findOne({
             companyId,
             subject: 'Live Chat Support',
@@ -187,7 +168,7 @@ exports.sendMessage = async (req, res) => {
         }).sort({ createdAt: -1 });
 
         if (!ticket) {
-            // Create a new chat ticket
+            
             ticket = await SupportTicket.create({
                 companyId,
                 creatorId: req.user.sub,
@@ -198,7 +179,7 @@ exports.sendMessage = async (req, res) => {
             });
         }
 
-        // Create message linked to ticket
+        
         const message = await SupportMessage.create({
             ticket: ticket._id,
             company: companyId,
@@ -211,12 +192,12 @@ exports.sendMessage = async (req, res) => {
 
         console.log('[PLATFORM SUPPORT] Message created successfully:', message._id);
 
-        // Emit socket event in real-time
+        
         if (req.app.get('io')) {
             const io = req.app.get('io');
-            // Echo back to the sender's own room (so their UI updates instantly)
+            
             io.to(`user-support:${req.user.sub}`).emit('platform-message', message);
-            // Notify platform admins panel
+            
             io.to('platform-admins').emit('platform-message', message);
         }
 
@@ -230,10 +211,6 @@ exports.sendMessage = async (req, res) => {
     }
 };
 
-/**
- * Mark a message as read
- * PATCH /api/platform/support/messages/:messageId/read
- */
 exports.markMessageAsRead = async (req, res) => {
     try {
         const { messageId } = req.params;
@@ -257,10 +234,6 @@ exports.markMessageAsRead = async (req, res) => {
     }
 };
 
-/**
- * Get all support tickets for a company
- * GET /api/platform/support/tickets/:companyId
- */
 exports.getTickets = async (req, res) => {
     try {
         const { companyId } = req.params;
@@ -295,10 +268,6 @@ exports.getTickets = async (req, res) => {
     }
 };
 
-/**
- * Create a new support ticket
- * POST /api/platform/support/tickets
- */
 exports.createTicket = async (req, res) => {
     try {
         const { companyId, subject, _category, priority, description } = req.body;
@@ -322,7 +291,7 @@ exports.createTicket = async (req, res) => {
 
         await ticket.populate('creatorId', 'username email profilePicture');
 
-        // Create initial message
+        
         const initialMessage = await SupportMessage.create({
             ticket: ticket._id,
             company: companyId,
@@ -331,7 +300,7 @@ exports.createTicket = async (req, res) => {
             content: description
         });
 
-        // Notify platform admins
+        
         if (req.app.get('io')) {
             req.app.get('io').to('platform-admins').emit('new-support-ticket', {
                 ticket,
@@ -346,10 +315,6 @@ exports.createTicket = async (req, res) => {
     }
 };
 
-/**
- * Update ticket status or add response
- * PUT /api/platform/support/tickets/:ticketId
- */
 exports.updateTicket = async (req, res) => {
     try {
         const { ticketId } = req.params;
@@ -361,7 +326,7 @@ exports.updateTicket = async (req, res) => {
             return res.status(404).json({ message: 'Ticket not found' });
         }
 
-        // Update fields
+        
         if (status) {
             ticket.status = status;
             if (status === 'resolved') {

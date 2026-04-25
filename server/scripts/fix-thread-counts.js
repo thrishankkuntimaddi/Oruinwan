@@ -1,13 +1,3 @@
-// server/scripts/fix-thread-counts.js
-/**
- * Database Migration Script
- * 
- * Problem: Old messages created before thread system was fully implemented
- * don't have the replyCount field populated, even though they have replies.
- * 
- * Solution: Count actual replies (messages withparentId) and update parent messages.
- */
-
 const mongoose = require('mongoose');
 const Message = require("../src/features/messages/message.model.js");
 require('dotenv').config();
@@ -18,17 +8,17 @@ async function fixThreadCounts() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB');
 
-        // Find all messages that have replies (have children with parentId pointing to them)
+        
         const messagesWithReplies = await Message.aggregate([
             {
                 $match: {
-                    parentId: { $ne: null } // Find all reply messages
+                    parentId: { $ne: null } 
                 }
             },
             {
                 $group: {
-                    _id: '$parentId', // Group by parent message ID
-                    replyCount: { $sum: 1 } // Count replies
+                    _id: '$parentId', 
+                    replyCount: { $sum: 1 } 
                 }
             }
         ]);
@@ -42,7 +32,7 @@ async function fixThreadCounts() {
             const parentId = item._id;
             const actualCount = item.replyCount;
 
-            // Get current parent message
+            
             const parent = await Message.findById(parentId);
 
             if (!parent) {
@@ -53,7 +43,7 @@ async function fixThreadCounts() {
             const currentCount = parent.replyCount || 0;
 
             if (currentCount !== actualCount) {
-                // Update the replyCount
+                
                 await Message.findByIdAndUpdate(parentId, {
                     $set: { replyCount: actualCount }
                 });
@@ -79,5 +69,4 @@ async function fixThreadCounts() {
     }
 }
 
-// Run the migration
 fixThreadCounts();

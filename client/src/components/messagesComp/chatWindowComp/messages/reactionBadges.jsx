@@ -1,4 +1,3 @@
-// src/components/messageComp/chatWindow/messages/reactionBadges.jsx
 import React from "react";
 
 export default function ReactionBadges({ reactions, currentUserId, onReactionClick, channelMembers = [] }) {

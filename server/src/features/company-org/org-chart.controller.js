@@ -1,6 +1,3 @@
-// server/src/features/company-org/org-chart.controller.js
-// Builds a hierarchical org chart tree for a company.
-// Structure: Company → Departments → Teams + Members
 const Department = require('../../../models/Department');
 const Team = require('../../models/Team');
 const User = require('../../../models/User');
@@ -8,46 +5,42 @@ const Company = require('../../../models/Company');
 const { handleError } = require('../../../utils/responseHelpers');
 const AuditLog = require('../../../models/AuditLog');
 
-/**
- * GET /api/companies/:id/org-chart
- * Returns the complete org tree for the company.
- */
 exports.getOrgChart = async (req, res) => {
   try {
     const companyId = req.params.id;
     const userId = req.user?.sub;
 
-    // Verify requester belongs to this company
+    
     const dbUser = await User.findById(userId).select('companyId companyRole').lean();
     if (!dbUser || String(dbUser.companyId) !== String(companyId)) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
-    // Fetch company basic info
+    
     const company = await Company.findById(companyId)
       .select('name logo industry')
       .lean();
     if (!company) return res.status(404).json({ message: 'Company not found' });
 
-    // Fetch all active departments (with head + member counts)
+    
     const departments = await Department.find({ company: companyId, isActive: true })
       .populate('head', 'username email profilePicture')
       .populate('managers', 'username email profilePicture')
       .lean();
 
-    // Fetch all active teams indexed by department
+    
     const teams = await Team.find({ company: companyId, isActive: true })
       .populate('lead', 'username email profilePicture')
       .populate('members.user', 'username email profilePicture')
       .lean();
 
-    // Fetch all company users (for unassigned members)
+    
     const allUsers = await User.find({
       companyId,
       accountStatus: { $in: ['active', 'invited'] }
     }).select('username email profilePicture companyRole departments').lean();
 
-    // Build department → teams map
+    
     const teamsByDept = {};
     teams.forEach(team => {
       const deptId = team.department ? team.department.toString() : '_none';
@@ -55,7 +48,7 @@ exports.getOrgChart = async (req, res) => {
       teamsByDept[deptId].push(team);
     });
 
-    // Build department → member counts
+    
     const deptNodes = departments.map(dept => ({
       id: dept._id,
       name: dept.name,
@@ -81,7 +74,7 @@ exports.getOrgChart = async (req, res) => {
       }))
     }));
 
-    // Count users not assigned to any department
+    
     const unassignedUsers = allUsers.filter(u => !u.departments || u.departments.length === 0);
 
     return res.json({
@@ -100,17 +93,12 @@ exports.getOrgChart = async (req, res) => {
   }
 };
 
-/**
- * GET /api/companies/:id/employees
- * Paginated, searchable employee directory for a company.
- * Query: search, dept, role, status, page, limit
- */
 exports.getEmployeeDirectory = async (req, res) => {
   try {
     const companyId = req.params.id;
     const userId = req.user?.sub;
 
-    // Verify requester belongs to this company
+    
     const dbUser = await User.findById(userId).select('companyId').lean();
     if (!dbUser || String(dbUser.companyId) !== String(companyId)) {
       return res.status(403).json({ message: 'Access denied' });
@@ -129,13 +117,13 @@ exports.getEmployeeDirectory = async (req, res) => {
     if (status && status !== 'all') filter.accountStatus = status;
     if (role) filter.companyRole = role;
 
-    // Department filter — look up users who are members of that dept
+    
     if (dept) {
       const deptDoc = await Department.findById(dept).select('members').lean();
       if (deptDoc) filter._id = { $in: deptDoc.members };
     }
 
-    // Full-text search on username / email / firstName / lastName
+    
     if (search.trim()) {
       const regex = new RegExp(search.trim(), 'i');
       filter.$or = [
@@ -159,7 +147,7 @@ exports.getEmployeeDirectory = async (req, res) => {
       User.countDocuments(filter)
     ]);
 
-    // Attach department names in a single query
+    
     const deptIds = [...new Set(employees.flatMap(e => e.departments || []).map(String))];
     const depts = deptIds.length
       ? await Department.find({ _id: { $in: deptIds } }).select('name').lean()

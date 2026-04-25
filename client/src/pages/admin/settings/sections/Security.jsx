@@ -28,7 +28,7 @@ const Security = () => {
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Protect your company account</p>
             </div>
 
-            {/* Password Policy */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <Lock size={14} style={{ color: 'var(--text-muted)' }} />
@@ -67,7 +67,7 @@ const Security = () => {
                 </div>
             </div>
 
-            {/* IP Whitelist */}
+            {}
             <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <Shield size={14} style={{ color: 'var(--text-muted)' }} />

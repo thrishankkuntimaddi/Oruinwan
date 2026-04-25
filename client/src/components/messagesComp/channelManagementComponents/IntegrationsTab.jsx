@@ -4,21 +4,12 @@ import { MOCK_INTEGRATIONS } from "../../apps/mock/mockIntegrations";
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
-// Channel-relevant integrations only
 const CHANNEL_INTEGRATIONS = MOCK_INTEGRATIONS.filter((i) =>
   ["github", "jira", "linear", "zoom"].includes(i.id)
 );
 
-/**
- * IntegrationsTab
- * Channel-level integration toggles — all local state, no API calls.
- *
- * Shows each integration with a toggle switch.
- * When toggled on: shows "Events will appear in this channel."
- * "Not Connected" integrations show a link to the Apps page.
- */
 export default function IntegrationsTab({ globalConnectedMap = {} }) {
-  // Channel-level enabled state (per integration for this channel)
+  
   const [channelEnabled, setChannelEnabled] = useState({
     github: false,
     jira: false,
@@ -55,7 +46,7 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
               transition: 'border-color 150ms ease, background-color 150ms ease',
             }}
           >
-            {/* Emoji icon */}
+            {}
             <div style={{
               width: '36px', height: '36px', borderRadius: '2px', flexShrink: 0,
               backgroundColor: 'var(--bg-hover)',
@@ -66,7 +57,7 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
               {integration.emoji}
             </div>
 
-            {/* Info */}
+            {}
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
                 <span style={{
@@ -128,7 +119,7 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
               )}
             </div>
 
-            {/* Toggle switch */}
+            {}
             <button
               onClick={() => isGloballyConnected && toggleIntegration(integration.id)}
               disabled={!isGloballyConnected}
@@ -158,7 +149,7 @@ export default function IntegrationsTab({ globalConnectedMap = {} }) {
         );
       })}
 
-      {/* Footer hint */}
+      {}
       <div style={{
         marginTop: '4px', padding: '12px 14px', borderRadius: '2px',
         backgroundColor: 'var(--bg-active)',

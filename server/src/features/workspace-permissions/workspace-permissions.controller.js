@@ -1,13 +1,7 @@
-// server/src/features/workspace-permissions/workspace-permissions.controller.js
 const WorkspacePermission = require('../../models/WorkspacePermission');
 const Workspace = require('../../../models/Workspace');
 const { handleError } = require('../../../utils/responseHelpers');
 
-/**
- * GET /api/workspaces/:id/permissions
- * Retrieve the permission config for a workspace.
- * Creates a default record if one doesn't exist yet.
- */
 exports.getPermissions = async (req, res) => {
   try {
     const workspaceId = req.params.id;
@@ -22,7 +16,7 @@ exports.getPermissions = async (req, res) => {
     let perms = await WorkspacePermission.findOne({ workspace: workspaceId });
 
     if (!perms) {
-      // Auto-create defaults on first access
+      
       perms = await WorkspacePermission.create({
         workspace: workspaceId,
         company: workspace.company || null
@@ -35,10 +29,6 @@ exports.getPermissions = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/workspaces/:id/permissions
- * Update workspace permissions (admin/owner only).
- */
 exports.updatePermissions = async (req, res) => {
   try {
     const workspaceId = req.params.id;
@@ -68,7 +58,7 @@ exports.updatePermissions = async (req, res) => {
       { new: true, upsert: true, runValidators: true }
     );
 
-    // Emit real-time event to all workspace members
+    
     const io = req.app?.get('io');
     if (io) {
       io.to(`workspace_${workspaceId}`).emit('workspace-permissions-updated', {
@@ -83,10 +73,6 @@ exports.updatePermissions = async (req, res) => {
   }
 };
 
-/**
- * GET /api/workspaces/:id/features
- * Get feature toggle state for a workspace.
- */
 exports.getFeatureToggles = async (req, res) => {
   try {
     const workspaceId = req.params.id;
@@ -107,10 +93,6 @@ exports.getFeatureToggles = async (req, res) => {
   }
 };
 
-/**
- * PUT /api/workspaces/:id/features
- * Update feature toggles for a workspace (admin/owner only).
- */
 exports.updateFeatureToggles = async (req, res) => {
   try {
     const workspaceId = req.params.id;

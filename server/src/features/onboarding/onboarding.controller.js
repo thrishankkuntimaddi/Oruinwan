@@ -1,20 +1,7 @@
-// server/src/features/onboarding/onboarding.controller.js
-//
-// Phase 1 — Company Identity Layer Stabilization
-//
-// Thin HTTP layer. All business logic lives in the three service modules:
-//   onboarding.service.js  — individual flow (role ceiling, dept validation, user creation)
-//   bulkImport.service.js  — async batch job engine
-//   invite.service.js      — token lifecycle, accept, resend
-
 const { body, validationResult } = require('express-validator');
 const { onboardIndividual } = require('./onboarding.service');
 const { startBulkJob, getJobStatus } = require('./bulkImport.service');
 const { resendInvite, acceptInvite } = require('./invite.service');
-
-// ============================================================================
-// VALIDATION RULES
-// ============================================================================
 
 exports.validateIndividual = [
     body('email')
@@ -41,10 +28,6 @@ exports.validateAcceptInvite = [
         .isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
 ];
 
-// ============================================================================
-// ERROR HELPER
-// ============================================================================
-
 function handleError(res, err) {
     console.error('[ONBOARDING CTRL]', err.message);
     return res.status(err.status || 500).json({
@@ -54,17 +37,6 @@ function handleError(res, err) {
     });
 }
 
-// ============================================================================
-// HANDLERS
-// ============================================================================
-
-/**
- * POST /api/company/onboarding/individual
- *
- * Creates a single user with accountStatus:'invited' and sends a magic-link email.
- * Role ceiling enforced by onboarding.service.onboardIndividual().
- * Department assignment via department.service.assignMembers() (Phase 4).
- */
 exports.inviteIndividual = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -87,8 +59,8 @@ exports.inviteIndividual = async (req, res) => {
         } = req.body;
 
         const result = await onboardIndividual({
-            companyId: req.companyId,       // set by requireCompanyMember
-            requesterRole: req.companyRole,     // set by requireCompanyMember
+            companyId: req.companyId,       
+            requesterRole: req.companyRole,     
             invitedBy: req.user._dbUser._id,
             email,
             firstName,
@@ -112,13 +84,6 @@ exports.inviteIndividual = async (req, res) => {
     }
 };
 
-/**
- * POST /api/company/onboarding/bulk
- *
- * Receives multipart/form-data with `employeeFile` (xlsx/csv).
- * Returns HTTP 202 immediately with { jobId, total }.
- * Processing runs in background — frontend polls GET /status/:jobId.
- */
 exports.bulkImport = async (req, res) => {
     if (!req.file) {
         return res.status(400).json({
@@ -141,7 +106,7 @@ exports.bulkImport = async (req, res) => {
             total,
             status: 'queued',
             message: `Processing ${total} employees in the background.`,
-            validationErrors: validationErrors || [], // hard-fails returned now, not async
+            validationErrors: validationErrors || [], 
             pollUrl: `/api/company/onboarding/status/${jobId}`,
         });
 
@@ -150,12 +115,6 @@ exports.bulkImport = async (req, res) => {
     }
 };
 
-/**
- * GET /api/company/onboarding/status/:jobId
- *
- * Returns current job progress from MongoDB.
- * Company isolation enforced — companyId must match.
- */
 exports.getJobStatus = async (req, res) => {
     try {
         const job = await getJobStatus(req.params.jobId, req.companyId);
@@ -174,12 +133,6 @@ exports.getJobStatus = async (req, res) => {
     }
 };
 
-/**
- * POST /api/company/onboarding/resend/:userId
- *
- * Regenerates invite token and resends magic-link email.
- * Only works for users with accountStatus:'invited'.
- */
 exports.resendInviteEmail = async (req, res) => {
     try {
         const result = await resendInvite(req.params.userId, req.companyId);
@@ -195,12 +148,6 @@ exports.resendInviteEmail = async (req, res) => {
     }
 };
 
-/**
- * POST /api/company/onboarding/accept
- *
- * Public endpoint (no auth required) — called when employee clicks the invite link.
- * Validates token, activates account, runs department.service.assignMembers() (Phase 4).
- */
 exports.acceptInviteHandler = async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

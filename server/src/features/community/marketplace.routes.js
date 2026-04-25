@@ -1,5 +1,3 @@
-// server/src/features/community/marketplace.routes.js
-// Community Marketplace — app listing, install, reviews, and public integrations
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -8,15 +6,6 @@ const AppReview = require('./AppReview.model');
 const requireAuth = require('../../shared/middleware/auth');
 const logger = require('../../../utils/logger');
 
-// ─────────────────────────────────────────────────────────────────────────────
-// APP MARKETPLACE
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * GET /api/marketplace/apps
- * Public listing of all marketplace apps. Includes avg rating from reviews.
- * Paginated: ?page=1&limit=20&category=productivity&q=search
- */
 router.get('/apps', async (req, res) => {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -41,7 +30,7 @@ router.get('/apps', async (req, res) => {
       App.countDocuments(query)
     ]);
 
-    // Fetch avg ratings for returned apps
+    
     const appIds = apps.map(a => a._id);
     const ratings = await AppReview.aggregate([
       { $match: { appId: { $in: appIds } } },
@@ -67,7 +56,7 @@ router.get('/apps', async (req, res) => {
       installCount: app.installedIn?.length || 0,
       avgRating: ratingMap[app._id.toString()]?.avgRating || 0,
       reviewCount: ratingMap[app._id.toString()]?.reviewCount || 0,
-      installedIn: undefined // strip from public payload
+      installedIn: undefined 
     }));
 
     res.json({ apps: enriched, total, page, totalPages: Math.ceil(total / limit) });
@@ -77,11 +66,6 @@ router.get('/apps', async (req, res) => {
   }
 });
 
-/**
- * POST /api/marketplace/install
- * Install an app into a workspace. Auth required.
- * Body: { appId, workspaceId }
- */
 router.post('/install', requireAuth, async (req, res) => {
   try {
     const { appId, workspaceId } = req.body;
@@ -110,15 +94,6 @@ router.post('/install', requireAuth, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// APP RATINGS & REVIEWS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * POST /api/marketplace/review
- * Submit or update a rating + review for an app. Auth required.
- * Body: { appId, rating (1-5), comment? }
- */
 router.post('/review', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
@@ -129,11 +104,11 @@ router.post('/review', requireAuth, async (req, res) => {
       return res.status(400).json({ error: 'rating must be between 1 and 5' });
     }
 
-    // Verify app exists
+    
     const app = await App.findById(appId).lean();
     if (!app) return res.status(404).json({ error: 'App not found' });
 
-    // Upsert: one review per user per app
+    
     const review = await AppReview.findOneAndUpdate(
       { appId, userId },
       { rating: Math.round(rating), comment: (comment || '').trim() },
@@ -147,11 +122,6 @@ router.post('/review', requireAuth, async (req, res) => {
   }
 });
 
-/**
- * GET /api/marketplace/reviews/:appId
- * List reviews for a given app. Public (no auth).
- * Paginated: ?page=1&limit=10
- */
 router.get('/reviews/:appId', async (req, res) => {
   try {
     const { appId } = req.params;
@@ -199,14 +169,6 @@ router.get('/reviews/:appId', async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PUBLIC INTEGRATIONS
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * GET /api/marketplace/integrations/public
- * List pre-configured integrations marked isPublic:true (no auth).
- */
 router.get('/integrations/public', async (req, res) => {
   try {
     const Integration = require('../integrations/integration.model');

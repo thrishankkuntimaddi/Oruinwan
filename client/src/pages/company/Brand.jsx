@@ -1,4 +1,3 @@
-// Brand.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { Palette, Type, Download, Copy, CheckCircle2 } from 'lucide-react';
@@ -32,7 +31,7 @@ const CopyHex = ({ hex }) => {
 export default function Brand() {
     return (
         <PublicPageShell title="Brand">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 56px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
@@ -48,11 +47,11 @@ export default function Brand() {
 
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '64px 24px' }}>
 
-                {/* Logo */}
+                {}
                 <div style={{ marginBottom: '64px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Logo</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
-                        {/* Dark BG */}
+                        {}
                         <div style={{ background: '#111', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
@@ -60,7 +59,7 @@ export default function Brand() {
                             </div>
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Dark background (preferred)</p>
                         </div>
-                        {/* Light BG */}
+                        {}
                         <div style={{ background: '#f5f5f5', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
@@ -68,14 +67,14 @@ export default function Brand() {
                             </div>
                             <p style={{ fontSize: '11px', color: 'rgba(12,12,12,0.4)', textAlign: 'center' }}>Light backgrounds</p>
                         </div>
-                        {/* Mark only */}
+                        {}
                         <div style={{ background: '#111', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
                             <img src="/chttrix-logo.jpg" alt="Chttrix mark" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Mark only (app icons, favicons)</p>
                         </div>
                     </div>
 
-                    {/* Logo rules */}
+                    {}
                     <div style={{ marginTop: '20px', padding: '18px 20px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
                         <p style={{ fontSize: '13px', fontWeight: 700, color: '#b8956a', marginBottom: '8px' }}>Usage Rules</p>
                         <ul style={{ paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -88,7 +87,7 @@ export default function Brand() {
                     </div>
                 </div>
 
-                {/* Colors */}
+                {}
                 <div style={{ marginBottom: '64px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Color Palette</p>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
@@ -104,7 +103,7 @@ export default function Brand() {
                     </div>
                 </div>
 
-                {/* Typography */}
+                {}
                 <div style={{ marginBottom: '64px' }}>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Typography</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
@@ -124,7 +123,7 @@ export default function Brand() {
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px' }}>Primary typeface: <span style={{ color: '#b8956a', fontFamily: 'monospace' }}>Inter</span> · Monospace: <span style={{ color: '#b8956a', fontFamily: 'monospace' }}>JetBrains Mono</span></p>
                 </div>
 
-                {/* Download */}
+                {}
                 <div>
                     <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Media & Press Kit</p>
                     <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>

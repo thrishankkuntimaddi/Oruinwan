@@ -1,4 +1,3 @@
-// client/src/pages/admin/OrgChartPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -69,7 +68,7 @@ export default function OrgChartPage() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -86,7 +85,7 @@ export default function OrgChartPage() {
                 </button>
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                 {loading && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
                     <RefreshCw size={22} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} /></div>}
@@ -95,7 +94,7 @@ export default function OrgChartPage() {
 
                 {data && !loading && (
                     <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {/* Stats */}
+                        {}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
                             {[
                                 { label: 'Total Employees', value: data.totalEmployees },
@@ -109,9 +108,9 @@ export default function OrgChartPage() {
                             ))}
                         </div>
 
-                        {/* Tree */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '24px' }}>
-                            {/* Company root */}
+                            {}
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: 'var(--accent)', padding: '12px 20px', marginBottom: '24px' }}>
                                 <Users size={18} style={{ color: 'var(--bg-base)' }} />
                                 <div>

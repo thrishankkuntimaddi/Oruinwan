@@ -1,11 +1,5 @@
 const mongoose = require('mongoose');
 
-/**
- * System Broadcasts
- * - Platform → Companies
- * - NOT chat
- * - NOT E2EE
- */
 const broadcastSchema = new mongoose.Schema(
   {
     subject: {
@@ -14,7 +8,7 @@ const broadcastSchema = new mongoose.Schema(
       trim: true
     },
 
-    body: {                     // 🔧 renamed from "message"
+    body: {                     
       type: String,
       required: true
     },
@@ -60,11 +54,9 @@ const broadcastSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-/* Indexes */
 broadcastSchema.index({ sentAt: -1 });
 broadcastSchema.index({ sentBy: 1 });
 
-/* Validation */
 broadcastSchema.pre('save', function () {
   if (this.targetType === 'specific' && (!this.targetCompanies || this.targetCompanies.length === 0)) {
     throw new Error('targetCompanies required when targetType is specific');

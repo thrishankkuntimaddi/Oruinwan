@@ -103,7 +103,7 @@ const WorkspacesManagement = () => {
             </header>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }} className="custom-scrollbar">
-                {/* Search & Filter */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '12px 16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <div style={{ flex: 1, position: 'relative' }}>
                         <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
@@ -121,7 +121,7 @@ const WorkspacesManagement = () => {
                     </div>
                 </div>
 
-                {/* Grid */}
+                {}
                 {loading ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
                         {[1,2,3].map(i => (

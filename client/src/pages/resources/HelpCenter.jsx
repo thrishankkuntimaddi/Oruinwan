@@ -1,4 +1,3 @@
-// HelpCenter.jsx — Monolith Flow Design System
 import React, { useState } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
 import { Search, MessageSquare, Zap, Shield, Settings, Users, BookOpen, ChevronDown, ChevronUp, ArrowRight } from 'lucide-react';
@@ -65,7 +64,7 @@ export default function HelpCenter() {
 
     return (
         <PublicPageShell title="Help Center">
-            {/* Hero */}
+            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 64px', textAlign: 'center' }}>
                 <div style={{ maxWidth: '640px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
@@ -74,7 +73,7 @@ export default function HelpCenter() {
                     </div>
                     <h1 style={{ fontSize: 'clamp(26px,4vw,44px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>How can we help?</h1>
                     <p style={{ fontSize: '14px', color: 'var(--text-muted)', marginBottom: '28px', lineHeight: '1.7' }}>Search our knowledge base or browse by topic below.</p>
-                    {/* Search bar */}
+                    {}
                     <div style={{ position: 'relative', maxWidth: '480px', margin: '0 auto' }}>
                         <Search size={14} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
                         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search help articles..."
@@ -86,13 +85,13 @@ export default function HelpCenter() {
             </div>
 
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px' }}>
-                {/* Categories grid */}
+                {}
                 <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Browse by Topic</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '16px', marginBottom: '64px' }}>
                     {CATEGORIES.map(cat => <CategoryCard key={cat.title} cat={cat} />)}
                 </div>
 
-                {/* Still need help */}
+                {}
                 <div style={{ padding: '36px', background: '#111', border: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: '32px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                     <div>
                         <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>Still need help?</h3>

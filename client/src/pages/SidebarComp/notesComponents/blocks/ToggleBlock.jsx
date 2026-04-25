@@ -24,7 +24,7 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                 overflow: 'hidden',
                 boxShadow: open ? '0 4px 20px rgba(0,0,0,0.15)' : 'none',
             }}>
-                {/* Header */}
+                {}
                 <div
                     style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', cursor: 'pointer', transition: 'background 150ms ease', background: open ? 'var(--bg-hover)' : 'transparent' }}
                     onClick={toggle}
@@ -57,7 +57,7 @@ const ToggleBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </button>
                 </div>
 
-                {/* Body — animated slide */}
+                {}
                 {open && (
                     <div style={{ padding: '10px 16px 14px', borderTop: '1px solid var(--border-subtle)', background: 'var(--bg-base)' }}>
                         <textarea

@@ -68,7 +68,7 @@ const OwnerSecurity = () => {
                 <div style={{ display: 'flex', gap: '8px' }}><div className="sk" style={{ height: '30px', width: '90px' }} /></div>
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-                {/* Risk score + 3 tiles */}
+                {}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1px', background: 'var(--border-subtle)', marginBottom: '16px' }}>
                     {[1,2,3,4].map(i => (
                          <div key={i} style={{ background: 'var(--bg-surface)', padding: '20px' }}>
@@ -79,7 +79,7 @@ const OwnerSecurity = () => {
                     ))}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    {/* Events log */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)' }}><div className="sk" style={{ height: '11px', width: '130px' }} /></div>
                         {[1,2,3,4,5].map(i => (
@@ -90,7 +90,7 @@ const OwnerSecurity = () => {
                             </div>
                         ))}
                     </div>
-                    {/* Sessions */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                         <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border-subtle)' }}><div className="sk" style={{ height: '11px', width: '130px' }} /></div>
                         {[1,2,3,4,5].map(i => (
@@ -108,7 +108,7 @@ const OwnerSecurity = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{
                 height: '56px', padding: '0 28px',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
@@ -128,13 +128,13 @@ const OwnerSecurity = () => {
                     icon={<RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />} />
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1280px', margin: '0 auto' }}>
 
-                    {/* Score + Stats Row */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
-                        {/* Compliance Score */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', padding: '24px', position: 'relative', overflow: 'hidden' }}>
                             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '2px', background: 'var(--state-success)' }} />
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
@@ -145,7 +145,7 @@ const OwnerSecurity = () => {
                             <p style={{ fontSize: '36px', fontWeight: 700, color: 'var(--state-success)', letterSpacing: '-0.03em' }}>{securityData?.complianceScore || 95}%</p>
                             <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>Excellent security posture</p>
                         </div>
-                        {/* Stats */}
+                        {}
                         {[
                             { label: 'Active Sessions', value: securityData?.activeSessions || 0, sub: 'Users logged in (24h)', icon: Activity },
                             { label: 'Security Alerts', value: securityData?.auditSummary?.critical || 0, sub: 'Require attention', icon: AlertTriangle, danger: true },
@@ -162,7 +162,7 @@ const OwnerSecurity = () => {
                         ))}
                     </div>
 
-                    {/* Active Sessions */}
+                    {}
                     <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <Monitor size={14} style={{ color: 'var(--accent)' }} />
@@ -195,7 +195,7 @@ const OwnerSecurity = () => {
                         </div>
                     </section>
 
-                    {/* Security Events */}
+                    {}
                     <section style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -238,9 +238,9 @@ const OwnerSecurity = () => {
                         </div>
                     </section>
 
-                    {/* Auth Settings + Access Control */}
+                    {}
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1px', background: 'var(--border-subtle)' }}>
-                        {/* Auth Settings */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                                 <Settings size={14} style={{ color: 'var(--accent)' }} />
@@ -266,7 +266,7 @@ const OwnerSecurity = () => {
                             </div>
                         </div>
 
-                        {/* Access Control */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', padding: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
                                 <UserCheck size={14} style={{ color: 'var(--accent)' }} />
@@ -292,7 +292,7 @@ const OwnerSecurity = () => {
                         </div>
                     </div>
 
-                    {/* Recommendations */}
+                    {}
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--accent)', padding: '20px', position: 'relative', overflow: 'hidden' }}>
                         <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '3px', background: 'var(--accent)' }} />
                         <div style={{ display: 'flex', gap: '12px', paddingLeft: '4px' }}>

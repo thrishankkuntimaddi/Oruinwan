@@ -1,11 +1,3 @@
-/**
- * AutomationBuilderPage.jsx
- *
- * Form-based automation builder (create & edit).
- * Three sections: Trigger → Conditions → Actions
- * Includes a templates panel for quick-start.
- */
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -14,8 +6,6 @@ import {
   getAutomation,
   updateAutomation
 } from '../../services/automationsService';
-
-// ─── Options ──────────────────────────────────────────────────────────────────
 
 const TRIGGER_OPTIONS = [
   { value: 'task.created',      label: '📋 Task created' },
@@ -52,8 +42,6 @@ const SCHEDULE_OPTIONS = [
   { value: '12h',  label: 'Every 12 hours' },
   { value: '24h',  label: 'Every 24 hours' },
 ];
-
-// ─── Action Config Fields ─────────────────────────────────────────────────────
 
 function ActionConfigFields({ action, onChange }) {
   const update = (key, value) => onChange({ ...action, config: { ...action.config, [key]: value } });
@@ -110,8 +98,6 @@ function ActionConfigFields({ action, onChange }) {
   }
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-
 const EMPTY_FORM = {
   name: '',
   description: '',
@@ -134,7 +120,7 @@ export default function AutomationBuilderPage() {
   const [loadingExisting, setLoadingExisting] = useState(isEdit);
   const [error, setError] = useState(null);
 
-  // Load existing automation for edit mode
+  
   useEffect(() => {
     if (!isEdit) return;
     (async () => {
@@ -158,7 +144,7 @@ export default function AutomationBuilderPage() {
     })();
   }, [id, isEdit, workspaceId]);
 
-  // Load templates
+  
   useEffect(() => {
     getTemplates()
       .then(({ data }) => setTemplates(data.templates || []))
@@ -178,7 +164,7 @@ export default function AutomationBuilderPage() {
     setShowTemplates(false);
   }, []);
 
-  // ── Form field helpers ────────────────────────────────────────────────────
+  
 
   const setTriggerType = (type) => {
     const needsSchedule = type === 'scheduled';
@@ -219,7 +205,7 @@ export default function AutomationBuilderPage() {
   const removeAction = (i) =>
     setForm(prev => ({ ...prev, actions: prev.actions.filter((_, idx) => idx !== i) }));
 
-  // ── Submit ────────────────────────────────────────────────────────────────
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -251,7 +237,7 @@ export default function AutomationBuilderPage() {
 
   return (
     <div style={styles.page}>
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {}
       <div style={styles.header}>
         <div>
           <button onClick={() => navigate(`/workspace/${workspaceId}/automations`)} style={styles.backBtn}>
@@ -271,7 +257,7 @@ export default function AutomationBuilderPage() {
       </div>
 
       <div style={styles.layout}>
-        {/* ── Templates Panel ─────────────────────────────────────────────── */}
+        {}
         {showTemplates && templates.length > 0 && (
           <aside style={styles.sidebar}>
             <h3 style={styles.sidebarTitle}>📦 Templates</h3>
@@ -290,11 +276,11 @@ export default function AutomationBuilderPage() {
           </aside>
         )}
 
-        {/* ── Form ────────────────────────────────────────────────────────── */}
+        {}
         <form onSubmit={handleSubmit} style={styles.form}>
           {error && <div style={styles.errorBox}>⚠️ {error}</div>}
 
-          {/* ── Basic Info ─────────────────────────────────────────────────── */}
+          {}
           <section style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionNum}>1</span>
@@ -335,7 +321,7 @@ export default function AutomationBuilderPage() {
             </div>
           </section>
 
-          {/* ── Trigger ───────────────────────────────────────────────────── */}
+          {}
           <section style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionNum}>2</span>
@@ -373,7 +359,7 @@ export default function AutomationBuilderPage() {
             )}
           </section>
 
-          {/* ── Conditions ────────────────────────────────────────────────── */}
+          {}
           <section style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionNum}>3</span>
@@ -419,7 +405,7 @@ export default function AutomationBuilderPage() {
             </button>
           </section>
 
-          {/* ── Actions ───────────────────────────────────────────────────── */}
+          {}
           <section style={styles.section}>
             <div style={styles.sectionHeader}>
               <span style={styles.sectionNum}>4</span>
@@ -457,7 +443,7 @@ export default function AutomationBuilderPage() {
             </button>
           </section>
 
-          {/* ── Submit ────────────────────────────────────────────────────── */}
+          {}
           <div style={styles.submitRow}>
             <button
               type="button"
@@ -476,7 +462,6 @@ export default function AutomationBuilderPage() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = {
   page: {
     minHeight: '100vh',

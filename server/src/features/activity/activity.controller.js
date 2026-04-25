@@ -1,19 +1,3 @@
-/**
- * server/src/features/activity/activity.controller.js
- *
- * Unified Activity Stream — REST Controller
- *
- * Endpoints:
- *   GET /api/activity/feed?workspaceId=xxx&limit=20&before=<iso>&type=task&actor=<userId>
- *     → paginated activity events for a workspace (filterable by type + actor)
- *
- *   GET /api/activity/me?limit=20
- *     → the authenticated user's own activity history
- *
- *   GET /api/activity/stats?workspaceId=xxx
- *     → { stats: [{ type, count }] } for dashboard widgets
- */
-
 'use strict';
 
 const mongoose = require('mongoose');
@@ -22,9 +6,6 @@ const { ACTIVITY_TYPES } = require('../../../../platform/sdk/events/activityEven
 
 const VALID_TYPES = Object.values(ACTIVITY_TYPES);
 
-// ---------------------------------------------------------------------------
-// GET /api/activity/feed
-// ---------------------------------------------------------------------------
 exports.getFeed = async (req, res) => {
   try {
     const { workspaceId, limit = 20, before, type, actor } = req.query;
@@ -35,12 +16,12 @@ exports.getFeed = async (req, res) => {
 
     const query = { workspaceId };
 
-    // Optional cursor-based pagination
+    
     if (before) {
       query.createdAt = { $lt: new Date(before) };
     }
 
-    // Optional type filter — validate against known types
+    
     if (type) {
       if (!VALID_TYPES.includes(type)) {
         return res.status(400).json({
@@ -50,7 +31,7 @@ exports.getFeed = async (req, res) => {
       query.type = type;
     }
 
-    // Optional actor filter
+    
     if (actor) {
       query.actor = actor;
     }
@@ -68,9 +49,6 @@ exports.getFeed = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// GET /api/activity/me
-// ---------------------------------------------------------------------------
 exports.getMyActivity = async (req, res) => {
   try {
     const { limit = 20, before } = req.query;
@@ -93,9 +71,6 @@ exports.getMyActivity = async (req, res) => {
   }
 };
 
-// ---------------------------------------------------------------------------
-// GET /api/activity/stats
-// ---------------------------------------------------------------------------
 exports.getStats = async (req, res) => {
   try {
     const { workspaceId } = req.query;

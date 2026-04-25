@@ -1,6 +1,3 @@
-// server/src/features/security/backup.routes.js
-// Admin-only route for creating encrypted data backups.
-
 'use strict';
 
 const express = require('express');
@@ -9,7 +6,6 @@ const requireAuth = require('../../shared/middleware/auth');
 const { requireCompanyRole } = require('../../shared/utils/companyRole');
 const { createBackup } = require('./backup.service');
 
-// POST /api/security/backup — admin only
 router.post('/backup', requireAuth, async (req, res) => {
   try {
     const { companyId } = req.body;
@@ -23,7 +19,7 @@ router.post('/backup', requireAuth, async (req, res) => {
         recordCount: backup.recordCount,
         algorithm: backup.algorithm,
       },
-      // Return encrypted payload so admin can store it externally
+      
       encryptedPayload: backup.encryptedPayload,
     });
   } catch (err) {
@@ -32,7 +28,6 @@ router.post('/backup', requireAuth, async (req, res) => {
   }
 });
 
-// Dev-only: trigger retention cleanup manually (for testing)
 if (process.env.NODE_ENV !== 'production') {
   router.post('/trigger-retention', requireAuth, async (req, res) => {
     try {

@@ -1,13 +1,3 @@
-// client/src/shared/components/ui/AppErrorBoundary.jsx
-//
-// Global error boundary that catches uncaught React render errors so
-// a crash in one panel does NOT blank-screen the entire application.
-//
-// Usage:
-//   <AppErrorBoundary label="ChatWindow">
-//     <ChatWindowV2 />
-//   </AppErrorBoundary>
-
 import React from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
 
@@ -23,7 +13,7 @@ class AppErrorBoundary extends React.Component {
     }
 
     componentDidCatch(error, info) {
-        // Only log in development; avoid leaking stack traces in production
+        
         if (import.meta.env.DEV) {
             const label = this.props.label || 'Unknown';
             console.error(`[AppErrorBoundary][${label}] Caught render error:`, error, info.componentStack);

@@ -10,7 +10,6 @@ import IntegrationCard from "../../components/apps/IntegrationCard";
 import IntegrationDetailsModal from "../../components/apps/IntegrationDetailsModal";
 import api from '@services/api';
 
-// ── Star rating display ──────────────────────────────────────────────────────
 function StarRating({ rating, size = 12 }) {
   const full = Math.floor(rating);
   const half = rating - full >= 0.5;
@@ -28,7 +27,6 @@ function StarRating({ rating, size = 12 }) {
   );
 }
 
-// ── Review Modal ─────────────────────────────────────────────────────────────
 function ReviewModal({ app, onClose, onSubmitted }) {
   const [rating, setRating] = useState(0);
   const [hover, setHover] = useState(0);
@@ -97,7 +95,6 @@ function ReviewModal({ app, onClose, onSubmitted }) {
   );
 }
 
-// ── Marketplace App Card ─────────────────────────────────────────────────────
 function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
   const [installing, setInstalling] = useState(false);
   const [installed, setInstalled] = useState(false);
@@ -160,9 +157,6 @@ function MarketplaceAppCard({ app, workspaceId, onReview, onInstalled }) {
   );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN PAGE
-// ─────────────────────────────────────────────────────────────────────────────
 const MARKETPLACE_CATEGORIES = [
   { id: "all", label: "All" },
   { id: "productivity", label: "Productivity" },
@@ -178,7 +172,7 @@ export default function AppsPage() {
 
   const [activeTab, setActiveTab] = useState("integrations");
 
-  // ── Legacy integrations state ──────────────────────────────────────────────
+  
   const [connectedMap, setConnectedMap] = useState(() => {
     const init = {};
     MOCK_INTEGRATIONS.forEach(i => { init[i.id] = i.connected; });
@@ -199,7 +193,7 @@ export default function AppsPage() {
   const available = filtered.filter(i => !connectedMap[i.id]);
   const totalInstalled = MOCK_INTEGRATIONS.filter(i => connectedMap[i.id]).length;
 
-  // ── Marketplace state ──────────────────────────────────────────────────────
+  
   const [mktApps, setMktApps] = useState([]);
   const [mktLoading, setMktLoading] = useState(false);
   const [mktSearch, setMktSearch] = useState("");
@@ -236,7 +230,7 @@ export default function AppsPage() {
     return () => clearTimeout(t);
   }, [fetchMarketplace, activeTab, mktSearch]);
 
-  // ── Shared style helpers ───────────────────────────────────────────────────
+  
   const tabBtn = (active) => ({
     padding: '6px 14px', fontSize: '12px', fontWeight: 600,
     background: active ? 'var(--accent-dim)' : 'transparent',
@@ -257,20 +251,20 @@ export default function AppsPage() {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', minHeight: 0, fontFamily: 'var(--font)' }}>
 
-      {/* Toast */}
+      {}
       {mktToast && (
         <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 50, padding: '10px 16px', fontSize: '13px', fontWeight: 600, color: '#fff', backgroundColor: mktToast.type === "error" ? 'var(--state-danger)' : 'var(--state-success)' }}>
           {mktToast.msg}
         </div>
       )}
 
-      {/* Review modal */}
+      {}
       {reviewApp && (
         <ReviewModal app={reviewApp} onClose={() => setReviewApp(null)}
           onSubmitted={() => { showToast("Review submitted!"); fetchMarketplace(); }} />
       )}
 
-      {/* Header */}
+      {}
       <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '20px 32px', flexShrink: 0 }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
@@ -299,7 +293,7 @@ export default function AppsPage() {
             </div>
           </div>
 
-          {/* Tabs */}
+          {}
           <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-active)', padding: '3px', width: 'fit-content', marginBottom: '20px' }}>
             <button onClick={() => setActiveTab("integrations")} style={tabBtn(activeTab === 'integrations')}>
               Integrations
@@ -309,7 +303,7 @@ export default function AppsPage() {
             </button>
           </div>
 
-          {/* Search + filters */}
+          {}
           {activeTab === "integrations" ? (
             <>
               <div style={{ position: 'relative', marginBottom: '14px' }}>
@@ -344,11 +338,11 @@ export default function AppsPage() {
         </div>
       </div>
 
-      {/* Content */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
 
-          {/* ── INTEGRATIONS TAB ─── */}
+          {}
           {activeTab === "integrations" && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
               {filtered.length === 0 && (
@@ -391,7 +385,7 @@ export default function AppsPage() {
             </div>
           )}
 
-          {/* ── MARKETPLACE TAB ─── */}
+          {}
           {activeTab === "marketplace" && (
             <div>
               {mktLoading ? (
@@ -436,7 +430,7 @@ export default function AppsPage() {
         </div>
       </div>
 
-      {/* Integration details modal */}
+      {}
       {selectedIntegration && (
         <IntegrationDetailsModal integration={selectedIntegration} connected={connectedMap[selectedIntegration.id]}
           onClose={() => setSelectedIntegration(null)} onStatusChange={handleStatusChange} />

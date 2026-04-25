@@ -92,7 +92,7 @@ const ContactAdmin = () => {
 
     return (
         <div style={{ height: '100%', background: 'var(--bg-base)', overflow: 'hidden', display: 'flex', flexDirection: 'column', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
                     <h1 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Contact Platform Admin</h1>
@@ -111,11 +111,11 @@ const ContactAdmin = () => {
                 </div>
             </div>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
                 {activeTab === 'chat' ? (
                     <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        {/* Messages */}
+                        {}
                         <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '12px' }} className="custom-scrollbar">
                             {loadingMessages ? (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}>
@@ -149,11 +149,11 @@ const ContactAdmin = () => {
                                         const initials = senderName.charAt(0).toUpperCase();
                                         return (
                                             <div key={msg._id || idx} style={{ display: 'flex', flexDirection: isOwn ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: '8px' }}>
-                                                {/* Avatar */}
+                                                {}
                                                 <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--bg-base)', background: isOwn ? '#7a7a7a' : 'var(--accent)' }}>
                                                     {isOwn ? initials : 'C'}
                                                 </div>
-                                                {/* Bubble */}
+                                                {}
                                                 <div style={{ maxWidth: '60%', display: 'flex', flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start', gap: '3px' }}>
                                                     <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                                         {isOwn ? senderName : 'Chttrix Support'}
@@ -172,7 +172,7 @@ const ContactAdmin = () => {
                                 </>
                             )}
                         </div>
-                        {/* Input */}
+                        {}
                         <div style={{ padding: '12px 24px', background: 'var(--bg-surface)', borderTop: '1px solid var(--border-subtle)', flexShrink: 0 }}>
                             <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '8px', alignItems: 'center', maxWidth: '800px', margin: '0 auto' }}>
                                 <button type="button" style={{ padding: '8px', background: 'none', border: '1px solid var(--border-default)', color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>
@@ -187,7 +187,7 @@ const ContactAdmin = () => {
                         </div>
                     </div>
                 ) : (
-                    /* Support Tickets */
+                    
                     <div style={{ height: '100%', overflowY: 'auto', padding: '20px 24px' }} className="custom-scrollbar">
                         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
@@ -252,7 +252,7 @@ const ContactAdmin = () => {
                 )}
             </div>
 
-            {/* Create Ticket Modal */}
+            {}
             {isCreateTicketOpen && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
                     <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '520px', fontFamily: 'Inter, system-ui, sans-serif' }}>

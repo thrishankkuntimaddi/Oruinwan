@@ -1,4 +1,3 @@
-// client/src/pages/SidebarComp/KnowledgePage.jsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -8,7 +7,6 @@ import {
 import { useKnowledge } from '../../hooks/useKnowledge';
 import { useToast } from '../../contexts/ToastContext';
 
-// ── Simple markdown preview renderer ─────────────────────────────────────────
 function MarkdownPreview({ content }) {
     const html = content
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -31,7 +29,6 @@ function MarkdownPreview({ content }) {
     );
 }
 
-// ── Link page modal ───────────────────────────────────────────────────────────
 function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }) {
     const [search, setSearch] = useState('');
     const options = allPages.filter(p => p._id !== currentPageId && (!search || p.title.toLowerCase().includes(search.toLowerCase())));
@@ -72,7 +69,6 @@ function LinkPageModal({ workspaceId, currentPageId, onLink, onClose, allPages }
     );
 }
 
-// ── Handbook section view ────────────────────────────────────────────────────
 function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
     const handbookPages = pages.filter(p => p.isHandbook);
     return (
@@ -124,7 +120,6 @@ function HandbookView({ pages, workspaceId, navigate, onCreate, creating }) {
     );
 }
 
-// ── Empty state ───────────────────────────────────────────────────────────────
 function EmptyKnowledge({ onCreate, loading }) {
     return (
         <div className="flex flex-col items-center justify-center h-full py-20">
@@ -142,7 +137,6 @@ function EmptyKnowledge({ onCreate, loading }) {
     );
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
 const KnowledgePage = () => {
     const { workspaceId, id } = useParams();
     const navigate = useNavigate();
@@ -155,7 +149,7 @@ const KnowledgePage = () => {
     const [tags, setTags] = useState([]);
     const [tagInput, setTagInput] = useState('');
     const [showTagInput, setShowTagInput] = useState(false);
-    const [viewMode, setViewMode] = useState('edit'); // 'edit' | 'preview'
+    const [viewMode, setViewMode] = useState('edit'); 
     const [showLinkModal, setShowLinkModal] = useState(false);
     const [backlinks, setBacklinks] = useState([]);
     const [summary, setSummary] = useState('');
@@ -185,7 +179,7 @@ const KnowledgePage = () => {
         }
     }, [id, getBacklinks]);
 
-    // Debounced auto-save
+    
     const autoSave = useCallback((newTitle, newContent, newTags) => {
         if (!id) return;
         clearTimeout(saveTimer.current);
@@ -256,8 +250,8 @@ const KnowledgePage = () => {
         setShowLinkModal(false);
     };
 
-    // ── Render ────────────────────────────────────────────────────────────────
-    // Handbook virtual route — no real page ID
+    
+    
     if (id === 'handbook') {
         const handleCreateHandbook = async () => {
             setCreating(true);
@@ -293,12 +287,12 @@ const KnowledgePage = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {/* Toolbar */}
+            {}
             <div className="h-14 px-6 flex items-center justify-between border-b border-gray-200 dark:border-gray-800 shrink-0">
                 <div className="flex items-center gap-3">
                     <span className="text-2xl">{pageData.icon || '📄'}</span>
                     <div className="flex items-center gap-1.5">
-                        {/* Edit / Preview toggle */}
+                        {}
                         <button
                             onClick={() => setViewMode(v => v === 'edit' ? 'preview' : 'edit')}
                             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, background: viewMode === 'preview' ? 'rgba(184,149,106,0.1)' : 'transparent', border: `1px solid ${viewMode === 'preview' ? 'rgba(184,149,106,0.25)' : 'transparent'}`, color: viewMode === 'preview' ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif', transition: 'all 150ms ease' }}
@@ -307,7 +301,7 @@ const KnowledgePage = () => {
                             {viewMode === 'edit' ? 'Preview' : 'Edit'}
                         </button>
 
-                        {/* AI Summarize */}
+                        {}
                         <button
                             onClick={handleSummarize}
                             disabled={summarizing}
@@ -317,7 +311,7 @@ const KnowledgePage = () => {
                             AI Summary
                         </button>
 
-                        {/* Link */}
+                        {}
                         <button
                             onClick={() => setShowLinkModal(true)}
                             style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 10px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter,system-ui,sans-serif' }} onMouseEnter={e => e.currentTarget.style.color = '#b8956a'} onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
@@ -342,10 +336,10 @@ const KnowledgePage = () => {
                 </div>
             </div>
 
-            {/* Scrollable content */}
+            {}
             <div className="flex-1 overflow-y-auto">
                 <div className="max-w-3xl mx-auto px-10 py-8">
-                    {/* Title */}
+                    {}
                     <input
                         type="text"
                         value={title}
@@ -360,7 +354,7 @@ const KnowledgePage = () => {
                         className="placeholder-gray-700"
                     />
 
-                    {/* Tags */}
+                    {}
                     <div className="flex flex-wrap items-center gap-2 mb-6 min-h-[28px]">
                         {tags.map(tag => (
                             <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '1px 8px', background: 'rgba(184,149,106,0.1)', border: '1px solid rgba(184,149,106,0.22)', color: '#b8956a', fontSize: '11px', fontWeight: 500, fontFamily: 'Inter,system-ui,sans-serif' }}>
@@ -390,7 +384,7 @@ const KnowledgePage = () => {
                         )}
                     </div>
 
-                    {/* AI Summary box */}
+                    {}
                     {summary && (
                         <div style={{ marginBottom: '24px', padding: '14px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
                             <div className="flex items-center gap-1.5 mb-2">
@@ -401,7 +395,7 @@ const KnowledgePage = () => {
                         </div>
                     )}
 
-                    {/* Editor / Preview */}
+                    {}
                     {viewMode === 'edit' ? (
                         <textarea
                             value={content}
@@ -417,14 +411,14 @@ const KnowledgePage = () => {
                         </div>
                     )}
 
-                    {/* Markdown hint */}
+                    {}
                     {viewMode === 'edit' && (
                         <p className="text-xs text-gray-300 dark:text-gray-600 mt-4">
                             Supports Markdown: <code className="font-mono"># H1</code> <code className="font-mono">**bold**</code> <code className="font-mono">*italic*</code> <code className="font-mono">`code`</code> <code className="font-mono">&gt; quote</code>
                         </p>
                     )}
 
-                    {/* Backlinks */}
+                    {}
                     {backlinks.length > 0 && (
                         <div className="mt-10 pt-6 border-t border-gray-100 dark:border-gray-800">
                             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -450,7 +444,7 @@ const KnowledgePage = () => {
                 </div>
             </div>
 
-            {/* Link modal */}
+            {}
             {showLinkModal && (
                 <LinkPageModal
                     workspaceId={workspaceId}

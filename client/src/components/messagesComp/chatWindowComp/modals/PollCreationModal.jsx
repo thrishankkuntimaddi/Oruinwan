@@ -10,10 +10,6 @@ const inputStyle = {
     fontFamily: FONT, boxSizing: 'border-box', transition: 'border-color 100ms ease',
 };
 
-/**
- * Poll Creation Modal
- * Allows users to create single or multiple choice polls
- */
 export default function PollCreationModal({ onClose, onCreate }) {
     const [question, setQuestion] = useState('');
     const [options,  setOptions]  = useState(['', '']);
@@ -66,16 +62,16 @@ export default function PollCreationModal({ onClose, onCreate }) {
                 overflow: 'hidden',
                 animation: 'fadeIn 180ms ease',
             }}>
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-default)', flexShrink: 0 }}>
                     <h2 style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: FONT }}>Create Poll</h2>
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Body */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                    {/* Question */}
+                    {}
                     <div>
                         <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px', fontFamily: FONT }}>
                             Poll Question <span style={{ color: 'var(--state-danger)' }}>*</span>
@@ -93,7 +89,7 @@ export default function PollCreationModal({ onClose, onCreate }) {
                         )}
                     </div>
 
-                    {/* Poll Type */}
+                    {}
                     <div>
                         <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontFamily: FONT }}>
                             Poll Type
@@ -113,7 +109,7 @@ export default function PollCreationModal({ onClose, onCreate }) {
                         </div>
                     </div>
 
-                    {/* Options */}
+                    {}
                     <div>
                         <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px', fontFamily: FONT }}>
                             Options <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>(2–10)</span>
@@ -146,7 +142,7 @@ export default function PollCreationModal({ onClose, onCreate }) {
                     </div>
                 </div>
 
-                {/* Footer */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', padding: '12px 16px', borderTop: '1px solid var(--border-default)', flexShrink: 0 }}>
                     <CancelBtn onClick={onClose}>Cancel</CancelBtn>
                     <CreateBtn onClick={handleSubmit}>Create Poll</CreateBtn>

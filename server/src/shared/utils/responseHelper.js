@@ -1,8 +1,3 @@
-// client/src/shared/utils/responseHelper.js
-/**
- * Response helper utilities for consistent API responses
- */
-
 export const sendSuccess = (res, data = {}, statusCode = 200) => {
     return res.status(statusCode).json({
         success: true,

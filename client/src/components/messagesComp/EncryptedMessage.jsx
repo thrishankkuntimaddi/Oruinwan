@@ -1,29 +1,14 @@
-// client/src/components/messagesComp/EncryptedMessage.jsx
-/**
- * EncryptedMessage Component (E2EE with Conversation Keys)
- * Handles decryption and display of encrypted messages using conversation/thread keys
- */
-
 import React, { useState, useEffect } from 'react';
 import { decryptReceivedMessage } from '../../services/messageEncryptionService';
 import { Lock } from 'lucide-react';
 
-/**
- * Component for displaying encrypted messages with automatic decryption
- * @param {Object} props
- * @param {string} props.ciphertext - Base64-encoded ciphertext
- * @param {string} props.messageIv - Base64-encoded IV
- * @param {string} props.conversationId - Channel ID or DM session ID
- * @param {string} props.conversationType - "channel" or "dm"
- * @param {string} props.parentMessageId - Parent message ID for thread key derivation (optional)
- */
 function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationType, parentMessageId = null }) {
     const [decrypted, setDecrypted] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // ✅ Correction #3: NON-BLOCKING decryption
-        // Never throw, never block render, always show something
+        
+        
         const decrypt = async () => {
             if (!ciphertext || !messageIv) {
                 setDecrypted('🔒 Encrypted message');
@@ -40,22 +25,22 @@ function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationT
             try {
                 setLoading(true);
 
-                // Use conversation key service with thread derivation support
+                
                 const plaintext = await decryptReceivedMessage(
                     ciphertext,
                     messageIv,
                     conversationId,
                     conversationType,
-                    parentMessageId  // Derives thread key if present
+                    parentMessageId  
                 );
 
                 setDecrypted(plaintext);
             } catch (err) {
-                // ✅ CRITICAL: Non-blocking error handling
-                // Show user-friendly message, log details for debugging
+                
+                
                 console.error('[E2EE] Decryption failed (non-blocking):', err);
 
-                // UI only knows: "Show plaintext" or "Show 🔒"
+                
                 if (err.message?.includes('not found')) {
                     setDecrypted('🔒 Encrypted message (key not available)');
                 } else {
@@ -78,7 +63,7 @@ function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationT
         );
     }
 
-    // If decryption failed, show lock emoji (already set in decrypted state)
+    
     if (decrypted?.startsWith('🔒')) {
         return (
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -88,7 +73,7 @@ function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationT
         );
     }
 
-    // Successfully decrypted - show plaintext
+    
     return (
         <div style={{ color: 'var(--text-primary)' }}>
             {decrypted}

@@ -1,5 +1,3 @@
-// src/components/messageComp/chatWindow/messages/messagesContainer.jsx
-
 import React, { useEffect, useRef } from "react";
 import { ChevronUp, Loader2 } from "lucide-react";
 import { groupByDate } from "../helpers/helpers";
@@ -89,7 +87,7 @@ export default function MessagesContainer({
       className="flex-1 overflow-y-auto p-4 chat-scroll-smooth"
       style={{ overflowX: "hidden" }}
     >
-      {/* Load More */}
+      {}
       {hasMore && (
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
           <button
@@ -126,7 +124,7 @@ export default function MessagesContainer({
 
       {grouped.map((grp) => (
         <div key={grp.label} style={{ marginBottom: '16px' }}>
-          {/* Date Header */}
+          {}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
             <div style={{
               fontSize: '11px', fontWeight: 400, color: 'var(--text-muted)',
@@ -141,7 +139,7 @@ export default function MessagesContainer({
             </div>
           </div>
 
-          {/* Messages */}
+          {}
           <div className="space-y-3">
             {grp.items.map((msg) => {
               let memberWhoJoined = null;

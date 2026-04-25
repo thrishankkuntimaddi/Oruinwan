@@ -1,6 +1,3 @@
-// client/src/components/manager/ManagerContactAdmin.jsx
-// Internal messaging interface for Manager to Company Admin communication
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
@@ -21,7 +18,7 @@ const ManagerContactAdmin = () => {
     const messagesEndRef = useRef(null);
     const socketRef = useRef(null);
 
-    // Get company admin
+    
     useEffect(() => {
         const fetchAdmin = async () => {
             try {
@@ -40,7 +37,7 @@ const ManagerContactAdmin = () => {
         }
     }, [company]);
 
-    // Fetch conversation with admin
+    
     useEffect(() => {
         const fetchConversation = async () => {
             if (!admin?._id) return;
@@ -62,7 +59,7 @@ const ManagerContactAdmin = () => {
         }
     }, [admin, showToast]);
 
-    // Initialize Socket.IO
+    
     useEffect(() => {
         if (!user?._id) return;
 
@@ -70,10 +67,10 @@ const ManagerContactAdmin = () => {
             withCredentials: true
         });
 
-        // Join user's personal room
+        
         socketRef.current.emit('join-room', `user-${user._id}`);
 
-        // Listen for new internal messages
+        
         socketRef.current.on('internal-message', (message) => {
             if (message.sender._id === admin?._id || message.recipient._id === admin?._id) {
                 setMessages(prev => [...prev, message]);
@@ -88,7 +85,7 @@ const ManagerContactAdmin = () => {
         };
     }, [user, admin]);
 
-    // Auto-scroll to bottom
+    
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
@@ -129,7 +126,7 @@ const ManagerContactAdmin = () => {
 
     return (
         <div className="h-full flex flex-col bg-gray-50 dark:bg-gray-900 transition-colors duration-200">
-            {/* Header */}
+            {}
             <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-8 py-6">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold text-lg">
@@ -144,7 +141,7 @@ const ManagerContactAdmin = () => {
                 </div>
             </div>
 
-            {/* Messages Area */}
+            {}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900">
                 {loading ? (
                     <div className="flex items-center justify-center h-full">
@@ -189,7 +186,7 @@ const ManagerContactAdmin = () => {
                 )}
             </div>
 
-            {/* Message Input */}
+            {}
             <div className="border-t border-gray-200 dark:border-gray-700 p-4 bg-white dark:bg-gray-800">
                 <form onSubmit={handleSendMessage} className="flex gap-2">
                     <button

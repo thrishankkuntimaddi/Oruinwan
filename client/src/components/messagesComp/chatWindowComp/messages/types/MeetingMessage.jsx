@@ -1,9 +1,3 @@
-/**
- * MeetingMessage.jsx — Phase 7.6
- *
- * Renders a meeting card inside chat.
- * msg.meeting = { title, startTime, duration, meetingLink, participants }
- */
 import React, { useMemo } from 'react';
 import { Calendar, Clock, Users, Video, ExternalLink } from 'lucide-react';
 
@@ -12,7 +6,7 @@ export default function MeetingMessage({ meeting }) {
 
     const { title, startTime, duration, meetingLink, participants = [] } = meeting;
 
-    // Format date/time
+    
     const formattedDate = useMemo(() => {
         if (!startTime) return null;
         try {
@@ -34,7 +28,7 @@ export default function MeetingMessage({ meeting }) {
             backgroundColor: 'var(--bg-active)',
             borderRadius: '2px', overflow: 'hidden',
         }}>
-            {/* Header stripe */}
+            {}
             <div style={{
                 display: 'flex', alignItems: 'center', gap: '8px',
                 padding: '7px 12px',
@@ -52,9 +46,9 @@ export default function MeetingMessage({ meeting }) {
                 </span>
             </div>
 
-            {/* Body */}
+            {}
             <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {/* Title */}
+                {}
                 <div style={{
                     fontSize: '13px', fontWeight: 600,
                     color: 'var(--text-primary)',
@@ -66,7 +60,7 @@ export default function MeetingMessage({ meeting }) {
                     {title}
                 </div>
 
-                {/* Date / Time */}
+                {}
                 {formattedDate && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '10px',
@@ -85,7 +79,7 @@ export default function MeetingMessage({ meeting }) {
                     </div>
                 )}
 
-                {/* Participants count */}
+                {}
                 {participants.length > 0 && (
                     <div style={{
                         display: 'flex', alignItems: 'center', gap: '4px',
@@ -97,7 +91,7 @@ export default function MeetingMessage({ meeting }) {
                     </div>
                 )}
 
-                {/* Past label */}
+                {}
                 {formattedDate?.isPast && (
                     <div style={{
                         fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic',
@@ -108,7 +102,7 @@ export default function MeetingMessage({ meeting }) {
                 )}
             </div>
 
-            {/* Join button */}
+            {}
             {meetingLink && (
                 <div style={{ padding: '0 12px 10px' }}>
                     <a

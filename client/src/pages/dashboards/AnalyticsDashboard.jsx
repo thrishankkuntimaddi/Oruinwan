@@ -1,5 +1,3 @@
-// client/src/pages/dashboards/AnalyticsDashboard.jsx
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,9 +25,9 @@ const AnalyticsDashboard = () => {
 
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
-    const [period, setPeriod] = useState(30); // Default 30 days
+    const [period, setPeriod] = useState(30); 
 
-    // Analytics data state
+    
     const [summary, setSummary] = useState(null);
     const [userActivity, setUserActivity] = useState(null);
     const [workspaces, setWorkspaces] = useState([]);
@@ -38,7 +36,7 @@ const AnalyticsDashboard = () => {
     const [messages, setMessages] = useState(null);
     const [engagement, setEngagement] = useState(null);
 
-    // Fetch all analytics data
+    
     const fetchAnalytics = async (showLoadingState = true) => {
         try {
             if (showLoadingState) setLoading(true);
@@ -83,12 +81,12 @@ const AnalyticsDashboard = () => {
         fetchAnalytics();
     }, [period]);
 
-    // Handle period change
+    
     const handlePeriodChange = (newPeriod) => {
         setPeriod(newPeriod);
     };
 
-    // Handle export
+    
     const handleExport = () => {
         showToast('Export functionality coming soon!', 'info');
     };
@@ -96,7 +94,7 @@ const AnalyticsDashboard = () => {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-8 animate-pulse">
-                {/* Header skeleton */}
+                {}
                 <div className="flex items-center justify-between mb-8">
                     <div className="space-y-2">
                         <div className="h-7 w-48 bg-gray-200 dark:bg-gray-700 rounded-xl" />
@@ -104,7 +102,7 @@ const AnalyticsDashboard = () => {
                     </div>
                     <div className="h-9 w-28 bg-blue-100 dark:bg-blue-900/30 rounded-xl" />
                 </div>
-                {/* Stats cards */}
+                {}
                 <div className="grid grid-cols-4 gap-4 mb-8">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -114,7 +112,7 @@ const AnalyticsDashboard = () => {
                         </div>
                     ))}
                 </div>
-                {/* Charts */}
+                {}
                 <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 h-64">
                         <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded mb-6" />
@@ -135,7 +133,7 @@ const AnalyticsDashboard = () => {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
+            {}
             <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
@@ -156,7 +154,7 @@ const AnalyticsDashboard = () => {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            {/* Period Selector */}
+                            {}
                             <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
                                 {[7, 30, 90, 365].map((days) => (
                                     <button
@@ -193,10 +191,10 @@ const AnalyticsDashboard = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
+            {}
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="space-y-8">
-                    {/* Overview Cards */}
+                    {}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <StatCard
                             label="Total Users"
@@ -225,7 +223,7 @@ const AnalyticsDashboard = () => {
                         />
                     </div>
 
-                    {/* Engagement Metrics */}
+                    {}
                     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <TrendingUp className="w-5 h-5 text-blue-600" />
@@ -252,7 +250,7 @@ const AnalyticsDashboard = () => {
                         </div>
                     </div>
 
-                    {/* User Activity Chart */}
+                    {}
                     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <Users className="w-5 h-5 text-blue-600" />
@@ -265,9 +263,9 @@ const AnalyticsDashboard = () => {
                         />
                     </div>
 
-                    {/* Two Column Layout */}
+                    {}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        {/* Workspace Analytics */}
+                        {}
                         <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                 <Briefcase className="w-5 h-5 text-purple-600" />
@@ -283,7 +281,7 @@ const AnalyticsDashboard = () => {
                             />
                         </div>
 
-                        {/* Task Status Distribution */}
+                        {}
                         <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                             <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                                 <CheckSquare className="w-5 h-5 text-orange-600" />
@@ -304,7 +302,7 @@ const AnalyticsDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Message Volume */}
+                    {}
                     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <MessageSquare className="w-5 h-5 text-green-600" />
@@ -331,7 +329,7 @@ const AnalyticsDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Top Channels */}
+                    {}
                     <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
                         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                             <Hash className="w-5 h-5 text-blue-600" />

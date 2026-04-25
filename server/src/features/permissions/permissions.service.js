@@ -1,5 +1,3 @@
-// server/src/features/permissions/permissions.service.js
-// Role Permission Matrix — read/write granular role→module permissions.
 'use strict';
 
 const Permission = require('../../../models/Permission');
@@ -59,11 +57,6 @@ const DEFAULT_MATRIX = {
 
 const ROLES = ['owner', 'admin', 'manager', 'member', 'guest'];
 
-/**
- * getMatrix(companyId)
- * Returns the full role × permission matrix for a company.
- * If no custom records exist, seeds defaults and returns them.
- */
 exports.getMatrix = async function (companyId) {
     const existing = await Permission.find({ company: companyId }).lean();
     const matrix = {};
@@ -76,11 +69,6 @@ exports.getMatrix = async function (companyId) {
     return matrix;
 };
 
-/**
- * updateMatrix(companyId, updates, updatedBy)
- * Bulk-upsert permissions for one or more roles.
- * @param updates - { owner: { sendMessages: true, ... }, member: { ... }, ... }
- */
 exports.updateMatrix = async function (companyId, updates, updatedBy) {
     const ops = [];
 
@@ -107,10 +95,6 @@ exports.updateMatrix = async function (companyId, updates, updatedBy) {
     return exports.getMatrix(companyId);
 };
 
-/**
- * seedDefaults(companyId, createdBy)
- * Seeds all 5 roles with default permissions (idempotent).
- */
 exports.seedDefaults = async function (companyId, createdBy) {
     for (const role of ROLES) {
         const exists = await Permission.exists({ company: companyId, role });

@@ -32,17 +32,17 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
     return (
         <div className="group relative mb-4">
             <div style={{ border: '1px solid var(--border-default)', overflow: 'hidden' }}>
-                {/* Header bar */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border-subtle)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {/* Traffic lights */}
+                        {}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#ff5f57' }} />
                             <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#febc2e' }} />
                             <div style={{ width: '11px', height: '11px', borderRadius: '50%', background: '#28c840' }} />
                         </div>
                         <div style={{ width: '1px', height: '14px', background: 'var(--bg-active)' }} />
-                        {/* Language picker */}
+                        {}
                         <div style={{ position: 'relative' }}>
                             <button
                                 onClick={() => setShowLangPicker(v => !v)}
@@ -73,7 +73,7 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                         </div>
                     </div>
 
-                    {/* Actions */}
+                    {}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
                             onClick={handleCopy}
@@ -100,9 +100,9 @@ const CodeBlock = ({ block, onBlockChange, onRemoveBlock }) => {
                     </div>
                 </div>
 
-                {/* Code area — always dark like a real code editor */}
+                {}
                 <div style={{ position: 'relative', background: '#0e0e0e' }}>
-                    {/* Line number gutter stripe */}
+                    {}
                     <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '40px', background: 'rgba(255,255,255,0.015)', borderRight: '1px solid rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
                     <textarea
                         value={block.content}

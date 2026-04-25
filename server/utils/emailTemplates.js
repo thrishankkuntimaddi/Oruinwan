@@ -1,30 +1,7 @@
-/**
- * server/utils/emailTemplates.js
- *
- * Chttrix — Unified Premium Email Template System
- * Monolith Flow Design Language
- *
- * Design tokens:
- *   --bg-base:        #080808
- *   --bg-card:        #111111
- *   --bg-header:      #0c0c0c
- *   --accent:         #b8956a  (amber/gold)
- *   --accent-light:   #d4a97a
- *   --text-primary:   #e4e4e4
- *   --text-secondary: #9a9a9a
- *   --text-muted:     #5a5a5a
- *   --border:         #1e1e1e
- *
- * All templates return { subject, html, text }.
- * Use inline styles only — CSS classes are stripped by Gmail.
- * Use table-based layout for max email client compatibility.
- */
-
 const YEAR = new Date().getFullYear();
 const APP_NAME = 'Chttrix';
 const APP_URL = process.env.FRONTEND_URL || 'https://chttrix.com';
 
-// ─── Design Tokens ────────────────────────────────────────────────────────────
 const T = {
   bgOuter:       '#f0ece6',
   bgCard:        '#ffffff',
@@ -43,16 +20,6 @@ const T = {
   borderAccent:  'rgba(184,149,106,0.3)',
 };
 
-// ─── Base Template Shell ──────────────────────────────────────────────────────
-/**
- * Wraps body HTML in the Chttrix branded shell.
- * @param {Object} opts
- * @param {string} opts.icon       — emoji or text (36px, no background needed)
- * @param {string} opts.title      — H1 headline
- * @param {string} opts.subtitle   — muted subtitle under headline
- * @param {string} opts.body       — inner HTML content (rows, buttons, paragraphs)
- * @param {string} [opts.preheader] — hidden preview text in email clients
- */
 function _shell({ icon, title, subtitle, body, preheader = '' }) {
   return `<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
@@ -139,9 +106,6 @@ function _shell({ icon, title, subtitle, body, preheader = '' }) {
 </html>`;
 }
 
-// ─── Reusable Partials ────────────────────────────────────────────────────────
-
-/** Big amber CTA button */
 function _btn(text, url) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:28px 0">
   <tr>
@@ -152,14 +116,12 @@ function _btn(text, url) {
 </table>`;
 }
 
-/** Ghost secondary link (smaller, amber text) */
 function _link(text, url) {
   return `<p style="margin:0;font-size:13px;color:${T.textMuted};line-height:1.6;word-break:break-all;font-family:inherit">
   Or copy this link: <a href="${url}" style="color:${T.accent};text-decoration:none;font-family:inherit">${url}</a>
 </p>`;
 }
 
-/** Info row inside a dark data card */
 function _row(label, value, highlight) {
   return `<tr>
   <td style="padding:10px 0;border-bottom:1px solid ${T.border};font-size:13px;color:${T.textSecondary};width:120px;font-family:inherit;vertical-align:top">${label}</td>
@@ -167,7 +129,6 @@ function _row(label, value, highlight) {
 </tr>`;
 }
 
-/** Dark info card wrapper (wraps _row() calls) */
 function _card(content) {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
     style="background-color:${T.bgSection};border:1px solid ${T.border};margin:20px 0">
@@ -179,7 +140,6 @@ function _card(content) {
 </table>`;
 }
 
-/** Warning / security alert box */
 function _alert(text, kind) {
   const colors = {
     warning: { bg: 'rgba(255,190,50,0.07)', border: '#b8860b', text: '#f0c040' },
@@ -196,7 +156,6 @@ function _alert(text, kind) {
 </table>`;
 }
 
-/** OTP / code display block */
 function _otp(code) {
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:28px auto">
   <tr>
@@ -208,7 +167,6 @@ function _otp(code) {
 </table>`;
 }
 
-/** Simple paragraph */
 function _p(text, opts = {}) {
   const size = opts.size || '14px';
   const color = opts.color || T.textSecondary;
@@ -217,15 +175,6 @@ function _p(text, opts = {}) {
   return `<p style="margin:${mt} 0 ${mb};font-size:${size};color:${color};line-height:1.7;font-family:inherit">${text}</p>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-//  TEMPLATE EXPORTS
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ── 1. Email Verification (signup link) ───────────────────────────────────────
-/**
- * @param {string} username
- * @param {string} verifyUrl
- */
 function verifyEmailTemplate(username, verifyUrl) {
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
@@ -247,11 +196,6 @@ function verifyEmailTemplate(username, verifyUrl) {
   };
 }
 
-// ── 2. Password Reset ─────────────────────────────────────────────────────────
-/**
- * @param {string} username
- * @param {string} resetUrl
- */
 function passwordResetTemplate(username, resetUrl) {
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
@@ -273,11 +217,6 @@ function passwordResetTemplate(username, resetUrl) {
   };
 }
 
-// ── 3. Password Set (OAuth users adding password login) ───────────────────────
-/**
- * @param {string} username
- * @param {string} provider  e.g. 'google'
- */
 function passwordSetTemplate(username, provider) {
   const providerLabel = provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'OAuth';
   const body = `
@@ -385,13 +324,6 @@ function inviteTemplate(name, companyName, inviteLink, opts = {}) {
   };
 }
 
-// ── 7. Bulk Import Welcome + Credentials ─────────────────────────────────────
-/**
- * @param {string} name
- * @param {string} workEmail
- * @param {string} tempPassword
- * @param {string} companyName
- */
 function bulkWelcomeTemplate(name, workEmail, tempPassword, companyName) {
   const loginUrl = `${APP_URL}/login`;
   const body = `
@@ -418,12 +350,6 @@ function bulkWelcomeTemplate(name, workEmail, tempPassword, companyName) {
   };
 }
 
-// ── 8. Workspace Invite ───────────────────────────────────────────────────────
-/**
- * @param {string} name
- * @param {string} workspaceName
- * @param {string} inviteLink
- */
 function workspaceInviteTemplate(name, workspaceName, inviteLink) {
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'You\'ve been invited!';
   const body = `
@@ -446,12 +372,6 @@ function workspaceInviteTemplate(name, workspaceName, inviteLink) {
   };
 }
 
-// ── 9. Workspace Invite Reminder ──────────────────────────────────────────────
-/**
- * @param {string} name
- * @param {string} workspaceName
- * @param {string} inviteLink
- */
 function workspaceInviteReminderTemplate(name, workspaceName, inviteLink) {
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Just a reminder!';
   const body = `
@@ -474,13 +394,6 @@ function workspaceInviteReminderTemplate(name, workspaceName, inviteLink) {
   };
 }
 
-// ── 10. Task Assigned ────────────────────────────────────────────────────────
-/**
- * @param {string} name
- * @param {string} taskTitle
- * @param {string} assignedBy
- * @param {string} [taskUrl]
- */
 function taskAssignedTemplate(name, taskTitle, assignedBy, taskUrl) {
   const url = taskUrl || APP_URL;
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Hi there,';
@@ -503,13 +416,6 @@ function taskAssignedTemplate(name, taskTitle, assignedBy, taskUrl) {
   };
 }
 
-// ── 11. Meeting Scheduled ────────────────────────────────────────────────────
-/**
- * @param {string} name
- * @param {string} meetingTitle
- * @param {string} [formattedTime]
- * @param {string} [meetingUrl]
- */
 function meetingScheduledTemplate(name, meetingTitle, formattedTime, meetingUrl) {
   const url = meetingUrl || `${APP_URL}/huddles`;
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Hi there,';
@@ -533,14 +439,6 @@ function meetingScheduledTemplate(name, meetingTitle, formattedTime, meetingUrl)
   };
 }
 
-// ── 12. Security — New Device Sign-In ────────────────────────────────────────
-/**
- * @param {string} name
- * @param {string} deviceName
- * @param {string} platform
- * @param {string} location     e.g. "from IP 1.2.3.4"
- * @param {string} formattedTime
- */
 function newDeviceSignInTemplate(name, deviceName, platform, location, formattedTime) {
   const securityUrl = `${APP_URL}/settings/security`;
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Hi there,';
@@ -570,12 +468,6 @@ function newDeviceSignInTemplate(name, deviceName, platform, location, formatted
   };
 }
 
-// ── 13. Security — Password Changed ──────────────────────────────────────────
-/**
- * @param {string} name
- * @param {string} deviceName
- * @param {string} formattedTime
- */
 function passwordChangedTemplate(name, deviceName, formattedTime) {
   const resetUrl = `${APP_URL}/forgot-password`;
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Hi there,';
@@ -602,13 +494,6 @@ function passwordChangedTemplate(name, deviceName, formattedTime) {
   };
 }
 
-// ── 14. Security — All Devices Revoked ───────────────────────────────────────
-/**
- * @param {string} name
- * @param {number} revokedCount
- * @param {string} deviceName   — device that initiated the sign-out
- * @param {string} formattedTime
- */
 function allDevicesRevokedTemplate(name, revokedCount, deviceName, formattedTime) {
   const securityUrl = `${APP_URL}/settings/security`;
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Hi there,';
@@ -637,24 +522,23 @@ function allDevicesRevokedTemplate(name, revokedCount, deviceName, formattedTime
   };
 }
 
-// ─── Exports ──────────────────────────────────────────────────────────────────
 module.exports = {
-  // Auth
+  
   verifyEmailTemplate,
   passwordResetTemplate,
   passwordSetTemplate,
   reactivateAccountTemplate,
   emailVerificationTemplate,
-  // Onboarding
+  
   inviteTemplate,
   bulkWelcomeTemplate,
-  // Workspaces
+  
   workspaceInviteTemplate,
   workspaceInviteReminderTemplate,
-  // Notifications
+  
   taskAssignedTemplate,
   meetingScheduledTemplate,
-  // Security
+  
   newDeviceSignInTemplate,
   passwordChangedTemplate,
   allDevicesRevokedTemplate,

@@ -1,5 +1,3 @@
-// server/src/features/integrations/providers/slack.handler.js
-// Slack bridge — mirrors messages between Slack ↔ Chttrix channels via webhooks
 const axios = require('axios');
 
 async function verify(config) {
@@ -9,10 +7,6 @@ async function verify(config) {
   return config;
 }
 
-/**
- * Send a message to Slack from Chttrix.
- * Uses Slack Incoming Webhook URL.
- */
 async function sendToSlack(webhookUrl, text, context = {}) {
   await axios.post(webhookUrl, {
     text,
@@ -22,23 +16,20 @@ async function sendToSlack(webhookUrl, text, context = {}) {
   }, { timeout: 8000 });
 }
 
-/**
- * Handle incoming Slack events (URL verification + message events).
- */
 async function handleWebhook(payload, headers, integration) {
   const results = [];
 
-  // Slack URL verification challenge
+  
   if (payload.type === 'url_verification') {
     return { handled: true, challenge: payload.challenge, results: [] };
   }
 
-  // Slack event callback
+  
   if (payload.type === 'event_callback') {
     const event = payload.event || {};
 
     if (event.type === 'message' && !event.subtype && event.text) {
-      // Mirror Slack message → Chttrix channel message
+      
       results.push({
         action: 'message.bridge',
         data: {

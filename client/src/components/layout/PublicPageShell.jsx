@@ -1,4 +1,3 @@
-// PublicPageShell.jsx — Monolith Flow: Shared nav + footer for all public pages
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Menu, X as XIcon } from 'lucide-react';
@@ -71,7 +70,6 @@ const NavBtn = ({ label, href, onClick }) => {
     );
 };
 
-// Hook: reactive window width
 function useWindowWidth() {
     const [w, setW] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
     useEffect(() => {
@@ -101,7 +99,7 @@ export default function PublicPageShell({ children, title }) {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
-    // Close drawer on resize to desktop
+    
     useEffect(() => {
         if (!isMobile) setMobileMenuOpen(false);
     }, [isMobile]);
@@ -116,7 +114,7 @@ export default function PublicPageShell({ children, title }) {
                 .public-scroll { overflow-y: auto; }
             `}</style>
 
-            {/* ── Nav ── */}
+            {}
             <nav style={{
                 position: 'fixed', top: 0, width: '100%', zIndex: 100,
                 background: scrolled ? 'rgba(12,12,12,0.97)' : 'rgba(12,12,12,0.88)',
@@ -124,14 +122,14 @@ export default function PublicPageShell({ children, title }) {
                 backdropFilter: 'blur(16px)',
                 transition: 'background 250ms ease',
             }}>
-                {/* Main row — 56px */}
+                {}
                 <div style={{
                     ...S.container,
                     height: '56px',
                     display: 'flex', alignItems: 'center',
                     justifyContent: 'space-between', gap: '8px',
                 }}>
-                    {/* Logo */}
+                    {}
                     <div
                         onClick={() => { navigate('/'); setMobileMenuOpen(false); }}
                         style={{ display: 'flex', alignItems: 'center', gap: '9px', cursor: 'pointer', flexShrink: 0 }}
@@ -146,7 +144,7 @@ export default function PublicPageShell({ children, title }) {
                         )}
                     </div>
 
-                    {/* ── DESKTOP: nav links + CTA ── */}
+                    {}
                     {!isMobile && (
                         <>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1, justifyContent: 'center' }}>
@@ -173,7 +171,7 @@ export default function PublicPageShell({ children, title }) {
                         </>
                     )}
 
-                    {/* ── MOBILE: hamburger ── */}
+                    {}
                     {isMobile && (
                         <button
                             onClick={() => setMobileMenuOpen(o => !o)}
@@ -185,7 +183,7 @@ export default function PublicPageShell({ children, title }) {
                     )}
                 </div>
 
-                {/* ── Mobile drawer ── */}
+                {}
                 {isMobile && mobileMenuOpen && (
                     <div style={{
                         background: 'rgba(10,10,10,0.99)',
@@ -213,16 +211,16 @@ export default function PublicPageShell({ children, title }) {
                 )}
             </nav>
 
-            {/* ── Page Content ── */}
+            {}
             <div style={{ paddingTop: '56px' }}>
                 {children}
             </div>
 
-            {/* ── Footer ── */}
+            {}
             <footer style={{ background: 'var(--bg-base)', borderTop: '1px solid var(--border-subtle)', paddingTop: '48px', paddingBottom: '32px' }}>
                 <div style={S.container}>
 
-                    {/* Brand row — always shown */}
+                    {}
                     <div style={{ marginBottom: '32px' }}>
                         <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '9px', marginBottom: '12px', cursor: 'pointer', width: 'fit-content' }}>
                             <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '24px', height: '24px', objectFit: 'cover', borderRadius: '2px' }} />
@@ -243,12 +241,12 @@ export default function PublicPageShell({ children, title }) {
                         </div>
                     </div>
 
-                    {/* Link columns — responsive grid */}
+                    {}
                     <div style={{
                         display: 'grid',
                         gridTemplateColumns: isMobile
-                            ? 'repeat(2, 1fr)'          // 2 cols on mobile
-                            : 'repeat(4, 1fr)',          // 4 cols on desktop
+                            ? 'repeat(2, 1fr)'          
+                            : 'repeat(4, 1fr)',          
                         gap: isMobile ? '24px 16px' : '0 24px',
                         marginBottom: '32px',
                     }}>
@@ -273,7 +271,7 @@ export default function PublicPageShell({ children, title }) {
                         ))}
                     </div>
 
-                    {/* Bottom bar */}
+                    {}
                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>© 2026 Chttrix Inc. All rights reserved.</span>
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>v1.0 · workspace-os</span>

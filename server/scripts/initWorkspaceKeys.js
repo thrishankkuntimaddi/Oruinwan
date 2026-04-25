@@ -1,72 +1,36 @@
 #!/usr/bin/env node
-/**
- * E2EE Workspace Key Initialization Script
- * 
- * This script initializes E2EE workspace keys for existing workspaces
- * that don't have encryption keys set up yet.
- * 
- * IMPORTANT: This is a ONE-TIME setup script for existing workspaces.
- * New workspaces should have keys created automatically on the client-side.
- * 
- * Usage:
- *   node initWorkspaceKeys.js
- * 
- * The script will:
- * 1. Find all workspaces without encryption keys
- * 2. For each workspace, prompt for the owner's password
- * 3. Generate a workspace key and encrypt it with the owner's password
- * 4. Create UserWorkspaceKey entries for all workspace members
- */
 
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 const readline = require('readline');
 require('dotenv').config();
 
-// Import models
 const Workspace = require('./models/Workspace');
 const User = require('./models/User');
 const { UserWorkspaceKey, WorkspaceKey } = require('./models/encryption');
 
-// ==================== CRYPTO UTILITIES ====================
-
-/**
- * Generate a random 256-bit workspace key
- */
 function generateWorkspaceKey() {
     return crypto.randomBytes(32);
 }
 
-/**
- * Generate random IV (12 bytes for AES-GCM)
- */
 function generateIV() {
     return crypto.randomBytes(12);
 }
 
-/**
- * Generate random salt for PBKDF2
- */
 function generateSalt() {
     return crypto.randomBytes(16);
 }
 
-/**
- * Derive KEK (Key Encryption Key) from password using PBKDF2
- */
 function deriveKEK(password, salt) {
     return crypto.pbkdf2Sync(
         password,
         salt,
-        100000, // iterations
-        32, // key length
+        100000, 
+        32, 
         'sha256'
     );
 }
 
-/**
- * Encrypt workspace key with user's KEK
- */
 function encryptWorkspaceKey(workspaceKey, kek) {
     const iv = generateIV();
     const cipher = crypto.createCipheriv('aes-256-gcm', kek, iv);
@@ -82,8 +46,6 @@ function encryptWorkspaceKey(workspaceKey, kek) {
         iv: iv.toString('base64')
     };
 }
-
-// ==================== USER INPUT ====================
 
 const rl = readline.createInterface({
     input: process.stdin,
@@ -110,17 +72,17 @@ function questionHidden(query) {
             switch (char) {
                 case '\n':
                 case '\r':
-                case '\u0004': // Ctrl+D
+                case '\u0004': 
                     stdin.setRawMode(false);
                     stdin.pause();
                     stdin.removeListener('data', onData);
                     process.stdout.write('\n');
                     resolve(password);
                     break;
-                case '\u0003': // Ctrl+C
+                case '\u0003': 
                     process.exit();
                     break;
-                case '\u007f': // Backspace
+                case '\u007f': 
                     password = password.slice(0, -1);
                     process.stdout.clearLine();
                     process.stdout.cursorTo(0);
@@ -137,18 +99,16 @@ function questionHidden(query) {
     });
 }
 
-// ==================== MAIN SCRIPT ====================
-
 async function initWorkspaceKeys() {
     try {
         console.log('🔐 E2EE Workspace Key Initialization Script\n');
 
-        // Connect to MongoDB
+        
         console.log('📡 Connecting to MongoDB...');
         await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/chttrix');
         console.log('✅ Connected to MongoDB\n');
 
-        // Find all workspaces
+        
         const workspaces = await Workspace.find().populate('members.user', 'username email');
         console.log(`📊 Found ${workspaces.length} workspaces\n`);
 
@@ -159,7 +119,7 @@ async function initWorkspaceKeys() {
             return;
         }
 
-        // Check which workspaces already have keys
+        
         const workspaceIds = workspaces.map(w => w._id);
         const existingKeys = await UserWorkspaceKey.find({
             workspaceId: { $in: workspaceIds }
@@ -179,14 +139,14 @@ async function initWorkspaceKeys() {
             return;
         }
 
-        // Process each workspace
+        
         for (const workspace of workspacesNeedingKeys) {
             console.log('━'.repeat(60));
             console.log(`📁 Workspace: ${workspace.name}`);
             console.log(`   Type: ${workspace.type}`);
             console.log(`   Members: ${workspace.members.length}`);
 
-            // Find workspace owner
+            
             const owner = workspace.members.find(m => m.role === 'owner');
             if (!owner) {
                 console.log('❌ No owner found, skipping...\n');
@@ -196,14 +156,14 @@ async function initWorkspaceKeys() {
             const ownerUser = owner.user;
             console.log(`   Owner: ${ownerUser.username} (${ownerUser.email})\n`);
 
-            // Ask if user wants to initialize this workspace
+            
             const shouldInit = await question(`Initialize keys for "${workspace.name}"? (y/n): `);
             if (shouldInit.toLowerCase() !== 'y') {
                 console.log('⏭️  Skipped\n');
                 continue;
             }
 
-            // Get owner's password
+            
             const password = await questionHidden(`Enter password for ${ownerUser.username}: `);
 
             if (!password) {
@@ -212,22 +172,22 @@ async function initWorkspaceKeys() {
             }
 
             try {
-                // Generate workspace key
+                
                 console.log('🔑 Generating workspace key...');
                 const workspaceKey = generateWorkspaceKey();
 
-                // Initialize keys for all members
+                
                 const enrollments = [];
 
                 for (const member of workspace.members) {
                     const userId = member.user._id || member.user;
                     const salt = generateSalt();
 
-                    // Derive KEK from password (same password for all members in this script)
-                    // NOTE: In production, each user should have their own password
+                    
+                    
                     const kek = deriveKEK(password, salt);
 
-                    // Encrypt workspace key with user's KEK
+                    
                     const { encryptedKey, iv } = encryptWorkspaceKey(workspaceKey, kek);
 
                     enrollments.push({
@@ -240,7 +200,7 @@ async function initWorkspaceKeys() {
                     });
                 }
 
-                // Save all enrollments
+                
                 console.log(`💾 Enrolling ${enrollments.length} members...`);
                 await UserWorkspaceKey.insertMany(enrollments);
 
@@ -272,5 +232,4 @@ async function initWorkspaceKeys() {
     }
 }
 
-// Run the script
 initWorkspaceKeys();

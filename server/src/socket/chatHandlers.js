@@ -1,6 +1,3 @@
-// server/src/socket/chatHandlers.js
-// CANONICAL chat socket handler — Phase 5: moved from server/socket/index.js
-
 const Message = require("../features/messages/message.model");
 const Channel = require("../features/channels/channel.model");
 const DMSession = require("../../models/DMSession");
@@ -9,29 +6,29 @@ const User = require("../../models/User");
 const logger = require("../../utils/logger");
 const messagesService = require("../modules/messages/messages.service");
 const ROOMS = require("../shared/utils/rooms");
-// Phase 7.7 — Huddle signaling
+
 const registerHuddleHandlers = require("./handlers/huddles.socket");
-// Unified Activity Stream — fire-and-forget side effects
+
 const activityService = require("../features/activity/activity.service");
 const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require("../../../platform/sdk/events/activityEvents");
 
 module.exports = async function registerChatHandlers(io, socket) {
-  const userId = socket.user.id; // extracted from JWT
+  const userId = socket.user.id; 
 
-  // Phase 7.7 — Register huddle events for this socket
+  
   registerHuddleHandlers(io, socket);
 
-  // ✅ JOIN USER-SPECIFIC ROOM for targeted events
+  
   socket.join(`user_${userId}`);
 
-  // ✅ JOIN COMPANY ROOM + COMPANY UPDATES ROOM (Auto-join)
+  
   try {
     const user = await User.findById(userId).select('companyId');
     if (user && user.companyId) {
       const companyId = user.companyId.toString();
       const companyRoom = `company_${companyId}`;
       socket.join(companyRoom);
-      // Auto-join company updates room so all users receive real-time update events
+      
       const updatesRoom = ROOMS.companyUpdates(companyId);
       socket.join(updatesRoom);
       logger.debug(`✅ [AUTO-JOIN] User ${userId} joined ${companyRoom} and ${updatesRoom}`);
@@ -40,17 +37,17 @@ module.exports = async function registerChatHandlers(io, socket) {
     console.error("Error auto-joining company room:", err);
   }
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // ✅ SESSION RESTORATION (Reconnect support)
-  // Auto-rejoin all DM and channel rooms this user belongs to.
-  // Runs on every connection — safe for both fresh connects and reconnects.
-  // Errors are isolated: a DB failure logs and continues, never crashes setup.
-  // ──────────────────────────────────────────────────────────────────────────
+  
+  
+  
+  
+  
+  
   (async () => {
     const joinedRooms = [];
 
     try {
-      // Run both queries in parallel — .lean() returns plain objects (no Mongoose overhead)
+      
       const [dmSessions, channels] = await Promise.all([
         DMSession.find({ participants: userId })
           .select('_id')
@@ -60,14 +57,14 @@ module.exports = async function registerChatHandlers(io, socket) {
           .lean()
       ]);
 
-      // Rejoin all DM rooms
+      
       for (const dm of dmSessions) {
         const room = `dm:${dm._id}`;
         socket.join(room);
         joinedRooms.push(room);
       }
 
-      // Rejoin all channel rooms
+      
       for (const ch of channels) {
         const room = `channel:${ch._id}`;
         socket.join(room);
@@ -77,12 +74,12 @@ module.exports = async function registerChatHandlers(io, socket) {
       logger.info(`✅ [RECONNECT] User ${userId} restored ${joinedRooms.length} rooms`);
 
     } catch (err) {
-      // DB failure: log and continue — socket is still usable for manual joins
+      
       logger.error(`❌ [RECONNECT] Room restoration failed for user ${userId}:`, err.message);
     }
 
-    // Always emit 'reconnected' so the client knows restoration is complete
-    // (even if DB failed — client can decide to fetch missed messages via REST)
+    
+    
     socket.emit('reconnected', {
       userId,
       restoredRooms: joinedRooms.length,
@@ -90,9 +87,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     });
   })();
 
-  /* ----------------------------------------------------
-     JOIN DM SESSION ROOM
-  ---------------------------------------------------- */
+  
   socket.on("join-dm", async ({ dmSessionId }) => {
     try {
       logger.socket('[JOIN][RECEIVE]', {
@@ -107,7 +102,7 @@ module.exports = async function registerChatHandlers(io, socket) {
         return;
       }
 
-      // SECURITY: Verify the requesting user is a participant of this DM session
+      
       const dmSession = await DMSession.findById(dmSessionId).select("participants").lean();
       if (!dmSession) {
         socket.emit("join-error", { event: "join-dm", code: "NOT_FOUND", message: "DM session not found" });
@@ -130,9 +125,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     JOIN CHANNEL ROOM
-  ---------------------------------------------------- */
+  
   socket.on("join-channel", ({ channelId }) => {
     try {
       if (!channelId) {
@@ -146,10 +139,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     JOIN CHANNEL ROOM (NEW - chat:join compatibility)
-     FIX 3: SOCKET.IO AUTHORIZATION ALIGNMENT
-  ---------------------------------------------------- */
+  
   socket.on("chat:join", async (channelId, callback) => {
     try {
       logger.socket('[DEBUG][JOIN][RECEIVE]', {
@@ -207,9 +197,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     JOIN WORKSPACE ROOM (For real-time updates like invites)
-  ---------------------------------------------------- */
+  
   socket.on("join-workspace", async ({ workspaceId }) => {
     try {
       if (!workspaceId) {
@@ -218,7 +206,7 @@ module.exports = async function registerChatHandlers(io, socket) {
         return;
       }
 
-      // SECURITY: Verify the requesting user is a member of this workspace
+      
       const workspace = await Workspace.findById(workspaceId).select("members").lean();
       if (!workspace) {
         socket.emit("join-error", { event: "join-workspace", code: "NOT_FOUND", message: "Workspace not found" });
@@ -245,14 +233,12 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     JOIN COMPANY UPDATES ROOM (for the Updates feed)
-  ---------------------------------------------------- */
+  
   socket.on("join-company-updates", async (companyId) => {
     try {
       if (!companyId) return;
 
-      // Security: verify the user belongs to this company
+      
       const user = await User.findById(userId).select('companyId').lean();
       if (!user || user.companyId?.toString() !== companyId.toString()) {
         logger.error(`[SECURITY] Unauthorized join-company-updates by user ${userId}`);
@@ -274,9 +260,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     logger.debug(`[leave-company-updates] User ${userId} left ${room}`);
   });
 
-  /* ----------------------------------------------------
-     SEND MESSAGE (DM or Channel) + ACK
-  ---------------------------------------------------- */
+  
   socket.on("send-message", async (data) => {
     try {
       const {
@@ -311,11 +295,11 @@ module.exports = async function registerChatHandlers(io, socket) {
 
       let actualDMSessionId = dmSessionId;
 
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // DM E2EE FIX: Handle new DM session creation with key bootstrap
-      // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      // BEFORE: Inline DMSession.create() without key bootstrap (BROKEN)
-      // AFTER: Delegate to findOrCreateDMSession() which correctly bootstraps keys
+      
+      
+      
+      
+      
       if (receiverId && !actualDMSessionId) {
         const dmSession = await messagesService.findOrCreateDMSession(
           userId,
@@ -325,7 +309,7 @@ module.exports = async function registerChatHandlers(io, socket) {
 
         actualDMSessionId = dmSession._id;
 
-        // ✅ Emit to both participants to refresh their DM lists
+        
         io.to(`user_${userId}`).emit("new-dm-session", {
           dmSessionId: dmSession._id,
           otherUserId: receiverId
@@ -335,11 +319,11 @@ module.exports = async function registerChatHandlers(io, socket) {
           otherUserId: userId
         });
 
-        // Join the new room
+        
         socket.join(`dm:${actualDMSessionId}`);
       }
 
-      // Populate common message data
+      
       let companyId = null;
 
       if (actualDMSessionId) {
@@ -365,7 +349,7 @@ module.exports = async function registerChatHandlers(io, socket) {
         doc.channel = channelId;
       }
 
-      // Save message
+      
       const saved = await Message.create(doc);
 
       console.log(`✉️ [PHASE 3] Encrypted message saved for ${channelId ? `channel:${channelId}` : `dm:${actualDMSessionId}`}`);
@@ -377,17 +361,17 @@ module.exports = async function registerChatHandlers(io, socket) {
           populate: { path: "sender", select: "username profilePicture" }
         });
 
-      // ---------------- broadcast ----------------
+      
       const eventName = replyTo ? "thread-reply" : "new-message";
       const payload = replyTo
         ? { parentId: replyTo, reply: populated, clientTempId }
         : { message: populated, clientTempId };
 
       if (actualDMSessionId) {
-        // Emit to DM room
+        
         io.to(`dm:${actualDMSessionId}`).emit(eventName, payload);
 
-        // Also emit to each participant's personal user room for real-time delivery
+        
         const dmSession = await DMSession.findById(actualDMSessionId);
         if (dmSession) {
           dmSession.participants.forEach(participantId => {
@@ -398,13 +382,13 @@ module.exports = async function registerChatHandlers(io, socket) {
         io.to(`channel:${channelId}`).emit(eventName, payload);
       }
 
-      // ---------------- ack to sender ----------------
+      
       socket.emit("message-sent", {
         message: populated,
         clientTempId,
       });
 
-      // ── Unified Activity Stream ── fire-and-forget, never blocks ──────────
+      
       activityService.emitWithIo(io, {
         type:        ACTIVITY_TYPES.MESSAGE,
         subtype:     ACTIVITY_SUBTYPES.SENT,
@@ -416,7 +400,7 @@ module.exports = async function registerChatHandlers(io, socket) {
           preview:   (text || '').substring(0, 120),
         },
       }).catch(() => {});
-      // ─────────────────────────────────────────────────────────────────────
+      
 
     } catch (err) {
       console.error("❌ [SOCKET] ERROR in send-message handler:", err);
@@ -429,9 +413,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     READ RECEIPTS
-  ---------------------------------------------------- */
+  
   socket.on("mark-chat-read", async ({ type, id }) => {
     try {
       const readerId = userId;
@@ -480,9 +462,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     READ SINGLE MESSAGE
-  ---------------------------------------------------- */
+  
   socket.on("message-read", async ({ messageId }) => {
     try {
       const readerId = userId;
@@ -492,7 +472,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       });
 
       const msg = await Message.findById(messageId)
-        .select("channelId receiverId senderId dm"); // Added dm to select
+        .select("channelId receiverId senderId dm"); 
 
       if (!msg) return;
 
@@ -501,8 +481,8 @@ module.exports = async function registerChatHandlers(io, socket) {
           readerId,
           messageIds: [messageId],
         });
-      } else if (msg.dm) { // Changed to check for dm
-        io.to(`dm:${msg.dm.toString()}`).emit("read-update", { // Use dm session ID
+      } else if (msg.dm) { 
+        io.to(`dm:${msg.dm.toString()}`).emit("read-update", { 
           readerId,
           messageIds: [messageId],
         });
@@ -513,12 +493,10 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     TYPING
-  ---------------------------------------------------- */
+  
   socket.on("typing", async ({ dmSessionId, channelId }) => {
     try {
-      // Get user's name for better UX
+      
       const fromName = socket.user?.username || "Someone";
 
       if (dmSessionId) {
@@ -531,21 +509,19 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     ADD REACTION
-  ---------------------------------------------------- */
+  
   socket.on("add-reaction", async ({ messageId, emoji }) => {
     try {
-      // Step 1: Atomically remove any existing reaction from this user
-      //         (handles emoji change — user already reacted with a different emoji)
+      
+      
       await Message.findOneAndUpdate(
         { _id: messageId, "reactions.userId": userId },
         { $pull: { reactions: { userId } } }
       );
 
-      // Step 2: Atomically push the new reaction
-      //         Two separate ops keeps logic simple and both are atomic individually.
-      //         Combined, they replace an existing reaction or add a fresh one.
+      
+      
+      
       const updated = await Message.findOneAndUpdate(
         { _id: messageId },
         { $push: { reactions: { emoji, userId } } },
@@ -568,14 +544,14 @@ module.exports = async function registerChatHandlers(io, socket) {
         reactions: updated.reactions,
       });
 
-      // ── Unified Activity Stream ── fire-and-forget ─────────────────────
+      
       activityService.emitWithIo(io, {
         type:    ACTIVITY_TYPES.REACTION,
         subtype: ACTIVITY_SUBTYPES.ADDED,
         actor:   userId,
         payload: { messageId, emoji },
       }).catch(() => {});
-      // ───────────────────────────────────────────────────────────────────
+      
 
     } catch (err) {
       logger.error("ADD REACTION ERROR:", err);
@@ -583,12 +559,10 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     REMOVE REACTION
-  ---------------------------------------------------- */
+  
   socket.on("remove-reaction", async ({ messageId }) => {
     try {
-      // Atomically pull this user's reaction subdocument from the array
+      
       const updated = await Message.findOneAndUpdate(
         { _id: messageId },
         { $pull: { reactions: { userId } } },
@@ -615,9 +589,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     DELETE MESSAGE (with permission logic)
-  ---------------------------------------------------- */
+  
   socket.on("delete-message", async ({ messageId, channelId, dmSessionId, localOnly = false }) => {
     try {
       const message = await Message.findById(messageId).populate("sender");
@@ -629,7 +601,7 @@ module.exports = async function registerChatHandlers(io, socket) {
       const isOwnMessage = message.sender._id.toString() === userId;
       let isAdmin = false;
 
-      // Check if user is admin (for channels)
+      
       if (channelId) {
         const channel = await Channel.findById(channelId).populate("workspace");
         if (channel) {
@@ -641,21 +613,21 @@ module.exports = async function registerChatHandlers(io, socket) {
         }
       }
 
-      // Determine deletion type based on localOnly flag
+      
       if (localOnly) {
-        // Force local deletion - only hide for this user
+        
         if (!message.hiddenFor.includes(userId)) {
           message.hiddenFor.push(userId);
         }
         await message.save();
 
-        // Only notify the user who deleted it
+        
         socket.emit("message-deleted", {
           messageId,
           isLocal: true,
         });
       } else if (isAdmin || isOwnMessage) {
-        // Universal deletion - visible to all as "deleted by [name]"
+        
         const currentUser = await User.findById(userId);
         const deleterName = currentUser ? currentUser.username : "Unknown";
 
@@ -665,16 +637,16 @@ module.exports = async function registerChatHandlers(io, socket) {
         message.deletedAt = new Date();
         await message.save();
 
-        // Broadcast to all participants
+        
         const room = channelId ? `channel:${channelId}` : `dm:${dmSessionId}`;
         io.to(room).emit("message-deleted", {
           messageId,
           deletedBy: userId,
-          deletedByName: deleterName,  // Fixed: now shows who deleted it, not the sender
+          deletedByName: deleterName,  
           isUniversal: true,
         });
       } else {
-        // Local deletion - only hide for this user (fallback for members deleting others' messages)
+        
         if (!message.hiddenFor.includes(userId)) {
           message.hiddenFor.push(userId);
         }
@@ -691,22 +663,20 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     PIN MESSAGE (All members can pin)
-  ---------------------------------------------------- */
+  
   socket.on("pin-message", async ({ messageId, channelId }) => {
     try {
-      // Check if user is a member of the channel
+      
       const channel = await Channel.findById(channelId);
       if (!channel) {
         socket.emit("pin-error", { messageId, error: "Channel not found" });
         return;
       }
 
-      // If user is connected to this channel via socket, they're a member
-      // Socket room join already verified membership
+      
+      
 
-      // Check pin limit (max 3 pins per channel)
+      
       const pinnedCount = await Message.countDocuments({
         channel: channelId,
         isPinned: true,
@@ -720,7 +690,7 @@ module.exports = async function registerChatHandlers(io, socket) {
         return;
       }
 
-      // Update message
+      
       const message = await Message.findByIdAndUpdate(
         messageId,
         {
@@ -731,10 +701,10 @@ module.exports = async function registerChatHandlers(io, socket) {
         { new: true }
       ).populate("pinnedBy", "username");
 
-      // Get pinner username
+      
       const pinner = await User.findById(userId).select("username");
 
-      // Broadcast to channel
+      
       io.to(`channel:${channelId}`).emit("message-pinned", {
         messageId,
         pinnedBy: userId,
@@ -747,29 +717,27 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     UNPIN MESSAGE (All members can unpin)
-  ---------------------------------------------------- */
+  
   socket.on("unpin-message", async ({ messageId, channelId }) => {
     try {
-      // Check if user is a member of the channel
+      
       const channel = await Channel.findById(channelId);
       if (!channel) {
         socket.emit("pin-error", { messageId, error: "Channel not found" });
         return;
       }
 
-      // If user is connected to this channel via socket, they're a member
-      // Socket room join already verified membership
+      
+      
 
-      // Update message
+      
       await Message.findByIdAndUpdate(messageId, {
         isPinned: false,
         pinnedBy: null,
         pinnedAt: null,
       });
 
-      // Broadcast to channel
+      
       io.to(`channel:${channelId}`).emit("message-unpinned", {
         messageId,
       });
@@ -779,13 +747,11 @@ module.exports = async function registerChatHandlers(io, socket) {
     }
   });
 
-  /* ----------------------------------------------------
-     KNOWLEDGE PAGE PRESENCE
-  ---------------------------------------------------- */
+  
   socket.on("knowledge:join", ({ pageId }) => {
     if (!pageId) return;
     socket.join(`knowledge:${pageId}`);
-    // Notify others in the room that this user joined
+    
     socket.to(`knowledge:${pageId}`).emit("knowledge:presence", {
       pageId,
       userId,
@@ -812,9 +778,7 @@ module.exports = async function registerChatHandlers(io, socket) {
     });
   });
 
-  /* ----------------------------------------------------
-     FILE ROOM (for comment presence)
-  ---------------------------------------------------- */
+  
   socket.on("file:join", ({ fileId }) => {
     if (!fileId) return;
     socket.join(`file:${fileId}`);
@@ -835,17 +799,17 @@ module.exports = async function registerChatHandlers(io, socket) {
     });
   });
 
-  // DUPLICATE ELIMINATED (Phase 1):
-  // The 'disconnect' event is exclusively handled by presenceService.setOffline()
-  // in server.js (line 578). That handler:
-  //   1. Updates User.isOnline: false in MongoDB (via presenceService.setOffline L89)
-  //   2. Only marks offline when the user's LAST socket disconnects (multi-tab safe)
-  //   3. Broadcasts user:offline to the company room
-  //
-  // The handler that was here previously caused:
-  //   - DOUBLE DB WRITE to User.isOnline on every disconnect
-  //   - Global io.emit("user-status-changed") that fired even for multi-tab users
-  //     who still had other active connections
-  //
-  // DO NOT re-add a 'disconnect' handler here.
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
 };

@@ -1,4 +1,3 @@
-// client/src/components/meetingsComp/Whiteboard.jsx
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Pen, Eraser, Trash2, Palette } from 'lucide-react';
 import api from '@services/api';
@@ -6,9 +5,6 @@ import { useSocket } from '../../contexts/SocketContext';
 
 const COLORS = ['#FFFFFF', '#F87171', '#FBBF24', '#34D399', '#60A5FA', '#A78BFA', '#F472B6', '#000000'];
 
-/**
- * Canvas-based whiteboard with realtime socket sync.
- */
 const Whiteboard = ({ meetingId, workspaceId }) => {
     const canvasRef = useRef(null);
     const { socket } = useSocket();
@@ -21,7 +17,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
     const [strokes, setStrokes] = useState([]);
     const [saving, setSaving] = useState(false);
 
-    // ── Load persisted strokes ─────────────────────────────────────────────────
+    
     useEffect(() => {
         if (!meetingId) return;
         api.get(`/api/v2/collaboration/whiteboard/${meetingId}`)
@@ -30,10 +26,10 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
                     setStrokes(data.strokes);
                 }
             })
-            .catch(() => { /* ignore */ });
+            .catch(() => {  });
     }, [meetingId]);
 
-    // ── Redraw canvas on stroke change ─────────────────────────────────────────
+    
     const redraw = useCallback((allStrokes) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
@@ -57,7 +53,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
 
     useEffect(() => { redraw(strokes); }, [strokes, redraw]);
 
-    // ── Socket listener — remote strokes ───────────────────────────────────────
+    
     useEffect(() => {
         if (!socket || !meetingId) return;
 
@@ -73,7 +69,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
         return () => socket.off('whiteboard:update', onUpdate);
     }, [socket, meetingId]);
 
-    // ── Mouse / Touch drawing ──────────────────────────────────────────────────
+    
     const getPos = (e) => {
         const canvas = canvasRef.current;
         const rect = canvas.getBoundingClientRect();
@@ -97,7 +93,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
         const pos = getPos(e);
         setCurrentPoints(prev => {
             const next = [...prev, pos];
-            // Live draw current stroke
+            
             const canvas = canvasRef.current;
             const ctx = canvas.getContext('2d');
             ctx.beginPath();
@@ -122,17 +118,17 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
         setStrokes(prev => [...prev, stroke]);
         setCurrentPoints([]);
 
-        // Emit to peers
+        
         socket?.emit('whiteboard:update', { meetingId, action: 'stroke', stroke });
     };
 
-    // ── Clear board ───────────────────────────────────────────────────────────
+    
     const handleClear = () => {
         setStrokes([]);
         socket?.emit('whiteboard:update', { meetingId, action: 'clear' });
     };
 
-    // ── Persist snapshot to server ─────────────────────────────────────────────
+    
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -147,7 +143,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
 
     return (
         <div className="flex flex-col h-full gap-3">
-            {/* Toolbar */}
+            {}
             <div className="flex items-center gap-2 flex-wrap">
                 <button
                     onClick={() => setTool('pen')}
@@ -191,7 +187,7 @@ const Whiteboard = ({ meetingId, workspaceId }) => {
                 </div>
             </div>
 
-            {/* Canvas */}
+            {}
             <div className="flex-1 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-[#1a1a2e]" style={{ cursor: tool === 'eraser' ? 'cell' : 'crosshair' }}>
                 <canvas
                     ref={canvasRef}

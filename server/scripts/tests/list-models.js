@@ -9,7 +9,7 @@ async function listModels() {
 
         console.log('📋 Fetching available models...\n');
 
-        // List all models
+        
         const models = await genAI.listModels();
 
         console.log('✅ Available models:');
@@ -21,7 +21,7 @@ async function listModels() {
     } catch (error) {
         console.error('❌ Error listing models:', error.message);
 
-        // Try direct API call as fallback
+        
         console.log('\n🔄 Trying direct model names...');
         const testModels = [
             'models/gemini-pro',

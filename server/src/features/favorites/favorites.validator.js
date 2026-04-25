@@ -1,26 +1,7 @@
-// server/src/features/favorites/favorites.validator.js
-/**
- * Favorites Validator - Input Validation Layer
- * 
- * Schema validation for favorite operations.
- * 
- * @module features/favorites/favorites.validator
- */
-
-// ============================================================================
-// VALIDATION RULES
-// ============================================================================
-
-/**
- * Validate add favorite data
- * 
- * @param {Object} data - Favorite data to validate
- * @returns {Object} { valid: boolean, errors?: string[] }
- */
 function validateAddFavorite(data) {
     const errors = [];
 
-    // Required fields
+    
     if (!data.workspaceId || typeof data.workspaceId !== 'string') {
         errors.push('workspaceId is required and must be a string');
     }
@@ -43,10 +24,6 @@ function validateAddFavorite(data) {
         errors: errors.length > 0 ? errors : undefined
     };
 }
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 module.exports = {
     validateAddFavorite

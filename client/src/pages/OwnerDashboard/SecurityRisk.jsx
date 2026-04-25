@@ -17,7 +17,7 @@ const SecurityRisk = ({ data }) => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Active Sessions */}
+                {}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-colors">
                     <div className="flex items-center gap-2 mb-4">
                         <Lock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -27,7 +27,7 @@ const SecurityRisk = ({ data }) => {
                     <div className="text-xs text-slate-500 dark:text-gray-400 mt-1">Users logged in (24h)</div>
                 </div>
 
-                {/* Audit Health */}
+                {}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-colors">
                     <div className="flex items-center gap-2 mb-4">
                         <FileText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
@@ -49,7 +49,7 @@ const SecurityRisk = ({ data }) => {
                     </div>
                 </div>
 
-                {/* Compliance Score */}
+                {}
                 <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-slate-200 dark:border-gray-700 p-6 transition-colors">
                     <div className="flex items-center gap-2 mb-4">
                         <Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />

@@ -1,4 +1,3 @@
-// server/src/features/teams/team.controller.js
 const teamService = require('./team.service');
 
 function handleErr(res, err) {

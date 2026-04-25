@@ -8,23 +8,20 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import EncryptedMessage from "../../EncryptedMessage";
 import { Avatar } from "../../../../shared/components/ui";
-// Phase 7.1 — Attachment type renderers
+
 import ImageMessage from "./types/ImageMessage";
 import VideoMessage from "./types/VideoMessage";
 import FileMessage from "./types/FileMessage";
 import VoiceMessage from "./types/VoiceMessage";
-// Phase 7.4 — Contact card
+
 import ContactMessage from "./types/ContactMessage";
-// Phase 7.5 — Link preview
+
 import LinkPreviewMessage from "./types/LinkPreviewMessage";
-// Phase 7.6 — Meeting card
+
 import MeetingMessage from "./types/MeetingMessage";
-// Mentions — highlight @username chips
+
 import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
 
-/* ---------------------------------------------------------
-   DM MessageItem Component (Matches Channel/Slack Style Exactly)
---------------------------------------------------------- */
 function DMMessageItem({
     msg,
     selectMode,
@@ -43,19 +40,19 @@ function DMMessageItem({
     currentUserId,
     onOpenThread,
     threadCounts,
-    // Translation (from useTranslation hook in MessagesContainer)
+    
     translationState = null,
     onTranslate,
     onClearTranslation,
-    // Phase 1 — Bookmarks, Reminders, Convert to Task
+    
     onRemind,
     onConvertToTask,
     isBookmarked = false,
     onBookmarkToggle,
 }) {
-    // dmSessionId is baked into msg by MessageEvent — used for E2EE encryption on edit
+    
     const dmSessionId = msg.dmSessionId || null;
-    // Check if message is from current user
+    
     const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
     const isMe = senderId === currentUserId || msg.sender === "you" || msg.sender === "me";
     const isSelected = selectedIds?.has(msg.id) || false;
@@ -64,24 +61,23 @@ function DMMessageItem({
     const [menuPos, setMenuPos] = useState(null);
     const [reactionPos, setReactionPos] = useState(null);
     const reactionPickerRef = useRef(null);
-    // Translate popover state
+    
     const [translatePopover, setTranslatePopover] = useState(null);
     const [lastLangCode, setLastLangCode] = useState(null);
 
-    // Edit state
+    
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(msg.text || msg.decryptedContent || '');
 
-    // Keep editText in sync with updated message text (e.g., from real-time socket edits)
-    // Only update when NOT actively editing to avoid clobbering the user's in-progress changes
+    
+    
     useEffect(() => {
         if (!isEditing) {
             setEditText(msg.text || msg.decryptedContent || '');
         }
     }, [msg.text, msg.decryptedContent, isEditing]);
 
-
-    // Avatar Logic — always produce a colorful avatar via DiceBear when no real photo
+    
     const avatarUrl = msg.senderAvatar || getAvatarUrl({ username: msg.senderName, _id: senderId });
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
 
@@ -100,8 +96,8 @@ function DMMessageItem({
         };
     }, [showReactionPicker]);
 
-    // Save edit — encrypts new text with DM conversation key, then PATCHes the server
-    // Using E2EE ensures both real-time updates AND page reloads show the correct text
+    
+    
     const handleSaveEdit = async () => {
         const trimmed = editText.trim();
         const currentText = msg.text || msg.decryptedContent || '';
@@ -109,18 +105,18 @@ function DMMessageItem({
             setIsEditing(false);
             return;
         }
-        if (!trimmed) return; // Don't save empty message
+        if (!trimmed) return; 
         try {
             let patchBody = {};
             if (dmSessionId) {
-                // E2EE path: encrypt the new text with the DM conversation key
+                
                 try {
                     const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
                     const encrypted = await encryptMessageForSending(trimmed, dmSessionId, 'dm', null);
                     if (encrypted?.ciphertext && encrypted?.messageIv) {
                         patchBody = { ciphertext: encrypted.ciphertext, messageIv: encrypted.messageIv };
                     } else {
-                        // Encryption not ready — fallback to plaintext
+                        
                         patchBody = { text: trimmed };
                     }
                 } catch (encErr) {
@@ -128,7 +124,7 @@ function DMMessageItem({
                     patchBody = { text: trimmed };
                 }
             } else {
-                // No dmSessionId available — plaintext fallback
+                
                 patchBody = { text: trimmed };
             }
             await api.patch(`/api/v2/messages/${msg._id || msg.id}`, patchBody);
@@ -143,7 +139,7 @@ function DMMessageItem({
         setIsEditing(false);
     };
 
-    // Reaction toggle — POST to add, DELETE to remove (one reaction per user; server auto-swaps emoji)
+    
     const toggleReaction = async (emoji) => {
         const normalizeId = (id) => (id?._id || id)?.toString();
         const myExistingReaction = msg.reactions?.find(
@@ -160,7 +156,7 @@ function DMMessageItem({
         }
     };
 
-    // System Message Rendering
+    
     if (msg.type === 'system' || msg.backend?.type === 'system') {
         const sd = msg.systemData || msg.backend?.systemData || {};
         const ev = msg.systemEvent || msg.backend?.systemEvent || '';
@@ -187,7 +183,7 @@ function DMMessageItem({
         );
     }
 
-    // Deleted Message Rendering
+    
     if (msg.isDeletedUniversally) {
         return (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '6px 16px', opacity: 0.55, position: 'relative' }}
@@ -208,7 +204,7 @@ function DMMessageItem({
         );
     }
 
-    // Shared style helpers
+    
     const toolbarBtn = (active = false) => ({
         padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
         borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -241,7 +237,7 @@ function DMMessageItem({
             onMouseEnter={e => { setShowToolbar(true); if (!isSelected && !msg.isPinned) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
             onMouseLeave={e => { setShowToolbar(false); if (!isSelected && !msg.isPinned) e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
-            {/* Selection Checkbox */}
+            {}
             {selectMode && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '4px', paddingRight: '4px' }}>
                     <input
@@ -253,7 +249,7 @@ function DMMessageItem({
                 </div>
             )}
 
-            {/* Avatar */}
+            {}
             <div style={{ flexShrink: 0, paddingTop: '2px' }}>
                 <Avatar
                     src={avatarUrl}
@@ -265,20 +261,20 @@ function DMMessageItem({
                 />
             </div>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, minWidth: 0, paddingRight: '96px', position: 'relative' }}>
-                {/* Header */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: 0 }}>
                     <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', lineHeight: 1.4 }}>{msg.senderName || 'Unknown'}</span>
                     {msg.isPinned && <Pin size={10} style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} title={msg.pinnedByName ? `Pinned by ${msg.pinnedByName}` : 'Pinned'} />}
                 </div>
 
-                {/* Timestamp */}
+                {}
                 <span style={{ position: 'absolute', top: '2px', right: '16px', fontSize: '10px', color: 'var(--text-muted)', userSelect: 'none' }}>
                     {formatTime(msg.ts)}
                 </span>
 
-                {/* Reply Preview */}
+                {}
                 {msg.repliedTo && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px', padding: '0 4px' }}>
                         <div style={{ width: '2px', backgroundColor: 'var(--accent)', borderRadius: '1px', flexShrink: 0, alignSelf: 'stretch', opacity: 0.6 }}></div>
@@ -294,7 +290,7 @@ function DMMessageItem({
                     </div>
                 )}
 
-                {/* Phase 7.1/7.4 — Rich message type rendering */}
+                {}
                 {!msg.isDeleted && msg.attachment && (
                     <div className="mt-0.5">
                         {msg.type === 'image' && <ImageMessage msg={msg} />}
@@ -303,21 +299,21 @@ function DMMessageItem({
                         {msg.type === 'voice' && <VoiceMessage msg={msg} />}
                     </div>
                 )}
-                {/* Phase 7.4 — Contact card */}
+                {}
                 {!msg.isDeleted && msg.type === 'contact' && (
                     <div className="mt-0.5">
                         <ContactMessage msg={msg} />
                     </div>
                 )}
 
-                {/* Phase 7.6 — Meeting card */}
+                {}
                 {!msg.isDeleted && msg.type === 'meeting' && msg.meeting && (
                     <div className="mt-0.5">
                         <MeetingMessage meeting={msg.meeting} />
                     </div>
                 )}
 
-                {/* Message Text */}
+                {}
                 {(!msg.attachment || msg.text) && (
                     <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '60%' }} className="message-content">
                         {msg.isDeleted ? (
@@ -382,19 +378,17 @@ function DMMessageItem({
                     </div>
                 )}
 
-
-
-                {/* Phase 7.5 — Link preview card */}
+                {}
                 {!msg.isDeleted && msg.linkPreview?.url && (
                     <LinkPreviewMessage preview={msg.linkPreview} />
                 )}
 
-                {/* Edited + translation display + status */}
+                {}
                 {msg.editedAt && !msg.isDeleted && (
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}> (edited)</span>
                 )}
 
-                {/* Translation Display Block */}
+                {}
                 {translationState?.status === 'done' && translationState.translatedText && (
                     <div style={{ marginTop: '6px', maxWidth: '60%' }}>
                         <div style={{ padding: '8px 12px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -418,7 +412,7 @@ function DMMessageItem({
                 {msg.sending && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>Sending...</div>}
                 {msg.failed && <div style={{ fontSize: '11px', color: 'var(--state-danger)', fontWeight: 500, marginTop: '2px' }}>Failed to send</div>}
 
-                {/* Reactions */}
+                {}
                 {msg.reactions && msg.reactions.length > 0 && (
                     <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                         {Object.entries(
@@ -452,7 +446,7 @@ function DMMessageItem({
                 )}
             </div>
 
-            {/* Hover Toolbar */}
+            {}
             <div style={{
                 position: 'absolute', top: '2px', right: '96px',
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
@@ -462,7 +456,7 @@ function DMMessageItem({
                 pointerEvents: (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover) ? 'auto' : 'none',
                 transition: 'opacity 100ms ease',
             }}>
-                {/* Reaction Picker */}
+                {}
                 <div style={{ position: 'relative' }} ref={reactionPickerRef}>
                     <button
                         onClick={(e) => {
@@ -545,7 +539,6 @@ function DMMessageItem({
     );
 }
 
-// Optimize with React.memo — include all fields that affect rendered output
 export default React.memo(DMMessageItem, (prevProps, nextProps) => {
     return (
         prevProps.msg.id === nextProps.msg.id &&
@@ -566,4 +559,3 @@ export default React.memo(DMMessageItem, (prevProps, nextProps) => {
         prevProps.msg.dmSessionId === nextProps.msg.dmSessionId
     );
 });
-

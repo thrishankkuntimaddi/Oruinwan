@@ -1,5 +1,3 @@
-// client/src/components/messagesComp/PinnedMessagesPanel.jsx
-// Phase-8: Side drawer showing pinned messages for the current channel/DM
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { Pin, X } from 'lucide-react';
@@ -15,8 +13,8 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
     setLoading(true);
     setError(null);
     try {
-      // Fallback: fetch all messages and filter pinned client-side
-      // since the backend filter is a query param convenience
+      
+      
       const res = await api.get(
         channelId
           ? `/api/v2/messages/channel/${channelId}`
@@ -39,7 +37,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
       await api.post(`/api/v2/messages/${messageId}/pin`, { pin: false });
       setMessages(prev => prev.filter(m => m._id !== messageId));
       onUnpin?.(messageId);
-    } catch { /* safe to ignore */ }
+    } catch {  }
   };
 
   return (
@@ -51,7 +49,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
       zIndex: 900, boxShadow: '-8px 0 32px rgba(0,0,0,0.4)',
       fontFamily: FONT,
     }}>
-      {/* Header */}
+      {}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 20px',
@@ -93,7 +91,7 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
         </button>
       </div>
 
-      {/* Body */}
+      {}
       <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
         {loading && (
           <div style={{

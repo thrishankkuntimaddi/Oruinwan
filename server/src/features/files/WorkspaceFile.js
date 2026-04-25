@@ -1,4 +1,3 @@
-// server/src/features/files/WorkspaceFile.js
 const mongoose = require('mongoose');
 
 const permissionSchema = new mongoose.Schema({
@@ -22,7 +21,6 @@ const workspaceFileSchema = new mongoose.Schema({
     currentVersion: { type: Number, default: 1 },
 }, { timestamps: true });
 
-// Full-text search index
 workspaceFileSchema.index({ name: 'text', description: 'text', tags: 'text' });
 workspaceFileSchema.index({ workspaceId: 1, isDeleted: 1 });
 workspaceFileSchema.index({ workspaceId: 1, folderId: 1 });

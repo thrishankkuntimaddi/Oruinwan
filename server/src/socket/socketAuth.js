@@ -1,15 +1,5 @@
-// server/src/socket/socketAuth.js
-// Socket.IO JWT authentication middleware
-// Extracted from server.js (Phase 4 cleanup)
-
 const jwt = require('jsonwebtoken');
 
-/**
- * Registers the Socket.IO authentication middleware on the given io instance.
- * Verifies the JWT access token attached to the socket handshake.
- *
- * @param {import('socket.io').Server} io
- */
 function registerSocketAuth(io) {
   io.use(async (socket, next) => {
     try {

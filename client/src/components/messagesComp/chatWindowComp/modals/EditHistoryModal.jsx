@@ -1,6 +1,3 @@
-// Phase 1 — Edit History Modal
-// Shows a chronological diff of all edits to a message
-
 import React, { useMemo, useState } from "react";
 import { X, Clock, GitCommit } from "lucide-react";
 
@@ -48,11 +45,6 @@ function fmtDate(ts) {
     });
 }
 
-/**
- * @param {object} props
- * @param {object} props.message - The full message object with editHistory[]
- * @param {function} props.onClose
- */
 export default function EditHistoryModal({ message, onClose }) {
     const versions = useMemo(() => {
         const history = message?.editHistory || [];
@@ -95,7 +87,7 @@ export default function EditHistoryModal({ message, onClose }) {
                 }}
                 onClick={e => e.stopPropagation()}
             >
-                {/* Header */}
+                {}
                 <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '14px 20px', borderBottom: '1px solid var(--border-default)', flexShrink: 0,
@@ -116,7 +108,7 @@ export default function EditHistoryModal({ message, onClose }) {
                     <CloseBtn onClick={onClose} />
                 </div>
 
-                {/* Versions list */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                     {versions.map((version, idx) => {
                         const prev = idx > 0 ? versions[idx - 1] : null;
@@ -125,7 +117,7 @@ export default function EditHistoryModal({ message, onClose }) {
 
                         return (
                             <div key={idx} style={{ position: 'relative' }}>
-                                {/* Timeline connector */}
+                                {}
                                 {idx < versions.length - 1 && (
                                     <div style={{
                                         position: 'absolute', left: '5px', top: '20px', bottom: '-20px', width: '1px',
@@ -133,14 +125,14 @@ export default function EditHistoryModal({ message, onClose }) {
                                     }} />
                                 )}
                                 <div style={{ display: 'flex', gap: '12px' }}>
-                                    {/* Timeline dot */}
+                                    {}
                                     <div style={{
                                         marginTop: '3px', width: '11px', height: '11px', borderRadius: '50%', flexShrink: 0,
                                         backgroundColor: isCurrent ? 'var(--accent)' : 'var(--bg-surface)',
                                         border: `2px solid ${isCurrent ? 'var(--accent)' : 'var(--border-default)'}`,
                                     }} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        {/* Label + timestamp */}
+                                        {}
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                                             <span style={{
                                                 fontSize: '11px', fontWeight: 600, fontFamily: FONT,
@@ -154,7 +146,7 @@ export default function EditHistoryModal({ message, onClose }) {
                                                 </span>
                                             )}
                                         </div>
-                                        {/* Content */}
+                                        {}
                                         <div style={{
                                             fontSize: '13px', lineHeight: 1.6, color: 'var(--text-secondary)',
                                             backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-subtle)',

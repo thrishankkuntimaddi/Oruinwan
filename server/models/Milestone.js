@@ -1,4 +1,3 @@
-// server/models/Milestone.js
 const mongoose = require("mongoose");
 
 const MilestoneSchema = new mongoose.Schema({
@@ -7,7 +6,7 @@ const MilestoneSchema = new mongoose.Schema({
     name: { type: String, required: true, trim: true },
     description: { type: String, default: "" },
     dueDate: { type: Date, default: null },
-    // startDate + endDate for roadmap planning view
+    
     startDate: { type: Date, default: null },
     endDate: { type: Date, default: null },
     status: {

@@ -36,19 +36,19 @@ const ReactivationFlow = () => {
                 { email, otpCode, password }
             );
 
-            // Save access token
+            
             if (response.data.accessToken) {
                 localStorage.setItem('accessToken', response.data.accessToken);
             }
 
-            // Show success message
+            
             alert('Account reactivated successfully!');
 
-            // Navigate to workspaces
+            
             navigate('/workspaces');
         } catch (err) {
             setError(err.response?.data?.message || 'Reactivation failed. Please try again.');
-            // Clear OTP if it's invalid
+            
             if (err.response?.data?.message?.includes('OTP') || err.response?.data?.message?.includes('expired')) {
                 setOtpCode('');
             }
@@ -60,7 +60,7 @@ const ReactivationFlow = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 w-full max-w-md">
-                {/* Header */}
+                {}
                 <div className="text-center mb-8">
                     <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Lock className="w-8 h-8 text-purple-600 dark:text-purple-400" />
@@ -73,14 +73,14 @@ const ReactivationFlow = () => {
                     </p>
                 </div>
 
-                {/* Error Message */}
+                {}
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-400 text-sm">
                         {error}
                     </div>
                 )}
 
-                {/* Single Form with OTP + Password */}
+                {}
                 <form onSubmit={handleReactivate} className="space-y-6">
                     <div>
                         <label className="flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
@@ -137,7 +137,7 @@ const ReactivationFlow = () => {
                     </button>
                 </form>
 
-                {/* Back to Login */}
+                {}
                 <div className="mt-6 text-center">
                     <button
                         onClick={() => navigate('/login')}

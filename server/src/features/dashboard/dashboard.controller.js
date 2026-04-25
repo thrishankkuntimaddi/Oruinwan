@@ -1,21 +1,15 @@
-// server/controllers/dashboardController.js
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Message = require("../messages/message.model.js");
 const _Channel = require("../channels/channel.model.js");
 const analyticsService = require('../analytics/analytics.service');
 
-// ─── helper: resolve companyId from authenticated request ─────────────────
 async function _resolveCompanyId(userId) {
     const user = await User.findById(userId).select('companyId companyRole isCoOwner').lean();
     if (!user) throw Object.assign(new Error('User not found'), { status: 401 });
     return { companyId: user.companyId?.toString(), companyRole: user.companyRole, isCoOwner: user.isCoOwner };
 }
 
-/**
- * GET /api/dashboard/metrics/:companyId
- * Get real-time dashboard metrics for company
- */
 exports.getDashboardMetrics = async (req, res) => {
     try {
         const { companyId } = req.params;
@@ -80,11 +74,6 @@ exports.getWorkspaceDashboard = async (req, res) => {
     res.status(501).json({ message: 'Not implemented yet' });
 };
 
-// ─── ANALYTICS ENDPOINTS ─────────────────────────────────────────────────────
-
-/**
- * GET /api/dashboard/analytics/summary?period=30
- */
 exports.getAnalyticsSummary = async (req, res) => {
     try {
         const { companyId } = await _resolveCompanyId(req.user.sub);
@@ -97,9 +86,6 @@ exports.getAnalyticsSummary = async (req, res) => {
     }
 };
 
-/**
- * GET /api/dashboard/analytics/users?period=30
- */
 exports.getUserActivityAnalytics = async (req, res) => {
     try {
         const { companyId } = await _resolveCompanyId(req.user.sub);
@@ -112,9 +98,6 @@ exports.getUserActivityAnalytics = async (req, res) => {
     }
 };
 
-/**
- * GET /api/dashboard/analytics/workspaces?period=30
- */
 exports.getWorkspaceAnalytics = async (req, res) => {
     try {
         const { companyId } = await _resolveCompanyId(req.user.sub);
@@ -127,9 +110,6 @@ exports.getWorkspaceAnalytics = async (req, res) => {
     }
 };
 
-/**
- * GET /api/dashboard/analytics/channels?period=30
- */
 exports.getChannelEngagementAnalytics = async (req, res) => {
     try {
         const { companyId } = await _resolveCompanyId(req.user.sub);
@@ -142,9 +122,6 @@ exports.getChannelEngagementAnalytics = async (req, res) => {
     }
 };
 
-/**
- * GET /api/dashboard/analytics/tasks?period=30
- */
 exports.getTaskAnalytics = async (req, res) => {
     try {
         const { companyId } = await _resolveCompanyId(req.user.sub);
@@ -157,9 +134,6 @@ exports.getTaskAnalytics = async (req, res) => {
     }
 };
 
-/**
- * GET /api/dashboard/analytics/messages?period=30
- */
 exports.getMessageVolumeAnalytics = async (req, res) => {
     try {
         const { companyId } = await _resolveCompanyId(req.user.sub);
@@ -172,9 +146,6 @@ exports.getMessageVolumeAnalytics = async (req, res) => {
     }
 };
 
-/**
- * GET /api/dashboard/analytics/engagement?period=30
- */
 exports.getEngagementTrends = async (req, res) => {
     try {
         const { companyId } = await _resolveCompanyId(req.user.sub);

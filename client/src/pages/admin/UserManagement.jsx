@@ -120,10 +120,10 @@ const UserManagement = () => {
             </header>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', background: 'var(--bg-base)' }} className="custom-scrollbar">
-                {/* Stats section */}
+                {}
                 {showStats && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
-                        {/* Card 1 */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
                             <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px' }}>Filtered Users</p>
                             <div style={{ fontSize: '28px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '4px' }}>{filteredMembers.length}</div>
@@ -140,7 +140,7 @@ const UserManagement = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Card 2: Role Distribution */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px' }}>
                             <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px' }}>Role Distribution</p>
                             <div style={{ height: '100px', display: 'flex', alignItems: 'center' }}>
@@ -165,7 +165,7 @@ const UserManagement = () => {
                                 </div>
                             </div>
                         </div>
-                        {/* Card 3: Dynamic Chart */}
+                        {}
                         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '16px', position: 'relative' }}>
                             <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                 {deptFilter !== 'all' && <Briefcase size={10} />}{chartStats.title}
@@ -187,7 +187,7 @@ const UserManagement = () => {
                     </div>
                 )}
 
-                {/* Tabs & Actions */}
+                {}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '2px' }}>
                         {['all', 'admins', 'managers', 'members', 'guests'].map(t => (
@@ -220,7 +220,7 @@ const UserManagement = () => {
                     </div>
                 </div>
 
-                {/* Table */}
+                {}
                 <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>

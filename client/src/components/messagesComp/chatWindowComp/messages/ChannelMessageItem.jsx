@@ -12,23 +12,20 @@ import ReactMarkdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import EncryptedMessage from "../../EncryptedMessage";
 import { Avatar } from "../../../../shared/components/ui";
-// Phase 7.1 — Attachment type renderers
+
 import ImageMessage from "./types/ImageMessage";
 import VideoMessage from "./types/VideoMessage";
 import FileMessage from "./types/FileMessage";
 import VoiceMessage from "./types/VoiceMessage";
-// Phase 7.4 — Contact card
+
 import ContactMessage from "./types/ContactMessage";
-// Phase 7.5 — Link preview
+
 import LinkPreviewMessage from "./types/LinkPreviewMessage";
-// Phase 7.6 — Meeting card
+
 import MeetingMessage from "./types/MeetingMessage";
-// Mentions — highlight @username chips
+
 import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
 
-/* ---------------------------------------------------------
-   CHANNEL MessageItem Component (Slack Style)
---------------------------------------------------------- */
 function ChannelMessageItem({
     msg,
     selectMode,
@@ -48,44 +45,44 @@ function ChannelMessageItem({
     onOpenThread,
     threadCounts,
     channelMembers,
-    isAdmin = false, // Admin check for pin permissions
-    // Phase 1 — Bookmarks, Reminders, Edit History
+    isAdmin = false, 
+    
     onRemind,
     onShowHistory,
     isBookmarked = false,
     onBookmarkToggle,
-    onConvertToTask,           // (msgId) => void — convert message to in-app Task
-    // Translation (from useTranslation hook in MessagesContainer)
-    translationState = null,   // { status, translatedText, language, detectedLang } | null
-    onTranslate,               // (msgId, text, langCode) => void
-    onClearTranslation,        // (msgId) => void
+    onConvertToTask,           
+    
+    translationState = null,   
+    onTranslate,               
+    onClearTranslation,        
 }) {
-    // TEMPORARY FIX: Fallback to msg.replyCount if threadCounts missing
+    
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
 
-    // ✅ Fix: Robust isMe — use String() to handle ObjectId vs string type mismatch
+    
     const senderId = msg.sender?._id || msg.senderId || (typeof msg.sender === 'string' ? msg.sender : null);
     const isMe = !!senderId && !!currentUserId && String(senderId) === String(currentUserId);
     const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef(null);
-    // Translate popover state
-    const [translatePopover, setTranslatePopover] = useState(null); // { pos } | null
-    const [lastLangCode, setLastLangCode] = useState(null); // for retry
-    // Fixed-position tracking for dropdowns — escapes scroll container overflow clipping
-    const [menuPos, setMenuPos] = useState(null);      // { top, bottom, right, openUp }
+    
+    const [translatePopover, setTranslatePopover] = useState(null); 
+    const [lastLangCode, setLastLangCode] = useState(null); 
+    
+    const [menuPos, setMenuPos] = useState(null);      
     const [reactionPos, setReactionPos] = useState(null);
 
-    // Step 3 — Local edit state
+    
     const [isEditing, setIsEditing] = useState(false);
     const [editText, setEditText] = useState(msg.decryptedContent || msg.text || '');
 
-    // Avatar Logic — always use a colorful avatar; fall back to DiceBear when no photo set
+    
     const avatarUrl = msg.senderAvatar || getAvatarUrl({ username: msg.senderName, _id: senderId });
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
 
-    // Shared style helpers
+    
     const toolbarBtn = (active = false) => ({
         padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
         borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -122,7 +119,7 @@ function ChannelMessageItem({
         };
     }, [showReactionPicker]);
 
-    // Step 3 — Save edit handler (E2EE-aware)
+    
     const handleSaveEdit = async () => {
         const trimmed = editText.trim();
         const currentText = msg.decryptedContent || msg.text || '';
@@ -130,13 +127,13 @@ function ChannelMessageItem({
             setIsEditing(false);
             return;
         }
-        if (!trimmed) return; // Don't save empty message
+        if (!trimmed) return; 
         try {
             const channelId = msg.channelId || (msg.channel && (msg.channel._id || msg.channel));
             const convType = channelId ? 'channel' : 'dm';
 
             if (channelId) {
-                // E2EE path: encrypt then save ciphertext
+                
                 const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
                 const encrypted = await encryptMessageForSending(trimmed, channelId, convType);
 
@@ -146,11 +143,11 @@ function ChannelMessageItem({
                         messageIv: encrypted.messageIv
                     });
                 } else {
-                    // Fallback: plaintext (only if key not available)
+                    
                     await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
                 }
             } else {
-                // No channel context — send plaintext
+                
                 await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
             }
         } catch (err) {
@@ -164,21 +161,21 @@ function ChannelMessageItem({
         setIsEditing(false);
     };
 
-    // Step 5 — Reaction toggle handler (one reaction per user, server enforces swap)
+    
     const toggleReaction = async (emoji) => {
         const normalizeId = (id) => (id?._id || id)?.toString();
 
-        // Check if I already reacted with THIS EXACT emoji
+        
         const myExistingReaction = msg.reactions?.find(
             (r) => normalizeId(r.userId) === normalizeId(currentUserId) && r.emoji === emoji
         );
 
         try {
             if (myExistingReaction) {
-                // Same emoji — toggle off (remove)
+                
                 await api.delete(`/api/v2/messages/${msg._id || msg.id}/react`, { data: { emoji } });
             } else {
-                // New or different emoji — server will auto-swap if user already has one
+                
                 await api.post(`/api/v2/messages/${msg._id || msg.id}/react`, { emoji });
             }
         } catch (err) {
@@ -186,7 +183,7 @@ function ChannelMessageItem({
         }
     };
 
-    // System message renderer — reads from systemEvent + systemData
+    
     if (msg.type === 'system' || msg.backend?.type === 'system') {
         const sd = msg.systemData || msg.backend?.systemData || {};
         const ev = msg.systemEvent || msg.backend?.systemEvent || '';
@@ -194,7 +191,7 @@ function ChannelMessageItem({
         const isMe = (id) => String(id) === String(currentUserId);
         const name = (id, fallback) => isMe(id) ? 'You' : (fallback || 'Someone');
 
-        // { icon: LucideComponent, color: tailwind bg class, text fn }
+        
         const eventConfig = {
             channel_created:        { Icon: Hash,      tint: 'rgba(184,149,106,0.15)', text: () => `${name(sd.userId, sd.userName)} created this channel` },
             member_joined:          { Icon: UserCheck,  tint: 'rgba(90,186,138,0.12)',  text: () => `${name(sd.userId, sd.userName)} joined #${sd.channelName || 'this channel'}` },
@@ -228,7 +225,7 @@ function ChannelMessageItem({
         );
     }
 
-    // ✨ Deleted Message Rendering
+    
     if (msg.isDeletedUniversally) {
         return (
             <div className="group" style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '6px 16px', opacity: 0.55, position: 'relative' }}
@@ -260,7 +257,7 @@ function ChannelMessageItem({
             onMouseEnter={e => { setShowToolbar(true); if (!isSelected && !msg.isPinned) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
             onMouseLeave={e => { setShowToolbar(false); if (!isSelected && !msg.isPinned) e.currentTarget.style.backgroundColor = 'transparent'; }}
         >
-            {/* Selection Checkbox */}
+            {}
             {selectMode && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', paddingTop: '4px', paddingRight: '4px' }}>
                     <input
@@ -272,7 +269,7 @@ function ChannelMessageItem({
                 </div>
             )}
 
-            {/* Avatar */}
+            {}
             <div style={{ flexShrink: 0, paddingTop: '2px' }}>
                 <Avatar
                     src={avatarUrl}
@@ -283,9 +280,9 @@ function ChannelMessageItem({
                 />
             </div>
 
-            {/* Content — always has right padding so toolbar never overlaps text */}
+            {}
             <div className="flex-1 min-w-0 pr-24 relative">
-                {/* Header: Name + Pin Info */}
+                {}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', marginBottom: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', lineHeight: 1.4 }}>{msg.senderName || 'Unknown'}</span>
@@ -295,12 +292,12 @@ function ChannelMessageItem({
                     </div>
                 </div>
 
-                {/* Timestamp */}
+                {}
                 <span style={{ position: 'absolute', top: '2px', right: '16px', fontSize: '10px', color: 'var(--text-muted)', userSelect: 'none' }}>
                     {formatTime(msg.ts)}
                 </span>
 
-                {/* Reply Preview */}
+                {}
                 {msg.repliedTo && (
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', marginBottom: '6px', padding: '0 4px' }}>
                         <div style={{ width: '2px', backgroundColor: 'var(--accent)', borderRadius: '1px', flexShrink: 0, alignSelf: 'stretch', opacity: 0.6 }}></div>
@@ -316,7 +313,7 @@ function ChannelMessageItem({
                     </div>
                 )}
 
-                {/* Phase 7.1/7.4 — Rich message type rendering (image/video/file/voice/contact) */}
+                {}
                 {!msg.isDeleted && msg.attachment && (
                     <div className="mt-0.5">
                         {msg.type === 'image' && <ImageMessage msg={msg} />}
@@ -325,22 +322,22 @@ function ChannelMessageItem({
                         {msg.type === 'voice' && <VoiceMessage msg={msg} />}
                     </div>
                 )}
-                {/* Phase 7.4 — Contact card (has contact, not attachment) */}
+                {}
                 {!msg.isDeleted && msg.type === 'contact' && (
                     <div className="mt-0.5">
                         <ContactMessage msg={msg} />
                     </div>
                 )}
 
-                {/* Phase 7.6 — Meeting card */}
+                {}
                 {!msg.isDeleted && msg.type === 'meeting' && msg.meeting && (
                     <div className="mt-0.5">
                         <MeetingMessage meeting={msg.meeting} />
                     </div>
                 )}
 
-                {/* Message Text — Step 1: soft delete, Step 3: inline edit */}
-                {/* Only render text block for text/encrypted messages, not pure attachment or card messages */}
+                {}
+                {}
                 {(!msg.attachment || msg.text) && msg.type !== 'contact' && msg.type !== 'meeting' && msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'file' && msg.type !== 'voice' && (
                     <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '60%' }} className="message-content">
                         {msg.isDeleted ? (
@@ -406,7 +403,7 @@ function ChannelMessageItem({
                     </div>
                 )}
 
-                {/* Translation Display Block */}
+                {}
                 {translationState?.status === 'done' && translationState.translatedText && (
                     <div style={{ marginTop: '6px', maxWidth: '60%' }}>
                         <div style={{ padding: '8px 12px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
@@ -431,7 +428,7 @@ function ChannelMessageItem({
                         </button>
                     </div>
                 )}
-                {/* Edit badge with history popover */}
+                {}
                 {msg.editedAt && !msg.isDeleted && (
                     <EditedBadge
                         editHistory={msg.editHistory}
@@ -441,12 +438,12 @@ function ChannelMessageItem({
                     />
                 )}
 
-                {/* Phase 7.5 — Link preview card */}
+                {}
                 {!msg.isDeleted && msg.linkPreview?.url && (
                     <LinkPreviewMessage preview={msg.linkPreview} />
                 )}
 
-                {/* Step 5 — Reaction bar (grouped emoji buttons) */}
+                {}
                 {!msg.isDeleted && msg.reactions?.length > 0 && (
                     <div style={{ display: 'flex', gap: '4px', marginTop: '4px', flexWrap: 'wrap' }}>
                         {Object.entries(
@@ -479,13 +476,11 @@ function ChannelMessageItem({
                     </div>
                 )}
 
-                {/* Sending/Failed States */}
+                {}
                 {msg.sending && <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>Sending...</div>}
                 {msg.failed && <div style={{ fontSize: '12px', color: 'var(--state-danger)', fontWeight: 500, marginTop: '4px' }}>Failed to send</div>}
 
-
-
-                {/* Thread Reply Link */}
+                {}
                 {count > 0 && onOpenThread && !msg.isDeleted && (
                     <div
                         onClick={(e) => { e.stopPropagation(); onOpenThread(msg.id); }}
@@ -493,7 +488,7 @@ function ChannelMessageItem({
                         onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
                         onMouseLeave={e => e.currentTarget.style.opacity = '1'}
                     >
-                        {/* Reply avatars */}
+                        {}
                         <div style={{ display: 'flex' }}>
                             {msg.replyAvatars && msg.replyAvatars.length > 0 ? (
                                 msg.replyAvatars.map((url, i) => (
@@ -520,10 +515,9 @@ function ChannelMessageItem({
                     </div>
                 )}
 
-
             </div>
 
-            {/* Hover Toolbar */}
+            {}
             <div style={{
                 position: 'absolute', top: '2px', right: '96px',
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
@@ -534,7 +528,7 @@ function ChannelMessageItem({
                 transition: 'opacity 100ms ease',
             }}>
 
-                {/* Reaction Trigger */}
+                {}
                 <div style={{ position: 'relative' }} ref={reactionPickerRef}>
                     <button
                         onClick={(e) => {
@@ -632,32 +626,13 @@ function ChannelMessageItem({
 }
 
 export default ChannelMessageItem;
-/* export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
-    // Re-render only if these specific props change
-    return (
-        prevProps.msg.id === nextProps.msg.id &&
-        prevProps.msg.payload?.text === nextProps.msg.payload?.text &&
-        prevProps.msg.isPinned === nextProps.msg.isPinned &&
-        prevProps.msg.sending === nextProps.msg.sending &&
-        prevProps.msg.failed === nextProps.msg.failed &&
-        prevProps.selectMode === nextProps.selectMode &&
-        prevProps.selectedIds === nextProps.selectedIds &&
-        prevProps.openMsgMenuId === nextProps.openMsgMenuId &&
-        JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions) &&
-        prevProps.msg.replyCount === nextProps.msg.replyCount && // ✅ Check msg.replyCount
-        prevProps.threadCounts?.[prevProps.msg.id] === nextProps.threadCounts?.[nextProps.msg.id]
-    );
-}); */
 
-// ── EditedBadge ──────────────────────────────────────────────────────────────
-// Shows "(edited)" next to a message. If editHistory has entries, clicking opens
-// a popover listing all previous versions with timestamps.
 function EditedBadge({ editHistory = [], editedAt, conversationId, conversationType }) {
     const [open, setOpen] = useState(false);
     const ref = useRef(null);
     const hasHistory = editHistory.length > 0;
 
-    // Close when clicking outside
+    
     useEffect(() => {
         if (!open) return;
         const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -702,7 +677,7 @@ function EditedBadge({ editHistory = [], editedAt, conversationId, conversationT
                     borderRadius: '2px',
                     boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
                 }}>
-                    {/* Popover header */}
+                    {}
                     <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                         padding: '7px 12px', borderBottom: '1px solid var(--border-default)',
@@ -720,7 +695,7 @@ function EditedBadge({ editHistory = [], editedAt, conversationId, conversationT
                         </button>
                     </div>
 
-                    {/* History entries */}
+                    {}
                     <div style={{ maxHeight: '192px', overflowY: 'auto' }}>
                         {[...editHistory].reverse().map((entry, i) => (
                             <div key={i} style={{

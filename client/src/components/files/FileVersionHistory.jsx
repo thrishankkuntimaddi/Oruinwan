@@ -1,4 +1,3 @@
-// client/src/components/files/FileVersionHistory.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { X, Clock, RotateCcw, Upload, ChevronRight, Check } from 'lucide-react';
 import { useFiles } from '../../hooks/useFiles';
@@ -17,25 +16,18 @@ function formatSize(bytes = 0) {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/**
- * FileVersionHistory — slide-in panel listing all past versions of a file.
- *
- * Props:
- *   fileId  {string}   — ID of the file whose history to show
- *   onClose {fn}       — called when user dismisses the panel
- */
 export default function FileVersionHistory({ fileId, onClose }) {
     const { getVersions, uploadVersion, restoreVersion } = useFiles();
 
     const [versions, setVersions]       = useState([]);
     const [current, setCurrent]         = useState(null);
     const [loading, setLoading]         = useState(true);
-    const [restoring, setRestoring]     = useState(null); // versionId being restored
+    const [restoring, setRestoring]     = useState(null); 
     const [uploading, setUploading]     = useState(false);
     const [changeNote, setChangeNote]   = useState('');
     const [successId, setSuccessId]     = useState(null);
 
-    /* load versions */
+    
     useEffect(() => {
         if (!fileId) return;
         (async () => {
@@ -47,7 +39,7 @@ export default function FileVersionHistory({ fileId, onClose }) {
         })();
     }, [fileId, getVersions]);
 
-    /* close on Escape */
+    
     useEffect(() => {
         const h = (e) => { if (e.key === 'Escape') onClose(); };
         document.addEventListener('keydown', h);
@@ -60,12 +52,12 @@ export default function FileVersionHistory({ fileId, onClose }) {
             await restoreVersion(fileId, versionId);
             setSuccessId(versionId);
             setTimeout(() => setSuccessId(null), 2000);
-            // refresh list
+            
             const data = await getVersions(fileId).catch(() => ({}));
             setVersions(data.versions || []);
             setCurrent(data.current || null);
         } catch {
-            /* silent — toast can be added later */
+            
         } finally {
             setRestoring(null);
         }
@@ -78,27 +70,27 @@ export default function FileVersionHistory({ fileId, onClose }) {
         try {
             await uploadVersion(fileId, file, changeNote);
             setChangeNote('');
-            // refresh
+            
             const data = await getVersions(fileId).catch(() => ({}));
             setVersions(data.versions || []);
             setCurrent(data.current || null);
         } catch {
-            /* silent */
+            
         } finally {
             setUploading(false);
         }
     }, [fileId, changeNote, uploadVersion, getVersions]);
 
     return (
-        /* backdrop */
+        
         <div
             className="fixed inset-0 z-50 flex justify-end bg-black/30 backdrop-blur-sm"
             onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
         >
-            {/* slide-in panel */}
+            {}
             <div className="bg-white dark:bg-gray-900 w-full max-w-md h-full flex flex-col shadow-2xl animate-slide-in-right">
 
-                {/* header */}
+                {}
                 <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
                     <Clock size={18} className="text-gray-400" />
                     <h2 className="font-semibold text-gray-900 dark:text-white flex-1 text-sm">Version History</h2>
@@ -110,7 +102,7 @@ export default function FileVersionHistory({ fileId, onClose }) {
                     </button>
                 </div>
 
-                {/* upload new version */}
+                {}
                 <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 shrink-0 space-y-2">
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Upload new version</p>
                     <input
@@ -136,7 +128,7 @@ export default function FileVersionHistory({ fileId, onClose }) {
                     </label>
                 </div>
 
-                {/* version list */}
+                {}
                 <div className="flex-1 overflow-y-auto">
                     {loading ? (
                         <div className="flex items-center justify-center h-32 text-gray-400 text-sm animate-pulse">
@@ -149,7 +141,7 @@ export default function FileVersionHistory({ fileId, onClose }) {
                         </div>
                     ) : (
                         <ul className="divide-y divide-gray-100 dark:divide-gray-800">
-                            {/* current version banner */}
+                            {}
                             {current && (
                                 <li className="px-5 py-3 bg-blue-50 dark:bg-blue-900/20 flex items-start gap-3">
                                     <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 text-xs font-bold shrink-0">
@@ -165,7 +157,7 @@ export default function FileVersionHistory({ fileId, onClose }) {
                                 </li>
                             )}
 
-                            {/* past versions (newest first) */}
+                            {}
                             {[...versions].reverse().map((v, idx) => (
                                 <li key={v._id} className="px-5 py-3 flex items-start gap-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
                                     <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 text-xs font-bold shrink-0">

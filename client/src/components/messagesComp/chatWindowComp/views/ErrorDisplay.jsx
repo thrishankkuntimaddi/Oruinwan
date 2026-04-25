@@ -1,9 +1,5 @@
 import React from 'react';
 
-/**
- * ErrorDisplay Component
- * Simple error overlay for conversation errors
- */
 const ErrorDisplay = ({ error }) => {
     if (!error) return null;
 

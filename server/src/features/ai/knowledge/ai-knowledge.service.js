@@ -1,4 +1,3 @@
-// server/src/features/ai/knowledge/ai-knowledge.service.js
 'use strict';
 
 const aiCore        = require('../ai-core.service');
@@ -6,23 +5,12 @@ const Message       = require('../../messages/message.model');
 const KnowledgePage = require('../../knowledge/KnowledgePage');
 const ScheduledMeeting = require('../../../models/ScheduledMeeting');
 
-// ─── Semantic Search ──────────────────────────────────────────────────────────
-
-/**
- * Combined keyword + semantic search across messages and knowledge pages.
- * Step 1: MongoDB text-style regex search (first pass)
- * Step 2: AI semantic re-ranking (second pass)
- *
- * @param {string} query
- * @param {string} workspaceId
- * @returns {Promise<{ results: Array, cached: boolean }>}
- */
 async function search(query, workspaceId) {
     if (!query || !workspaceId) return { results: [], cached: false };
 
     const regex = new RegExp(query.split(/\s+/).join('|'), 'i');
 
-    // --- First pass: keyword candidates ---
+    
     const [messages, pages] = await Promise.all([
         Message.find({
             workspace:            workspaceId,
@@ -49,7 +37,7 @@ async function search(query, workspaceId) {
             .lean(),
     ]);
 
-    // --- Build candidate docs ---
+    
     const docs = [
         ...messages.map(m => ({
             id:      m._id.toString(),

@@ -52,7 +52,7 @@ export default function WorkspaceTemplates() {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {/* Header */}
+            {}
             <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
                 <div>
                     <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
@@ -64,9 +64,9 @@ export default function WorkspaceTemplates() {
                 <TplCreateBtn onClick={() => setShowCreate(true)} />
             </header>
 
-            {/* Content */}
+            {}
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
-                {/* Category filter */}
+                {}
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
                     {['', ...CATEGORIES].map(cat => (
                         <button key={cat} onClick={() => setFilterCat(cat)}
@@ -114,7 +114,7 @@ export default function WorkspaceTemplates() {
                 )}
             </div>
 
-            {/* Create Modal */}
+            {}
             {showCreate && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
                     onClick={e => { if (e.target === e.currentTarget) setShowCreate(false); }}>

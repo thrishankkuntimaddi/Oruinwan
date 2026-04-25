@@ -67,7 +67,7 @@ const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, getIconCom
                 );
             })}
 
-            {/* Locked — company members */}
+            {}
             {isCompanyMember ? (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', border: '1px dashed var(--border-default)', borderRadius: '2px', background: 'var(--bg-surface)', cursor: 'not-allowed', userSelect: 'none', padding: '24px', textAlign: 'center' }}>
                     <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', border: '1px solid var(--border-default)' }}>
@@ -82,7 +82,7 @@ const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, getIconCom
                     </span>
                 </div>
             ) : (
-                /* Create New */
+                
                 <button
                     onClick={() => { if (!isLimitReached) onCreateClick(); }}
                     disabled={isLimitReached}

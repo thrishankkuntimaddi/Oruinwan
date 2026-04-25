@@ -1,51 +1,31 @@
-/**
- * Message Encryption Service
- * 
- * Handles encryption/decryption of messages using conversation/thread keys
- * Integrates with conversation key service and thread key derivation
- */
-
 import { deriveThreadKey, generateIV } from '../utils/crypto';
 import conversationKeyService from './conversationKeyService';
 
-// ==================== MESSAGE ENCRYPTION ====================
-
-/**
- * Encrypt message for sending
- * Uses conversation key for channel/DM messages
- * Uses derived thread key for thread replies
- * 
- * @param {string} plaintext - Message text to encrypt
- * @param {string} conversationId - Channel/DM ID
- * @param {string} conversationType - 'channel' or 'dm'
- * @param {string|null} parentMessageId - Parent message ID if this is a thread reply
- * @returns {Promise<{ciphertext: string, messageIv: string, isEncrypted: boolean}>}
- */
 export async function encryptMessageForSending(plaintext, conversationId, conversationType, parentMessageId = null) {
     try {
-        // Get conversation key
+        
         let encryptionKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
         if (!encryptionKey) {
             throw new Error(`No conversation key found for ${conversationType}:${conversationId}`);
         }
 
-        // If this is a thread reply, derive thread-specific key
+        
         if (parentMessageId) {
             encryptionKey = await deriveThreadKey(encryptionKey, parentMessageId);
         }
 
-        // 🔴 FIX 1 — MANDATORY: Validate encryption key before using Web Crypto API
-        // Return status instead of throwing to prevent React crashes
+        
+        
         if (!(encryptionKey instanceof CryptoKey)) {
             console.warn('⚠️ [Encryption Guard] Key not ready, blocking send');
             return { status: 'ENCRYPTION_NOT_READY' };
         }
 
-        // Generate random IV
+        
         const iv = generateIV();
 
-        // Encrypt message
+        
         const plaintextBytes = new TextEncoder().encode(plaintext);
         const ciphertext = await crypto.subtle.encrypt(
             {
@@ -57,7 +37,7 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
             plaintextBytes
         );
 
-        // Convert to base64 for transmission
+        
         const ciphertextBase64 = btoa(String.fromCharCode(...new Uint8Array(ciphertext)));
         const ivBase64 = btoa(String.fromCharCode(...new Uint8Array(iv)));
 
@@ -72,41 +52,27 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
     }
 }
 
-// ==================== MESSAGE DECRYPTION ====================
-
-/**
- * Decrypt received message
- * Uses conversation key for channel/DM messages
- * Uses derived thread key for thread replies
- * 
- * @param {string} ciphertextBase64 - Base64-encoded ciphertext
- * @param {string} ivBase64 - Base64-encoded IV
- * @param {string} conversationId - Channel/DM ID
- * @param {string} conversationType - 'channel' or 'dm'
- * @param {string|null} parentMessageId - Parent message ID if this is a thread reply
- * @returns {Promise<string>} Decrypted plaintext
- */
 export async function decryptReceivedMessage(ciphertextBase64, ivBase64, conversationId, conversationType, parentMessageId = null) {
     try {
-        // Get conversation key
-        // ✅ PHASE 0: Let BROKEN_CHANNEL error propagate instead of returning fallback text
+        
+        
         let decryptionKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
         if (!decryptionKey) {
-            // This should trigger BROKEN_CHANNEL error in conversationKeyService
+            
             throw new Error(`BROKEN_CHANNEL: No encryption key available for ${conversationType}:${conversationId}`);
         }
 
-        // If this is a thread reply, derive thread-specific key
+        
         if (parentMessageId) {
             decryptionKey = await deriveThreadKey(decryptionKey, parentMessageId);
         }
 
-        // Decode from base64
+        
         const ciphertext = Uint8Array.from(atob(ciphertextBase64), c => c.charCodeAt(0));
         const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
 
-        // Decrypt message
+        
         const plaintextBytes = await crypto.subtle.decrypt(
             {
                 name: 'AES-GCM',
@@ -117,31 +83,20 @@ export async function decryptReceivedMessage(ciphertextBase64, ivBase64, convers
             ciphertext
         );
 
-        // Convert to string
+        
         const plaintext = new TextDecoder().decode(plaintextBytes);
 
         return plaintext;
     } catch (error) {
         console.error('Message decryption failed:', error);
-        // Don't expose error details to user
+        
         return '🔒 Unable to decrypt message';
     }
 }
 
-// ==================== GRACEFUL DEGRADATION ====================
-
-/**
- * Attempt to decrypt message with graceful fallback
- * Shows encrypted indicator if decryption fails
- * 
- * @param {Object} message - Message object with encrypted payload
- * @param {string} conversationId - Channel/DM ID
- * @param {string} conversationType - 'channel' or 'dm'
- * @returns {Promise<string>} Decrypted text or encrypted indicator
- */
 export async function decryptMessageGracefully(message, conversationId, conversationType) {
     try {
-        // System messages have no encrypted payload — pass through as-is
+        
         if (message.type === 'system') {
             return message.systemData?.text || message.text || '';
         }
@@ -165,27 +120,14 @@ export async function decryptMessageGracefully(message, conversationId, conversa
     }
 }
 
-// ==================== BATCH DECRYPTION ====================
-
-/**
- * Decrypt multiple messages efficiently
- * Pre-fetches conversation key to avoid repeated lookups
- * NEVER returns placeholders - filters messages instead
- * 
- * @param {Array} messages - Array of encrypted message objects
- * @param {string} conversationId - Channel/DM ID
- * @param {string} conversationType - 'channel' or 'dm'
- * @param {Date|null} userJoinedAt - When user joined (for filtering)
- * @returns {Promise<Array>} Array of decrypted messages (filtered by joinedAt)
- */
 export async function batchDecryptMessages(messages, conversationId, conversationType, userJoinedAt = null) {
     try {
-        // ✅ Early return for empty messages
+        
         if (!messages || messages.length === 0) {
             return [];
         }
 
-        // ✅ Filter messages by joinedAt FIRST (before attempting decryption)
+        
         let messagesToDecrypt = messages;
         if (userJoinedAt) {
             const joinTimestamp = new Date(userJoinedAt).getTime();
@@ -199,40 +141,40 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
             }
         }
 
-        // ✅ Fetch conversation key
+        
         const conversationKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
         if (!conversationKey) {
-            // No key exists = UNINITIALIZED channel (no messages should exist)
+            
             console.warn('⚠️ [Batch Decrypt] No conversation key found - returning empty array');
             return [];
         }
 
-        // Decrypt each message
+        
         const decrypted = await Promise.all(
             messagesToDecrypt.map(async (message) => {
                 try {
-                    // ── System messages have no encrypted payload — pass through ──
+                    
                     if (message.type === 'system') {
                         return { ...message, decryptedContent: null, isSystem: true };
                     }
 
-                    // ── Non-text messages (poll, image, video, file, voice, contact, meeting)
-                    //    are never encrypted — pass through unchanged ──
+                    
+                    
                     const NON_ENCRYPTED_TYPES = ['poll', 'image', 'video', 'file', 'voice', 'contact', 'meeting'];
                     if (NON_ENCRYPTED_TYPES.includes(message.type)) {
                         return { ...message, isDecryptable: false };
                     }
 
-                    // Handle nested payload structure from Message model
-                    // Server stores encryption data in payload.payload.{ciphertext, messageIv}
+                    
+                    
                     const encryptionPayload = message.payload?.payload || message.payload || message;
                     const { ciphertext, messageIv } = encryptionPayload;
                     const { parentId } = message;
 
                     if (!ciphertext || !messageIv) {
-                        // Message exists but has no encryption data — likely a plain-text legacy message
-                        // or a message type we don't encrypt. Pass through without error.
+                        
+                        
                         console.warn(`⚠️ [Batch Decrypt] No ciphertext for message ${message.id} (type=${message.type}) — passing through`);
                         return {
                             ...message,
@@ -241,20 +183,19 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                         };
                     }
 
-
-                    // Use conversation key or derived thread key
+                    
                     let decryptionKey = conversationKey;
-                    // ✅ CRITICAL: Only derive thread key if message was explicitly encrypted as thread message
-                    // Thread replies in this app are encrypted with conversation key (UI grouping only)
+                    
+                    
                     if (parentId && message.isThreadEncrypted === true) {
                         decryptionKey = await deriveThreadKey(conversationKey, parentId);
                     }
 
-                    // Decode
+                    
                     const ciphertextBytes = Uint8Array.from(atob(ciphertext), c => c.charCodeAt(0));
                     const iv = Uint8Array.from(atob(messageIv), c => c.charCodeAt(0));
 
-                    // Decrypt
+                    
                     const plaintextBytes = await crypto.subtle.decrypt(
                         {
                             name: 'AES-GCM',
@@ -286,7 +227,7 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
         return decrypted;
     } catch (error) {
         console.error('❌ [Batch Decrypt] Batch decryption failed:', error);
-        // ✅ NEVER throw - return messages with error indicators
+        
         return messages.map(message => ({
             ...message,
             decryptedContent: '⚠️ Decryption failed',
@@ -294,8 +235,6 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
         }));
     }
 }
-
-// ==================== EXPORTS ====================
 
 const messageEncryptionService = {
     encryptMessageForSending,

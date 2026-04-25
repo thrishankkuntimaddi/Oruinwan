@@ -1,17 +1,8 @@
-// server/src/modules/ai/ai-messaging.service.js
-// Phase-8: AI-powered messaging helpers
-//   - Smart reply suggestions (3 quick replies per message)
-//   - Message / thread translation
-//   - Thread summarization
-//
-// All results are cached in-process with a 5-minute TTL to avoid redundant
-// API calls when multiple users trigger the same feature.
 'use strict';
 
 const gateway = require('../../../ai/api/ai.gateway');
 
-// ─── Simple in-process TTL cache ────────────────────────────────────────────
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL_MS = 5 * 60 * 1000; 
 const _cache = new Map();
 
 function _cacheGet(key) {
@@ -25,7 +16,7 @@ function _cacheGet(key) {
 }
 
 function _cacheSet(key, value) {
-  // Evict oldest entries if cache grows too large
+  
   if (_cache.size > 500) {
     const oldest = _cache.keys().next().value;
     _cache.delete(oldest);
@@ -33,16 +24,6 @@ function _cacheSet(key, value) {
   _cache.set(key, { value, ts: Date.now() });
 }
 
-// ─── Smart Reply Suggestions ────────────────────────────────────────────────
-
-/**
- * Generate 3 quick-reply suggestions for a received message.
- *
- * @param {string} messageText     Plaintext of the message to reply to
- * @param {string} [messageId]     Optional message ID — used as cache key
- * @param {Array}  [contextMessages] Last few messages for context (each: { role, content })
- * @returns {Promise<string[]>}  Array of up to 3 suggestion strings
- */
 async function getSmartReplies(messageText, messageId = null, contextMessages = []) {
   const cacheKey = `suggestions:${messageId || messageText.slice(0, 60)}`;
   const cached = _cacheGet(cacheKey);
@@ -67,7 +48,7 @@ async function getSmartReplies(messageText, messageId = null, contextMessages = 
     );
 
     const text = result?.text || result?.message || '';
-    // Extract JSON array from response
+    
     const match = text.match(/\[[\s\S]*?\]/);
     if (match) {
       const parsed = JSON.parse(match[0]);
@@ -83,16 +64,6 @@ async function getSmartReplies(messageText, messageId = null, contextMessages = 
   return suggestions;
 }
 
-// ─── Translation ─────────────────────────────────────────────────────────────
-
-/**
- * Translate `text` into `targetLang` (BCP-47 language tag, e.g. 'es', 'fr').
- *
- * @param {string} text
- * @param {string} targetLang
- * @param {string} [messageId]  Optional — used as cache key
- * @returns {Promise<{ translated: string, detectedLang: string|null }>}
- */
 async function translateMessage(text, targetLang, messageId = null) {
   const cacheKey = `translate:${messageId || text.slice(0, 60)}:${targetLang}`;
   const cached = _cacheGet(cacheKey);
@@ -126,16 +97,6 @@ async function translateMessage(text, targetLang, messageId = null) {
   return result;
 }
 
-// ─── Thread Summarization ────────────────────────────────────────────────────
-
-/**
- * Generate a concise AI summary of a thread.
- *
- * @param {string} parentMessageId  — used as cache key
- * @param {Array}  replies           Array of { text, senderName } objects (plaintext)
- * @param {string} [parentText]      Plaintext of the parent (root) message
- * @returns {Promise<string>}  Summary paragraph
- */
 async function summarizeThread(parentMessageId, replies, parentText = '') {
   const cacheKey = `thread-summary:${parentMessageId}:${replies.length}`;
   const cached = _cacheGet(cacheKey);
@@ -173,9 +134,8 @@ async function summarizeThread(parentMessageId, replies, parentText = '') {
   return summary;
 }
 
-/** Invalidate cached summary when a new reply is posted */
 function invalidateThreadSummary(parentMessageId) {
-  // Remove all keys matching this parentMessageId prefix
+  
   for (const key of _cache.keys()) {
     if (key.startsWith(`thread-summary:${parentMessageId}`)) {
       _cache.delete(key);

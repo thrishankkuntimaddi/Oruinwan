@@ -1,4 +1,3 @@
-// client/src/components/ai/AICommandBox.jsx
 import React, { useState, useRef, useEffect } from 'react';
 
 const EXAMPLES = [
@@ -74,7 +73,7 @@ export default function AICommandBox({ workspaceId, token, isOpen, onClose }) {
                 borderRadius:14, boxShadow:'0 24px 80px rgba(0,0,0,0.6)',
                 overflow:'hidden',
             }}>
-                {/* Input Row */}
+                {}
                 <div style={{ display:'flex', alignItems:'center', gap:10, padding:'14px 16px', borderBottom:result||loading||error?'1px solid rgba(139,92,246,0.15)':'none' }}>
                     <span style={{fontSize:20}}>⚡</span>
                     <input
@@ -99,10 +98,10 @@ export default function AICommandBox({ workspaceId, token, isOpen, onClose }) {
                 </div>
                 <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
 
-                {/* Error */}
+                {}
                 {error && <div style={{ padding:'10px 16px', fontSize:13, color:'#f87171', background:'rgba(239,68,68,0.08)' }}>⚠️ {error}</div>}
 
-                {/* Result */}
+                {}
                 {result && (
                     <div style={{ padding:16 }}>
                         <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:10 }}>
@@ -142,7 +141,7 @@ export default function AICommandBox({ workspaceId, token, isOpen, onClose }) {
                     </div>
                 )}
 
-                {/* Examples */}
+                {}
                 {!result && !loading && !command && (
                     <div style={{ padding:'8px 16px 12px' }}>
                         <p style={{ margin:'0 0 8px 0', fontSize:11, color:'#475569', fontWeight:600, textTransform:'uppercase', letterSpacing:'0.05em' }}>Quick commands</p>

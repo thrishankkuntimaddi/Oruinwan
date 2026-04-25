@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Briefcase, Users, Shield, Trash2, Plus, Edit2, Save, Search, AlertTriangle, Monitor } from 'lucide-react';
 import { updateDepartment, addWorkspaceToDepartment, removeWorkspaceFromDepartment, assignUserToDepartment, removeUserFromDepartment, deleteDepartment } from '../../services/departmentService';
@@ -11,15 +10,15 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
     const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(false);
 
-    // Data States
+    
     const [allWorkspaces, setAllWorkspaces] = useState([]);
     const [allUsers, setAllUsers] = useState([]);
 
-    // UI States
+    
     const [editMode, setEditMode] = useState(false);
     const [formData, setFormData] = useState({ name: '', description: '' });
 
-    // Selections
+    
     const [selectedWorkspace, setSelectedWorkspace] = useState('');
     const [userSearch, setUserSearch] = useState('');
 
@@ -29,7 +28,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                 workspaceService.getWorkspaces(companyId),
                 getCompanyMembers(companyId)
             ]);
-            // Fix: workspaceService returns axios response, need .data
+            
             setAllWorkspaces(wsRes.data?.workspaces || []);
             setAllUsers(usrRes.members || []);
         } catch (error) {
@@ -44,7 +43,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
         }
     }, [isOpen, department, fetchData]);
 
-    // --- Actions ---
+    
 
     const handleUpdateDetails = async () => {
         try {
@@ -79,7 +78,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
             await assignUserToDepartment(userId, department._id);
             showToast("Member added", "success");
             onUpdate();
-            setUserSearch(''); // reset search
+            setUserSearch(''); 
         } catch (error) {
             showToast("Failed to add member", "error");
         } finally {
@@ -149,7 +148,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
 
     if (!isOpen || !department) return null;
 
-    // Computed Lists
+    
     const currentMemberIds = department.members?.map(m => m._id) || [];
     const availableUsers = allUsers.filter(u =>
         !currentMemberIds.includes(u._id) &&
@@ -164,7 +163,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
             <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose} />
 
             <div className="relative w-full max-w-5xl bg-white max-h-[85vh] shadow-2xl flex flex-col rounded-2xl overflow-hidden animate-scaleIn ring-1 ring-white/20">
-                {/* --- Header --- */}
+                {}
                 <div className="p-8 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white relative overflow-hidden shrink-0">
                     <div className="absolute top-0 right-0 p-40 bg-indigo-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
 
@@ -221,7 +220,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                         </button>
                     </div>
 
-                    {/* Stats */}
+                    {}
                     {!editMode && (
                         <div className="absolute bottom-0 right-0 p-8 flex gap-8 z-10">
                             <div className="text-right">
@@ -236,9 +235,9 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                     )}
                 </div>
 
-                {/* --- Body Layout (Sidebar + Content) --- */}
+                {}
                 <div className="flex flex-1 overflow-hidden">
-                    {/* Navigation Sidebar */}
+                    {}
                     <div className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col p-4 shrink-0">
                         <nav className="space-y-1">
                             {['overview', 'people', 'workspaces', 'settings'].map(tab => (
@@ -269,12 +268,12 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                         </div>
                     </div>
 
-                    {/* Content Area */}
+                    {}
                     <div className="flex-1 overflow-y-auto p-8 bg-white custom-scrollbar">
-                        {/* OVERVIEW TAB */}
+                        {}
                         {activeTab === 'overview' && (
                             <div className="space-y-8 animate-fadeIn max-w-3xl">
-                                {/* Leadership Card */}
+                                {}
                                 <section>
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Department Leadership</h3>
 
@@ -319,7 +318,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                             </div>
                         )}
 
-                        {/* PEOPLE TAB */}
+                        {}
                         {activeTab === 'people' && (
                             <div className="space-y-8 animate-fadeIn max-w-4xl">
                                 <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -387,7 +386,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                             </div>
                         )}
 
-                        {/* WORKSPACES TAB */}
+                        {}
                         {activeTab === 'workspaces' && (
                             <div className="space-y-8 animate-fadeIn max-w-4xl">
                                 <div className="flex items-end gap-3 bg-slate-50 p-6 rounded-2xl border border-slate-200">
@@ -442,7 +441,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
                             </div>
                         )}
 
-                        {/* SETTINGS TAB */}
+                        {}
                         {activeTab === 'settings' && (
                             <div className="space-y-6 animate-fadeIn max-w-xl mx-auto mt-8">
                                 <div className="bg-red-50 rounded-2xl border border-red-100 p-8 text-center">

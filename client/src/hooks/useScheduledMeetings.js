@@ -1,13 +1,3 @@
-/**
- * useScheduledMeetings.js
- *
- * Fetches upcoming scheduled meetings for the current workspace from the
- * REST API and subscribes to real-time socket events so the HomePanel
- * sidebar stays live without polling.
- *
- * Usage:
- *   const { meetings, loading, createMeeting, cancelMeeting } = useScheduledMeetings(workspaceId);
- */
 import { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useSocket } from '../contexts/SocketContext';
@@ -18,7 +8,7 @@ export function useScheduledMeetings(workspaceId) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
-    // ── Fetch upcoming meetings from REST API ──────────────────────────
+    
     const fetchMeetings = useCallback(async () => {
         if (!workspaceId) return;
         setLoading(true);
@@ -40,7 +30,7 @@ export function useScheduledMeetings(workspaceId) {
         fetchMeetings();
     }, [fetchMeetings]);
 
-    // ── Real-time socket sync ──────────────────────────────────────────
+    
     useEffect(() => {
         if (!socket) return;
 
@@ -58,7 +48,7 @@ export function useScheduledMeetings(workspaceId) {
         const onUpdated = ({ meeting }) => {
             if (String(meeting.workspaceId) !== String(workspaceId)) return;
             setMeetings(prev => {
-                // Remove if no longer upcoming (cancelled / completed)
+                
                 if (['cancelled', 'completed'].includes(meeting.status)) {
                     return prev.filter(m => m._id !== meeting._id);
                 }
@@ -81,7 +71,7 @@ export function useScheduledMeetings(workspaceId) {
         };
     }, [socket, workspaceId]);
 
-    // ── Mutations ──────────────────────────────────────────────────────
+    
     const createMeeting = useCallback(async (payload) => {
         const { data } = await api.post('/api/scheduled-meetings', {
             workspaceId,

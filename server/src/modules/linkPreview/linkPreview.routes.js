@@ -6,7 +6,6 @@ const auth       = require('../../shared/middleware/auth');
 const controller = require('./linkPreview.controller');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
-// 30 preview fetches per user per minute
 const previewLimiter = rateLimit({
     windowMs: 60_000,
     max:      30,

@@ -1,4 +1,3 @@
-// server/src/features/knowledge/KnowledgePage.js
 const mongoose = require('mongoose');
 
 const versionEntrySchema = new mongoose.Schema({
@@ -15,7 +14,7 @@ const knowledgePageSchema = new mongoose.Schema({
     parentId: { type: mongoose.Schema.Types.ObjectId, ref: 'KnowledgePage', default: null },
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'KnowledgeCategory', default: null },
     tags: [{ type: String, lowercase: true, trim: true }],
-    summary: { type: String, default: '' }, // AI-generated
+    summary: { type: String, default: '' }, 
     isHandbook: { type: Boolean, default: false },
     isDeleted: { type: Boolean, default: false },
     icon: { type: String, default: '📄' },

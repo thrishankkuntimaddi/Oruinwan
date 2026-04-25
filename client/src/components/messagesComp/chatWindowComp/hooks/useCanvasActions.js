@@ -1,9 +1,6 @@
 import { useCallback } from 'react';
 import api from '@services/api';
 
-/**
- * Custom hook for canvas/tab management actions
- */
 export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setActiveTab, showToast }) {
     const fetchTabs = useCallback(async () => {
         if (!chat || chat.type !== 'channel') return;
@@ -73,7 +70,7 @@ export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setAc
     const handleSaveCanvas = useCallback(async (tabId, data) => {
         try {
             const res = await api.put(`/api/channels/${chat.id}/tabs/${tabId}`, data);
-            // Update local tab state with returned metadata (lastEditedAt, wordCount, etc.)
+            
             if (res.data.tab) {
                 setTabs(prev => prev.map(t => t._id === tabId ? { ...t, ...res.data.tab } : t));
             }

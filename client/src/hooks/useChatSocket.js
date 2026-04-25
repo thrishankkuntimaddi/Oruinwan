@@ -1,65 +1,53 @@
-// client/src/hooks/useChatSocket.js
-// Single source of truth for socket lifecycle and event listeners
-
 import { useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '../contexts/SocketContext';
-import { useAuth } from '../contexts/AuthContext'; // ✅ FIX 5: Import useAuth for encryptionReady
+import { useAuth } from '../contexts/AuthContext'; 
 
-/**
- * Manages socket connection lifecycle for a conversation
- * @param {string} conversationId - Channel ID or DM Session ID
- * @param {string} conversationType - "channel" | "dm" | "broadcast"
- * @param {function} eventHandler - Callback for incoming socket events
- * @returns {object} Socket utilities and state
- */
 export function useChatSocket(conversationId, conversationType, eventHandler) {
     const { socket } = useSocket();
-    const { encryptionReady } = useAuth(); // ✅ FIX 5: Get encryption ready flag
-    const eventHandlerRef = useRef(eventHandler); // Changed from onEventRef
-    // eslint-disable-next-line no-unused-vars
-    const lastEventHashRef = useRef(new Set()); // Track processed event hashes (reserved for deduplication)
-    const wasDisconnectedRef = useRef(false);  // ← STABILITY: track disconnect for missed-message recovery
+    const { encryptionReady } = useAuth(); 
+    const eventHandlerRef = useRef(eventHandler); 
+    
+    const lastEventHashRef = useRef(new Set()); 
+    const wasDisconnectedRef = useRef(false);  
 
-
-
-    // Keep callback ref fresh
+    
     useEffect(() => {
         eventHandlerRef.current = eventHandler;
     }, [eventHandler]);
 
-    // Join conversation room
+    
     const joinConversation = useCallback(() => {
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // 🚫 DM GUARD: Skip chat:join for Direct Messages
-        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-        // DMs use 'join-dm' event (handled in ChatWindowV2.jsx)
-        // Channels/threads use 'chat:join' (continue normally below)
+        
+        
+        
+        
+        
         if (conversationType === 'dm') {
-            return; // Exit early - DM join handled elsewhere
+            return; 
         }
 
         if (!conversationId || !conversationType) {
             return;
         }
 
-        // ⚠️ GUARDRAIL FIX 5: Explicit ordering checks
+        
 
-        // Step 1: Check encryption ready
+        
         if (!encryptionReady) {
             return;
         }
 
-        // Step 2: Check socket connected
+        
         if (!socket?.connected) {
             return;
         }
 
-        // ✅ CRITICAL FIX: Server expects conversationId as first param, NOT an object
+        
         socket.emit('chat:join', conversationId, (response) => {
             if (response?.error) {
                 console.error(`❌[chat: join] Failed to join ${conversationType}: ${response.error} `, response);
 
-                // Handle specific error codes
+                
                 if (response.code === 'UNAUTHORIZED') {
                     console.error(`🚫[chat: join] Not authorized to join channel ${conversationId} `);
                     eventHandlerRef.current?.({
@@ -72,12 +60,12 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                     });
                 }
             } else if (response?.success) {
-                // Successfully joined
+                
             }
         });
-    }, [socket, conversationId, conversationType, encryptionReady]); // ✅ FIX 5: Add encryptionReady
+    }, [socket, conversationId, conversationType, encryptionReady]); 
 
-    // Leave conversation room
+    
     const leaveConversation = useCallback(() => {
         if (conversationType === 'dm') {
             return;
@@ -85,15 +73,15 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
         if (!socket || !conversationId) return;
 
-        // The `joinedRef` is removed, so we just emit leave if socket is connected
+        
         if (socket.connected) {
             socket.emit('chat:leave', { conversationId });
         }
     }, [socket, conversationId, conversationType]);
 
-    // Auto-join when prerequisites are met
+    
     useEffect(() => {
-        // ✅ FIX 5: Join only when encryption ready AND socket connected
+        
         if (encryptionReady && socket?.connected && conversationId) {
             joinConversation();
         }
@@ -103,9 +91,9 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                 socket.emit('chat:leave', conversationId);
             }
         };
-    }, [socket, conversationId, conversationType, encryptionReady, joinConversation]); // ✅ FIX 5: Add encryptionReady
+    }, [socket, conversationId, conversationType, encryptionReady, joinConversation]); 
 
-    // Emit typing indicator
+    
     const emitTyping = useCallback((isTyping) => {
         if (!socket || !conversationId) return;
 
@@ -115,7 +103,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         });
     }, [socket, conversationId]);
 
-    // Mark messages as read
+    
     const markAsRead = useCallback((messageIds) => {
         if (!socket || !conversationId || !messageIds?.length) return;
 
@@ -126,15 +114,15 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         });
     }, [socket, conversationId, conversationType]);
 
-    // Setup socket event listeners
+    
     useEffect(() => {
         if (!socket || !conversationId) return;
 
-        // Re-join room when socket connects/reconnects (auto-join effect handles initial join)
+        
         const handleConnect = () => {
             joinConversation();
-            // If we previously disconnected, notify the parent so it can re-fetch
-            // any messages that arrived while the socket was offline.
+            
+            
             if (wasDisconnectedRef.current) {
                 wasDisconnectedRef.current = false;
                 eventHandlerRef.current?.({
@@ -151,39 +139,35 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         socket.on('connect', handleConnect);
         socket.on('disconnect', handleDisconnect);
 
-        // ==================== MESSAGE EVENTS ====================
+        
 
         const handleNewMessage = (data) => {
-            // Extract message and identify conversation ID
+            
             const message = data.message || data;
 
-            // ✅ CRITICAL FIX: Handle both channels (channel field) and DMs (dm field)
+            
             const messageChannelId = message.channelId || message.channel?._id || message.channel;
             const messageDmId = message.dmId || message.dm?._id || message.dm;
 
-            // Determine which conversationId to compare against
+            
             const messageConversationId = conversationType === 'dm' ? messageDmId : messageChannelId;
 
-
-
-            // ✅ CRITICAL FIX: Only process if message belongs to active conversation
-            // Prevents cross-channel contamination when user is in multiple rooms
-            // Also rejects messages with missing/invalid conversationId
+            
+            
+            
             if (messageConversationId !== conversationId) {
-                return; // Ignore messages from other conversations
+                return; 
             }
 
-            // ✅ THREAD FIX: Route thread replies separately
-            // Thread replies should NOT appear in main chat message list
+            
+            
             if (message.parentId) {
                 eventHandlerRef.current?.({
                     type: 'thread-reply',
                     payload: data
                 });
-                return; // Do NOT emit as regular message
+                return; 
             }
-
-
 
             eventHandlerRef.current?.({
                 type: 'new-message',
@@ -198,20 +182,20 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-        // ✅ THREAD FIX: Listen for dedicated thread-reply events from backend
+        
         const handleThreadReply = (data) => {
 
-            // Route to conversation handler as thread-reply event
+            
             eventHandlerRef.current?.({
                 type: 'thread-reply',
                 payload: data
             });
         };
 
-        // ✅ THREAD AWARENESS: Listen for thread:created when first reply is added
+        
         const handleThreadCreated = (data) => {
 
-            // Route to conversation handler to update parent message
+            
             eventHandlerRef.current?.({
                 type: 'thread:created',
                 payload: data
@@ -233,7 +217,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         };
 
         const handleMessageHidden = (data) => {
-            // 'message:hidden' is a personal event — message is hidden only for current user
+            
             eventHandlerRef.current?.({
                 type: 'message-hidden',
                 payload: data
@@ -241,29 +225,29 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         };
 
         const handleMessageEdited = async (data) => {
-            // message:edited from server → decrypt new ciphertext, update decryptedContent
+            
             const msgId = data._id || data.id;
 
-            // ✅ FIX: If server sent updated plaintext .text (non-E2EE edit path),
-            // use it directly WITHOUT decrypting the ciphertext.
-            // Otherwise the old unchanged ciphertext would be decrypted and OVERWRITE the new text.
+            
+            
+            
             let newDecryptedContent = null;
 
             if (data.text) {
-                // Plaintext edit — use directly
+                
                 newDecryptedContent = data.text;
             } else if (data.payload?.ciphertext && data.payload?.messageIv) {
-                // E2EE edit — decrypt the new ciphertext
+                
                 try {
                     const { batchDecryptMessages } = await import('../services/messageEncryptionService');
                     const fake = [{ id: msgId, type: 'message', payload: data.payload }];
                     const decrypted = await batchDecryptMessages(fake, conversationId, conversationType, null);
                     newDecryptedContent = decrypted[0]?.decryptedContent || null;
-                } catch (_) { /* leave null */ }
+                } catch (_) {  }
             }
 
-            // ✅ FIX: Always emit the update even if decryption failed —
-            // editHistory and editedAt still need to be propagated so the history popover works.
+            
+            
             eventHandlerRef.current?.({
                 type: 'message-updated',
                 payload: {
@@ -274,9 +258,9 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                             decryptedContent: newDecryptedContent,
                         }),
                         editedAt: data.editedAt,
-                        // ✅ FIX: Pass editHistory from the server document so the history popover works
+                        
                         editHistory: data.editHistory || [],
-                        // Carry new encrypted payload so the event is consistent
+                        
                         ...(data.payload?.ciphertext && {
                             payload: {
                                 ciphertext: data.payload.ciphertext,
@@ -289,14 +273,12 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-
         const handleMessageUpdated = (data) => {
             eventHandlerRef.current?.({
                 type: 'message-updated',
                 payload: data
             });
         };
-
 
         const handleMessagePinned = (data) => {
             eventHandlerRef.current?.({
@@ -312,10 +294,10 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-        // ==================== REACTION EVENTS ====================
+        
 
         const handleReactionAdded = (data) => {
-            // Handles both 'reaction-added' (old) and 'message:reaction_added' (new v2)
+            
             eventHandlerRef.current?.({
                 type: 'reaction-added',
                 payload: data
@@ -323,14 +305,14 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         };
 
         const handleReactionRemoved = (data) => {
-            // Handles both 'reaction-removed' (old) and 'message:reaction_removed' (new v2)
+            
             eventHandlerRef.current?.({
                 type: 'reaction-removed',
                 payload: data
             });
         };
 
-        // ==================== TYPING EVENTS ====================
+        
 
         const handleUserTyping = (data) => {
             eventHandlerRef.current?.({
@@ -339,7 +321,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-        // ==================== POLL EVENTS ====================
+        
 
         const handlePollCreated = (data) => {
             eventHandlerRef.current?.({
@@ -362,7 +344,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-        // ==================== CHANNEL EVENTS ====================
+        
 
         const handleChannelUpdated = (data) => {
             eventHandlerRef.current?.({
@@ -385,8 +367,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-        // ==================== READ RECEIPTS ====================
-
+        
 
         const handleMessageRead = (data) => {
             eventHandlerRef.current?.({
@@ -395,24 +376,24 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             });
         };
 
-        // Register all event listeners
+        
         socket.on('new-message', handleNewMessage);
-        socket.on('thread-reply', handleThreadReply); // ✅ NEW: Listen for thread replies
-        socket.on('thread:created', handleThreadCreated); // ✅ NEW: Listen for thread creation
+        socket.on('thread-reply', handleThreadReply); 
+        socket.on('thread:created', handleThreadCreated); 
         socket.on('message-sent', handleMessageSent);
         socket.on('send-error', handleSendError);
         socket.on('message-deleted', handleMessageDeleted);
-        socket.on('message:deleted', handleMessageDeleted);   // v2 alias
-        socket.on('message:hidden', handleMessageHidden);     // personal hide
+        socket.on('message:deleted', handleMessageDeleted);   
+        socket.on('message:hidden', handleMessageHidden);     
         socket.on('message-updated', handleMessageUpdated);
-        socket.on('message:edited', handleMessageEdited);     // v2 alias
+        socket.on('message:edited', handleMessageEdited);     
         socket.on('message-pinned', handleMessagePinned);
         socket.on('message-unpinned', handleMessageUnpinned);
 
         socket.on('reaction-added', handleReactionAdded);
         socket.on('reaction-removed', handleReactionRemoved);
-        socket.on('message:reaction_added', handleReactionAdded);   // v2 alias
-        socket.on('message:reaction_removed', handleReactionRemoved); // v2 alias
+        socket.on('message:reaction_added', handleReactionAdded);   
+        socket.on('message:reaction_removed', handleReactionRemoved); 
 
         socket.on('chat:user_typing', handleUserTyping);
 
@@ -426,11 +407,11 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
         socket.on('message-read', handleMessageRead);
 
-        // Cleanup on unmount
+        
         return () => {
             socket.off('new-message', handleNewMessage);
-            socket.off('thread-reply', handleThreadReply); // ✅ Cleanup thread-reply listener
-            socket.off('thread:created', handleThreadCreated); // ✅ Cleanup thread:created listener
+            socket.off('thread-reply', handleThreadReply); 
+            socket.off('thread:created', handleThreadCreated); 
             socket.off('message-sent', handleMessageSent);
             socket.off('send-error', handleSendError);
             socket.off('message-deleted', handleMessageDeleted);
@@ -458,11 +439,11 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
             socket.off('message-read', handleMessageRead);
 
-            // Remove connect listener
+            
             socket.off('connect', handleConnect);
             socket.off('disconnect', handleDisconnect);
 
-            // Leave room on unmount
+            
             leaveConversation();
         };
     }, [socket, conversationId, conversationType, joinConversation, leaveConversation]);

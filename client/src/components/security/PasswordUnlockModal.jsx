@@ -1,17 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, AlertCircle, Loader2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 
-/**
- * Password Unlock Modal — Monolith Flow Design System
- *
- * Appears when user has password-protected identity keys
- * but session is rehydrated without password.
- *
- * This is NOT a crypto bug — it's expected behavior for:
- * - Page refresh
- * - New device login
- * - Session rehydration
- */
 export default function PasswordUnlockModal({ onSubmit }) {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(null);
@@ -31,11 +20,11 @@ export default function PasswordUnlockModal({ onSubmit }) {
 
         try {
             await onSubmit(password);
-            // Success — modal will be closed by parent component
+            
         } catch (err) {
             console.error('❌ [UNLOCK] Password unlock failed:', err);
 
-            // Provide more actionable error messages
+            
             const rawMsg = err.message || '';
             let friendlyMsg = 'Incorrect password. Please try again.';
             if (rawMsg.includes('500')) {
@@ -83,7 +72,7 @@ export default function PasswordUnlockModal({ onSubmit }) {
                 overflow: 'hidden',
                 animation: 'pwUnlockSlideIn 260ms cubic-bezier(0.16,1,0.3,1)',
             }}>
-                {/* Header */}
+                {}
                 <div style={{
                     padding: '20px 24px 16px',
                     borderBottom: '1px solid var(--border-default, #222222)',
@@ -120,10 +109,10 @@ export default function PasswordUnlockModal({ onSubmit }) {
                     </div>
                 </div>
 
-                {/* Body */}
+                {}
                 <form onSubmit={handleUnlock} style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-                    {/* Info notice */}
+                    {}
                     <div style={{
                         display: 'flex', alignItems: 'flex-start', gap: '10px',
                         padding: '10px 12px',
@@ -141,7 +130,7 @@ export default function PasswordUnlockModal({ onSubmit }) {
                         </div>
                     </div>
 
-                    {/* Password Input */}
+                    {}
                     <div>
                         <label
                             htmlFor="unlock-password"
@@ -201,7 +190,7 @@ export default function PasswordUnlockModal({ onSubmit }) {
                         </div>
                     </div>
 
-                    {/* Error Message */}
+                    {}
                     {error && (
                         <div style={{
                             display: 'flex', alignItems: 'flex-start', gap: '8px',
@@ -214,7 +203,7 @@ export default function PasswordUnlockModal({ onSubmit }) {
                         </div>
                     )}
 
-                    {/* Submit */}
+                    {}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
                         <button
                             type="submit"

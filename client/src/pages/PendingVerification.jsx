@@ -12,7 +12,7 @@ const PendingVerification = () => {
     return (
         <div className="min-h-screen w-full bg-white dark:bg-[#030712] relative overflow-hidden font-sans selection:bg-indigo-500 selection:text-white flex flex-col items-center justify-center p-6 transition-colors duration-500">
 
-            {/* Background Effects */}
+            {}
             <div className={`absolute inset-0 transition-opacity duration-1000 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
                 <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
                 <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
@@ -22,10 +22,10 @@ const PendingVerification = () => {
                 <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-50 via-purple-50 to-transparent blur-[100px]"></div>
             </div>
 
-            {/* Content Card */}
+            {}
             <div className="relative z-10 w-full max-w-lg bg-white/70 dark:bg-slate-900/50 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/50 dark:border-white/10 p-8 md:p-12 text-center animate-fade-in-up">
 
-                {/* Icon Animation */}
+                {}
                 <div className="relative w-24 h-24 mx-auto mb-8">
                     <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900/30 rounded-full animate-ping opacity-75"></div>
                     <div className="relative w-full h-full bg-blue-50 dark:bg-blue-900/50 rounded-full flex items-center justify-center border-4 border-white dark:border-slate-800 shadow-xl">
@@ -77,7 +77,7 @@ const PendingVerification = () => {
                 </button>
             </div>
 
-            {/* Footer */}
+            {}
             <div className="absolute bottom-6 text-xs text-slate-400 dark:text-slate-600 font-medium">
                 &copy; 2026 Chttrix Inc.
             </div>

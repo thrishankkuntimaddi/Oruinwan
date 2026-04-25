@@ -9,7 +9,6 @@ import {
     Trash2, Eye, AlertCircle, Target
 } from 'lucide-react';
 
-// ─── constants ─────────────────────────────────────────────────────────────
 const TIMEZONES = [
     { value: 'UTC', label: 'UTC — Universal Time' },
     { value: 'America/New_York', label: 'Eastern Time (US)' },
@@ -34,7 +33,6 @@ const STEPS = [
     { id: 4, title: 'Launch', desc: 'Ready to go', icon: Zap },
 ];
 
-// ─── input helper ───────────────────────────────────────────────────────────
 const inp = 'w-full px-4 py-3 rounded-xl border text-sm font-medium transition-all outline-none ' +
     'bg-white dark:bg-slate-800 ' +
     'border-slate-200 dark:border-slate-700 ' +
@@ -42,7 +40,6 @@ const inp = 'w-full px-4 py-3 rounded-xl border text-sm font-medium transition-a
     'placeholder-slate-400 dark:placeholder-slate-500 ' +
     'focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20';
 
-// ─── component ──────────────────────────────────────────────────────────────
 const CompanySetup = () => {
     const { user, refreshUser } = useAuth();
     const { showToast } = useToast();
@@ -50,30 +47,30 @@ const CompanySetup = () => {
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
 
-    // Step 1
+    
     const [displayName, setDisplayName] = useState(user?.company?.name || user?.companyName || '');
     const [timezone, setTimezone] = useState('Asia/Kolkata');
     const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
     const logoInputRef = useRef();
 
-    // Step 2
+    
     const [departments, setDepartments] = useState(['Engineering', 'Sales', 'Marketing', 'HR']);
     const [newDeptInput, setNewDeptInput] = useState('');
 
-    // Step 3
+    
     const [excelFile, setExcelFile] = useState(null);
     const [parsedEmployees, setParsedEmployees] = useState(null);
     const [manualInvites, setManualInvites] = useState([{ name: '', email: '', phone: '', role: 'member', department: '' }]);
     const excelInputRef = useRef();
 
-    // Step 4
+    
     const [launchSummary, setLaunchSummary] = useState(null);
 
     const companyId = user?.company?.id || user?.company?._id
         || (typeof user?.companyId === 'string' ? user.companyId : user?.companyId?._id || user?.companyId?.toString());
 
-    // ── logo ─────────────────────────────────────────────────────────────────
+    
     const handleLogoSelect = (file) => {
         if (!file) return;
         if (!file.type.startsWith('image/')) { showToast('Please upload an image file', 'error'); return; }
@@ -86,7 +83,7 @@ const CompanySetup = () => {
         handleLogoSelect(e.dataTransfer.files[0]);
     }, []);
 
-    // ── departments ───────────────────────────────────────────────────────────
+    
     const addDept = (name) => {
         const t = name.trim();
         if (!t || departments.includes(t)) return;
@@ -94,7 +91,7 @@ const CompanySetup = () => {
     };
     const removeDept = (i) => departments.length > 1 && setDepartments(p => p.filter((_, idx) => idx !== i));
 
-    // ── excel ─────────────────────────────────────────────────────────────────
+    
     const handleExcelSelect = async (file) => {
         if (!file) return;
         setExcelFile(file);
@@ -104,20 +101,20 @@ const CompanySetup = () => {
             const wb = XLSX.read(buffer);
             const ws = wb.Sheets[wb.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-            // 10-col format: A=First Name B=Last Name C=Work Email D=Pers.Email
-            //                E=Job Title F=Join Date G=Mobile H=Corp ID I=Role J=Department
+            
+            
             const data = rows.slice(1)
-                .filter(r => r[2] && String(r[2]).includes('@'))   // need work email in col C
+                .filter(r => r[2] && String(r[2]).includes('@'))   
                 .map(r => ({
                     name:         `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
-                    email:        String(r[2] || '').trim().toLowerCase(),   // C: Work email
-                    personalEmail:String(r[3] || '').trim().toLowerCase(),   // D: Personal email
-                    jobTitle:     String(r[4] || '').trim(),                 // E
-                    joiningDate:  String(r[5] || '').trim(),                 // F
-                    phone:        String(r[6] || '').trim(),                 // G: Mobile ← was broken
-                    corporateId:  String(r[7] || '').trim(),                 // H
-                    role:         String(r[8] || 'member').trim().toLowerCase(), // I
-                    department:   String(r[9] || '').trim(),                 // J
+                    email:        String(r[2] || '').trim().toLowerCase(),   
+                    personalEmail:String(r[3] || '').trim().toLowerCase(),   
+                    jobTitle:     String(r[4] || '').trim(),                 
+                    joiningDate:  String(r[5] || '').trim(),                 
+                    phone:        String(r[6] || '').trim(),                 
+                    corporateId:  String(r[7] || '').trim(),                 
+                    role:         String(r[8] || 'member').trim().toLowerCase(), 
+                    department:   String(r[9] || '').trim(),                 
                 }));
             setParsedEmployees(data);
             showToast(`Parsed ${data.length} employee records`, 'success');
@@ -139,12 +136,12 @@ const CompanySetup = () => {
         } catch { showToast('Failed to download template', 'error'); }
     };
 
-    // ── manual invites ────────────────────────────────────────────────────────
+    
     const updateInvite = (i, field, val) =>
         setManualInvites(p => { const c = [...p]; c[i] = { ...c[i], [field]: val }; return c; });
     const removeInvite = (i) => manualInvites.length > 1 && setManualInvites(p => p.filter((_, idx) => idx !== i));
 
-    // ── submit ────────────────────────────────────────────────────────────────
+    
     const handleNext = async () => {
         if (!companyId) { showToast('No company ID found', 'error'); return; }
         setIsLoading(true);
@@ -191,7 +188,7 @@ const CompanySetup = () => {
         }
     };
 
-    // ── render ────────────────────────────────────────────────────────────────
+    
     return (
         <div className="h-screen w-full bg-slate-100 dark:bg-[#07090f] flex items-center justify-center overflow-hidden font-sans p-4">
             <style>{`
@@ -199,14 +196,14 @@ const CompanySetup = () => {
                 .fade-up { animation: fadeUp 0.3s ease forwards; }
             `}</style>
 
-            {/* ── Card ── */}
+            {}
             <div className="w-full max-w-5xl h-full max-h-[92vh] rounded-3xl overflow-hidden shadow-2xl flex border border-slate-200 dark:border-slate-800">
 
-                {/* ══ SIDEBAR ══ */}
+                {}
                 <div className="w-64 shrink-0 bg-[#0e1220] flex flex-col h-full">
                     <div className="p-6 flex flex-col h-full">
 
-                        {/* Real logo + wordmark */}
+                        {}
                         <div className="flex items-center gap-2.5 mb-8">
                             <img
                                 src="/chttrix-logo.jpg"
@@ -217,7 +214,7 @@ const CompanySetup = () => {
                             <span className="font-black text-xl text-white tracking-tight">Chttrix</span>
                         </div>
 
-                        {/* Step list */}
+                        {}
                         <div className="space-y-1 flex-1">
                             {STEPS.map(s => {
                                 const active = step === s.id;
@@ -238,7 +235,7 @@ const CompanySetup = () => {
                             })}
                         </div>
 
-                        {/* Progress */}
+                        {}
                         <div className="pt-4 border-t border-white/10">
                             <div className="flex items-center gap-2 mb-2">
                                 <Clock size={11} className="text-slate-500" />
@@ -252,14 +249,14 @@ const CompanySetup = () => {
                     </div>
                 </div>
 
-                {/* ══ MAIN AREA ══ */}
+                {}
                 <div className="flex-1 bg-white dark:bg-slate-900 flex flex-col min-h-0">
 
-                    {/* Scrollable form */}
+                    {}
                     <div className="flex-1 overflow-y-auto px-10 py-8">
                         <div className="max-w-xl mx-auto">
 
-                            {/* ── STEP 1 ── */}
+                            {}
                             {step === 1 && (
                                 <div className="fade-up space-y-5">
                                     <div>
@@ -315,7 +312,7 @@ const CompanySetup = () => {
                                 </div>
                             )}
 
-                            {/* ── STEP 2 ── */}
+                            {}
                             {step === 2 && (
                                 <div className="fade-up space-y-5">
                                     <div>
@@ -359,7 +356,7 @@ const CompanySetup = () => {
                                 </div>
                             )}
 
-                            {/* ── STEP 3 ── */}
+                            {}
                             {step === 3 && (
                                 <div className="fade-up space-y-5">
                                     <div>
@@ -367,7 +364,7 @@ const CompanySetup = () => {
                                         <p className="text-sm text-slate-500 dark:text-slate-400">Add your team via Excel upload or manually.</p>
                                     </div>
 
-                                    {/* Template download */}
+                                    {}
                                     <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
                                         <div className="w-10 h-10 rounded-xl bg-white dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-800 shrink-0">
                                             <FileSpreadsheet size={20} />
@@ -382,7 +379,7 @@ const CompanySetup = () => {
                                         </button>
                                     </div>
 
-                                    {/* Excel upload */}
+                                    {}
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bulk Upload (Excel / CSV)</label>
                                         {excelFile ? (
@@ -448,7 +445,7 @@ const CompanySetup = () => {
                                             onChange={e => handleExcelSelect(e.target.files[0])} />
                                     </div>
 
-                                    {/* Manual — only when no Excel uploaded */}
+                                    {}
                                     {!excelFile && (
                                         <>
                                             <div className="relative flex items-center gap-3">
@@ -501,7 +498,7 @@ const CompanySetup = () => {
                                 </div>
                             )}
 
-                            {/* ── STEP 4 ── */}
+                            {}
                             {step === 4 && (
                                 <div className="fade-up flex flex-col items-center text-center py-6">
                                     <div className="relative w-24 h-24 mb-8">
@@ -534,7 +531,7 @@ const CompanySetup = () => {
                         </div>
                     </div>
 
-                    {/* ── Footer ── */}
+                    {}
                     <div className="shrink-0 px-10 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
                         <div>
                             {step > 1 && step < 4 && (

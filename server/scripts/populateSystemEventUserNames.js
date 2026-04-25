@@ -1,13 +1,3 @@
-// server/scripts/populateSystemEventUserNames.js
-/**
- * Migration Script: Populate userName in systemEvents
- * 
- * This script adds the userName field to all systemEvents that have a userId
- * but are missing the userName field.
- * 
- * Usage: node scripts/populateSystemEventUserNames.js
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Channel = require("../src/features/channels/channel.model.js");
@@ -17,11 +7,11 @@ async function populateSystemEventUserNames() {
     try {
         console.log('🚀 Starting migration: Populate userName in systemEvents...\n');
 
-        // Connect to MongoDB
+        
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB\n');
 
-        // Find ALL channels with systemEvents
+        
         const channels = await Channel.find({
             'systemEvents.0': { $exists: true }
         });
@@ -37,14 +27,14 @@ async function populateSystemEventUserNames() {
         let updatedCount = 0;
         let skippedCount = 0;
 
-        // Process each channel
+        
         for (const channel of channels) {
             let needsUpdate = false;
 
-            // Check each systemEvent
+            
             for (const event of channel.systemEvents) {
                 if (event.userId && !event.userName) {
-                    // Fetch user and add userName
+                    
                     const user = await User.findById(event.userId).select('firstName lastName').lean();
                     if (user) {
                         event.userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown';
@@ -80,7 +70,6 @@ async function populateSystemEventUserNames() {
     }
 }
 
-// Run the migration
 populateSystemEventUserNames()
     .then(() => {
         console.log('\n✨ All done!');

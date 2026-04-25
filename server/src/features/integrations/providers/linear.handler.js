@@ -1,7 +1,6 @@
-// server/src/features/integrations/providers/linear.handler.js
 async function handleWebhook(payload, headers, integration) {
-  const type = payload.type; // 'Issue', 'Project', 'Cycle'
-  const action = payload.action; // 'create', 'update', 'remove'
+  const type = payload.type; 
+  const action = payload.action; 
   const results = [];
 
   if (type === 'Issue') {

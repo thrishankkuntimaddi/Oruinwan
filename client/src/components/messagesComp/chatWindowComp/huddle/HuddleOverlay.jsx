@@ -1,14 +1,3 @@
-/**
- * HuddleOverlay.jsx — Phase 7.7
- *
- * Fixed bottom-left overlay shown while a huddle is active.
- * Features:
- *   - Participant avatars
- *   - Duration timer
- *   - Mute toggle
- *   - Leave button
- *   - Minimise toggle
- */
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff, PhoneOff, ChevronDown, ChevronUp, Radio } from 'lucide-react';
 import HuddleParticipants from './HuddleParticipants';
@@ -30,7 +19,7 @@ export default function HuddleOverlay({
     const [minimised, setMinimised] = useState(false);
     const [elapsed, setElapsed] = useState(0);
 
-    // Duration timer
+    
     useEffect(() => {
         if (!active) { setElapsed(0); return; }
         const t = setInterval(() => setElapsed(s => s + 1), 1000);
@@ -44,7 +33,7 @@ export default function HuddleOverlay({
             className={`fixed bottom-4 left-4 z-50 flex flex-col bg-gray-900/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl overflow-hidden transition-all duration-300 ${minimised ? 'w-52' : 'w-64'}`}
             style={{ minWidth: 208 }}
         >
-            {/* Header */}
+            {}
             <div className="flex items-center gap-2 px-3 py-2.5 bg-green-600/20 border-b border-white/10">
                 <Radio size={13} className="text-green-400 flex-shrink-0 animate-pulse" />
                 <div className="flex-1 min-w-0">
@@ -62,10 +51,10 @@ export default function HuddleOverlay({
                 </button>
             </div>
 
-            {/* Body — hidden when minimised */}
+            {}
             {!minimised && (
                 <>
-                    {/* Participants */}
+                    {}
                     <div className="px-3 py-2.5">
                         <p className="text-[10px] text-white/40 mb-2 uppercase tracking-wider">
                             {participants.length} {participants.length === 1 ? 'participant' : 'participants'}
@@ -73,14 +62,14 @@ export default function HuddleOverlay({
                         <HuddleParticipants participants={participants} />
                     </div>
 
-                    {/* Divider */}
+                    {}
                     <div className="h-px bg-white/10 mx-3" />
                 </>
             )}
 
-            {/* Controls */}
+            {}
             <div className="flex items-center justify-between px-3 py-2.5 gap-2">
-                {/* Mute toggle */}
+                {}
                 <button
                     onClick={onToggleMute}
                     title={muted ? 'Unmute' : 'Mute'}
@@ -94,7 +83,7 @@ export default function HuddleOverlay({
                     <span>{muted ? 'Unmute' : 'Mute'}</span>
                 </button>
 
-                {/* Leave */}
+                {}
                 <button
                     onClick={onLeave}
                     title="Leave huddle"

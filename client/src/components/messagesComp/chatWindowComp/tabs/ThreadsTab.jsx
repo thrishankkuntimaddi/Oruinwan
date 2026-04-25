@@ -91,13 +91,13 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
 
     return (
         <div style={{ display: 'flex', width: '100%', height: '100%', backgroundColor: 'var(--bg-base)' }}>
-            {/* Left Column: Thread List */}
+            {}
             <div style={{
                 flexShrink: 0, width: '280px', display: 'flex', flexDirection: 'column',
                 borderRight: '1px solid var(--border-default)',
                 backgroundColor: 'var(--bg-surface)',
             }}>
-                {/* Header */}
+                {}
                 <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <h2 style={{
                         fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)',
@@ -140,7 +140,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                     </div>
                 </div>
 
-                {/* Thread List */}
+                {}
                 <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
                     {loading ? (
                         <div style={{ padding: '8px' }}>
@@ -182,7 +182,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                     onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; } }}
                                     onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.backgroundColor = 'transparent'; } }}
                                 >
-                                    {/* Avatar */}
+                                    {}
                                     <img
                                         src={getAvatarUrl(thread.sender || { username: thread.senderName || '?' })}
                                         alt={thread.sender?.username || thread.senderName || 'User'}
@@ -201,7 +201,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                         }}
                                     />
 
-                                    {/* Content */}
+                                    {}
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                                             <span style={{
@@ -225,7 +225,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                                         </p>
                                     </div>
 
-                                    {/* Reply count badge */}
+                                    {}
                                     <span style={{
                                         flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: '4px',
                                         padding: '2px 6px', borderRadius: '2px',
@@ -254,7 +254,7 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                 </div>
             </div>
 
-            {/* Right Column: Thread Panel */}
+            {}
             <div style={{
                 flex: 1, display: 'flex', flexDirection: 'column',
                 backgroundColor: 'var(--bg-base)', overflow: 'hidden',

@@ -1,8 +1,3 @@
-// server/scripts/checkChannelData.js
-/**
- * Debug Script: Check channel data to see what's actually in the database
- */
-
 require('dotenv').config();
 const mongoose = require('mongoose');
 const Channel = require("../src/features/channels/channel.model.js");
@@ -12,10 +7,10 @@ async function checkChannelData() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ Connected to MongoDB\n');
 
-        // Find all default channels
+        
         const channels = await Channel.find({ isDefault: true })
             .select('name workspace createdBy createdAt members systemEvents')
-            .lean(); // Use lean() to get plain objects
+            .lean(); 
 
         console.log(`📊 Found ${channels.length} default channels\n`);
 

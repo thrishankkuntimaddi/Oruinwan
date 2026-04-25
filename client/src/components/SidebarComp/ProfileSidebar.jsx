@@ -4,21 +4,18 @@ import { useToast } from "../../contexts/ToastContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import api from '@services/api';
 
-// Import extracted view components
 import MainMenuView from "../profile/views/MainMenuView";
 import ProfileView from "../profile/views/ProfileView";
 import PreferencesView from "../profile/views/PreferencesView";
 import SecurityView from "../profile/views/SecurityView";
 import HelpMenuView from "../profile/views/HelpMenuView";
 
-// Import help sub-views
 import HelpAcademyView from "../profile/views/help/HelpAcademyView";
 import HelpShortcutsView from "../profile/views/help/HelpShortcutsView";
 import HelpBugView from "../profile/views/help/HelpBugView";
 import HelpWhatsNewView from "../profile/views/help/HelpWhatsNewView";
 import HelpContactView from "../profile/views/help/HelpContactView";
 
-// Import modals
 import DeleteAccountModal from "../profile/modals/DeleteAccountModal";
 
 const ProfileMenu = ({ onClose }) => {
@@ -26,31 +23,31 @@ const ProfileMenu = ({ onClose }) => {
   const { showToast } = useToast();
   const { theme, setTheme } = useTheme();
 
-  // View state
+  
   const [view, setView] = useState("menu");
   const [formData, setFormData] = useState({ ...user });
   const [status, setStatus] = useState("active");
 
-  // Email state
+  
   const [emails, setEmails] = useState([]);
   const [newEmail, setNewEmail] = useState("");
   const [phoneCode, setPhoneCode] = useState(user?.phoneCode || "+1");
 
-  // Verification modal state
+  
   const [showVerifyModal, setShowVerifyModal] = useState(false);
   const [verifyingEmailId, setVerifyingEmailId] = useState(null);
   const [verificationCode, setVerificationCode] = useState("");
 
-  // Password state
+  
   const [passData, setPassData] = useState({ old: "", new: "", confirm: "" });
   const [showPasswords, setShowPasswords] = useState({ old: false, new: false, confirm: false });
 
-  // Security state
+  
   const [sessions, setSessions] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
-  // Sync formData with user object changes
+  
   useEffect(() => {
     if (user) {
       setFormData({
@@ -67,14 +64,14 @@ const ProfileMenu = ({ onClose }) => {
     }
   }, [user]);
 
-  // Load user's current status on mount
+  
   useEffect(() => {
     if (user?.userStatus) {
       setStatus(user.userStatus);
     }
   }, [user]);
 
-  // Load emails from user object
+  
   useEffect(() => {
     if (user?.emails && user.emails.length > 0) {
       setEmails(user.emails);
@@ -88,15 +85,15 @@ const ProfileMenu = ({ onClose }) => {
     }
   }, [user]);
 
-  // Fetch sessions when navigating to security view
+  
   useEffect(() => {
     if (view === "security") {
       fetchSessions();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [view]);
 
-  // === Handler Functions ===
+  
 
   const fetchSessions = async () => {
     try {
@@ -293,11 +290,11 @@ const ProfileMenu = ({ onClose }) => {
     }
   };
 
-  // === Render ===
+  
 
   return (
     <>
-      {/* Delete Account Modal */}
+      {}
       <DeleteAccountModal
         show={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -306,10 +303,10 @@ const ProfileMenu = ({ onClose }) => {
         onDeleteAccount={handleDeleteAccount}
       />
 
-      {/* Backdrop to close */}
+      {}
       <div className="fixed inset-0 z-[90]" onClick={onClose}></div>
 
-      {/* Popover Positioned Bottom-Left — anchored to right edge of 52px sidebar */}
+      {}
       <div style={{ position: 'fixed', bottom: '8px', left: '58px', zIndex: 100 }}>
         {view === "menu" && (
           <MainMenuView
@@ -374,7 +371,7 @@ const ProfileMenu = ({ onClose }) => {
         {view === "help_contact" && <HelpContactView onBack={() => setView("help")} />}
       </div>
 
-      {/* Email Verification Modal */}
+      {}
       {showVerifyModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}>
           <div style={{ background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 24px 80px rgba(0,0,0,0.75)', padding: '24px', width: '100%', maxWidth: '384px', margin: '0 16px', fontFamily: 'Inter, system-ui, sans-serif' }}>

@@ -1,4 +1,3 @@
-// server/src/features/developer/bot.model.js
 const mongoose = require('mongoose');
 const crypto = require('crypto');
 
@@ -21,7 +20,7 @@ const botSchema = new mongoose.Schema({
     required: true,
     index: true
   },
-  // Hashed bot token (Bearer auth)
+  
   tokenHash: {
     type: String,
     required: true,
@@ -62,7 +61,7 @@ const botSchema = new mongoose.Schema({
 botSchema.statics.generateToken = function () {
   const rawToken = 'bot_' + crypto.randomBytes(32).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-  const tokenPrefix = rawToken.slice(0, 12); // "bot_XXXXXXXX"
+  const tokenPrefix = rawToken.slice(0, 12); 
   return { rawToken, tokenHash, tokenPrefix };
 };
 

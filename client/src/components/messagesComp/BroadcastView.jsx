@@ -43,7 +43,7 @@ export default function BroadcastView() {
         if (selectedUsers.length === 0 || !message.trim()) return;
         setSending(true);
 
-        // Simulate sending
+        
         setTimeout(() => {
             showToast(`Broadcast sent to ${selectedUsers.length} recipients!`);
             setSending(false);
@@ -58,7 +58,7 @@ export default function BroadcastView() {
 
     return (
         <div className="flex flex-col h-full bg-white">
-            {/* Header */}
+            {}
             <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
@@ -72,7 +72,7 @@ export default function BroadcastView() {
             </div>
 
             <div className="flex-1 flex overflow-hidden">
-                {/* Left: Recipient Selection */}
+                {}
                 <div className="w-80 border-r border-gray-100 flex flex-col bg-gray-50/30">
                     <div className="p-4">
                         <div className="relative">
@@ -119,7 +119,7 @@ export default function BroadcastView() {
                     </div>
                 </div>
 
-                {/* Right: Composer */}
+                {}
                 <div className="flex-1 flex flex-col bg-white">
                     <div className="flex-1 p-8">
                         <div className="max-w-3xl mx-auto w-full h-full flex flex-col">

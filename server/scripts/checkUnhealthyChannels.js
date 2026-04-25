@@ -1,6 +1,3 @@
-// Utility script to identify channels without E2EE keys
-// Run: node scripts/checkUnhealthyChannels.js
-
 const mongoose = require('mongoose');
 require('dotenv').config();
 
@@ -14,7 +11,7 @@ async function checkUnhealthyChannels() {
         await mongoose.connect(process.env.MONGO_URI);
         console.log('✅ MongoDB Connected');
 
-        // Get all channels
+        
         const channels = await Channel.find({})
             .populate('workspace', 'name company')
             .populate('createdBy', 'username email userType')
@@ -26,7 +23,7 @@ async function checkUnhealthyChannels() {
         const unhealthyChannels = [];
 
         for (const channel of channels) {
-            // Check if conversation key exists
+            
             const hasKey = await ConversationKey.findOne({
                 conversationId: channel._id,
                 conversationType: 'channel'
@@ -62,7 +59,7 @@ async function checkUnhealthyChannels() {
         console.log(`   Unhealthy (no E2EE): ${unhealthyChannels.length}`);
         console.log(`   Health Score: ${Math.round(((channels.length - unhealthyChannels.length) / channels.length) * 100)}%`);
 
-        // Break down by account type
+        
         const companyChannels = unhealthyChannels.filter(ch => ch.workspace?.company);
         const personalChannels = unhealthyChannels.filter(ch => !ch.workspace?.company);
 

@@ -1,15 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { ZoomIn, ZoomOut, RotateCw, Check, X } from 'lucide-react';
 
-/**
- * ImageCropEditor
- * Canvas-based square crop editor — no external library.
- * Props:
- *   src       — data URL or object URL of the image to edit
- *   onConfirm — (blob) => void — called with the cropped JPEG blob
- *   onCancel  — () => void
- *   outputSize — pixel dimension of the output (default 400)
- */
 const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
     const canvasRef = useRef(null);
     const imgRef = useRef(null);
@@ -22,15 +13,15 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
     const [imgNaturalSize, setImgNaturalSize] = useState({ w: 1, h: 1 });
     const [ready, setReady] = useState(false);
 
-    const CANVAS_SIZE = 320; // Display canvas is always 320×320
+    const CANVAS_SIZE = 320; 
 
-    // Load image
+    
     useEffect(() => {
         const img = new Image();
         img.onload = () => {
             imgRef.current = img;
             setImgNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-            // Set initial zoom so the image fills the crop square
+            
             const minDim = Math.min(img.naturalWidth, img.naturalHeight);
             const initZoom = CANVAS_SIZE / minDim;
             setZoom(initZoom);
@@ -40,7 +31,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
         img.src = src;
     }, [src]);
 
-    // Draw frame
+    
     const draw = useCallback(() => {
         if (!canvasRef.current || !imgRef.current || !ready) return;
         const ctx = canvasRef.current.getContext('2d');
@@ -55,7 +46,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
         ctx.drawImage(imgRef.current, -w / 2, -h / 2, w, h);
         ctx.restore();
 
-        // Darkened overlay outside circle crop guide
+        
         ctx.save();
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
@@ -65,7 +56,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
         ctx.fill();
         ctx.restore();
 
-        // Circle border
+        
         ctx.save();
         ctx.strokeStyle = 'rgba(255,255,255,0.7)';
         ctx.lineWidth = 2;
@@ -77,7 +68,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
 
     useEffect(() => { draw(); }, [draw]);
 
-    // Drag-to-pan
+    
     const onMouseDown = (e) => {
         setDragging(true);
         setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
@@ -88,7 +79,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
     };
     const onMouseUp = () => setDragging(false);
 
-    // Touch support
+    
     const onTouchStart = (e) => {
         const t = e.touches[0];
         setDragging(true);
@@ -100,7 +91,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
         setOffset({ x: t.clientX - dragStart.x, y: t.clientY - dragStart.y });
     };
 
-    // Export cropped output
+    
     const handleConfirm = () => {
         if (!imgRef.current) return;
         const out = document.createElement('canvas');
@@ -134,7 +125,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
                     </button>
                 </div>
 
-                {/* Canvas */}
+                {}
                 <div className="flex items-center justify-center bg-gray-900 py-6 px-6">
                     <canvas
                         ref={canvasRef}
@@ -154,9 +145,9 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
 
                 <p className="text-center text-[11px] text-gray-400 py-2">Drag to reposition · Scroll or use buttons to zoom</p>
 
-                {/* Controls */}
+                {}
                 <div className="px-5 py-3 space-y-3 border-t border-gray-200 dark:border-gray-800">
-                    {/* Zoom slider */}
+                    {}
                     <div className="flex items-center gap-3">
                         <button onClick={() => zoomBy(-0.1)} className="p-1.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors">
                             <ZoomOut size={15} />
@@ -178,7 +169,7 @@ const ImageCropEditor = ({ src, onConfirm, onCancel, outputSize = 400 }) => {
                         </button>
                     </div>
 
-                    {/* Action buttons */}
+                    {}
                     <div className="flex gap-2">
                         <button onClick={onCancel}
                             className="flex-1 px-4 py-2 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 text-[12.5px] font-semibold rounded-lg transition-colors">

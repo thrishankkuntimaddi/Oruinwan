@@ -30,7 +30,7 @@ const CompanySettings = () => {
 
     return (
         <div style={{ display: 'flex', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            {/* Sidebar */}
+            {}
             <aside style={{ width: '220px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ padding: '20px', borderBottom: '1px solid var(--border-subtle)' }}>
                     <h1 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '3px' }}>Settings</h1>
@@ -50,7 +50,7 @@ const CompanySettings = () => {
                 </nav>
             </aside>
 
-            {/* Main Content */}
+            {}
             <main style={{ flex: 1, overflowY: 'auto' }} className="custom-scrollbar">
                 <div style={{ maxWidth: '680px', padding: '28px 32px' }}>
                     {ActiveComponent && <ActiveComponent />}

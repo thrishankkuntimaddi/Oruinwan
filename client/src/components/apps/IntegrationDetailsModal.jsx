@@ -28,7 +28,7 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
     >
       <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', maxHeight: '85vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.2)', fontFamily: 'Inter, system-ui, sans-serif' }}>
 
-        {/* Header */}
+        {}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
           <div style={{ width: '48px', height: '48px', background: 'var(--accent-dim)', border: '1px solid rgba(184,149,106,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', flexShrink: 0 }}>
             {integration.emoji}
@@ -40,7 +40,7 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
             </span>
           </div>
 
-          {/* Status badge */}
+          {}
           {isConnected ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 700, color: '#3a8f6a', background: 'rgba(58,143,106,0.1)', border: '1px solid rgba(58,143,106,0.25)', padding: '3px 10px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#3a8f6a', animation: 'pulse 2s infinite' }} />
@@ -63,15 +63,15 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
           </button>
         </div>
 
-        {/* Body */}
+        {}
         <div style={{ flex: 1, overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-          {/* Description */}
+          {}
           <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.65, margin: 0 }}>
             {integration.description}
           </p>
 
-          {/* Success banner */}
+          {}
           {showSuccess && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(58,143,106,0.08)', border: '1px solid rgba(58,143,106,0.2)', padding: '10px 14px' }}>
               <CheckCircle2 size={16} style={{ color: '#3a8f6a', flexShrink: 0 }} />
@@ -81,7 +81,7 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
             </div>
           )}
 
-          {/* Use Cases */}
+          {}
           <div>
             <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace' }}>
               <Zap size={11} /> What you can do
@@ -96,7 +96,7 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
             </ul>
           </div>
 
-          {/* Permissions */}
+          {}
           <div>
             <h3 style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'monospace' }}>
               <Shield size={11} /> Permissions required
@@ -112,7 +112,7 @@ export default function IntegrationDetailsModal({ integration, connected, onClos
           </div>
         </div>
 
-        {/* Footer */}
+        {}
         <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', flexShrink: 0 }}>
           <button
             onClick={onClose}

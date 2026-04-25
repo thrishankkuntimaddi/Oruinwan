@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { X, Sparkles, FileText, ListTodo, Pen, Wand2, FileCode, ChevronRight, Copy, Check } from 'lucide-react';
 
-// Dark-themed Monolith Flow AI action colors
 const AI_ACTIONS = [
   { id: 'summarize', icon: FileText, label: 'Summarize Note', desc: 'Get a 3–5 bullet summary', iconColor: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.2)' },
   { id: 'extract', icon: ListTodo, label: 'Extract Action Items', desc: 'Find all tasks & next steps', iconColor: '#34d399', bg: 'rgba(52,211,153,0.1)', border: 'rgba(52,211,153,0.2)' },
@@ -59,7 +58,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
       background: 'var(--bg-surface)', borderLeft: '1px solid rgba(255,255,255,0.07)',
       width: '288px', flexShrink: 0,
     }}>
-      {/* Header */}
+      {}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ width: '28px', height: '28px', background: 'linear-gradient(135deg, #b8956a, #a07850)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -79,7 +78,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
         </button>
       </div>
 
-      {/* Actions */}
+      {}
       <div style={{ padding: '12px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', padding: '0 4px', marginBottom: '8px', fontFamily: 'monospace' }}>Actions</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -108,7 +107,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
         </div>
       </div>
 
-      {/* Result area */}
+      {}
       {result && (
         <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
           <div style={{ background: 'var(--bg-hover)', border: '1px solid var(--border-default)', padding: '12px', marginBottom: '10px' }}>
@@ -130,7 +129,7 @@ const AIPanel = ({ blocks, title, onInsertBlock, onClose }) => {
         </div>
       )}
 
-      {/* Footer */}
+      {}
       <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <p style={{ fontSize: '10px', color: 'var(--text-muted)', textAlign: 'center', fontFamily: 'monospace' }}>
           Powered by Chttrix AI · Connect API for live results

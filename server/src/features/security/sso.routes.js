@@ -1,7 +1,3 @@
-// server/src/features/security/sso.routes.js
-// SSO (Single Sign-On) routes for Google, Microsoft, and Okta (generic OAuth2)
-// Extends the existing auth system without rebuilding it.
-
 'use strict';
 
 const express = require('express');
@@ -12,7 +8,6 @@ const jwt = require('jsonwebtoken');
 const User = require('../../../models/User');
 const AuditLog = require('../../../models/AuditLog');
 
-// ── Provider configuration ────────────────────────────────────────────────────
 const PROVIDERS = {
   google: {
     authUrl: 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -43,7 +38,6 @@ const PROVIDERS = {
 const FRONTEND_URL = () => process.env.FRONTEND_URL || 'http://localhost:3000';
 const BACKEND_URL = () => process.env.BACKEND_URL || 'http://localhost:8080';
 
-// ── Helper: issue JWT (same signature as existing auth) ──────────────────────
 function issueToken(user) {
   return jwt.sign(
     { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
@@ -52,19 +46,16 @@ function issueToken(user) {
   );
 }
 
-// ── Helper: resolve URL (supports both string and function) ──────────────────
 function resolve(val) {
   return typeof val === 'function' ? val() : val;
 }
 
-// ── GET /api/auth/sso/:provider ───────────────────────────────────────────────
-// Redirects browser to provider's OAuth2 authorization URL.
 router.get('/:provider', (req, res) => {
   const { provider } = req.params;
   const cfg = PROVIDERS[provider];
   if (!cfg) return res.status(400).json({ message: `Unknown SSO provider: ${provider}` });
 
-  // Validate that environment vars for this provider are set
+  
   const clientId = cfg.clientId();
   if (!clientId) {
     return res.status(501).json({
@@ -72,7 +63,7 @@ router.get('/:provider', (req, res) => {
     });
   }
 
-  // CSRF protection via state cookie (same pattern as existing LinkedIn OAuth)
+  
   const state = crypto.randomBytes(16).toString('hex');
   res.cookie(`sso_state_${provider}`, state, {
     httpOnly: true,
@@ -93,8 +84,6 @@ router.get('/:provider', (req, res) => {
   res.redirect(`${resolve(cfg.authUrl)}?${params.toString()}`);
 });
 
-// ── GET /api/auth/sso/:provider/callback ─────────────────────────────────────
-// Receives OAuth2 code, exchanges for tokens, maps to internal user, issues JWT.
 router.get('/:provider/callback', async (req, res) => {
   const { provider } = req.params;
   const cfg = PROVIDERS[provider];
@@ -107,7 +96,7 @@ router.get('/:provider/callback', async (req, res) => {
     return res.redirect(`${FRONTEND_URL()}/login?error=sso_${provider}_failed`);
   }
 
-  // Validate CSRF state
+  
   const storedState = req.cookies?.[`sso_state_${provider}`];
   if (!state || !storedState || state !== storedState) {
     console.error(`[SSO] ${provider}: state mismatch — CSRF attempt?`);
@@ -119,7 +108,7 @@ router.get('/:provider/callback', async (req, res) => {
   try {
     const redirectUri = `${BACKEND_URL()}/api/auth/sso/${provider}/callback`;
 
-    // Exchange code for access token
+    
     const tokenRes = await axios.post(
       resolve(cfg.tokenUrl),
       new URLSearchParams({
@@ -134,13 +123,13 @@ router.get('/:provider/callback', async (req, res) => {
 
     const { access_token: accessToken } = tokenRes.data;
 
-    // Fetch user info from provider
+    
     const userInfoRes = await axios.get(resolve(cfg.userInfoUrl), {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     const profile = userInfoRes.data;
 
-    // Normalize profile fields across providers
+    
     const externalId = profile.sub || profile.id || profile.oid;
     const email = profile.email || profile.mail || profile.userPrincipalName;
     const name = profile.name || `${profile.givenName || ''} ${profile.surname || ''}`.trim() || profile.displayName;
@@ -150,12 +139,12 @@ router.get('/:provider/callback', async (req, res) => {
       return res.redirect(`${FRONTEND_URL()}/login?error=sso_no_email`);
     }
 
-    // Find or create user — map external identity to internal user
+    
     let user = await User.findOne({ ssoProvider: provider, ssoId: externalId });
     if (!user) {
       user = await User.findOne({ email: email.toLowerCase() });
       if (user) {
-        // Link SSO identity to existing account
+        
         user.ssoProvider = provider;
         user.ssoId = externalId;
         if (picture && !user.profilePicture) user.profilePicture = picture;
@@ -164,7 +153,7 @@ router.get('/:provider/callback', async (req, res) => {
     }
 
     if (!user) {
-      // Create new account from SSO identity
+      
       user = await User.create({
         username: name || email.split('@')[0],
         email: email.toLowerCase(),
@@ -178,7 +167,7 @@ router.get('/:provider/callback', async (req, res) => {
       });
     }
 
-    // Record audit event
+    
     try {
       await AuditLog.create({
         userId: user._id,
@@ -191,10 +180,10 @@ router.get('/:provider/callback', async (req, res) => {
         category: 'auth',
         severity: 'info',
       });
-    } catch (_) { /* non-critical */ }
+    } catch (_) {  }
 
     const token = issueToken(user);
-    // Use fragment (#) to keep token out of server logs / Referer headers
+    
     return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${token}`);
   } catch (err) {
     console.error(`[SSO] ${provider} callback error:`, err.response?.data || err.message);
