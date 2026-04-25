@@ -13,7 +13,7 @@
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4-black.svg)](https://socket.io/)
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
 
-[Live Demo](#) · [Documentation](#) · [Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
+[Live Demo](https://chttrix.vercel.app) · [Documentation](https://chttrix.vercel.app/chttrix-docs) · [Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
 
 </div>
 
