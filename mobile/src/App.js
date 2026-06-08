@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Text, View } from 'react-native';
 
 import LoginScreen from './screens/LoginScreen';
+import RegisterScreen from './screens/RegisterScreen';
 import WorkspaceSelectScreen from './screens/WorkspaceSelectScreen';
 import HomeScreen from './screens/HomeScreen';
 import MessagesScreen from './screens/MessagesScreen';
@@ -33,15 +34,15 @@ function TabIcon({ label, focused }) {
   return (
     <View style={{
       width: 28, height: 28,
-      borderRadius: isHash ? 8 : 14,
-      backgroundColor: focused ? '#6366f1' : 'transparent',
+      borderRadius: isHash ? 6 : 14,
+      backgroundColor: focused ? '#b8956a' : 'transparent',
       alignItems: 'center', justifyContent: 'center',
     }}>
       <Text style={{
         fontSize: isHash ? 15 : 18,
         fontWeight: isHash ? '900' : '400',
-        opacity: focused ? 1 : 0.5,
-        color: focused ? '#fff' : '#94a3b8',
+        opacity: focused ? 1 : 0.45,
+        color: focused ? '#0c0c0c' : '#7a7a7a',
       }}>
         {icon}
       </Text>
@@ -57,17 +58,18 @@ function MainTabs() {
           <TabIcon label={route.name} focused={focused} />
         ),
         tabBarLabel: route.name,
-        tabBarActiveTintColor: '#6366f1',
-        tabBarInactiveTintColor: '#475569',
+        tabBarActiveTintColor: '#b8956a',
+        tabBarInactiveTintColor: '#404040',
         tabBarStyle: {
-          backgroundColor: '#0f172a',
-          borderTopColor: '#1e293b',
+          backgroundColor: '#0c0c0c',
+          borderTopColor: '#191919',
+          borderTopWidth: 1,
           paddingBottom: 6,
           height: 58,
         },
         tabBarLabelStyle: { fontSize: 10, fontWeight: '600', marginTop: 2 },
-        headerStyle: { backgroundColor: '#0f172a' },
-        headerTintColor: '#f1f5f9',
+        headerStyle: { backgroundColor: '#0c0c0c' },
+        headerTintColor: '#e4e4e4',
         headerTitleStyle: { fontWeight: '700' },
         headerShown: false,
       })}
@@ -93,15 +95,15 @@ function RootNavigator() {
 
   if (initialRoute === null) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0f172a', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: '#0c0c0c', justifyContent: 'center', alignItems: 'center' }}>
         <View style={{
-          width: 72, height: 72, borderRadius: 20,
-          backgroundColor: '#6366f1', alignItems: 'center', justifyContent: 'center',
+          width: 72, height: 72, borderRadius: 16,
+          backgroundColor: '#b8956a', alignItems: 'center', justifyContent: 'center',
           marginBottom: 14,
         }}>
-          <Text style={{ color: '#fff', fontSize: 32, fontWeight: '800' }}>C</Text>
+          <Text style={{ color: '#0c0c0c', fontSize: 32, fontWeight: '800' }}>C</Text>
         </View>
-        <Text style={{ color: '#94a3b8', fontSize: 14, letterSpacing: 1 }}>CHTTRIX</Text>
+        <Text style={{ color: '#404040', fontSize: 12, letterSpacing: 2, fontWeight: '600' }}>CHTTRIX</Text>
       </View>
     );
   }
@@ -113,6 +115,7 @@ function RootNavigator() {
         screenOptions={{ headerShown: false, animation: 'fade' }}
       >
         <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
         <Stack.Screen name="WorkspaceSelect" component={WorkspaceSelectScreen} />
         <Stack.Screen name="Main" component={MainTabs} />
       </Stack.Navigator>

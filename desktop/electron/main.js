@@ -31,6 +31,7 @@ const WEB_URL = process.env.CHTTRIX_WEB_URL ||
 // Allowed origins for will-navigate and new-window guards
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
+  'http://localhost:3000',
   'http://localhost:5001',
   'https://app.chttrix.com',
   'https://api.chttrix.com',
@@ -42,6 +43,10 @@ let mainWindow = null;
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function isAllowedUrl(urlString) {
   try {
+    if (urlString.startsWith('file://')) {
+      const filePath = require('url').fileURLToPath(urlString);
+      return filePath.startsWith(app.getAppPath());
+    }
     const { origin } = new URL(urlString);
     return ALLOWED_ORIGINS.some((allowed) => origin === new URL(allowed).origin);
   } catch {

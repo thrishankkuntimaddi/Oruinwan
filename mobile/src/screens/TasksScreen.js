@@ -13,10 +13,10 @@ import { cacheGet, cacheSet } from '../services/storage';
 import { useApp } from '../context/AppContext';
 
 const STATUS_COLORS = {
-  todo: '#475569',
-  in_progress: '#f59e0b',
-  done: '#10b981',
-  blocked: '#ef4444',
+  todo: '#383838',
+  in_progress: '#c9a87c',
+  done: '#5aba8a',
+  blocked: '#e05252',
 };
 
 const STATUS_ICONS = {
@@ -84,9 +84,9 @@ export default function TasksScreen() {
   };
 
   function priorityColor(p) {
-    if (p === 'high' || p === 'urgent') return '#ef4444';
-    if (p === 'medium') return '#f59e0b';
-    return '#475569';
+    if (p === 'high' || p === 'urgent') return '#e05252';
+    if (p === 'medium') return '#c9a87c';
+    return '#383838';
   }
 
   function renderSection(label, data) {
@@ -143,7 +143,7 @@ export default function TasksScreen() {
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator color="#6366f1" size="large" />
+        <ActivityIndicator color="#b8956a" size="large" />
       </View>
     );
   }
@@ -183,7 +183,7 @@ export default function TasksScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => loadTasks(true)}
-            tintColor="#6366f1"
+            tintColor="#b8956a"
           />
         }
       />
@@ -192,43 +192,46 @@ export default function TasksScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: '#0c0c0c' },
   headerRow: {
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4,
   },
-  heading: { color: '#f1f5f9', fontSize: 20, fontWeight: '700' },
+  heading: { color: '#e4e4e4', fontSize: 18, fontWeight: '700' },
   wsBadge: {
-    backgroundColor: '#1e293b', borderRadius: 20,
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderWidth: 1, borderColor: '#334155',
+    backgroundColor: '#111111', borderRadius: 4,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: '#222222',
   },
-  wsBadgeText: { color: '#6366f1', fontSize: 11, fontWeight: '700' },
+  wsBadgeText: { color: '#b8956a', fontSize: 10, fontWeight: '700' },
   sectionHeader: {
-    color: '#64748b', fontSize: 11, fontWeight: '700',
-    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 6, letterSpacing: 1,
+    color: '#404040', fontSize: 10, fontWeight: '700',
+    paddingHorizontal: 16, paddingTop: 16, paddingBottom: 6, letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   taskCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#1e293b', marginHorizontal: 12, marginBottom: 8,
-    borderRadius: 12, padding: 12,
+    backgroundColor: '#111111', marginHorizontal: 12, marginBottom: 6,
+    borderRadius: 6, padding: 12,
+    borderWidth: 1, borderColor: '#191919',
   },
   statusDot: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 28, height: 28, borderRadius: 4,
     alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  statusIcon: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  statusIcon: { color: '#e4e4e4', fontSize: 13, fontWeight: '700' },
   taskInfo: { flex: 1 },
-  taskTitle: { color: '#f1f5f9', fontSize: 15, fontWeight: '500' },
-  strikethrough: { textDecorationLine: 'line-through', color: '#475569' },
-  assignee: { color: '#94a3b8', fontSize: 12, marginTop: 3 },
-  dueDate: { color: '#94a3b8', fontSize: 12, marginTop: 2 },
-  dueDateOverdue: { color: '#ef4444' },
-  priorityBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  priorityText: { color: '#fff', fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },
+  taskTitle: { color: '#e4e4e4', fontSize: 14, fontWeight: '500' },
+  strikethrough: { textDecorationLine: 'line-through', color: '#404040' },
+  assignee: { color: '#7a7a7a', fontSize: 11, marginTop: 3 },
+  dueDate: { color: '#7a7a7a', fontSize: 11, marginTop: 2 },
+  dueDateOverdue: { color: '#e05252' },
+  priorityBadge: { borderRadius: 3, paddingHorizontal: 6, paddingVertical: 2 },
+  priorityText: { color: '#0c0c0c', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
   emptyWrap: { alignItems: 'center', marginTop: 60, paddingHorizontal: 32 },
-  emptyIcon: { fontSize: 44, marginBottom: 14 },
-  emptyTitle: { color: '#f1f5f9', fontSize: 17, fontWeight: '700', marginBottom: 8 },
-  emptyBody: { color: '#64748b', fontSize: 13, textAlign: 'center', lineHeight: 20 },
+  emptyIcon: { fontSize: 40, marginBottom: 14 },
+  emptyTitle: { color: '#e4e4e4', fontSize: 16, fontWeight: '600', marginBottom: 6 },
+  emptyBody: { color: '#7a7a7a', fontSize: 13, textAlign: 'center', lineHeight: 20 },
 });
+

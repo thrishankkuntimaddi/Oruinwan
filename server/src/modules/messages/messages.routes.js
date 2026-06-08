@@ -47,6 +47,8 @@ router.post('/channel', messagesController.sendChannelMessage);
 
 router.post('/poll', messagesController.createPollMessage);
 
+router.get('/channel/:channelId/jump-anchor', messagesController.getJumpAnchor);
+
 router.get('/channel/:channelId', messagesController.getChannelMessages);
 
 router.get('/thread/:messageId', threadsController.getThread);

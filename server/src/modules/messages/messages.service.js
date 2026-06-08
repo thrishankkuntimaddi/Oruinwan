@@ -86,20 +86,7 @@ async function createMessage(messageData, io = null) {
         });
     }
 
-    
-    
-    
-    
-    if (channel) {
-        const Channel = require('../../features/channels/channel.model.js');
-        Channel.findByIdAndUpdate(
-            channel,
-            {
-                $inc: { messageCount: 1 },
-                $set: { lastMessageAt: message.createdAt }
-            }
-        ).catch(err => logger.error({ err, channel }, '[createMessage] Failed to update channel counters'));
-    }
+
 
     
     
@@ -204,87 +191,215 @@ async function fetchMessages(query, options = {}) {
     const {
         limit = 50,
         before = null,
+        after = null,
+        around = null,
         populateReplies = false,
         userJoinedAt = null,
         userId = null
     } = options;
 
-    
-    
     let finalQuery = { ...query, parentId: null };
     if (userId) {
         finalQuery.hiddenFor = { $nin: [userId] };
     }
 
-    
     if (userJoinedAt) {
         finalQuery.createdAt = { $gte: userJoinedAt };
     }
 
-    
-    if (before) {
-        if (finalQuery.createdAt) {
-            
-            const beforeMsg = await Message.findById(before);
-            if (beforeMsg && beforeMsg.createdAt >= userJoinedAt) {
+    if (around) {
+        const anchorMsg = await Message.findById(around)
+            .populate('sender', 'username email profilePicture')
+            .populate('readBy.user', 'username')
+            .populate({
+                path: 'parentId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            })
+            .populate({
+                path: 'quotedMessageId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            });
+
+        if (!anchorMsg) {
+            return { messages: [], hasMore: false, hasMoreNewer: false };
+        }
+
+        const halfLimit = Math.floor(parseInt(limit) / 2);
+
+        // Fetch older messages (fetch halfLimit + 1)
+        const olderQuery = { ...finalQuery, _id: { $lt: anchorMsg._id } };
+        const older = await Message.find(olderQuery)
+            .sort({ _id: -1 })
+            .limit(halfLimit + 1)
+            .populate('sender', 'username email profilePicture')
+            .populate('readBy.user', 'username')
+            .populate({
+                path: 'parentId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            })
+            .populate({
+                path: 'quotedMessageId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            });
+
+        const hasMoreOlder = older.length > halfLimit;
+        if (hasMoreOlder) {
+            older.pop();
+        }
+        older.reverse();
+
+        // Fetch newer messages (fetch halfLimit + 1)
+        const newerQuery = { ...finalQuery, _id: { $gt: anchorMsg._id } };
+        const newer = await Message.find(newerQuery)
+            .sort({ _id: 1 })
+            .limit(halfLimit + 1)
+            .populate('sender', 'username email profilePicture')
+            .populate('readBy.user', 'username')
+            .populate({
+                path: 'parentId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            })
+            .populate({
+                path: 'quotedMessageId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            });
+
+        const hasMoreNewer = newer.length > halfLimit;
+        if (hasMoreNewer) {
+            newer.pop();
+        }
+
+        const combined = [...older, anchorMsg, ...newer];
+
+        let messagesWithCounts = combined.map(m => m.toObject ? m.toObject() : m);
+        if (populateReplies) {
+            const messageIds = combined.map(m => m._id);
+            const counts = await Message.aggregate([
+                {
+                    $match: {
+                        parentId: { $in: messageIds },
+                        type: { $ne: 'system' }
+                    }
+                },
+                { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
+            ]);
+            const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
+            messagesWithCounts = messagesWithCounts.map(msgObj => ({
+                ...msgObj,
+                replyCount: countMap.get(msgObj._id.toString()) || 0
+            }));
+        }
+
+        return {
+            messages: messagesWithCounts,
+            hasMore: hasMoreOlder,
+            hasMoreNewer
+        };
+    } else if (after) {
+        finalQuery._id = { $gt: after };
+
+        const fetchLimit = parseInt(limit) + 1;
+        const messages = await Message.find(finalQuery)
+            .sort({ _id: 1 }) // oldest first (chronological order)
+            .limit(fetchLimit)
+            .populate('sender', 'username email profilePicture')
+            .populate('readBy.user', 'username')
+            .populate({
+                path: 'parentId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            })
+            .populate({
+                path: 'quotedMessageId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            });
+
+        const hasMoreNewer = messages.length > parseInt(limit);
+        if (hasMoreNewer) {
+            messages.pop();
+        }
+
+        let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
+        if (populateReplies) {
+            const messageIds = messages.map(m => m._id);
+            const counts = await Message.aggregate([
+                {
+                    $match: {
+                        parentId: { $in: messageIds },
+                        type: { $ne: 'system' }
+                    }
+                },
+                { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
+            ]);
+            const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
+            messagesWithCounts = messagesWithCounts.map(msgObj => ({
+                ...msgObj,
+                replyCount: countMap.get(msgObj._id.toString()) || 0
+            }));
+        }
+
+        return {
+            messages: messagesWithCounts,
+            hasMoreNewer
+        };
+    } else {
+        if (before) {
+            if (finalQuery.createdAt) {
+                const beforeMsg = await Message.findById(before);
+                if (beforeMsg && beforeMsg.createdAt >= userJoinedAt) {
+                    finalQuery._id = { $lt: before };
+                }
+            } else {
                 finalQuery._id = { $lt: before };
             }
-        } else {
-            finalQuery._id = { $lt: before };
         }
+
+        const fetchLimit = parseInt(limit) + 1;
+
+        const messages = await Message.find(finalQuery)
+            .sort({ _id: -1 })
+            .limit(fetchLimit)
+            .populate('sender', 'username email profilePicture')
+            .populate('readBy.user', 'username')
+            .populate({
+                path: 'parentId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            })
+            .populate({
+                path: 'quotedMessageId',
+                populate: { path: 'sender', select: 'username profilePicture' }
+            });
+
+        const hasMore = messages.length > parseInt(limit);
+        if (hasMore) {
+            messages.pop();
+        }
+
+        messages.reverse();
+
+        let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
+        if (populateReplies) {
+            const messageIds = messages.map(m => m._id);
+            const counts = await Message.aggregate([
+                {
+                    $match: {
+                        parentId: { $in: messageIds },
+                        type: { $ne: 'system' }
+                    }
+                },
+                { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
+            ]);
+            const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
+            messagesWithCounts = messagesWithCounts.map(msgObj => ({
+                ...msgObj,
+                replyCount: countMap.get(msgObj._id.toString()) || 0
+            }));
+        }
+
+        return {
+            messages: messagesWithCounts,
+            hasMore
+        };
     }
-
-    
-    const fetchLimit = parseInt(limit) + 1;
-
-    
-    const messages = await Message.find(finalQuery)
-        .sort({ _id: -1 }) 
-        .limit(fetchLimit)
-        .populate('sender', 'username email profilePicture')
-        .populate('readBy.user', 'username')
-        .populate({
-            path: 'parentId',
-            populate: { path: 'sender', select: 'username profilePicture' }
-        })
-        .populate({
-            path: 'quotedMessageId',
-            populate: { path: 'sender', select: 'username profilePicture' }
-        });
-
-    
-    const hasMore = messages.length > parseInt(limit);
-    if (hasMore) {
-        messages.pop(); 
-    }
-
-    
-    messages.reverse();
-
-    
-    let messagesWithCounts = messages.map(m => m.toObject ? m.toObject() : m);
-    if (populateReplies) {
-        const messageIds = messages.map(m => m._id);
-        const counts = await Message.aggregate([
-            {
-                $match: {
-                    parentId: { $in: messageIds },
-                    type: { $ne: 'system' }
-                }
-            },
-            { $group: { _id: '$parentId', replyCount: { $sum: 1 } } }
-        ]);
-        const countMap = new Map(counts.map(c => [c._id.toString(), c.replyCount]));
-        messagesWithCounts = messagesWithCounts.map(msgObj => ({
-            ...msgObj,
-            replyCount: countMap.get(msgObj._id.toString()) || 0
-        }));
-    }
-
-    return {
-        messages: messagesWithCounts,
-        hasMore
-    };
 }
 
 async function findOrCreateDMSession(userId1, userId2, workspaceId) {

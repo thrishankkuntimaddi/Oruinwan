@@ -11,6 +11,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(false);
+    const [hasMoreNewer, setHasMoreNewer] = useState(false);
     const [error, setError] = useState(null);
     const [historyLoaded, setHistoryLoaded] = useState(false); 
 
@@ -18,8 +19,9 @@ export function useConversation(conversationId, conversationType, workspaceId) {
     const eventsMapRef = useRef(new Map()); 
 
     
-    const loadMessages = useCallback(async () => {
-        if (!conversationId || loadedRef.current) return;
+    const loadMessages = useCallback(async (opts = {}) => {
+        if (!conversationId) return;
+        if (loadedRef.current && !opts.around) return;
 
         setLoading(true);
         loadedRef.current = true; 
@@ -27,14 +29,18 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
         try {
             let response;
+            const params = { limit: 50 };
+            if (opts.around) {
+                params.around = opts.around;
+            }
 
             if (conversationType === 'channel') {
                 response = await api.get(`/api/v2/messages/channel/${conversationId}`, {
-                    params: { limit: 50 } 
+                    params
                 });
             } else if (conversationType === 'dm') {
                 response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dm/${conversationId}`, {
-                    params: { limit: 50 } 
+                    params
                 });
 
                 
@@ -74,6 +80,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
             const messages = response?.data?.messages || [];
             const hasMore = response?.data?.hasMore || false; 
+            const hasMoreNewer = response?.data?.hasMoreNewer || false;
 
             
             const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
@@ -125,6 +132,9 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             }
 
             
+            if (opts.around) {
+                eventsMapRef.current.clear();
+            }
             decrypted.forEach(event => {
                 eventsMapRef.current.set(event.id, event);
             });
@@ -132,6 +142,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             
             setEvents(Array.from(eventsMapRef.current.values()));
             setHasMore(hasMore);
+            setHasMoreNewer(hasMoreNewer);
             setHistoryLoaded(true); 
         } catch (err) {
             console.error('Error loading messages:', err);
@@ -411,9 +422,112 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         setHistoryLoaded(false); 
         loadedRef.current = false;
         eventsMapRef.current.clear();
+        setHasMoreNewer(false);
     }, []);
 
     
+    const loadNewer = useCallback(async () => {
+        if (!conversationId || loading || !hasMoreNewer) return;
+
+        setLoading(true);
+
+        try {
+            const newestEvent = events[events.length - 1];
+            if (!newestEvent) return;
+
+            let response;
+            const params = { limit: 50, after: newestEvent.id };
+
+            if (conversationType === 'channel') {
+                response = await api.get(`/api/v2/messages/channel/${conversationId}`, {
+                    params
+                });
+            } else if (conversationType === 'dm') {
+                response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dm/${conversationId}`, {
+                    params
+                });
+            }
+
+            const { messages = [], hasMoreNewer: moreNewer = false } = response.data;
+            const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
+
+            const normalized = messages.map(msg => ({
+                id: msg._id,
+                type: msg.type === 'system' ? 'system'
+                    : msg.type === 'poll' ? 'poll'
+                        : msg.pollId ? 'poll'
+                            : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
+                                : 'message',
+                payload: {
+                    ...msg,
+                    replyCount: msg.replyCount || 0,
+                    reactions: msg.reactions || [],
+                    isPinned: msg.isPinned || false,
+                    attachments: msg.attachments || [],
+                    attachment: ATTACHMENT_TYPES.includes(msg.type) ? (msg.attachments?.[0] || null) : undefined,
+                    isDeleted: msg.isDeleted || msg.deletedAt != null,
+                    deletedBy: msg.deletedBy || null,
+                    deletedByName: msg.deletedByName || null
+                },
+                ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
+                ...(msg.type === 'system' && {
+                    systemEvent: msg.systemEvent,
+                    systemData: msg.systemData,
+                }),
+                sender: msg.sender,
+                createdAt: msg.createdAt,
+                parentId: msg.parentId
+            }));
+
+            let decrypted = normalized;
+            if (normalized.length > 0) {
+                decrypted = await batchDecryptMessages(normalized, conversationId, conversationType, null);
+            }
+
+            decrypted.forEach(event => {
+                if (!eventsMapRef.current.has(event.id)) {
+                    eventsMapRef.current.set(event.id, event);
+                }
+            });
+
+            setEvents(prev => [...prev, ...decrypted]);
+            setHasMoreNewer(moreNewer);
+        } catch (err) {
+            console.error('Error loading newer messages:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [conversationId, conversationType, workspaceId, events, loading, hasMoreNewer]);
+
+    const jumpToDate = useCallback(async (dayStart, dayEnd) => {
+        if (!conversationId) return null;
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const response = await api.get(`/api/v2/messages/channel/${conversationId}/jump-anchor`, {
+                params: { dayStart, dayEnd }
+            });
+
+            const { anchorMessageId, isFallback } = response.data;
+
+            if (anchorMessageId) {
+                reset();
+                loadedRef.current = true;
+                await loadMessages({ around: anchorMessageId });
+            }
+
+            return { anchorMessageId, isFallback };
+        } catch (err) {
+            console.error('Error jumping to date:', err);
+            setError(err.response?.data?.message || 'Failed to jump to date');
+            return null;
+        } finally {
+            setLoading(false);
+        }
+    }, [conversationId, reset, loadMessages]);
+
     useEffect(() => {
         if (conversationId) {
             reset();
@@ -425,9 +539,12 @@ export function useConversation(conversationId, conversationType, workspaceId) {
         events,
         loading,
         hasMore,
+        hasMoreNewer,
         error,
         historyLoaded, 
         loadMore,
+        loadNewer,
+        jumpToDate,
         addOptimisticEvent,
         updateEvent,
         removeEvent,

@@ -1,7 +1,7 @@
 import { io } from 'socket.io-client';
 import { getToken } from './storage';
 
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:5001';
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL || 'http://localhost:8080';
 
 let socket = null;
 

@@ -97,7 +97,7 @@ export default function NotificationsScreen() {
           name: 'default',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#6366f1',
+          lightColor: '#b8956a',
         });
       }
 
@@ -160,18 +160,19 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: '#0c0c0c' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 },
-  heading: { color: '#f1f5f9', fontSize: 20, fontWeight: '700' },
-  clearBtn: { color: '#6366f1', fontSize: 13 },
+  heading: { color: '#e4e4e4', fontSize: 18, fontWeight: '700' },
+  clearBtn: { color: '#b8956a', fontSize: 12, fontWeight: '600' },
   statusBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 },
-  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  statusText: { color: '#94a3b8', fontSize: 12 },
-  card: { flexDirection: 'row', backgroundColor: '#1e293b', borderRadius: 12, marginBottom: 8, padding: 14 },
-  cardDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366f1', marginTop: 5, marginRight: 12 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
+  statusText: { color: '#7a7a7a', fontSize: 11 },
+  card: { flexDirection: 'row', backgroundColor: '#111111', borderRadius: 6, marginBottom: 6, padding: 14, borderWidth: 1, borderColor: '#191919' },
+  cardDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#b8956a', marginTop: 5, marginRight: 10 },
   cardContent: { flex: 1 },
-  cardTitle: { color: '#f1f5f9', fontWeight: '600', fontSize: 14 },
-  cardBody: { color: '#94a3b8', fontSize: 13, marginTop: 2 },
-  cardTime: { color: '#475569', fontSize: 11, marginTop: 4 },
-  empty: { color: '#475569', textAlign: 'center', marginTop: 60, fontSize: 15 },
+  cardTitle: { color: '#e4e4e4', fontWeight: '600', fontSize: 13 },
+  cardBody: { color: '#7a7a7a', fontSize: 12, marginTop: 2 },
+  cardTime: { color: '#404040', fontSize: 10, marginTop: 4 },
+  empty: { color: '#404040', textAlign: 'center', marginTop: 60, fontSize: 14 },
 });
+

@@ -1,43 +1,43 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
 import { login } from '../services/api';
 import { saveToken } from '../services/storage';
 import { useApp } from '../context/AppContext';
+import { T } from '../theme';
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { setUser, workspace } = useApp();
+  const [loading, setLoading]   = useState(false);
+  const [errors, setErrors]     = useState({});
+  const { setUser, workspace }  = useApp();
+
+  function validate() {
+    const e = {};
+    if (!email.trim()) e.email = 'Email is required.';
+    if (!password)     e.password = 'Password is required.';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  }
 
   const handleLogin = async () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter both email and password.');
-      return;
-    }
+    if (!validate()) return;
     try {
       setLoading(true);
       const { data } = await login(email.trim(), password);
-      const token = data.token || data.accessToken;
-      const user = data.user;
+      const token = data.accessToken || data.token;
+      const user  = data.user;
+      if (!token) throw new Error('No access token received');
       await saveToken(token);
       if (user) await setUser(user);
-      
       navigation.replace(workspace ? 'Main' : 'WorkspaceSelect');
     } catch (err) {
-      const msg =
-        err.response?.data?.message || 'Login failed. Please try again.';
-      Alert.alert('Login Error', msg);
+      const msg = err.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Sign In Error', msg);
     } finally {
       setLoading(false);
     }
@@ -45,103 +45,160 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={s.root}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.card}>
-        {}
-        <View style={styles.brand}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoText}>C</Text>
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Brand ── */}
+        <View style={s.brand}>
+          <View style={s.logo}>
+            <Text style={s.logoText}>C</Text>
           </View>
-          <Text style={styles.title}>Chttrix</Text>
-          <Text style={styles.subtitle}>Company Workspace OS</Text>
+          <Text style={s.appName}>Chttrix</Text>
+          <Text style={s.tagline}>Company Workspace OS</Text>
         </View>
 
-        {}
-        <TextInput
-          style={styles.input}
-          placeholder="Work email"
-          placeholderTextColor="#94a3b8"
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={email}
-          onChangeText={setEmail}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor="#94a3b8"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        {/* ── Card ── */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Welcome back</Text>
+          <Text style={s.cardSub}>Sign in to your workspace</Text>
 
-        {}
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Sign In</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+          {/* Email */}
+          <View style={s.fieldWrap}>
+            <Text style={s.label}>EMAIL</Text>
+            <TextInput
+              style={[s.input, errors.email && s.inputErr]}
+              placeholder="you@company.com"
+              placeholderTextColor={T.textMuted}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={email}
+              onChangeText={(v) => { setEmail(v); if (errors.email) setErrors(p => ({ ...p, email: null })); }}
+            />
+            {errors.email ? <Text style={s.errText}>{errors.email}</Text> : null}
+          </View>
+
+          {/* Password */}
+          <View style={s.fieldWrap}>
+            <Text style={s.label}>PASSWORD</Text>
+            <TextInput
+              style={[s.input, errors.password && s.inputErr]}
+              placeholder="Your password"
+              placeholderTextColor={T.textMuted}
+              secureTextEntry
+              value={password}
+              onChangeText={(v) => { setPassword(v); if (errors.password) setErrors(p => ({ ...p, password: null })); }}
+            />
+            {errors.password ? <Text style={s.errText}>{errors.password}</Text> : null}
+          </View>
+
+          {/* CTA */}
+          <TouchableOpacity
+            style={[s.btn, loading && s.btnDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            {loading
+              ? <ActivityIndicator color={T.bgBase} />
+              : <Text style={s.btnText}>Sign In</Text>
+            }
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={s.divider}>
+            <View style={s.divLine} />
+            <Text style={s.divText}>or</Text>
+            <View style={s.divLine} />
+          </View>
+
+          {/* Sign Up link */}
+          <TouchableOpacity
+            style={s.switchBtn}
+            onPress={() => navigation.navigate('Register')}
+            activeOpacity={0.7}
+          >
+            <Text style={s.switchText}>
+              New to Chttrix?{' '}
+              <Text style={s.switchLink}>Create an account</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    justifyContent: 'center',
-    padding: 24,
+const s = StyleSheet.create({
+  root:   { flex: 1, backgroundColor: T.bgBase },
+  scroll: { padding: 24, paddingBottom: 48 },
+
+  // Brand
+  brand:   { alignItems: 'center', marginTop: 60, marginBottom: 36 },
+  logo: {
+    width: 68, height: 68,
+    borderRadius: 14,
+    backgroundColor: T.accent,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 18,
   },
+  logoText: { color: T.bgBase, fontSize: 30, fontWeight: '800' },
+  appName:  { color: T.textPrimary, fontSize: 26, fontWeight: '700', letterSpacing: -0.5 },
+  tagline:  { color: T.textMuted, fontSize: 13, marginTop: 5, letterSpacing: 0.3 },
+
+  // Card
   card: {
-    backgroundColor: '#1e293b',
-    borderRadius: 20,
-    padding: 28,
-    shadowColor: '#000',
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  brand: { alignItems: 'center', marginBottom: 32 },
-  logoCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#6366f1',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  logoText: { color: '#fff', fontSize: 28, fontWeight: '800' },
-  title: { color: '#f1f5f9', fontSize: 24, fontWeight: '700' },
-  subtitle: { color: '#94a3b8', fontSize: 13, marginTop: 4 },
-  input: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: '#f1f5f9',
-    fontSize: 15,
-    marginBottom: 14,
+    backgroundColor: T.bgSurface,
+    borderRadius: 8,
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: T.borderDefault,
   },
-  button: {
-    backgroundColor: '#6366f1',
-    borderRadius: 12,
-    paddingVertical: 16,
+  cardTitle: { color: T.textPrimary, fontSize: 18, fontWeight: '700', marginBottom: 4 },
+  cardSub:   { color: T.textSecondary, fontSize: 13, marginBottom: 24 },
+
+  // Fields
+  fieldWrap: { marginBottom: 18 },
+  label: {
+    color: T.textSecondary, fontSize: 10, fontWeight: '700',
+    letterSpacing: 1.2, marginBottom: 7, textTransform: 'uppercase',
+  },
+  input: {
+    backgroundColor: T.bgInput,
+    borderRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    color: T.textPrimary,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: T.borderDefault,
+  },
+  inputErr: { borderColor: T.danger },
+  errText:  { color: T.danger, fontSize: 11, marginTop: 5 },
+
+  // Button
+  btn: {
+    backgroundColor: T.accent,
+    borderRadius: 4,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
   },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  btnDisabled: { opacity: 0.5 },
+  btnText: { color: T.bgBase, fontSize: 14, fontWeight: '700', letterSpacing: 0.5 },
+
+  // Divider
+  divider: { flexDirection: 'row', alignItems: 'center', marginVertical: 22 },
+  divLine: { flex: 1, height: 1, backgroundColor: T.borderSubtle },
+  divText: { color: T.textMuted, marginHorizontal: 12, fontSize: 12 },
+
+  // Switch
+  switchBtn:  { alignItems: 'center', paddingVertical: 2 },
+  switchText: { color: T.textSecondary, fontSize: 13 },
+  switchLink: { color: T.accent, fontWeight: '600' },
 });

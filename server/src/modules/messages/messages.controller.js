@@ -1,5 +1,6 @@
 const messagesService = require('./messages.service');
 const Channel = require("../../features/channels/channel.model.js");
+const Message = require("../../features/messages/message.model.js");
 const User = require('../../../models/User');
 const DMSession = require('../../../models/DMSession');
 const { handleError } = require('../../../utils/responseHelpers');
@@ -131,7 +132,7 @@ exports.getDMs = async (req, res) => {
     try {
         const userId = req.user.sub;
         const { workspaceId, dmSessionId, dmId } = req.params;
-        const { limit, before } = req.query;
+        const { limit, before, after, around } = req.query;
 
         console.log('🔍 [getDMs] DEBUG:', {
             userId,
@@ -148,22 +149,11 @@ exports.getDMs = async (req, res) => {
 
         console.log('🔍 [getDMs] Looking up DM session:', {
             sessionId,
-            sessionIdType: typeof sessionId,
-            sessionIdLength: sessionId?.length
+            workspaceId
         });
 
         
         let dmSession = await DMSession.findById(sessionId);
-
-        console.log('🔍 [getDMs] DM session lookup result:', {
-            found: !!dmSession,
-            sessionId,
-            dmSessionData: dmSession ? {
-                _id: dmSession._id,
-                workspace: dmSession.workspace,
-                participants: dmSession.participants
-            } : null
-        });
 
         
         
@@ -208,6 +198,8 @@ exports.getDMs = async (req, res) => {
             {
                 limit: parseInt(limit) || 50,
                 before,
+                after,
+                around,
                 populateReplies: true,
                 userId   
             }
@@ -428,7 +420,7 @@ exports.getChannelMessages = async (req, res) => {
     try {
         const userId = req.user.sub;
         const { channelId } = req.params;
-        const { limit, before } = req.query;
+        const { limit, before, after, around } = req.query;
 
         
         const channel = await Channel.findById(channelId);
@@ -451,6 +443,8 @@ exports.getChannelMessages = async (req, res) => {
             {
                 limit: parseInt(limit) || 50,
                 before,
+                after,
+                around,
                 populateReplies: true,
                 userJoinedAt,
                 userId   
@@ -464,15 +458,14 @@ exports.getChannelMessages = async (req, res) => {
         }));
 
         
-        const populatedMembers = await Promise.all(
-            channelMembers.map(async (member) => {
-                const user = await User.findById(member.userId).select('username');
-                return {
-                    ...member,
-                    username: user?.username || 'Unknown'
-                };
-            })
-        );
+        const userIds = channelMembers.map(m => m.userId);
+        const users = await User.find({ _id: { $in: userIds } }).select('username').lean();
+        const userMap = new Map(users.map(u => [u._id.toString(), u.username]));
+
+        const populatedMembers = channelMembers.map(member => ({
+            ...member,
+            username: userMap.get(member.userId) || 'Unknown'
+        }));
 
         return res.json({
             ...result,
@@ -1246,5 +1239,116 @@ exports.getThreadSummary = async (req, res) => {
         return res.json({ summary });
     } catch (err) {
         return res.status(500).json({ message: 'Thread summary unavailable', error: err.message });
+    }
+};
+
+exports.getJumpAnchor = async (req, res) => {
+    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getJumpAnchor');
+    try {
+        const userId = req.user.sub;
+        const { channelId } = req.params;
+        const { dayStart, dayEnd } = req.query;
+
+        if (!dayStart || !dayEnd) {
+            return res.status(400).json({ message: 'dayStart and dayEnd query parameters are required' });
+        }
+
+        const channel = await Channel.findById(channelId);
+        if (!channel) {
+            return res.status(404).json({ message: 'Channel not found' });
+        }
+
+        const isUserMember = channel.isMember(userId);
+        if (!isUserMember) {
+            return res.status(403).json({ message: 'Not a channel member' });
+        }
+
+        const userJoinedAt = channel.getUserJoinDate(userId);
+        const dayStartDate = new Date(dayStart);
+        const dayEndDate = new Date(dayEnd);
+
+        const queryBase = {
+            channel: channelId,
+            parentId: null,
+            hiddenFor: { $nin: [userId] }
+        };
+
+        if (userJoinedAt) {
+            queryBase.createdAt = { $gte: userJoinedAt };
+        }
+
+        // 1. Try to find oldest message in [dayStart, dayEnd]
+        const dateQuery = {
+            ...queryBase,
+            createdAt: {
+                $gte: dayStartDate,
+                $lte: dayEndDate
+            }
+        };
+        if (userJoinedAt && userJoinedAt > dayStartDate) {
+            dateQuery.createdAt.$gte = userJoinedAt;
+        }
+
+        let anchorMsg = await Message.findOne(dateQuery)
+            .sort({ createdAt: 1 })
+            .select('_id createdAt')
+            .lean();
+
+        if (anchorMsg) {
+            return res.json({
+                anchorMessageId: anchorMsg._id,
+                date: anchorMsg.createdAt,
+                isFallback: false
+            });
+        }
+
+        // 2. Search for nearest message before dayStart
+        const beforeQuery = {
+            ...queryBase,
+            createdAt: {
+                $lt: dayStartDate
+            }
+        };
+        if (userJoinedAt) {
+            beforeQuery.createdAt.$gte = userJoinedAt;
+        }
+
+        anchorMsg = await Message.findOne(beforeQuery)
+            .sort({ createdAt: -1 })
+            .select('_id createdAt')
+            .lean();
+
+        if (anchorMsg) {
+            return res.json({
+                anchorMessageId: anchorMsg._id,
+                date: anchorMsg.createdAt,
+                isFallback: true
+            });
+        }
+
+        // 3. Fallback to very first message (oldest)
+        const fallbackQuery = { ...queryBase };
+        anchorMsg = await Message.findOne(fallbackQuery)
+            .sort({ createdAt: 1 })
+            .select('_id createdAt')
+            .lean();
+
+        if (anchorMsg) {
+            return res.json({
+                anchorMessageId: anchorMsg._id,
+                date: anchorMsg.createdAt,
+                isFallback: true
+            });
+        }
+
+        // 4. Empty channel
+        return res.json({
+            anchorMessageId: null,
+            date: null,
+            isFallback: false
+        });
+
+    } catch (err) {
+        return handleError(res, err, 'GET JUMP ANCHOR ERROR');
     }
 };

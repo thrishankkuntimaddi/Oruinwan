@@ -74,8 +74,11 @@ app.use(passport.initialize());
 const isProduction = process.env.NODE_ENV === 'production';
 const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:5173',         
-  process.env.FRONTEND_URL,       
+  'http://localhost:5173',
+  'http://localhost:8081',   // Expo web
+  'http://localhost:19006',  // Expo web (classic)
+  'http://localhost:19000',  // Expo DevTools
+  process.env.FRONTEND_URL,
 ].filter(Boolean); 
 
 console.log('🌐 CORS allowed origins:', allowedOrigins);

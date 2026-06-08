@@ -195,4 +195,23 @@ MessageSchema.index({ createdAt: -1 });
 MessageSchema.index({ channel: 1, _id: 1 });
 MessageSchema.index({ dm: 1, _id: 1 });
 
+MessageSchema.pre("save", function (next) {
+  this._wasNew = this.isNew;
+  next();
+});
+
+MessageSchema.post("save", async function (doc) {
+  if (doc._wasNew && doc.channel) {
+    try {
+      const Channel = mongoose.model("Channel");
+      await Channel.findByIdAndUpdate(doc.channel, {
+        $inc: { messageCount: 1 },
+        $set: { lastMessageAt: doc.createdAt }
+      });
+    } catch (err) {
+      console.error("[Message Schema post-save] Failed to update channel counters:", err);
+    }
+  }
+});
+
 module.exports = mongoose.model("Message", MessageSchema);

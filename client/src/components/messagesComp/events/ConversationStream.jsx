@@ -7,6 +7,7 @@ import MeetingEvent from './MeetingEvent';
 import JoinMarker from '../chatWindowComp/messages/JoinMarker';
 import { Loader2, Lock, Hash } from 'lucide-react';
 import logger from '../../../utils/logger';
+import { useToast } from '../../../contexts/ToastContext';
 
 function ConversationStream({
     events = [],
@@ -19,6 +20,9 @@ function ConversationStream({
     loading = false,
     onLoadMore,
     hasMore = false,
+    onLoadNewer,
+    hasMoreNewer = false,
+    onJumpToDate,
     actions = {},
     conversationType = 'channel',
     channelMembers = [],
@@ -32,11 +36,16 @@ function ConversationStream({
     conversationId = null,
     showThreadsOnly = false,
 }) {
-    const streamRef = useRef(null);
+        const streamRef = useRef(null);
     const bottomRef = useRef(null);
+    const lastBlurTimeRef = useRef(0);
+    const isJumpingRef = useRef(false);
     const prevScrollHeight = useRef(0);
     const prevEventsLengthRef = useRef(0); 
     const [openMsgMenuId, setOpenMsgMenuId] = useState(null);
+    const [jumpedMsgId, setJumpedMsgId] = useState(null);
+
+    const { showToast } = useToast();
 
     const toggleMsgMenu = (e, id) => {
         if (e && e.stopPropagation) e.stopPropagation();
@@ -74,7 +83,11 @@ function ConversationStream({
         const isNewMessage = currentLen > prevEventsLengthRef.current;
 
         if (isInitialLoad) {
-            
+            if (isJumpingRef.current) {
+                isJumpingRef.current = false;
+                prevEventsLengthRef.current = currentLen;
+                return;
+            }
             requestAnimationFrame(() => {
                 requestAnimationFrame(() => {
                     bottomRef.current?.scrollIntoView({ behavior: 'instant' });
@@ -111,11 +124,85 @@ function ConversationStream({
     }, [loading]);
 
     
-    const handleScroll = () => {
-        if (!streamRef.current || loading || !hasMore) return;
+    const minDateString = useMemo(() => {
+        const channelCreated = channelCreatedAt ? new Date(channelCreatedAt) : new Date();
+        const joined = userJoinedAt ? new Date(userJoinedAt) : channelCreated;
+        const start = joined > channelCreated ? joined : channelCreated;
+        const year = start.getFullYear();
+        const month = String(start.getMonth() + 1).padStart(2, '0');
+        const day = String(start.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }, [channelCreatedAt, userJoinedAt]);
 
-        if (streamRef.current.scrollTop < 100) {
+    const maxDateString = useMemo(() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }, []);
+
+    const handleDateChange = async (e) => {
+        const inputEl = e.target;
+        inputEl.blur();
+
+        const selectedDateStr = inputEl.value;
+        if (!selectedDateStr) return;
+
+        inputEl.value = '';
+
+        const dayStart = new Date(`${selectedDateStr}T00:00:00`).toISOString();
+        const dayEnd = new Date(`${selectedDateStr}T23:59:59.999`).toISOString();
+
+        isJumpingRef.current = true;
+
+        setTimeout(async () => {
+            if (onJumpToDate) {
+                const result = await onJumpToDate(dayStart, dayEnd);
+                if (result) {
+                    const { anchorMessageId, isFallback } = result;
+                    if (isFallback) {
+                        showToast('No messages found on selected date. Showing nearest conversation.', 'success');
+                    }
+                    if (anchorMessageId) {
+                        setJumpedMsgId(anchorMessageId);
+                    } else {
+                        isJumpingRef.current = false;
+                    }
+                } else {
+                    isJumpingRef.current = false;
+                }
+            } else {
+                isJumpingRef.current = false;
+            }
+        }, 50);
+    };
+
+    useEffect(() => {
+        if (jumpedMsgId) {
+            const element = document.getElementById(`msg-${jumpedMsgId}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const timer = setTimeout(() => {
+                    setJumpedMsgId(null);
+                }, 2000);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [jumpedMsgId, events]);
+
+    const handleScroll = () => {
+        if (!streamRef.current || loading) return;
+
+        const el = streamRef.current;
+
+        if (hasMore && el.scrollTop < 100) {
             onLoadMore?.();
+        }
+
+        const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+        if (hasMoreNewer && isNearBottom) {
+            onLoadNewer?.();
         }
     };
 
@@ -406,6 +493,18 @@ function ConversationStream({
                                 }}
                             >
                                 <span
+                                    onClick={e => {
+                                        const timeSinceLastBlur = Date.now() - lastBlurTimeRef.current;
+                                        if (timeSinceLastBlur < 250) {
+                                            return;
+                                        }
+                                        const parent = e.currentTarget.parentNode;
+                                        const input = parent.querySelector('input[type="date"]');
+                                        if (input) {
+                                            input.focus();
+                                            input.showPicker();
+                                        }
+                                    }}
                                     style={{
                                         background: 'var(--bg-active)',
                                         padding: '0.25rem 1rem',
@@ -413,11 +512,43 @@ function ConversationStream({
                                         fontSize: '0.75rem',
                                         color: 'var(--text-muted)',
                                         position: 'relative',
-                                        zIndex: 1
+                                        zIndex: 1,
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        transition: 'background-color 0.2s, color 0.2s',
+                                        border: '1px solid var(--border-default)'
+                                    }}
+                                    onMouseEnter={e => {
+                                        e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                                        e.currentTarget.style.color = 'var(--text-primary)';
+                                    }}
+                                    onMouseLeave={e => {
+                                        e.currentTarget.style.backgroundColor = 'var(--bg-active)';
+                                        e.currentTarget.style.color = 'var(--text-muted)';
                                     }}
                                 >
                                     {dateKey}
                                 </span>
+                                <input
+                                    type="date"
+                                    min={minDateString}
+                                    max={maxDateString}
+                                    onChange={handleDateChange}
+                                    onBlur={() => {
+                                        lastBlurTimeRef.current = Date.now();
+                                    }}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        transform: 'translate(-50%, -50%)',
+                                        opacity: 0,
+                                        width: '120px',
+                                        height: '24px',
+                                        pointerEvents: 'none',
+                                        zIndex: -1
+                                    }}
+                                />
                                 <div
                                     style={{
                                         position: 'absolute',
@@ -433,7 +564,11 @@ function ConversationStream({
 
                             {}
                             {eventsForDate.map((event, idx) => (
-                                <div key={event.id || `event-${dateKey}-${idx}`}>
+                                <div
+                                    key={event.id || `event-${dateKey}-${idx}`}
+                                    id={`msg-${event.id}`}
+                                    className={jumpedMsgId === event.id ? 'highlight-jump' : ''}
+                                >
                                     {renderEvent(event)}
                                 </div>
                             ))}
@@ -512,6 +647,37 @@ function ConversationStream({
             )}
 
             {}
+
+            {hasMoreNewer && (
+                <div style={{ padding: '8px 16px', textAlign: 'center' }}>
+                    {loading ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '8px 0' }}>
+                            {[50, 80, 65].map((w, i) => (
+                                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--bg-hover)', flexShrink: 0 }} />
+                                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div style={{ display: 'flex', gap: '6px' }}>
+                                            <div style={{ height: '10px', width: '80px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px' }} />
+                                            <div style={{ height: '10px', width: '40px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', opacity: 0.6 }} />
+                                        </div>
+                                        <div style={{ height: '12px', backgroundColor: 'var(--bg-hover)', borderRadius: '2px', width: `${w}%` }} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <button
+                            onClick={() => onLoadNewer?.()}
+                            style={{ background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontSize: '12px', color: 'var(--accent)', padding: '4px 16px', fontFamily: 'var(--font)', transition: '150ms ease' }}
+                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
+                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                        >
+                            Load newer messages
+                        </button>
+                    )}
+                </div>
+            )}
+
             <div ref={bottomRef} />
         </div>
     );

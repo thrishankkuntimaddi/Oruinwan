@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getToken } from './storage';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5001/api';
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8080/api';
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -30,6 +30,10 @@ api.interceptors.response.use(
 export const login = (email, password) =>
   api.post('/auth/login', { email, password });
 
+export const register = (username, email, password) =>
+  api.post('/auth/signup', { username, email, password });
+
+
 export const logoutApi = () =>
   api.post('/auth/logout');
 
@@ -45,8 +49,11 @@ export const fetchWorkspaceChannels = (workspaceId) =>
 export const fetchWorkspaceMembers = (workspaceId) =>
   api.get(`/workspaces/${workspaceId}/members`);
 
-export const fetchChannelMessages = (channelId) =>
-  api.get(`/messages/channel/${channelId}`);
+export const fetchChannelMessages = (channelId, params = {}) =>
+  api.get(`/v2/messages/channel/${channelId}`, { params });
+
+export const fetchChannelJumpAnchor = (channelId, dayStart, dayEnd) =>
+  api.get(`/v2/messages/channel/${channelId}/jump-anchor`, { params: { dayStart, dayEnd } });
 
 export const fetchDMMessages = (dmSessionId) =>
   api.get(`/messages/dm/${dmSessionId}`);
