@@ -3,14 +3,20 @@ const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const Message = require('./message.model');
+const { canAccessMessage } = require('../../modules/messages/messageAccess');
+const mongoose = require('mongoose');
 
 router.post('/:id/bookmark', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
     const messageId = req.params.id;
 
-    const message = await Message.findById(messageId).select('bookmarkedBy');
+    if (!mongoose.Types.ObjectId.isValid(messageId)) return res.status(400).json({ message: 'Invalid message id' });
+    const message = await Message.findById(messageId).select('bookmarkedBy channel dm');
     if (!message) return res.status(404).json({ message: 'Message not found' });
+    if (!(await canAccessMessage(message, userId))) {
+      return res.status(403).json({ message: 'You do not have access to this message' });
+    }
 
     const isBookmarked = message.bookmarkedBy.some(id => id.toString() === userId.toString());
 
@@ -19,13 +25,13 @@ router.post('/:id/bookmark', requireAuth, async (req, res) => {
       await Message.findByIdAndUpdate(messageId, {
         $pull: { bookmarkedBy: userId }
       });
-      return res.json({ bookmarked: false });
+      return res.json({ bookmarked: false, messageId });
     } else {
       
       await Message.findByIdAndUpdate(messageId, {
         $addToSet: { bookmarkedBy: userId }
       });
-      return res.json({ bookmarked: true });
+      return res.json({ bookmarked: true, messageId });
     }
   } catch (err) {
     logger.error('Bookmark toggle error:', err);
@@ -44,8 +50,8 @@ router.get('/bookmarks', requireAuth, async (req, res) => {
       hiddenFor: { $ne: userId }
     })
       .sort({ createdAt: -1 })
-      .skip(Number(skip))
-      .limit(Number(limit))
+      .skip(Math.max(parseInt(skip, 10) || 0, 0))
+      .limit(Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100))
       .populate('sender', 'username profilePicture')
       .populate('channel', 'name')
       .lean();

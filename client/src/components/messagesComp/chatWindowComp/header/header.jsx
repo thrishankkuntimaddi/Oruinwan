@@ -51,7 +51,6 @@ export default function Header({
   onDeleteChannel,
   currentUserId,
   showToast,
-  typingUsers = [],
   onCreatePoll,
   onShowThreadsView,
   isThreadsOnly,
@@ -93,14 +92,6 @@ export default function Header({
     setShowClearChatConfirm(false);
   };
 
-  const getTypingText = () => {
-    if (typingUsers.length === 0) return null;
-    if (typingUsers.length === 1) return `${typingUsers[0].name} is typing...`;
-    if (typingUsers.length === 2) return `${typingUsers[0].name} and ${typingUsers[1].name} are typing...`;
-    return `${typingUsers.length} people are typing...`;
-  };
-
-  const typingText = getTypingText();
 
   return (
     <>
@@ -534,31 +525,6 @@ export default function Header({
       </div>
 
       {}
-      {typingText && (
-        <div style={{
-          position: 'absolute', top: '100%', left: '50%', transform: 'translateX(-50%)',
-          zIndex: 30, marginTop: '8px',
-          animation: 'fadeIn 220ms cubic-bezier(0.16,1,0.3,1)',
-        }}>
-          <div style={{
-            backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)',
-            color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 400,
-            padding: '6px 16px', borderRadius: '2px', display: 'flex', alignItems: 'center', gap: '8px',
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-          }}>
-            <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-              {[0, 150, 300].map((delay) => (
-                <span key={delay} style={{
-                  width: '4px', height: '4px', backgroundColor: 'var(--accent)',
-                  borderRadius: '50%', animation: `bounce 1.2s ease infinite`,
-                  animationDelay: `${delay}ms`, display: 'inline-block',
-                }} />
-              ))}
-            </div>
-            <span>{typingText}</span>
-          </div>
-        </div>
-      )}
     </>
   );
 }

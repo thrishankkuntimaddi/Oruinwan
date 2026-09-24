@@ -1,11 +1,10 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChannelMessageItem from '../chatWindowComp/messages/ChannelMessageItem';
 import DMMessageItem from '../chatWindowComp/messages/DMMessageItem';
 import { getAvatarUrl } from '../../../utils/avatarUtils';
 import ChecklistMessage from '../ChecklistMessage';
 import { useTranslation } from '../../../hooks/useTranslation';
 
-const MessageDiffViewer = lazy(() => import('../MessageDiffViewer'));
 
 function MessageEvent({
     event,
@@ -21,7 +20,6 @@ function MessageEvent({
     setOpenMsgMenuId,
     threadCounts = {} 
 }) {
-    const [showDiff, setShowDiff] = useState(false);
     
     const { getTranslation, requestTranslation, clearTranslation } = useTranslation();
     
@@ -174,6 +172,10 @@ function MessageEvent({
         editedAt: event.payload?.editedAt || event.editedAt || null,
         
         editHistory: event.editHistory || event.payload?.editHistory || [],
+        version: event.version ?? event.payload?.version ?? null,
+        restoredFromVersion: event.restoredFromVersion !== undefined
+            ? event.restoredFromVersion
+            : (event.payload?.restoredFromVersion ?? null),
         
         decryptedContent: event.decryptedContent || messageText || null,
         
@@ -203,148 +205,53 @@ function MessageEvent({
         linkedTaskId: event.linkedTaskId || event.payload?.linkedTaskId || null,
     };
 
-    
-    const handleShowHistory = () => setShowDiff(true);
-
-    
-    const handleAddReaction = (emoji) => {
-        actions.addReaction?.(enrichedMessage._id, emoji);
-    };
-
-    const handleDelete = (scope = 'everyone') => {
-        
-        actions.deleteMessage?.(enrichedMessage._id, scope);
-    };
-
-    const handlePin = () => {
-        if (enrichedMessage.isPinned) {
-            actions.unpinMessage?.(enrichedMessage._id);
-        } else {
-            actions.pinMessage?.(enrichedMessage._id);
-        }
-    };
-
-    
-    
-    
-    
     const handleForward = () => {
         actions.forwardMessage?.(enrichedMessage._id);
     };
 
-    const handleThreadOpen = () => {
-        onThreadOpen?.(enrichedMessage);
-    };
+    const handleThreadOpen = onThreadOpen ? () => onThreadOpen(enrichedMessage) : undefined;
 
     const renderChecklist = msgType === 'checklist' && enrichedMessage.checklist?.length > 0;
-    const plainText = enrichedMessage.text || enrichedMessage.decryptedContent || '';
+    const translation = getTranslation(enrichedMessage._id);
 
-    if (isDM) {
-        return (
-            <>
-                <DMMessageItem
-                    msg={enrichedMessage}
-                    selectMode={false}
-                    selectedIds={new Set()}
-                    toggleSelect={() => { }}
-                    openMsgMenuId={openMsgMenuId}
-                    toggleMsgMenu={toggleMsgMenu}
-                    formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                    addReaction={handleAddReaction}
-                    pinMessage={handlePin}
-                    replyToMessage={(id) => onReply?.(enrichedMessage)}
-                    forwardMessage={handleForward}
-                    copyMessage={() => { }}
-                    deleteMessage={(id, scope) => handleDelete(scope)}
-                    infoMessage={(id) => actions.infoMessage?.(id, enrichedMessage.decryptedContent || enrichedMessage.text)}
-                    currentUserId={currentUserId}
-                    onOpenThread={handleThreadOpen}
-                    threadCounts={threadCounts}
-                    translationState={getTranslation(enrichedMessage._id)}
-                    onTranslate={requestTranslation}
-                    onClearTranslation={clearTranslation}
-                    onRemind={actions.onRemind}
-                    onConvertToTask={actions.onConvertToTask}
-                    isBookmarked={Array.isArray(enrichedMessage.bookmarkedBy) ? enrichedMessage.bookmarkedBy.some(id => String(id?._id || id) === String(currentUserId)) : false}
-                    onBookmarkToggle={() => {}}
-                />
-                {renderChecklist && (
-                    <div style={{ paddingLeft: 52, paddingRight: 16, paddingBottom: 4 }}>
-                        <ChecklistMessage
-                            messageId={enrichedMessage._id}
-                            checklist={enrichedMessage.checklist}
-                        />
-                    </div>
-                )}
-                {showDiff && (
-                    <Suspense fallback={null}>
-                        <MessageDiffViewer
-                            messageId={enrichedMessage._id}
-                            currentText={plainText}
-                            onClose={() => setShowDiff(false)}
-                        />
-                    </Suspense>
-                )}
-            </>
-        );
-    }
+    const itemProps = {
+        msg: enrichedMessage,
+        selectMode: false,
+        selectedIds: EMPTY_SET,
+        toggleSelect: noop,
+        openMsgMenuId,
+        toggleMsgMenu,
+        formatTime,
+        replyToMessage: onReply ? () => onReply(enrichedMessage) : undefined,
+        forwardMessage: actions.forwardMessage ? handleForward : undefined,
+        currentUserId,
+        onOpenThread: handleThreadOpen,
+        threadCounts,
+        toolbar: actions,
+        translationState: translation,
+        onTranslate: requestTranslation,
+        onClearTranslation: clearTranslation,
+    };
+
+    const Item = isDM ? DMMessageItem : ChannelMessageItem;
 
     return (
         <>
-            <ChannelMessageItem
-                msg={enrichedMessage}
-                selectMode={false}
-                selectedIds={new Set()}
-                toggleSelect={() => { }}
-                openMsgMenuId={openMsgMenuId}
-                toggleMsgMenu={toggleMsgMenu}
-                formatTime={(ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                addReaction={handleAddReaction}
-                pinMessage={handlePin}
-                replyToMessage={(id) => onReply?.(enrichedMessage)}
-                forwardMessage={handleForward}
-                copyMessage={() => { }}
-                deleteMessage={(id, scope) => handleDelete(scope)}
-                infoMessage={(id) => actions.infoMessage?.(id, enrichedMessage.decryptedContent || enrichedMessage.text)}
-                currentUserId={currentUserId}
-                onOpenThread={handleThreadOpen}
-                threadCounts={threadCounts}
-                channelMembers={[]}
-                isAdmin={false}
-                onRemind={actions.onRemind}
-                onShowHistory={handleShowHistory}   
-                isBookmarked={
-                    Array.isArray(enrichedMessage.bookmarkedBy)
-                        ? enrichedMessage.bookmarkedBy.some(
-                            id => String(id?._id || id) === String(currentUserId)
-                        )
-                        : false
-                }
-                onBookmarkToggle={() => {  }}
-                onConvertToTask={actions.onConvertToTask}
-                translationState={getTranslation(enrichedMessage._id)}
-                onTranslate={requestTranslation}
-                onClearTranslation={clearTranslation}
-            />
+            <Item {...itemProps} />
             {renderChecklist && (
-                <div style={{ paddingLeft: 56, paddingRight: 16, paddingBottom: 4 }}>
+                <div style={{ paddingLeft: isDM ? 52 : 56, paddingRight: 16, paddingBottom: 4 }}>
                     <ChecklistMessage
                         messageId={enrichedMessage._id}
                         checklist={enrichedMessage.checklist}
                     />
                 </div>
             )}
-            {showDiff && (
-                <Suspense fallback={null}>
-                    <MessageDiffViewer
-                        messageId={enrichedMessage._id}
-                        currentText={plainText}
-                        onClose={() => setShowDiff(false)}
-                    />
-                </Suspense>
-            )}
         </>
     );
 }
+
+const EMPTY_SET = new Set();
+const noop = () => { };
+const formatTime = (ts) => new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
 export default MessageEvent;

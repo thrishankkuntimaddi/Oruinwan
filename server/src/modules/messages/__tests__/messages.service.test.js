@@ -7,6 +7,15 @@ jest.mock('../../../features/messages/message.model.js');
 jest.mock('../../../../models/DMSession');
 jest.mock('../../../../models/Workspace');
 
+jest.mock('../messageAccess', () => ({
+    canAccessMessage: jest.fn().mockResolvedValue(true),
+    loadAccessibleMessage: jest.fn(async (Model, id) => {
+        const q = Model.findById(id);
+        const r = q && q.select ? q.select() : q;
+        return r && r.lean ? r.lean() : r;
+    }),
+}));
+
 jest.mock('../../conversations/conversationKeys.service', () => ({
     bootstrapConversationKey: jest.fn().mockResolvedValue({ success: true }),
 }));

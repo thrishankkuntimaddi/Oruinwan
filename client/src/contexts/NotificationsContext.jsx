@@ -5,6 +5,8 @@ import { useWorkspace } from './WorkspaceContext';
 import { useAuth } from './AuthContext';
 import { useDesktopNotification } from '../hooks/useDesktopNotification';
 import logger from '../utils/logger';
+import { useToast } from './ToastContext';
+import { decryptTextOrNull } from '../services/messageEncryptionService';
 
 const NotificationsContext = createContext(null);
 
@@ -17,6 +19,7 @@ export function NotificationsProvider({ children }) {
     const { activeWorkspace } = useWorkspace();
     const { accessToken } = useAuth();
     const { triggerDesktopNotification } = useDesktopNotification();
+    const { showToast } = useToast();
 
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -115,6 +118,40 @@ export function NotificationsProvider({ children }) {
 
         return unsubscribe;
     }, [addNotificationListener, workspaceId, triggerDesktopNotification]);
+
+    // "Remind me" reminders fire from the server cron as 'reminder-fired'
+    // (to the user's personal room). The message is E2EE, so decrypt a
+    // preview locally when we hold the conversation key.
+    useEffect(() => {
+        const unsubscribe = addNotificationListener(async (event, payload) => {
+            if (event !== 'reminder-fired' || !payload) return;
+            const message = payload.message || {};
+            const sender = message.sender?.username;
+            let preview = null;
+            const convId = message.channel || message.dm;
+            if (message.payload?.ciphertext && convId) {
+                preview = await decryptTextOrNull(
+                    message.payload.ciphertext, message.payload.messageIv,
+                    String(convId?._id || convId), message.channel ? 'channel' : 'dm'
+                );
+            }
+            preview = preview || message.text || null;
+            const snippet = preview ? `"${preview.length > 80 ? `${preview.slice(0, 77)}...` : preview}"` : 'a message';
+            const title = 'Reminder';
+            const body = [payload.note, `${sender ? `${sender}: ` : ''}${snippet}`].filter(Boolean).join(' · ');
+            showToast?.(`${title}: ${body}`, 'info', 8000);
+            try {
+                if (window.chttrixDesktop) {
+                    window.chttrixDesktop.notify({ type: 'system', title, body });
+                } else {
+                    triggerDesktopNotification(title, body);
+                }
+            } catch (err) {
+                logger.warn('[NotificationsContext] reminder desktop notification failed:', err);
+            }
+        });
+        return unsubscribe;
+    }, [addNotificationListener, showToast, triggerDesktopNotification]);
 
     
     const markRead = useCallback(async (notifId) => {

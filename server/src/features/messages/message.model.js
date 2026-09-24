@@ -60,6 +60,7 @@ const MessageSchema = new mongoose.Schema({
       'admin_assigned', 'admin_demoted',
       'channel_renamed', 'channel_desc_changed', 'channel_privacy_changed',
       'message_pinned', 'message_unpinned',
+      'dm_message_pinned', 'dm_message_unpinned',
       'messages_cleared',
       null
     ],
@@ -179,8 +180,12 @@ const MessageSchema = new mongoose.Schema({
     ciphertext: { type: String, default: null },     
     messageIv:  { type: String, default: null },     
     isEncrypted:{ type: Boolean, default: false },   
-    editedAt:   { type: Date, default: Date.now }
+    editedAt:   { type: Date, default: Date.now },
+    // Set when this historical state was itself produced by restoring an older version.
+    restoredFromVersion: { type: Number, default: null }
   }],
+  // Version number the current content was restored from (null after a normal edit).
+  restoredFromVersion: { type: Number, default: null },
   isDeleted: { type: Boolean, default: false },    
   version: { type: Number, default: 1 },           
 }, { timestamps: true });

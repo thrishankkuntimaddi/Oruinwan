@@ -1,194 +1,120 @@
-import React, { useState } from "react";
-import { X, Bell, Clock } from "lucide-react";
+import React, { useState } from 'react';
+import { Bell, Clock, Loader2 } from 'lucide-react';
 import api from '@services/api';
-
-const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+import ToolbarModalShell, { fieldStyle, labelStyle, PrimaryButton, FONT } from './ToolbarModalShell';
+import { resolveReminderPreset, formatReminderTime } from '../../../../utils/messageActionUtils';
 
 const PRESETS = [
-    { label: "In 20 minutes", delta: 20 * 60 * 1000 },
-    { label: "In 1 hour",     delta: 60 * 60 * 1000 },
-    { label: "In 3 hours",    delta: 3 * 60 * 60 * 1000 },
-    { label: "Tomorrow",      delta: 24 * 60 * 60 * 1000 },
-    { label: "Next week",     delta: 7 * 24 * 60 * 60 * 1000 },
+    { key: '20m', label: 'In 20 minutes' },
+    { key: '1h', label: 'In 1 hour' },
+    { key: '3h', label: 'In 3 hours' },
+    { key: 'tomorrow', label: 'Tomorrow at 9:00' },
+    { key: 'nextweek', label: 'Next week (Monday 9:00)' },
 ];
 
-const inputStyle = {
-    width: '100%', padding: '7px 10px', fontSize: '13px',
-    backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)',
-    borderRadius: '2px', outline: 'none', color: 'var(--text-primary)',
-    fontFamily: FONT, boxSizing: 'border-box', transition: 'border-color 100ms ease',
-    colorScheme: 'dark',
+const toLocalInput = (d) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+/**
+ * Pick a reminder time for a message. POSTs /api/v2/messages/:id/reminder and
+ * calls onSet(reminder, remindAt) on success.
+ */
 export default function ReminderPicker({ messageId, onClose, onSet }) {
-    const [customDate, setCustomDate] = useState("");
-    const [note,       setNote]       = useState("");
-    const [saving,     setSaving]     = useState(false);
-    const [error,      setError]      = useState(null);
-    const [success,    setSuccess]    = useState(false);
+    const [customDate, setCustomDate] = useState('');
+    const [note, setNote] = useState('');
+    const [saving, setSaving] = useState(null);
+    const [error, setError] = useState(null);
 
-    const save = async (remindAt) => {
-        setSaving(true);
+    const save = async (date, key) => {
+        if (!date || Number.isNaN(date.getTime())) { setError('Pick a valid date and time'); return; }
+        if (date.getTime() <= Date.now()) { setError('Pick a time in the future'); return; }
+        setSaving(key);
         setError(null);
         try {
-            const res = await api.post(`/api/messages/${messageId}/remind`, {
-                remindAt: new Date(remindAt).toISOString(),
-                note,
+            const res = await api.post(`/api/v2/messages/${messageId}/reminder`, {
+                remindAt: date.toISOString(),
+                ...(note.trim() && { note: note.trim() }),
             });
-            setSuccess(true);
-            onSet?.(res.data.reminder);
-            setTimeout(onClose, 1200);
+            onSet?.(res.data?.reminder, date);
+            onClose();
         } catch (err) {
-            setError(err.response?.data?.message || "Failed to set reminder");
+            setError(err?.response?.data?.message || 'Failed to set reminder');
         } finally {
-            setSaving(false);
+            setSaving(null);
         }
     };
 
-    const handlePreset = (delta) => save(Date.now() + delta);
-    const handleCustom = () => { if (!customDate) return; save(customDate); };
+    const now = new Date();
 
     return (
-        <div
-            style={{
-                position: 'fixed', inset: 0, zIndex: 50,
-                display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(3px)',
-                fontFamily: FONT,
-            }}
-            onClick={onClose}
+        <ToolbarModalShell
+            title="Remind me about this message"
+            icon={<Bell size={14} style={{ color: 'var(--accent)' }} />}
+            onClose={onClose}
+            width={400}
         >
-            <div
-                style={{
-                    width: '100%', maxWidth: '380px', margin: '0 16px 16px',
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-accent)',
-                    borderRadius: '4px',
-                    boxShadow: '0 -16px 48px rgba(0,0,0,0.5)',
-                    overflow: 'hidden',
-                    animation: 'fadeIn 180ms ease',
-                }}
-                onClick={e => e.stopPropagation()}
-            >
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid var(--border-default)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Bell size={15} style={{ color: 'var(--accent)' }} />
-                        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>
-                            Set a Reminder
-                        </h3>
-                    </div>
-                    <CloseBtn onClick={onClose} />
-                </div>
+            <div style={{ padding: '8px' }}>
+                {PRESETS.map(p => {
+                    const at = resolveReminderPreset(p.key, now);
+                    return (
+                        <button
+                            key={p.key}
+                            type="button"
+                            disabled={!!saving}
+                            onClick={() => save(resolveReminderPreset(p.key, new Date()), p.key)}
+                            style={{
+                                width: '100%', textAlign: 'left', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: '8px',
+                                fontSize: '13px', color: 'var(--text-secondary)', background: 'transparent', border: 'none', outline: 'none',
+                                borderRadius: '2px', cursor: saving ? 'not-allowed' : 'pointer', fontFamily: FONT,
+                                opacity: saving && saving !== p.key ? 0.5 : 1,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                        >
+                            {saving === p.key
+                                ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
+                                : <Clock size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />}
+                            <span style={{ flex: 1 }}>{p.label}</span>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{formatReminderTime(at, now)}</span>
+                        </button>
+                    );
+                })}
+            </div>
 
-                {}
-                <div style={{ padding: '8px 10px' }}>
-                    {PRESETS.map(preset => (
-                        <PresetBtn
-                            key={preset.label}
-                            label={preset.label}
-                            disabled={saving}
-                            onClick={() => handlePreset(preset.delta)}
-                        />
-                    ))}
-                </div>
-
-                {}
-                <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <label style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: FONT }}>
-                        Custom time
-                    </label>
+            <div style={{ padding: '12px 16px 16px', borderTop: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                    <label style={labelStyle} htmlFor="reminder-custom">Custom date &amp; time</label>
                     <input
+                        id="reminder-custom"
                         type="datetime-local"
                         value={customDate}
+                        min={toLocalInput(now)}
                         onChange={e => setCustomDate(e.target.value)}
-                        min={new Date().toISOString().slice(0, 16)}
-                        style={inputStyle}
-                        onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
-                        onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                        style={fieldStyle}
                     />
+                </div>
+                <div>
+                    <label style={labelStyle} htmlFor="reminder-note">Note (optional)</label>
                     <input
+                        id="reminder-note"
                         type="text"
-                        placeholder="Optional note…"
+                        maxLength={280}
+                        placeholder="What should you do?"
                         value={note}
                         onChange={e => setNote(e.target.value)}
-                        style={inputStyle}
-                        onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
-                        onBlur={e => e.target.style.borderColor = 'var(--border-default)'}
+                        style={fieldStyle}
                     />
-                    <SubmitBtn onClick={handleCustom} disabled={!customDate || saving}>
-                        {saving ? "Saving…" : "Set Reminder"}
-                    </SubmitBtn>
                 </div>
-
-                {}
-                {success && (
-                    <div style={{ padding: '0 16px 14px', textAlign: 'center', fontSize: '12px', color: 'var(--state-success)', fontWeight: 500, fontFamily: FONT }}>
-                        ✅ Reminder set!
-                    </div>
-                )}
-                {error && (
-                    <div style={{ padding: '0 16px 14px', textAlign: 'center', fontSize: '12px', color: 'var(--state-danger)', fontFamily: FONT }}>
-                        {error}
-                    </div>
-                )}
+                {error && <div role="alert" style={{ fontSize: '12px', color: 'var(--state-danger)' }}>{error}</div>}
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <PrimaryButton disabled={!customDate || !!saving} onClick={() => save(new Date(customDate), 'custom')}>
+                        {saving === 'custom' && <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />}
+                        Set reminder
+                    </PrimaryButton>
+                </div>
             </div>
-        </div>
-    );
-}
-
-function PresetBtn({ label, onClick, disabled }) {
-    const [hov, setHov] = useState(false);
-    return (
-        <button
-            onClick={onClick} disabled={disabled}
-            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{
-                width: '100%', textAlign: 'left', padding: '8px 10px',
-                display: 'flex', alignItems: 'center', gap: '8px',
-                fontSize: '13px', color: hov ? 'var(--text-primary)' : 'var(--text-secondary)',
-                backgroundColor: hov ? 'var(--bg-hover)' : 'transparent',
-                border: 'none', outline: 'none', borderRadius: '2px',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                opacity: disabled ? 0.5 : 1, transition: '100ms ease',
-                fontFamily: 'Inter, system-ui, sans-serif',
-            }}>
-            <Clock size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-            {label}
-        </button>
-    );
-}
-
-function SubmitBtn({ onClick, disabled, children }) {
-    const [hov, setHov] = useState(false);
-    return (
-        <button onClick={onClick} disabled={disabled}
-            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{
-                width: '100%', padding: '9px 0', fontSize: '13px', fontWeight: 600,
-                backgroundColor: disabled ? 'var(--bg-active)' : (hov ? 'var(--accent-hover)' : 'var(--accent)'),
-                color: disabled ? 'var(--text-muted)' : '#0c0c0c',
-                border: `1px solid ${disabled ? 'var(--border-default)' : 'var(--accent)'}`,
-                borderRadius: '2px', cursor: disabled ? 'not-allowed' : 'pointer',
-                outline: 'none', transition: '100ms ease', opacity: disabled ? 0.5 : 1,
-                fontFamily: 'Inter, system-ui, sans-serif',
-            }}>
-            {children}
-        </button>
-    );
-}
-
-function CloseBtn({ onClick }) {
-    const [hov, setHov] = useState(false);
-    return (
-        <button onClick={onClick}
-            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{
-                padding: '5px', border: 'none', outline: 'none', background: 'none',
-                cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms',
-                color: hov ? 'var(--state-danger)' : 'var(--text-muted)',
-            }}>
-            <X size={15} />
-        </button>
+        </ToolbarModalShell>
     );
 }

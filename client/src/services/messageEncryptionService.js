@@ -95,6 +95,27 @@ export async function decryptReceivedMessage(ciphertextBase64, ivBase64, convers
     }
 }
 
+/**
+ * Decrypt one `{ ciphertext, messageIv }` with the conversation key.
+ * Unlike decryptReceivedMessage this never returns a placeholder string:
+ * it resolves to the plaintext, or `null` when decryption is impossible.
+ */
+export async function decryptTextOrNull(ciphertextBase64, ivBase64, conversationId, conversationType, parentMessageId = null) {
+    if (!ciphertextBase64 || !ivBase64 || !conversationId) return null;
+    try {
+        let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
+        if (!key) return null;
+        if (parentMessageId) key = await deriveThreadKey(key, parentMessageId);
+        const ciphertext = Uint8Array.from(atob(ciphertextBase64), c => c.charCodeAt(0));
+        const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
+        const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv, tagLength: 128 }, key, ciphertext);
+        return new TextDecoder().decode(plain);
+    } catch (error) {
+        logger.warn('decryptTextOrNull failed:', error?.message);
+        return null;
+    }
+}
+
 export async function decryptMessageGracefully(message, conversationId, conversationType) {
     try {
         
@@ -256,6 +277,7 @@ const messageEncryptionService = {
     encryptMessageForSending,
     decryptReceivedMessage,
     decryptMessageGracefully,
+    decryptTextOrNull,
     batchDecryptMessages
 };
 

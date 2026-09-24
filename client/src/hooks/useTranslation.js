@@ -3,6 +3,10 @@ import api from '@services/api';
 
 const INITIAL_STATE = { translationMap: new Map() };
 
+// Session-wide cache keyed by `${messageId}:${langCode}`, shared by every
+// message row so re-opening a conversation doesn't re-translate.
+const sessionCache = new Map();
+
 function reducer(state, action) {
     const next = new Map(state.translationMap);
     switch (action.type) {
@@ -18,7 +22,7 @@ function reducer(state, action) {
             });
             break;
         case 'SET_ERROR':
-            next.set(action.msgId, { status: 'error', language: action.language, translatedText: null, detectedLang: null });
+            next.set(action.msgId, { status: 'error', language: action.language, translatedText: null, detectedLang: null, error: action.error || null });
             break;
         case 'CLEAR':
             next.delete(action.msgId);
@@ -32,8 +36,7 @@ function reducer(state, action) {
 export function useTranslation() {
     const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
 
-    
-    const cacheRef = useRef(new Map());
+    const cacheRef = useRef(sessionCache);
     
     const pendingRef = useRef(new Set());
 
@@ -69,15 +72,19 @@ export function useTranslation() {
                 messageId: msgId,
             });
 
-            const translatedText = res.data?.translated ?? text;
+            const translatedText = res.data?.translated;
+            if (!translatedText) throw new Error('Empty translation');
             const detectedLang = res.data?.detectedLang ?? null;
 
             
             cacheRef.current.set(cacheKey, { translatedText, detectedLang });
 
             dispatch({ type: 'SET_DONE', msgId, language: langCode, translatedText, detectedLang });
-        } catch {
-            dispatch({ type: 'SET_ERROR', msgId, language: langCode });
+        } catch (err) {
+            const error = err?.response?.status === 503
+                ? 'Translation service is unavailable right now.'
+                : (err?.response?.data?.message || null);
+            dispatch({ type: 'SET_ERROR', msgId, language: langCode, error });
         } finally {
             pendingRef.current.delete(pendingKey);
         }

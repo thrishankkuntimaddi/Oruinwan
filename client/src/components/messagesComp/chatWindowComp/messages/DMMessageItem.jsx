@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from '@services/api';
-import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X, Globe, Bookmark, Bell, CheckSquare } from "lucide-react";
+import { Smile, MessageSquare, Share, MoreHorizontal, Pin, Trash2 } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import ReactionPicker from "./reactionPicker";
@@ -19,10 +19,11 @@ import ContactMessage from "./types/ContactMessage";
 import LinkPreviewMessage from "./types/LinkPreviewMessage";
 
 import MeetingMessage from "./types/MeetingMessage";
+import { MessageMoreMenu, EditedBadge, TranslationBlock, InlineMessageEditor, useMessageToolbar } from './MessageToolbarParts';
+import { hasEditHistory } from '../../../../utils/messageActionUtils';
 
 import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
 import logger from '../../../../utils/logger';
-import { useToast } from '../../../../contexts/ToastContext';
 
 function DMMessageItem({
     msg,
@@ -32,55 +33,32 @@ function DMMessageItem({
     openMsgMenuId,
     toggleMsgMenu,
     formatTime,
-    addReaction,
-    pinMessage,
     replyToMessage,
     forwardMessage,
-    copyMessage,
-    deleteMessage,
-    infoMessage,
     currentUserId,
     onOpenThread,
     threadCounts,
-    
+    toolbar = {},
     translationState = null,
     onTranslate,
     onClearTranslation,
-    
-    onRemind,
-    onConvertToTask,
-    isBookmarked = false,
-    onBookmarkToggle,
 }) {
-    
-    const dmSessionId = msg.dmSessionId || null;
-    const { showToast } = useToast();
-    
+    const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
     const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
-    const isMe = senderId === currentUserId || msg.sender === "you" || msg.sender === "me";
+    const isMe = (!!senderId && !!currentUserId && String(senderId) === String(currentUserId)) || msg.sender === "you" || msg.sender === "me";
     const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
-    const [menuPos, setMenuPos] = useState(null);
     const [reactionPos, setReactionPos] = useState(null);
     const reactionPickerRef = useRef(null);
-    
-    const [translatePopover, setTranslatePopover] = useState(null);
-    const [lastLangCode, setLastLangCode] = useState(null);
 
-    
-    const [isEditing, setIsEditing] = useState(false);
-    const [editText, setEditText] = useState(msg.text || msg.decryptedContent || '');
+    const tb = useMessageToolbar({
+        msg, isMe, currentUserId, toolbar, threadCount: count,
+        openMsgMenuId, toggleMsgMenu, onOpenThread, replyToMessage, forwardMessage,
+        translationState, onTranslate, onClearTranslation,
+    });
+    const text = tb.text;
 
-    
-    
-    useEffect(() => {
-        if (!isEditing) {
-            setEditText(msg.text || msg.decryptedContent || '');
-        }
-    }, [msg.text, msg.decryptedContent, isEditing]);
-
-    
     const avatarUrl = msg.senderAvatar || getAvatarUrl({ username: msg.senderName, _id: senderId });
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
 
@@ -99,51 +77,6 @@ function DMMessageItem({
         };
     }, [showReactionPicker]);
 
-    
-    
-    const handleSaveEdit = async () => {
-        const trimmed = editText.trim();
-        const currentText = msg.text || msg.decryptedContent || '';
-        if (trimmed === currentText.trim()) {
-            setIsEditing(false);
-            return;
-        }
-        if (!trimmed) return; 
-        // DMs are end-to-end encrypted: never fall back to sending plaintext.
-        if (!dmSessionId) {
-            showToast?.('Cannot edit: encryption session unavailable', 'error');
-            return;
-        }
-        let patchBody;
-        try {
-            const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
-            const encrypted = await encryptMessageForSending(trimmed, dmSessionId, 'dm', null);
-            if (!encrypted?.ciphertext || !encrypted?.messageIv) {
-                logger.warn('[DMMessageItem] Edit aborted — encryption not ready:', encrypted?.status);
-                showToast?.('Could not encrypt your edit. Please try again.', 'error');
-                return;
-            }
-            patchBody = { ciphertext: encrypted.ciphertext, messageIv: encrypted.messageIv };
-        } catch (encErr) {
-            logger.warn('[DMMessageItem] Edit aborted — encryption failed:', encErr);
-            showToast?.('Could not encrypt your edit. Please try again.', 'error');
-            return;
-        }
-        try {
-            await api.patch(`/api/v2/messages/${msg._id || msg.id}`, patchBody);
-        } catch (err) {
-            logger.error('[DMMessageItem] Edit failed:', err);
-            showToast?.('Failed to edit message', 'error');
-        }
-        setIsEditing(false);
-    };
-
-    const handleCancelEdit = () => {
-        setEditText(msg.text || '');
-        setIsEditing(false);
-    };
-
-    
     const toggleReaction = async (emoji) => {
         const normalizeId = (id) => (id?._id || id)?.toString();
         const myExistingReaction = msg.reactions?.find(
@@ -159,6 +92,7 @@ function DMMessageItem({
             logger.error('[DMMessageItem] Reaction toggle failed:', err);
         }
     };
+
 
     
     if (msg.type === 'system' || msg.backend?.type === 'system') {
@@ -214,21 +148,8 @@ function DMMessageItem({
         borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: active ? 'var(--accent)' : 'var(--text-muted)', transition: '100ms ease',
     });
-    const menuItem = (label, icon, onClick, accent = false, danger = false) => {
-        const color = danger ? 'var(--state-danger)' : accent ? 'var(--accent)' : 'var(--text-secondary)';
-        const hoverBg = danger ? 'rgba(192,57,43,0.08)' : 'var(--bg-hover)';
-        return (
-            <button
-                key={label}
-                onClick={onClick}
-                style={{ width: '100%', textAlign: 'left', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color, fontSize: '13px', fontFamily: 'var(--font)', transition: '100ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = hoverBg}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-                {icon}{label}
-            </button>
-        );
-    };
+    const hasEdits = hasEditHistory(msg);
+    const toolbarVisible = !msg.isDeleted && !tb.isEditing && (showToolbar || tb.menuOpen || showReactionPicker || !!tb.translatePopover);
 
     return (
         <div
@@ -322,30 +243,9 @@ function DMMessageItem({
                     <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '60%' }} className="message-content">
                         {msg.isDeleted ? (
                             <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Message deleted</span>
-                        ) : isEditing ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', maxWidth: '480px' }}>
-                                <textarea
-                                    style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: '2px', padding: '8px 12px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'none', minHeight: '60px', fontFamily: 'var(--font)', boxSizing: 'border-box', lineHeight: 1.6 }}
-                                    value={editText}
-                                    onChange={(e) => setEditText(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
-                                        if (e.key === 'Escape') handleCancelEdit();
-                                    }}
-                                    autoFocus
-                                    rows={Math.min(6, (editText.match(/\n/g) || []).length + 2)}
-                                />
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <button onClick={handleSaveEdit} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--accent)', color: '#0c0c0c', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
-                                        <Check size={11} /> Save
-                                    </button>
-                                    <button onClick={handleCancelEdit} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
-                                        <X size={11} /> Cancel
-                                    </button>
-                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Enter to save · Esc to cancel</span>
-                                </div>
-                            </div>
-                        ) : msg.text ? (
+                        ) : tb.isEditing ? (
+                            <InlineMessageEditor initialText={text} onSave={tb.saveEdit} onCancel={tb.cancelEdit} />
+                        ) : text ? (
                             <ReactMarkdown
                                 remarkPlugins={[remarkBreaks]}
                                 components={{
@@ -366,7 +266,7 @@ function DMMessageItem({
                                     del: mentionRenderer(msg.senderName),
                                 }}
                             >
-                                {wrapMentions(msg.text)}
+                                {wrapMentions(text)}
                             </ReactMarkdown>
                         ) : msg.payload?.isEncrypted ? (
                             <EncryptedMessage
@@ -388,30 +288,10 @@ function DMMessageItem({
                 )}
 
                 {}
-                {msg.editedAt && !msg.isDeleted && (
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}> (edited)</span>
+                {!msg.isDeleted && hasEdits && !tb.isEditing && (
+                    <EditedBadge msg={msg} onOpen={tb.showHistory} />
                 )}
-
-                {}
-                {translationState?.status === 'done' && translationState.translatedText && (
-                    <div style={{ marginTop: '6px', maxWidth: '60%' }}>
-                        <div style={{ padding: '8px 12px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                            {translationState.translatedText}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                            {translationState.detectedLang && (
-                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Detected: {translationState.detectedLang.toUpperCase()}</span>
-                            )}
-                            <button onClick={() => onClearTranslation?.(msg._id || msg.id)} style={{ fontSize: '11px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, outline: 'none' }}>Show original</button>
-                        </div>
-                    </div>
-                )}
-                {translationState?.status === 'error' && (
-                    <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--state-danger)' }}>
-                        Translation failed.
-                        <button onClick={() => onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode)} style={{ marginLeft: '4px', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', fontSize: 'inherit', outline: 'none' }}>Retry</button>
-                    </div>
-                )}
+                <TranslationBlock state={translationState} onClear={tb.clearTranslation} onRetry={tb.retryTranslation} />
 
                 {msg.sending && <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '2px' }}>Sending...</div>}
                 {msg.failed && <div style={{ fontSize: '11px', color: 'var(--state-danger)', fontWeight: 500, marginTop: '2px' }}>Failed to send</div>}
@@ -448,6 +328,25 @@ function DMMessageItem({
                         })}
                     </div>
                 )}
+                {count > 0 && onOpenThread && !msg.isDeleted && (
+                    <div
+                        onClick={(e) => { e.stopPropagation(); onOpenThread(msg.id); }}
+                        style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                    >
+                        <MessageSquare size={12} style={{ color: 'var(--accent)' }} />
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--accent)', fontFamily: 'var(--font)' }}>
+                            {count} {count === 1 ? 'reply' : 'replies'}
+                        </span>
+                        {msg.lastReplyAt && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'var(--font)' }}>
+                                Last reply at {formatTime(msg.lastReplyAt)}
+                            </span>
+                        )}
+                    </div>
+                )}
+
             </div>
 
             {}
@@ -456,11 +355,10 @@ function DMMessageItem({
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
                 borderRadius: '2px', padding: '2px', display: 'flex', alignItems: 'center',
                 zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                opacity: (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover) ? 1 : 0,
-                pointerEvents: (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover) ? 'auto' : 'none',
+                opacity: toolbarVisible ? 1 : 0,
+                pointerEvents: toolbarVisible ? 'auto' : 'none',
                 transition: 'opacity 100ms ease',
             }}>
-                {}
                 <div style={{ position: 'relative' }} ref={reactionPickerRef}>
                     <button
                         onClick={(e) => {
@@ -482,84 +380,59 @@ function DMMessageItem({
                     )}
                 </div>
 
-                <button onClick={() => forwardMessage && forwardMessage(msg.id)} title="Forward" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><Share size={14} /></button>
+                {onOpenThread && <button onClick={() => onOpenThread(msg.id)} title="Reply in thread" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><MessageSquare size={14} /></button>}
+                {forwardMessage && <button onClick={() => forwardMessage(msg.id)} title="Forward" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><Share size={14} /></button>}
 
-                <div style={{ position: 'relative' }}>
-                    <button
-                        onClick={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const spaceBelow = window.innerHeight - rect.bottom;
-                            setMenuPos({ right: window.innerWidth - rect.right, openUp: spaceBelow < 260, top: rect.bottom + 4, bottom: window.innerHeight - rect.top + 4 });
-                            toggleMsgMenu(e, msg.id);
-                        }}
-                        title="More" style={toolbarBtn(openMsgMenuId === msg.id)}
-                        onMouseEnter={e => { if (openMsgMenuId !== msg.id) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { if (openMsgMenuId !== msg.id) e.currentTarget.style.color = 'var(--text-muted)'; }}
-                    ><MoreHorizontal size={14} /></button>
-                    {openMsgMenuId === msg.id && menuPos && (
-                        <div style={{
-                            position: 'fixed', zIndex: 999, width: '200px',
-                            backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-                            borderRadius: '2px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                            paddingTop: '4px', paddingBottom: '4px',
-                            right: menuPos.right, ...(menuPos.openUp ? { bottom: menuPos.bottom } : { top: menuPos.top })
-                        }}>
-                            {menuItem('Copy text',    <Copy size={13} />,         () => { copyMessage(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {menuItem('Reply',        <MessageSquare size={13} />,() => { replyToMessage(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {menuItem(msg.isPinned ? 'Unpin' : 'Pin', <Pin size={13} />, async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/pin`, { pin: !msg.isPinned }); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {menuItem('Message info',<Info size={13} />,          () => { infoMessage(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {isMe && !msg.isDeleted && menuItem('Edit', <Pencil size={13} />, () => { setIsEditing(true); setEditText(msg.text || ''); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {msg.text && menuItem(translationState?.status === 'done' ? 'Show original' : 'Translate', <Globe size={13} />, (e) => {
-                                if (translationState?.status === 'done') { onClearTranslation?.(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); return; }
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const spaceBelow = window.innerHeight - rect.bottom;
-                                setTranslatePopover({ pos: { right: window.innerWidth - rect.right, ...(spaceBelow < 240 ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }) } });
-                            })}
-                            {translatePopover && (
-                                <TranslatePopover
-                                    pos={translatePopover.pos}
-                                    status={translationState?.status === 'loading' ? 'loading' : translationState?.status === 'error' ? 'error' : null}
-                                    onSelect={(langCode) => { setLastLangCode(langCode); onTranslate?.(msg._id || msg.id, msg.text || '', langCode); setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); }}
-                                    onClose={() => { setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); }}
-                                    onRetry={() => { if (lastLangCode) { onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode); setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); } }}
-                                />
-                            )}
-                            {menuItem(
-                                isBookmarked ? 'Remove Bookmark' : 'Save / Bookmark',
-                                <Bookmark size={13} style={{ fill: isBookmarked ? 'currentColor' : 'none' }} />,
-                                async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/bookmark`); onBookmarkToggle?.(msg._id || msg.id); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); },
-                                isBookmarked
-                            )}
-                            {onRemind && menuItem('Remind Me', <Bell size={13} />, () => { onRemind(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {onConvertToTask && menuItem('Convert to Task', <CheckSquare size={13} />, async () => { await onConvertToTask(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            <div style={{ height: '1px', backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
-                            {menuItem('Delete for me',       <Trash2 size={13} />, () => { deleteMessage(msg._id || msg.id, 'me'); toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
-                            {isMe && menuItem('Delete for everyone', <Trash2 size={13} />, () => { deleteMessage(msg._id || msg.id, 'everyone'); toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
-                        </div>
-                    )}
-                </div>
+                <button
+                    onClick={tb.openMenu}
+                    title="More" aria-haspopup="menu" aria-expanded={tb.menuOpen}
+                    style={toolbarBtn(tb.menuOpen)}
+                    onMouseEnter={e => { if (!tb.menuOpen) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { if (!tb.menuOpen) e.currentTarget.style.color = 'var(--text-muted)'; }}
+                ><MoreHorizontal size={14} /></button>
             </div>
+            {tb.menuOpen && <MessageMoreMenu anchor={tb.menuAnchor} groups={tb.groups} onClose={tb.closeMenu} />}
+            {tb.translatePopover && (
+                <TranslatePopover
+                    pos={tb.translatePopover.pos}
+                    status={null}
+                    onSelect={tb.selectLanguage}
+                    onClose={tb.closeTranslatePopover}
+                    onRetry={tb.retryTranslation}
+                />
+            )}
         </div>
     );
 }
 
 export default React.memo(DMMessageItem, (prevProps, nextProps) => {
+    const p = prevProps.msg;
+    const n = nextProps.msg;
     return (
-        prevProps.msg.id === nextProps.msg.id &&
-        prevProps.msg.text === nextProps.msg.text &&
-        prevProps.msg.decryptedContent === nextProps.msg.decryptedContent &&
-        prevProps.msg.editedAt === nextProps.msg.editedAt &&
-        prevProps.msg.isPinned === nextProps.msg.isPinned &&
-        prevProps.msg.pinnedByName === nextProps.msg.pinnedByName &&
-        prevProps.msg.isDeleted === nextProps.msg.isDeleted &&
-        prevProps.msg.isDeletedUniversally === nextProps.msg.isDeletedUniversally &&
-        prevProps.msg.sending === nextProps.msg.sending &&
-        prevProps.msg.failed === nextProps.msg.failed &&
+        p.id === n.id &&
+        p.text === n.text &&
+        p.decryptedContent === n.decryptedContent &&
+        p.editedAt === n.editedAt &&
+        p.version === n.version &&
+        p.restoredFromVersion === n.restoredFromVersion &&
+        p.isPinned === n.isPinned &&
+        p.pinnedByName === n.pinnedByName &&
+        p.isDeleted === n.isDeleted &&
+        p.isDeletedUniversally === n.isDeletedUniversally &&
+        p.sending === n.sending &&
+        p.failed === n.failed &&
+        p.replyCount === n.replyCount &&
+        p.lastReplyAt === n.lastReplyAt &&
+        p.dmSessionId === n.dmSessionId &&
         prevProps.selectMode === nextProps.selectMode &&
         prevProps.selectedIds === nextProps.selectedIds &&
         prevProps.openMsgMenuId === nextProps.openMsgMenuId &&
-        JSON.stringify(prevProps.msg.repliedTo) === JSON.stringify(nextProps.msg.repliedTo) &&
-        JSON.stringify(prevProps.msg.reactions) === JSON.stringify(nextProps.msg.reactions) &&
-        prevProps.msg.dmSessionId === nextProps.msg.dmSessionId
+        prevProps.translationState === nextProps.translationState &&
+        prevProps.toolbar === nextProps.toolbar &&
+        (prevProps.threadCounts?.[p.id] || 0) === (nextProps.threadCounts?.[n.id] || 0) &&
+        JSON.stringify(p.bookmarkedBy) === JSON.stringify(n.bookmarkedBy) &&
+        (p.editHistory?.length || 0) === (n.editHistory?.length || 0) &&
+        JSON.stringify(p.repliedTo) === JSON.stringify(n.repliedTo) &&
+        JSON.stringify(p.reactions) === JSON.stringify(n.reactions)
     );
 });

@@ -1,210 +1,193 @@
-import React, { useState } from "react";
-import { X, CheckCircle2, Clock, Lock, Smile, MessageSquare } from "lucide-react";
+import React from 'react';
+import { Info, Loader2, CheckCheck, Clock, Lock, Smile, Pin, History, RefreshCw } from 'lucide-react';
+import ToolbarModalShell, { FONT, SecondaryButton, PrimaryButton } from './ToolbarModalShell';
+import { getAvatarUrl } from '../../../../utils/avatarUtils';
 
-const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+const idOf = (u) => String(u?._id || u || '');
 
-export default function MessageInfoModal({ msg, members = [], readBy = [], currentUserId, onClose }) {
-    if (!msg) return null;
+const fmt = (ts) => {
+    if (!ts) return '–';
+    const d = new Date(ts);
+    return `${d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })} at ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+};
 
-    const readBySet = new Set(readBy.map(String));
+/** Group reactions into [{ emoji, userIds }] whatever shape the server sent. */
+function groupReactions(reactions = []) {
+    const map = new Map();
+    reactions.forEach(r => {
+        if (!r?.emoji) return;
+        const list = map.get(r.emoji) || [];
+        if (Array.isArray(r.users)) list.push(...r.users.map(idOf));
+        else if (r.userId || r.user) list.push(idOf(r.userId || r.user));
+        map.set(r.emoji, list);
+    });
+    return [...map.entries()].map(([emoji, userIds]) => ({ emoji, userIds }));
+}
 
-    const seenByList = members.filter(m => {
-        const id = String(m._id);
-        return readBySet.has(id) && id !== String(currentUserId);
-    }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+/**
+ * Message info. `info` is `{ status: 'loading' | 'done' | 'error', data, error }`
+ * where data is the GET /api/v2/messages/:id/info response. `msg` is the
+ * client-side message (it carries the decrypted text).
+ */
+export default function MessageInfoModal({ info, msg, onClose, onRetry }) {
+    const status = info?.status || 'loading';
+    const data = info?.data || {};
+    const m = data.message || {};
+    const pick = (key) => (data[key] !== undefined ? data[key] : m[key]);
 
-    const deliveredToList = members.filter(m => {
-        const id = String(m._id);
-        return !readBySet.has(id) && id !== String(currentUserId);
-    }).sort((a, b) => (a.username || '').localeCompare(b.username || ''));
+    const sender = m.sender || msg?.sender || {};
+    const senderId = idOf(sender);
+    const senderName = sender.username || msg?.senderName || 'Unknown';
+    const text = msg?.decryptedContent || msg?.text || m.text || '';
 
-    const displayText = msg.text || msg.payload?.text || '🔒 Encrypted message';
-    const sentAt   = msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '–';
-    const sentDate = msg.createdAt ? new Date(msg.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+    const members = Array.isArray(data.members) ? data.members : [];
+    const memberById = new Map(members.map(u => [idOf(u), u]));
+    const readByUsers = (Array.isArray(pick('readByUsers')) ? pick('readByUsers') : [])
+        .filter(u => idOf(u) !== senderId);
+    const readIds = new Set([
+        ...readByUsers.map(idOf),
+        ...(Array.isArray(data.readBy) ? data.readBy.map(idOf) : []),
+    ]);
+    const readList = readByUsers.length
+        ? readByUsers
+        : [...readIds].filter(id => id !== senderId).map(id => memberById.get(id) || { _id: id, username: 'Unknown' });
+    const unreadList = members.filter(u => idOf(u) !== senderId && !readIds.has(idOf(u)));
+
+    const editCount = pick('editCount') ?? (Array.isArray(m.editHistory) ? m.editHistory.length : 0);
+    const editedAt = pick('editedAt') || msg?.editedAt;
+    const restoredFrom = pick('restoredFromVersion');
+    const version = pick('version');
+    const isPinned = pick('isPinned') ?? msg?.isPinned;
+    const pinnedBy = pick('pinnedBy');
+    const pinnedByName = typeof pinnedBy === 'string' ? pinnedBy : (pinnedBy?.username || msg?.pinnedByName);
+    const pinnedAt = pick('pinnedAt');
+    const reactions = groupReactions(m.reactions || msg?.reactions || []);
+    const nameOf = (id) => memberById.get(id)?.username || 'Unknown';
 
     return (
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 100,
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
-            fontFamily: FONT,
-        }}>
-            {}
-            <div style={{ position: 'absolute', inset: 0, backgroundColor: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(2px)' }} onClick={onClose} />
-
-            {}
-            <div style={{
-                position: 'relative', zIndex: 10,
-                width: '100%', maxWidth: '380px',
-                backgroundColor: 'var(--bg-surface)',
-                border: '1px solid var(--border-accent)',
-                borderBottom: 'none',
-                borderRadius: '4px 4px 0 0',
-                boxShadow: '0 -16px 48px rgba(0,0,0,0.5)',
-                overflow: 'hidden',
-            }}>
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-default)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <MessageSquare size={14} style={{ color: 'var(--accent)' }} />
-                        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', fontFamily: FONT }}>Message Info</span>
-                    </div>
-                    <CloseBtn onClick={onClose} />
-                </div>
-
-                {}
-                <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)' }}>
-                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: 1.6, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', fontFamily: FONT }}>
-                        &ldquo;{displayText}&rdquo;
-                    </p>
-                    <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '12px', fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={10} /> {sentDate} at {sentAt}</span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Lock size={10} style={{ color: 'var(--accent)' }} />
-                            {msg.isEncrypted ? 'End-to-end encrypted' : 'Encrypted in transit'}
-                        </span>
+        <ToolbarModalShell
+            title="Message info"
+            icon={<Info size={14} style={{ color: 'var(--accent)' }} />}
+            onClose={onClose}
+            width={420}
+            footer={(
+                <>
+                    {status === 'error' && onRetry && <SecondaryButton onClick={onRetry}><RefreshCw size={12} /> Retry</SecondaryButton>}
+                    <PrimaryButton onClick={onClose}>Close</PrimaryButton>
+                </>
+            )}
+        >
+            {/* Message preview — available immediately from the client copy */}
+            <div style={{ padding: '12px 16px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                    <UserAvatar user={{ ...sender, username: senderName }} />
+                    <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{senderName}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Clock size={10} /> Sent {fmt(m.createdAt || msg?.createdAt || msg?.ts)}
+                        </div>
                     </div>
                 </div>
+                <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '120px', overflowY: 'auto', fontFamily: FONT }}>
+                    {text || <span style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>No text content</span>}
+                </p>
+                <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'var(--text-muted)' }}>
+                    <Lock size={10} style={{ color: 'var(--accent)' }} />
+                    {(m.isEncrypted ?? msg?.isEncrypted) ? 'End-to-end encrypted' : 'Encrypted in transit'}
+                </div>
+            </div>
 
-                {}
-                <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
-
-                    {}
-                    {msg.reactions && msg.reactions.length > 0 && (
-                        <Section>
-                            <SectionHeader icon={<Smile size={13} style={{ color: 'var(--accent)' }} />}>
-                                Reactions ({msg.reactions.reduce((acc, r) => acc + (r.users?.length || 0), 0)})
-                            </SectionHeader>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                {msg.reactions.map((reaction, idx) => {
-                                    const reactedNames = members
-                                        .filter(m => reaction.users?.some(uid => String(uid) === String(m._id)))
-                                        .map(u => u.username || 'Unknown');
-                                    return (
-                                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <span style={{ fontSize: '16px' }}>{reaction.emoji}</span>
-                                            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: FONT }}>
-                                                {reactedNames.join(', ') || `${reaction.users?.length || 0} members`}
-                                            </span>
-                                        </div>
-                                    );
-                                })}
+            {status === 'loading' && (
+                <div style={{ padding: '20px 16px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <Loader2 size={14} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} /> Loading details…
+                </div>
+            )}
+            {status === 'error' && (
+                <div role="alert" style={{ padding: '16px', fontSize: '12px', color: 'var(--state-danger)' }}>
+                    {info?.error || 'Could not load message info.'}
+                </div>
+            )}
+            {status === 'done' && (
+                <>
+                    {(editedAt || editCount > 0) && (
+                        <Section icon={<History size={12} />} title="Edited">
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.7 }}>
+                                <div>{editCount || 1} {editCount === 1 || !editCount ? 'edit' : 'edits'}{version ? ` · now version ${version}` : ''}</div>
+                                <div>Last edited {fmt(editedAt)}</div>
+                                {restoredFrom && <div style={{ color: 'var(--accent)' }}>Restored from version {restoredFrom}</div>}
                             </div>
                         </Section>
                     )}
-
-                    {}
-                    <Section>
-                        <SectionHeader icon={<CheckCircle2 size={13} style={{ color: 'var(--accent)' }} />}>
-                            Seen by {seenByList.length}
-                        </SectionHeader>
-                        {seenByList.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {seenByList.map(user => (
-                                    <MemberRow key={user._id} user={user} />
+                    {isPinned && (
+                        <Section icon={<Pin size={12} />} title="Pinned">
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                Pinned by {pinnedByName || 'someone'}{pinnedAt ? ` · ${fmt(pinnedAt)}` : ''}
+                            </div>
+                        </Section>
+                    )}
+                    {reactions.length > 0 && (
+                        <Section icon={<Smile size={12} />} title={`Reactions (${reactions.reduce((n, r) => n + r.userIds.length, 0)})`}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                {reactions.map(r => (
+                                    <div key={r.emoji} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <span style={{ fontSize: '16px' }}>{r.emoji}</span>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{r.userIds.map(nameOf).join(', ')}</span>
+                                    </div>
                                 ))}
                             </div>
-                        ) : (
-                            <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '18px', fontFamily: FONT }}>No one has read this yet.</p>
-                        )}
+                        </Section>
+                    )}
+                    <Section icon={<CheckCheck size={12} />} title={`Read by (${readList.length})`}>
+                        {readList.length
+                            ? <UserList users={readList} />
+                            : <Empty>No one has read this yet.</Empty>}
                     </Section>
-
-                    {}
-                    <Section>
-                        <SectionHeader>Delivered to ({deliveredToList.length})</SectionHeader>
-                        {deliveredToList.length > 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                {deliveredToList.map(user => (
-                                    <MemberRow key={user._id} user={user} muted />
-                                ))}
-                            </div>
-                        ) : (
-                            <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '18px', fontFamily: FONT }}>All members have seen this.</p>
-                        )}
+                    <Section icon={<Clock size={12} />} title={`Not yet read (${unreadList.length})`}>
+                        {unreadList.length
+                            ? <UserList users={unreadList} muted />
+                            : <Empty>{members.length > 1 ? 'Everyone has read this.' : 'No other recipients.'}</Empty>}
                     </Section>
-                </div>
-
-                {}
-                <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-default)' }}>
-                    <FooterBtn onClick={onClose}>Close</FooterBtn>
-                </div>
-            </div>
-        </div>
+                </>
+            )}
+        </ToolbarModalShell>
     );
 }
 
-function CloseBtn({ onClick }) {
-    const [hovered, setHovered] = useState(false);
-    return (
-        <button onClick={onClick}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-            style={{
-                padding: '5px', border: 'none', outline: 'none', background: 'none',
-                cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '100ms ease',
-                color: hovered ? 'var(--state-danger)' : 'var(--text-muted)',
-            }}>
-            <X size={15} />
-        </button>
-    );
-}
-
-function Section({ children }) {
+function Section({ icon, title, children }) {
     return (
         <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                <span style={{ color: 'var(--accent)', display: 'flex' }}>{icon}</span>{title}
+            </div>
             {children}
         </div>
     );
 }
 
-function SectionHeader({ icon, children }) {
+function Empty({ children }) {
+    return <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)', fontStyle: 'italic' }}>{children}</p>;
+}
+
+function UserAvatar({ user, muted }) {
+    const src = user.profilePicture || getAvatarUrl({ username: user.username, _id: user._id });
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px', fontFamily: 'Inter, system-ui, sans-serif', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-            {icon}
-            {children}
-        </div>
+        <img
+            src={src}
+            alt=""
+            style={{ width: '24px', height: '24px', borderRadius: '2px', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)', opacity: muted ? 0.6 : 1 }}
+        />
     );
 }
 
-function MemberRow({ user, muted }) {
-    const char = (user.username || '?').charAt(0).toUpperCase();
+function UserList({ users, muted }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', opacity: muted ? 0.6 : 1 }}>
-            {user.profilePicture ? (
-                <img src={user.profilePicture} alt={user.username}
-                    style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '1px solid var(--border-default)' }} />
-            ) : (
-                <div style={{
-                    width: '26px', height: '26px', borderRadius: '50%', flexShrink: 0,
-                    backgroundColor: muted ? 'var(--bg-hover)' : 'rgba(184,149,106,0.15)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: `1px solid ${muted ? 'var(--border-default)' : 'var(--border-accent)'}`,
-                    fontSize: '10px', fontWeight: 700,
-                    color: muted ? 'var(--text-muted)' : 'var(--accent)',
-                }}>
-                    {char}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {users.map(u => (
+                <div key={idOf(u)} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <UserAvatar user={u} muted={muted} />
+                    <span style={{ fontSize: '13px', color: muted ? 'var(--text-muted)' : 'var(--text-secondary)' }}>{u.username || 'Unknown'}</span>
                 </div>
-            )}
-            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                {user.username}
-            </span>
+            ))}
         </div>
-    );
-}
-
-function FooterBtn({ onClick, children }) {
-    const [hovered, setHovered] = useState(false);
-    return (
-        <button onClick={onClick}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-            style={{
-                width: '100%', padding: '8px 0', fontSize: '13px', fontWeight: 500,
-                color: hovered ? 'var(--text-primary)' : 'var(--text-secondary)',
-                backgroundColor: hovered ? 'var(--bg-hover)' : 'var(--bg-active)',
-                border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer',
-                outline: 'none', transition: '100ms ease', fontFamily: 'Inter, system-ui, sans-serif',
-            }}>
-            {children}
-        </button>
     );
 }

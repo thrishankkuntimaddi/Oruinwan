@@ -1,6 +1,7 @@
 import React from 'react';
 import { ConversationStream } from '../../events';
 import FooterInput from '../footer/footerInput.jsx';
+import TypingIndicator from '../TypingIndicator.jsx';
 import ThreadPanel from '../ThreadPanel.jsx';
 import BookmarksPanel from '../panels/BookmarksPanel.jsx';
 import TasksTab from '../tabs/TasksTab.jsx';
@@ -10,6 +11,7 @@ import ChannelJoinPrompt from '../states/ChannelJoinPrompt.jsx';
 import CanvasDashboardView from './CanvasDashboardView.jsx';
 
 const CentralContentView = ({
+    typingUsers = [],
     
     activeTab,
     tabs,
@@ -135,7 +137,8 @@ const CentralContentView = ({
                             isPrivate={chat?.isPrivate || false}
                         />
 
-                        {}
+                        <TypingIndicator users={typingUsers} />
+
                         <FooterInput
                             newMessage={newMessage}
                             onChange={onMessageChange}
@@ -232,7 +235,7 @@ const CentralContentView = ({
                 <ThreadPanel
                     parentMessage={activeThread}
                     channelId={chat.id || chat._id}
-                    conversationType="channel"
+                    conversationType={conversationType === 'dm' ? 'dm' : 'channel'}
                     onClose={onThreadClose}
                     socket={rawSocket}
                     currentUserId={currentUserId}

@@ -7,6 +7,14 @@ const DMSession = require('../../../models/DMSession');
 const { handleError } = require('../../../utils/responseHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
 const mongoose = require('mongoose');
+const { canAccessMessage, loadAccessibleMessage } = require('./messageAccess');
+
+function sendError(res, err, label) {
+    if (err && err.status && err.status < 500) {
+        return res.status(err.status).json({ message: err.message });
+    }
+    return handleError(res, err, label);
+}
 
 exports.sendDirectMessage = async (req, res) => {
     logger.info('🔄 [MESSAGES:MODULAR] Function invoked: sendDirectMessage');
@@ -607,11 +615,7 @@ exports.editMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.user.sub;
-        const { text, ciphertext, messageIv } = req.body;
-
-        if (!text && !ciphertext) {
-            return res.status(400).json({ message: 'text or ciphertext is required' });
-        }
+        const { text, ciphertext, messageIv } = req.body || {};
 
         const io = req.app?.get('io');
         const message = await messagesService.editMessage(
@@ -623,8 +627,50 @@ exports.editMessage = async (req, res) => {
 
         return res.json({ message });
     } catch (err) {
-        const status = err.status || 500;
-        return res.status(status).json({ message: err.message || 'Server error' });
+        return sendError(res, err, 'EDIT MESSAGE ERROR');
+    }
+};
+
+exports.restoreMessageVersion = async (req, res) => {
+    try {
+        const { messageId } = req.params;
+        const { versionIndex } = req.body || {};
+        if (versionIndex === undefined || versionIndex === null || versionIndex === '') {
+            return res.status(400).json({ message: 'versionIndex is required' });
+        }
+        const io = req.app?.get('io');
+        const message = await messagesService.restoreMessageVersion(messageId, req.user.sub, versionIndex, io);
+        return res.json({ message });
+    } catch (err) {
+        return sendError(res, err, 'RESTORE MESSAGE VERSION ERROR');
+    }
+};
+
+exports.getMessageVersions = async (req, res) => {
+    try {
+        const result = await messagesService.getMessageVersions(req.params.messageId, req.user.sub);
+        return res.json(result);
+    } catch (err) {
+        return sendError(res, err, 'GET MESSAGE VERSIONS ERROR');
+    }
+};
+
+exports.toggleBookmark = async (req, res) => {
+    try {
+        const result = await messagesService.toggleBookmark(req.params.messageId, req.user.sub);
+        return res.json(result);
+    } catch (err) {
+        return sendError(res, err, 'TOGGLE BOOKMARK ERROR');
+    }
+};
+
+exports.getBookmarks = async (req, res) => {
+    try {
+        const { limit, skip } = req.query;
+        const messages = await messagesService.getBookmarks(req.user.sub, { limit, skip });
+        return res.json({ messages });
+    } catch (err) {
+        return sendError(res, err, 'GET BOOKMARKS ERROR');
     }
 };
 
@@ -699,44 +745,26 @@ exports.pinMessage = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.user.sub;
-        const { pin = true } = req.body;
+        const body = req.body || {};
+        const pin = body.pin === undefined ? true : !(body.pin === false || body.pin === 'false');
 
-        const Message = require('../../features/messages/message.model');
-        const message = await Message.findById(messageId);
-        if (!message) {
-            return res.status(404).json({ message: 'Message not found' });
+        let message;
+        try {
+            message = await loadAccessibleMessage(Message, messageId, userId);
+        } catch (e) {
+            if (e.status === 403) return res.status(403).json({ message: 'You must be a member of this conversation to pin messages' });
+            throw e;
+        }
+        if (message.isDeleted || message.isDeletedUniversally) {
+            return res.status(400).json({ message: 'Cannot pin a deleted message' });
+        }
+        if (message.type === 'system') {
+            return res.status(400).json({ message: 'System messages cannot be pinned' });
         }
 
-        
-        
-        const isSender = String(message.sender) === String(userId);
-        let isChannelAdmin = false;
-        let isDMParticipant = false;
-
-        if (message.dm) {
-            
-            const DMSession = require('../../../models/DMSession');
-            const dmSession = await DMSession.findById(message.dm).select('participants').lean();
-            if (dmSession) {
-                isDMParticipant = dmSession.participants.some(p => String(p) === String(userId));
-            }
-        } else if (message.channel) {
-            
-            const Channel = require('../../features/channels/channel.model');
-            const channel = await Channel.findById(message.channel).select('members admins createdBy isDefault').lean();
-            if (channel) {
-                isChannelAdmin = channel.isDefault || 
-                    (channel.members || []).some(m => {
-                        const memberId = m.user?.toString() || m.toString();
-                        return memberId === userId.toString();
-                    }) ||
-                    (channel.admins || []).map(id => id.toString()).includes(userId.toString()) ||
-                    channel.createdBy?.toString() === userId.toString();
-            }
-        }
-
-        if (!isSender && !isChannelAdmin && !isDMParticipant) {
-            return res.status(403).json({ message: 'You must be a channel member to pin messages' });
+        // Idempotent: nothing to change, no events or system messages.
+        if (!!message.isPinned === pin) {
+            return res.json({ message, changed: false });
         }
 
         message.isPinned = pin;
@@ -744,90 +772,65 @@ exports.pinMessage = async (req, res) => {
         message.pinnedAt = pin ? new Date() : null;
         await message.save();
 
+        if (message.channel) {
+            await Channel.updateOne(
+                { _id: message.channel },
+                pin ? { $addToSet: { pinnedMessages: message._id } } : { $pull: { pinnedMessages: message._id } }
+            ).catch(e => logger.warn('[PIN] channel pinnedMessages sync failed:', e.message));
+        }
+
+        const pinner = await User.findById(userId).select('username').lean().catch(() => null);
+        const pinnedByName = pinner?.username || null;
+
         const io = req.app?.get('io');
-
-        
+        const pinRoom = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
         if (io) {
-            const pinRoom = message.channel
-                ? `channel:${message.channel}`
-                : `dm:${message.dm}`;
-
-            
-            let pinnedByName = null;
-            try {
-                const User = require('../../../models/User');
-                const pinner = await User.findById(userId).select('username').lean();
-                pinnedByName = pinner?.username || null;
-            } catch (_e) {  }
-
             io.to(pinRoom).emit(pin ? 'message-pinned' : 'message-unpinned', {
-                messageId,
-                pinnedBy: userId,
-                pinnedByName,
-                pinnedAt: message.pinnedAt
+                messageId: String(message._id),
+                // Content fields included so clients that merge this into the
+                // message's `payload` keep the ciphertext needed to decrypt it.
+                ciphertext: message.payload?.ciphertext,
+                messageIv: message.payload?.messageIv,
+                isEncrypted: message.payload?.isEncrypted,
+                isPinned: pin,
+                pinnedBy: pin ? String(userId) : null,
+                pinnedByName: pin ? pinnedByName : null,
+                pinnedAt: message.pinnedAt,
+                channelId: message.channel ? String(message.channel) : null,
+                dmId: message.dm ? String(message.dm) : null,
             });
         }
 
-        
-        if (message.channel) {
-            
-            try {
-                const User = require('../../../models/User');
-                const pinner = await User.findById(userId).select('username').lean();
-
-                
-                const snippet = message.payload?.text || message.text || message.decryptedContent || '';
-                const messageSnippet = snippet.length > 60 ? snippet.slice(0, 57) + '…' : snippet;
-
-                const systemMsg = await Message.create({
-                    type: 'system',
-                    systemEvent: pin ? 'message_pinned' : 'message_unpinned',
-                    sender: userId,
-                    channel: message.channel,
-                    workspace: message.workspace,
-                    systemData: {
-                        userId,
-                        userName: pinner?.username || 'Someone',
-                        messageSnippet,
-                        pinnedMessageId: messageId,
-                    },
-                });
-                if (io) io.to(`channel:${message.channel}`).emit('new-message', systemMsg);
-            } catch (sysErr) {
-                logger.error('[SYSTEM MSG] pin system message failed:', sysErr);
-            }
-        } else if (message.dm) {
-            
-            try {
-                const User = require('../../../models/User');
-                const pinner = await User.findById(userId).select('username').lean();
-
-                const snippet = message.payload?.text || message.text || '';
-                const messageSnippet = snippet.length > 60 ? snippet.slice(0, 57) + '…' : snippet;
-
-                const systemMsg = await Message.create({
-                    type: 'system',
-                    systemEvent: pin ? 'dm_message_pinned' : 'dm_message_unpinned',
-                    sender: userId,
-                    dm: message.dm,
-                    workspace: message.workspace,
-                    systemData: {
-                        userId,
-                        userName: pinnedByName || pinner?.username || 'Someone',
-                        messageSnippet,
-                        pinnedMessageId: messageId,
-                    },
-                });
-                if (io) io.to(`dm:${message.dm}`).emit('new-message', systemMsg);
-            } catch (sysErr) {
-                logger.error('[SYSTEM MSG] DM pin system message failed:', sysErr);
-            }
+        // Timeline system event. Message content is E2EE, so no snippet is available server-side
+        // except for legacy plaintext messages.
+        try {
+            const snippet = message.payload?.ciphertext ? '' : (message.text || '');
+            const messageSnippet = snippet.length > 60 ? snippet.slice(0, 57) + '…' : snippet;
+            const systemMsg = await Message.create({
+                type: 'system',
+                systemEvent: message.channel
+                    ? (pin ? 'message_pinned' : 'message_unpinned')
+                    : (pin ? 'dm_message_pinned' : 'dm_message_unpinned'),
+                sender: userId,
+                channel: message.channel || null,
+                dm: message.channel ? null : message.dm,
+                workspace: message.workspace,
+                company: message.company || null,
+                systemData: {
+                    userId,
+                    userName: pinnedByName || 'Someone',
+                    messageSnippet,
+                    pinnedMessageId: String(message._id),
+                },
+            });
+            if (io) io.to(pinRoom).emit('new-message', systemMsg);
+        } catch (sysErr) {
+            logger.error('[SYSTEM MSG] pin system message failed:', sysErr);
         }
-        
 
-        return res.json({ message });
+        return res.json({ message, changed: true });
     } catch (err) {
-        return res.status(500).json({ message: err.message || 'Server error' });
+        return sendError(res, err, 'PIN MESSAGE ERROR');
     }
 };
 
@@ -910,6 +913,68 @@ exports.createPollMessage = async (req, res) => {
     }
 };
 
+
+// ── Poll helpers ────────────────────────────────────────────────────────────
+
+/** Poll with voter ids replaced by { _id, username } so clients can show who voted. */
+async function enrichPollVoters(message) {
+    try {
+        const User = require('../../../models/User');
+        const ids = new Set();
+        message.poll.options.forEach(opt => opt.votes.forEach(v => ids.add(v.toString())));
+        const users = ids.size
+            ? await User.find({ _id: { $in: [...ids] } }).select('_id username').lean()
+            : [];
+        const names = Object.fromEntries(users.map(u => [u._id.toString(), u.username]));
+        const plain = message.poll.toObject ? message.poll.toObject() : message.poll;
+        return {
+            ...plain,
+            options: plain.options.map(opt => ({
+                ...opt,
+                votes: (opt.votes || []).map(v => ({ _id: v.toString(), username: names[v.toString()] || 'Unknown' })),
+            })),
+        };
+    } catch (err) {
+        logger.warn('[poll] voter name enrichment failed:', err.message);
+        return message.poll.toObject ? message.poll.toObject() : message.poll;
+    }
+}
+
+/** Push the new poll state to everyone in the conversation (channel or DM). */
+function broadcastPollUpdate(req, message, poll) {
+    const io = req.io || req.app?.get('io');
+    if (!io) return;
+    const room = message.channel ? `channel:${message.channel}` : message.dm ? `dm:${message.dm}` : null;
+    if (room) io.to(room).emit('poll:vote_updated', { messageId: String(message._id), poll });
+}
+
+exports.closePoll = async (req, res) => {
+    try {
+        const userId = req.user.sub;
+        const Message = require('../../features/messages/message.model');
+        const message = await Message.findById(req.params.messageId);
+        if (!message || message.type !== 'poll' || !message.poll) {
+            return res.status(404).json({ message: 'Poll not found' });
+        }
+        const creator = String(message.poll.createdBy || message.sender);
+        if (creator !== String(userId)) {
+            return res.status(403).json({ message: 'Only the poll creator can end this poll' });
+        }
+        if (!message.poll.isActive) {
+            return res.status(400).json({ message: 'Poll is already closed' });
+        }
+        message.poll.isActive = false;
+        message.markModified('poll');
+        await message.save();
+
+        const poll = await enrichPollVoters(message);
+        broadcastPollUpdate(req, message, poll);
+        return res.json({ message: { ...message.toObject(), poll } });
+    } catch (err) {
+        return handleError(res, err, 'CLOSE POLL ERROR');
+    }
+};
+
 exports.voteOnPoll = async (req, res) => {
     try {
         const userId = req.user.sub;
@@ -935,11 +1000,8 @@ exports.voteOnPoll = async (req, res) => {
         }
 
         
-        if (message.channel) {
-            const channel = await Channel.findById(message.channel);
-            if (!channel || !channel.isMember(userId)) {
-                return res.status(403).json({ message: 'Not a channel member' });
-            }
+        if (!(await canAccessMessage(message, userId))) {
+            return res.status(403).json({ message: 'You are not part of this conversation' });
         }
 
         
@@ -976,40 +1038,8 @@ exports.voteOnPoll = async (req, res) => {
         await message.save();
 
         
-        let pollWithVoterNames;
-        try {
-            await message.populate('sender', 'username profilePicture');
-            const User = require('../../../models/User');
-            const allVoterIds = new Set();
-            message.poll.options.forEach(opt => opt.votes.forEach(v => allVoterIds.add(v.toString())));
-            const voterDocs = allVoterIds.size > 0
-                ? await User.find({ _id: { $in: [...allVoterIds] } }).select('_id username').lean()
-                : [];
-            const voterMap = {};
-            voterDocs.forEach(u => { voterMap[u._id.toString()] = u.username; });
-            pollWithVoterNames = {
-                ...message.poll.toObject(),
-                options: message.poll.options.map(opt => ({
-                    ...opt.toObject(),
-                    votes: opt.votes.map(v => ({
-                        _id: v.toString(),
-                        username: voterMap[v.toString()] || '?'
-                    }))
-                }))
-            };
-        } catch (enrichErr) {
-            logger.warn('[voteOnPoll] Voter name enrichment failed (vote saved OK):', enrichErr.message);
-            pollWithVoterNames = message.poll.toObject();
-        }
-
-        
-        const io = req.io || req.app?.get('io');
-        if (io && message.channel) {
-            io.to(`channel:${message.channel}`).emit('poll:vote_updated', {
-                messageId: message._id,
-                poll: pollWithVoterNames,
-            });
-        }
+        const pollWithVoterNames = await enrichPollVoters(message);
+        broadcastPollUpdate(req, message, pollWithVoterNames);
 
         return res.json({ message: { ...message.toObject(), poll: pollWithVoterNames } });
     } catch (err) {
@@ -1022,91 +1052,92 @@ exports.getMessageInfo = async (req, res) => {
         const userId = req.user.sub;
         const { messageId } = req.params;
 
-        const Message = require('../../features/messages/message.model');
         const Workspace = require('../../../models/Workspace');
 
-        
-        const message = await Message.findById(messageId)
-            .populate('sender', 'username profilePicture')
-            .populate('readBy', 'username profilePicture')
-            .lean();
-
-        if (!message) {
-            return res.status(404).json({ message: 'Message not found' });
-        }
+        const message = await loadAccessibleMessage(Message, messageId, userId, {
+            populate: [
+                { path: 'sender', select: 'username profilePicture' },
+                { path: 'readBy', select: 'username profilePicture' },
+                { path: 'pinnedBy', select: 'username profilePicture' },
+            ],
+            lean: true,
+        });
 
         let channelMembers = [];
+        const toMember = (u) => ({
+            _id: String(u?._id || u),
+            username: u?.username || 'Unknown',
+            profilePicture: u?.profilePicture || null,
+        });
 
         if (message.channel) {
             const channel = await Channel.findById(message.channel)
                 .populate('members.user', 'username profilePicture')
                 .lean();
-
             if (!channel) return res.status(404).json({ message: 'Channel not found' });
 
-            
-            const isMember = channel.isDefault || channel.members?.some(m =>
-                String(m.user?._id || m.user) === String(userId)
-            );
-            if (!isMember) return res.status(403).json({ message: 'Not authorized' });
-
-            
             if (channel.isDefault && (!channel.members || channel.members.length === 0)) {
                 const workspace = await Workspace.findById(channel.workspace)
                     .populate('members.user', 'username profilePicture')
                     .lean();
-                channelMembers = (workspace?.members || []).map(m => ({
-                    _id: String(m.user?._id || m.user),
-                    username: m.user?.username || 'Unknown',
-                    profilePicture: m.user?.profilePicture || null
-                }));
+                channelMembers = (workspace?.members || [])
+                    .filter(m => m.user && m.status !== 'removed')
+                    .map(m => toMember(m.user));
             } else {
-                channelMembers = (channel.members || []).map(m => ({
-                    _id: String(m.user?._id || m.user),
-                    username: m.user?.username || 'Unknown',
-                    profilePicture: m.user?.profilePicture || null
-                }));
+                channelMembers = (channel.members || []).map(m => toMember(m.user || m));
             }
-
         } else if (message.dm) {
             const dmSession = await DMSession.findById(message.dm)
                 .populate('participants', 'username profilePicture')
                 .lean();
-            const isParticipant = dmSession?.participants?.some(
-                p => String(p._id || p) === String(userId)
-            );
-            if (!isParticipant) return res.status(403).json({ message: 'Not authorized' });
-            channelMembers = (dmSession?.participants || []).map(p => ({
-                _id: String(p._id || p),
-                username: p.username || 'Unknown',
-                profilePicture: p.profilePicture || null
-            }));
+            channelMembers = (dmSession?.participants || []).map(toMember);
         }
 
-        
-        const readByIds = new Set(
-            (message.readBy || []).map(u => String(u._id || u))
-        );
+        const readByUsers = (message.readBy || [])
+            .filter(Boolean)
+            .map(toMember);
+        const readByIds = [...new Set(readByUsers.map(u => u._id))];
 
-        logger.info(`[MESSAGE INFO] msgId=${messageId} members=${channelMembers.length} readBy=${readByIds.size}`);
+        const editCount = (message.editHistory || []).length;
+        const pinnedBy = message.pinnedBy
+            ? { _id: String(message.pinnedBy._id || message.pinnedBy), username: message.pinnedBy.username || null }
+            : null;
+
+        const info = {
+            _id: message._id,
+            text: message.text,
+            isEncrypted: !!(message.payload?.ciphertext || message.isEncrypted),
+            payload: message.payload,
+            createdAt: message.createdAt,
+            sender: message.sender,
+            reactions: message.reactions || [],
+            readBy: readByIds,
+            readByUsers,
+            editedAt: message.editedAt || null,
+            version: message.version || 1,
+            editCount,
+            restoredFromVersion: message.restoredFromVersion ?? null,
+            isPinned: !!message.isPinned,
+            pinnedBy: pinnedBy ? pinnedBy.username : null,
+            pinnedById: pinnedBy ? pinnedBy._id : null,
+            pinnedAt: message.pinnedAt || null,
+        };
 
         return res.json({
-            message: {
-                _id: message._id,
-                text: message.text,
-                isEncrypted: !!(message.payload?.ciphertext || message.isEncrypted),
-                payload: message.payload,
-                createdAt: message.createdAt,
-                sender: message.sender,
-                reactions: message.reactions || [],
-                readBy: [...readByIds]
-            },
+            message: info,
             members: channelMembers,
-            readBy: [...readByIds]
+            readBy: readByIds,
+            readByUsers,
+            editedAt: info.editedAt,
+            version: info.version,
+            editCount,
+            restoredFromVersion: info.restoredFromVersion,
+            isPinned: info.isPinned,
+            pinnedBy: info.pinnedBy,
+            pinnedAt: info.pinnedAt,
         });
-
     } catch (err) {
-        return handleError(res, err, 'GET MESSAGE INFO ERROR');
+        return sendError(res, err, 'GET MESSAGE INFO ERROR');
     }
 };
 
@@ -1120,7 +1151,7 @@ exports.scheduleReminder = async (req, res) => {
 
         if (!remindAt) return res.status(400).json({ message: 'remindAt is required' });
 
-        const reminder = await reminderService.scheduleReminder(userId, messageId, remindAt, note);
+        const reminder = await reminderService.scheduleReminder(userId, messageId, remindAt, typeof note === 'string' ? note : '');
         return res.status(201).json({ success: true, reminder });
     } catch (err) {
         const status = err.status || 500;
@@ -1171,28 +1202,37 @@ exports.checklistToggle = async (req, res) => {
 
 exports.getMessageDiff = async (req, res) => {
     try {
-        const userId = req.user.sub;
-        const { messageId } = req.params;
-        const diff = await messagesService.getMessageDiff(messageId, userId);
+        const diff = await messagesService.getMessageDiff(req.params.messageId, req.user.sub);
         return res.json(diff);
     } catch (err) {
-        const status = err.status || 500;
-        return res.status(status).json({ message: err.message });
+        return sendError(res, err, 'GET MESSAGE DIFF ERROR');
     }
 };
 
 exports.convertToTask = async (req, res) => {
     try {
-        const userId     = req.user.sub;
+        const userId = req.user.sub;
         const { messageId } = req.params;
-        const taskData   = req.body || {};
-        const io = req.app?.get('io');
+        // workspaceId / projectId from the client are deliberately not forwarded.
+        const { title, description, priority, dueDate, assigneeIds } = req.body || {};
+        if (!title || !String(title).trim()) return res.status(400).json({ message: 'title is required' });
 
-        const task = await messagesService.convertToTask(messageId, userId, taskData, io);
-        return res.status(201).json({ task });
+        const io = req.app?.get('io');
+        const task = await messagesService.convertToTask(
+            messageId, userId, { title, description, priority, dueDate, assigneeIds }, io
+        );
+        return res.status(201).json({
+            task: {
+                _id: task._id,
+                title: task.title,
+                status: task.status,
+                priority: task.priority,
+                dueDate: task.dueDate || null,
+                workspace: task.workspace || null,
+            },
+        });
     } catch (err) {
-        const status = err.status || 500;
-        return res.status(status).json({ message: err.message });
+        return sendError(res, err, 'CONVERT TO TASK ERROR');
     }
 };
 
@@ -1214,32 +1254,46 @@ exports.getSmartReplies = async (req, res) => {
     }
 };
 
+const MAX_TRANSLATE_CHARS = 5000;
+
 exports.translateMessage = async (req, res) => {
     try {
-        const { text, targetLang, messageId } = req.body;
-        if (!text || !targetLang) {
+        const { text, targetLang } = req.body || {};
+        if (typeof text !== 'string' || !text.trim() || typeof targetLang !== 'string' || !targetLang.trim()) {
             return res.status(400).json({ message: 'text and targetLang are required' });
         }
-        const result = await aiMessagingService.translateMessage(text, targetLang, messageId);
+        if (text.length > MAX_TRANSLATE_CHARS) {
+            return res.status(400).json({ message: `text must be at most ${MAX_TRANSLATE_CHARS} characters` });
+        }
+        if (targetLang.length > 40) return res.status(400).json({ message: 'Invalid targetLang' });
+
+        const result = await aiMessagingService.translateMessage(text, targetLang.trim());
         return res.json(result);
     } catch (err) {
-        return res.status(500).json({ message: 'Translation unavailable', error: err.message });
+        logger.warn('[AI translate] failed:', err.message);
+        return res.status(503).json({ message: 'Translation unavailable', error: err.message });
     }
 };
 
 exports.getThreadSummary = async (req, res) => {
     try {
-        const { parentMessageId, replies = [], parentText = '' } = req.body;
+        const userId = req.user.sub;
+        const { parentMessageId, replies = [], parentText = '' } = req.body || {};
         if (!parentMessageId) return res.status(400).json({ message: 'parentMessageId is required' });
+        if (!Array.isArray(replies)) return res.status(400).json({ message: 'replies must be an array' });
+
+        await loadAccessibleMessage(Message, parentMessageId, userId, { select: 'channel dm', lean: true });
 
         const summary = await aiMessagingService.summarizeThread(
             parentMessageId,
-            replies,
-            parentText
+            replies.slice(-200),
+            typeof parentText === 'string' ? parentText : ''
         );
         return res.json({ summary });
     } catch (err) {
-        return res.status(500).json({ message: 'Thread summary unavailable', error: err.message });
+        if (err.status && err.status < 500) return res.status(err.status).json({ message: err.message });
+        logger.warn('[AI thread summary] failed:', err.message);
+        return res.status(503).json({ message: 'Thread summary unavailable', error: err.message });
     }
 };
 

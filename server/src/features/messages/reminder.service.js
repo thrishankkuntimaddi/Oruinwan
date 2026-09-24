@@ -3,6 +3,7 @@ const logger = require('../../../utils/logger');
 
 const MessageReminder = require('./MessageReminder');
 const Message         = require('./message.model');
+const { loadAccessibleMessage } = require('../../modules/messages/messageAccess');
 
 async function scheduleReminder(userId, messageId, remindAt, note = '') {
   const when = new Date(remindAt);
@@ -10,10 +11,15 @@ async function scheduleReminder(userId, messageId, remindAt, note = '') {
   if (when <= new Date()) throw Object.assign(new Error('remindAt must be in the future'), { status: 400 });
 
   
-  const msg = await Message.findById(messageId).select('_id').lean();
-  if (!msg) throw Object.assign(new Error('Message not found'), { status: 404 });
+  // Throws 400/404/403 when the message is missing or the caller cannot read it.
+  await loadAccessibleMessage(Message, messageId, userId, { select: '_id channel dm', lean: true });
 
-  const reminder = await MessageReminder.create({ userId, messageId, remindAt: when, note });
+  const reminder = await MessageReminder.create({
+    userId,
+    messageId,
+    remindAt: when,
+    note: String(note || '').trim().slice(0, 500),
+  });
   return reminder;
 }
 
@@ -29,6 +35,9 @@ async function getUserReminders(userId) {
 }
 
 async function cancelReminder(reminderId, userId) {
+  if (!require('mongoose').Types.ObjectId.isValid(String(reminderId))) {
+    throw Object.assign(new Error('Reminder not found'), { status: 404 });
+  }
   const reminder = await MessageReminder.findOne({ _id: reminderId, userId });
   if (!reminder) throw Object.assign(new Error('Reminder not found'), { status: 404 });
   await reminder.deleteOne();

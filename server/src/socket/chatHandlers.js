@@ -54,7 +54,7 @@ async function loadAuthorizedMessage(messageId, uid, select = "channel dm worksp
   return null;
 }
 
-module.exports = async function registerChatHandlers(io, socket) {
+module.exports = function registerChatHandlers(io, socket) {
   const userId = socket.user.id; 
 
   
@@ -63,30 +63,23 @@ module.exports = async function registerChatHandlers(io, socket) {
   
   socket.join(`user_${userId}`);
 
-  
-  try {
-    const user = await User.findById(userId).select('companyId');
-    if (user && user.companyId) {
-      const companyId = user.companyId.toString();
-      const companyRoom = `company_${companyId}`;
-      socket.join(companyRoom);
-      
-      const updatesRoom = ROOMS.companyUpdates(companyId);
-      socket.join(updatesRoom);
-      logger.debug(`✅ [AUTO-JOIN] User ${userId} joined ${companyRoom} and ${updatesRoom}`);
-    }
-  } catch (err) {
-    logger.error("Error auto-joining company room:", err);
-  }
-
-  
-  
-  
-  
-  
-  
+  // Room restoration runs in the background. Nothing here may be awaited before
+  // the socket.on(...) registrations below: events a client emits right after
+  // connecting (chat:join, typing, votes) would otherwise arrive with no
+  // listener and be silently dropped.
   (async () => {
     const joinedRooms = [];
+
+    try {
+      const user = await User.findById(userId).select('companyId').lean();
+      if (user && user.companyId) {
+        const companyId = user.companyId.toString();
+        socket.join(`company_${companyId}`);
+        socket.join(ROOMS.companyUpdates(companyId));
+      }
+    } catch (err) {
+      logger.error("Error auto-joining company room:", err);
+    }
 
     try {
       

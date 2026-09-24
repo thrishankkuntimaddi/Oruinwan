@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import api from '@services/api';
 import {
-    Smile, MessageSquare, Share, MoreHorizontal, Pin, Copy, Trash2, Info, Pencil, Check, X,
+    Smile, MessageSquare, Share, MoreHorizontal, Pin, Trash2, Info,
     Hash, UserCheck, LogOut, UserPlus, UserMinus, Shield, ShieldOff,
-    PenLine, FileText, Lock, PinIcon, Eraser, History, Globe, Bookmark, Bell, CheckSquare, Sparkles
+    PenLine, FileText, Lock, PinIcon, Eraser
 } from "lucide-react";
 import TranslatePopover from './TranslatePopover';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
@@ -23,6 +23,8 @@ import ContactMessage from "./types/ContactMessage";
 import LinkPreviewMessage from "./types/LinkPreviewMessage";
 
 import MeetingMessage from "./types/MeetingMessage";
+import { MessageMoreMenu, EditedBadge, TranslationBlock, InlineMessageEditor, useMessageToolbar } from './MessageToolbarParts';
+import { hasEditHistory } from '../../../../utils/messageActionUtils';
 
 import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
 import logger from '../../../../utils/logger';
@@ -35,75 +37,41 @@ function ChannelMessageItem({
     openMsgMenuId,
     toggleMsgMenu,
     formatTime,
-    addReaction,
-    pinMessage,
     replyToMessage,
     forwardMessage,
-    copyMessage,
-    deleteMessage,
-    infoMessage,
     currentUserId,
     onOpenThread,
     threadCounts,
-    channelMembers,
-    isAdmin = false, 
-    
-    onRemind,
-    onShowHistory,
-    isBookmarked = false,
-    onBookmarkToggle,
-    onConvertToTask,           
-    
-    translationState = null,   
-    onTranslate,               
-    onClearTranslation,        
+    toolbar = {},
+    translationState = null,
+    onTranslate,
+    onClearTranslation,
 }) {
-    
     const count = (threadCounts && threadCounts[msg.id]) || msg.replyCount || 0;
 
-    
     const senderId = msg.sender?._id || msg.senderId || (typeof msg.sender === 'string' ? msg.sender : null);
     const isMe = !!senderId && !!currentUserId && String(senderId) === String(currentUserId);
     const isSelected = selectedIds?.has(msg.id) || false;
     const [showToolbar, setShowToolbar] = useState(false);
     const [showReactionPicker, setShowReactionPicker] = useState(false);
     const reactionPickerRef = useRef(null);
-    
-    const [translatePopover, setTranslatePopover] = useState(null); 
-    const [lastLangCode, setLastLangCode] = useState(null); 
-    
-    const [menuPos, setMenuPos] = useState(null);      
     const [reactionPos, setReactionPos] = useState(null);
 
-    
-    const [isEditing, setIsEditing] = useState(false);
-    const [editText, setEditText] = useState(msg.decryptedContent || msg.text || '');
+    const tb = useMessageToolbar({
+        msg, isMe, currentUserId, toolbar, threadCount: count,
+        openMsgMenuId, toggleMsgMenu, onOpenThread, replyToMessage, forwardMessage,
+        translationState, onTranslate, onClearTranslation,
+    });
+    const text = tb.text;
 
-    
     const avatarUrl = msg.senderAvatar || getAvatarUrl({ username: msg.senderName, _id: senderId });
     const initial = msg.senderName ? msg.senderName.charAt(0).toUpperCase() : "?";
 
-    
     const toolbarBtn = (active = false) => ({
         padding: '4px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer',
         borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
         color: active ? 'var(--accent)' : 'var(--text-muted)', transition: '100ms ease',
     });
-    const menuItem = (label, icon, onClick, accent = false, danger = false) => {
-        const color = danger ? 'var(--state-danger)' : accent ? 'var(--accent)' : 'var(--text-secondary)';
-        const hoverBg = danger ? 'rgba(192,57,43,0.08)' : 'var(--bg-hover)';
-        return (
-            <button
-                key={label}
-                onClick={onClick}
-                style={{ width: '100%', textAlign: 'left', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color, fontSize: '13px', fontFamily: 'var(--font)', transition: '100ms ease' }}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = hoverBg}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
-                {icon}{label}
-            </button>
-        );
-    };
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -120,63 +88,15 @@ function ChannelMessageItem({
         };
     }, [showReactionPicker]);
 
-    
-    const handleSaveEdit = async () => {
-        const trimmed = editText.trim();
-        const currentText = msg.decryptedContent || msg.text || '';
-        if (trimmed === currentText.trim()) {
-            setIsEditing(false);
-            return;
-        }
-        if (!trimmed) return; 
-        try {
-            const channelId = msg.channelId || (msg.channel && (msg.channel._id || msg.channel));
-            const convType = channelId ? 'channel' : 'dm';
-
-            if (channelId) {
-                
-                const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
-                const encrypted = await encryptMessageForSending(trimmed, channelId, convType);
-
-                if (encrypted && encrypted.status !== 'ENCRYPTION_NOT_READY') {
-                    await api.patch(`/api/v2/messages/${msg._id || msg.id}`, {
-                        ciphertext: encrypted.ciphertext,
-                        messageIv: encrypted.messageIv
-                    });
-                } else {
-                    
-                    await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
-                }
-            } else {
-                
-                await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
-            }
-        } catch (err) {
-            logger.error('Edit failed:', err);
-        }
-        setIsEditing(false);
-    };
-
-    const handleCancelEdit = () => {
-        setEditText(msg.decryptedContent || msg.text || '');
-        setIsEditing(false);
-    };
-
-    
     const toggleReaction = async (emoji) => {
         const normalizeId = (id) => (id?._id || id)?.toString();
-
-        
         const myExistingReaction = msg.reactions?.find(
             (r) => normalizeId(r.userId) === normalizeId(currentUserId) && r.emoji === emoji
         );
-
         try {
             if (myExistingReaction) {
-                
                 await api.delete(`/api/v2/messages/${msg._id || msg.id}/react`, { data: { emoji } });
             } else {
-                
                 await api.post(`/api/v2/messages/${msg._id || msg.id}/react`, { emoji });
             }
         } catch (err) {
@@ -246,6 +166,9 @@ function ChannelMessageItem({
             </div>
         );
     }
+
+    const hasEdits = hasEditHistory(msg);
+    const toolbarVisible = !msg.isDeleted && !tb.isEditing && (showToolbar || tb.menuOpen || showReactionPicker || !!tb.translatePopover);
 
     return (
         <div
@@ -343,30 +266,9 @@ function ChannelMessageItem({
                     <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '60%' }} className="message-content">
                         {msg.isDeleted ? (
                             <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Message deleted</span>
-                        ) : isEditing ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', maxWidth: '480px' }}>
-                                <textarea
-                                    style={{ width: '100%', backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-accent)', borderRadius: '2px', padding: '8px 12px', fontSize: '14px', color: 'var(--text-primary)', outline: 'none', resize: 'none', minHeight: '60px', fontFamily: 'var(--font)', boxSizing: 'border-box', lineHeight: 1.6 }}
-                                    value={editText}
-                                    onChange={(e) => setEditText(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(); }
-                                        if (e.key === 'Escape') handleCancelEdit();
-                                    }}
-                                    autoFocus
-                                    rows={Math.min(6, (editText.match(/\n/g) || []).length + 2)}
-                                />
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <button onClick={handleSaveEdit} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--accent)', color: '#0c0c0c', fontSize: '12px', fontWeight: 600, border: 'none', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
-                                        <Check size={11} /> Save
-                                    </button>
-                                    <button onClick={handleCancelEdit} style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 12px', backgroundColor: 'var(--bg-active)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--font)', outline: 'none' }}>
-                                        <X size={11} /> Cancel
-                                    </button>
-                                    <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Enter to save · Esc to cancel</span>
-                                </div>
-                            </div>
-                        ) : msg.text ? (
+                        ) : tb.isEditing ? (
+                            <InlineMessageEditor initialText={text} onSave={tb.saveEdit} onCancel={tb.cancelEdit} />
+                        ) : text ? (
                             <ReactMarkdown
                                 remarkPlugins={[remarkBreaks]}
                                 components={{
@@ -387,7 +289,7 @@ function ChannelMessageItem({
                                     del: mentionRenderer(msg.senderName),
                                 }}
                             >
-                                {wrapMentions(msg.text)}
+                                {wrapMentions(text)}
                             </ReactMarkdown>
                         ) : msg.payload?.isEncrypted ? (
                             <EncryptedMessage
@@ -405,39 +307,10 @@ function ChannelMessageItem({
                 )}
 
                 {}
-                {translationState?.status === 'done' && translationState.translatedText && (
-                    <div style={{ marginTop: '6px', maxWidth: '60%' }}>
-                        <div style={{ padding: '8px 12px', borderRadius: '2px', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '13px', lineHeight: 1.65, color: 'var(--text-primary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                            {translationState.translatedText}
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
-                            {translationState.detectedLang && (
-                                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Detected: {translationState.detectedLang.toUpperCase()}</span>
-                            )}
-                            <button onClick={() => onClearTranslation?.(msg._id || msg.id)} style={{ fontSize: '11px', color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, outline: 'none' }}>Show original</button>
-                        </div>
-                    </div>
+                {!msg.isDeleted && hasEdits && !tb.isEditing && (
+                    <EditedBadge msg={msg} onOpen={tb.showHistory} />
                 )}
-                {translationState?.status === 'error' && (
-                    <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--state-danger)' }}>
-                        Translation failed.
-                        <button
-                            onClick={() => onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode)}
-                            className="ml-1 underline"
-                        >
-                            Retry
-                        </button>
-                    </div>
-                )}
-                {}
-                {msg.editedAt && !msg.isDeleted && (
-                    <EditedBadge
-                        editHistory={msg.editHistory}
-                        editedAt={msg.editedAt}
-                        conversationId={msg.channel || msg.channelId || msg.conversationId}
-                        conversationType={msg.channel || msg.channelId ? 'channel' : 'dm'}
-                    />
-                )}
+                <TranslationBlock state={translationState} onClear={tb.clearTranslation} onRetry={tb.retryTranslation} />
 
                 {}
                 {!msg.isDeleted && msg.linkPreview?.url && (
@@ -524,12 +397,10 @@ function ChannelMessageItem({
                 backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
                 borderRadius: '2px', padding: '2px', display: 'flex', alignItems: 'center',
                 zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                opacity: (!msg.isDeleted && (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover)) ? 1 : 0,
-                pointerEvents: (!msg.isDeleted && (showToolbar || openMsgMenuId === msg.id || showReactionPicker || !!translatePopover)) ? 'auto' : 'none',
+                opacity: toolbarVisible ? 1 : 0,
+                pointerEvents: toolbarVisible ? 'auto' : 'none',
                 transition: 'opacity 100ms ease',
             }}>
-
-                {}
                 <div style={{ position: 'relative' }} ref={reactionPickerRef}>
                     <button
                         onClick={(e) => {
@@ -551,184 +422,29 @@ function ChannelMessageItem({
                     )}
                 </div>
 
-                <button onClick={() => onOpenThread && onOpenThread(msg.id)} title="Thread" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><MessageSquare size={14} /></button>
-                <button onClick={() => forwardMessage(msg.id)} title="Forward" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><Share size={14} /></button>
+                {onOpenThread && <button onClick={() => onOpenThread(msg.id)} title="Reply in thread" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><MessageSquare size={14} /></button>}
+                {forwardMessage && <button onClick={() => forwardMessage(msg.id)} title="Forward" style={toolbarBtn()} onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'} onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}><Share size={14} /></button>}
 
-                <div style={{ position: 'relative' }}>
-                    <button
-                        onClick={(e) => {
-                            const rect = e.currentTarget.getBoundingClientRect();
-                            const spaceBelow = window.innerHeight - rect.bottom;
-                            setMenuPos({ right: window.innerWidth - rect.right, openUp: spaceBelow < 260, top: rect.bottom + 4, bottom: window.innerHeight - rect.top + 4 });
-                            toggleMsgMenu(e, msg.id);
-                        }}
-                        title="More" style={toolbarBtn(openMsgMenuId === msg.id)}
-                        onMouseEnter={e => { if (openMsgMenuId !== msg.id) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { if (openMsgMenuId !== msg.id) e.currentTarget.style.color = 'var(--text-muted)'; }}
-                    ><MoreHorizontal size={14} /></button>
-                    {openMsgMenuId === msg.id && menuPos && (
-                        <div
-                            style={{
-                                position: 'fixed', zIndex: 999, width: '200px',
-                                backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
-                                borderRadius: '2px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                                paddingTop: '4px', paddingBottom: '4px', fontSize: '13px',
-                                right: menuPos.right, ...(menuPos.openUp ? { bottom: menuPos.bottom } : { top: menuPos.top })
-                            }}
-                        >
-
-                            {menuItem('Copy text',    <Copy size={13} />,         () => { navigator.clipboard.writeText(msg.text || msg.payload?.text || ''); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {menuItem('Reply',         <MessageSquare size={13} />,() => { replyToMessage?.(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {menuItem(msg.isPinned ? 'Unpin message' : 'Pin message', <Pin size={13} />, async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/pin`, { pin: !msg.isPinned }); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {menuItem('Message info', <Info size={13} />,           () => { infoMessage?.(msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {isMe && !msg.isDeleted && menuItem('Edit message', <Pencil size={13} />, () => { setIsEditing(true); setEditText(msg.decryptedContent || msg.text || ''); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-
-                            <div style={{ height: '1px', backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
-
-                            {menuItem(
-                                isBookmarked ? 'Remove Bookmark' : 'Save / Bookmark',
-                                <Bookmark size={13} style={{ fill: isBookmarked ? 'currentColor' : 'none' }} />,
-                                async () => { try { await api.post(`/api/v2/messages/${msg._id || msg.id}/bookmark`); onBookmarkToggle?.(msg._id || msg.id); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); },
-                                isBookmarked
-                            )}
-                            {onRemind && menuItem('Remind Me', <Bell size={13} />, () => { onRemind(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {onConvertToTask && menuItem('Convert to Task', <CheckSquare size={13} />, async () => { await onConvertToTask(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {(msg.replyCount > 0 || (threadCounts && threadCounts[msg.id] > 0)) && menuItem('Summarize Thread', <Sparkles size={13} />, async () => { toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {onShowHistory && msg.editHistory?.length > 0 && menuItem('Edit History', <History size={13} />, () => { onShowHistory(msg); toggleMsgMenu({ stopPropagation: () => {} }, null); })}
-                            {msg.text && menuItem(translationState?.status === 'done' ? 'Show original' : 'Translate', <Globe size={13} />, (e) => {
-                                if (translationState?.status === 'done') { onClearTranslation?.(msg._id || msg.id); toggleMsgMenu({ stopPropagation: () => {} }, null); return; }
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const spaceBelow = window.innerHeight - rect.bottom;
-                                setTranslatePopover({ pos: { right: window.innerWidth - rect.right, ...(spaceBelow < 240 ? { bottom: window.innerHeight - rect.top + 4 } : { top: rect.bottom + 4 }) } });
-                            })}
-                            {translatePopover && (
-                                <TranslatePopover
-                                    pos={translatePopover.pos}
-                                    status={translationState?.status === 'loading' ? 'loading' : translationState?.status === 'error' ? 'error' : null}
-                                    onSelect={(langCode) => { setLastLangCode(langCode); onTranslate?.(msg._id || msg.id, msg.text || '', langCode); setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); }}
-                                    onClose={() => { setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); }}
-                                    onRetry={() => { if (lastLangCode) { onTranslate?.(msg._id || msg.id, msg.text || '', lastLangCode); setTranslatePopover(null); toggleMsgMenu({ stopPropagation: () => {} }, null); } }}
-                                />
-                            )}
-
-                            {(isMe || isAdmin) && (
-                                <>
-                                    <div style={{ height: '1px', backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
-                                    {menuItem('Delete for me',       <Trash2 size={13} />, async () => { try { await deleteMessage(msg._id || msg.id, 'me'); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
-                                    {isMe && menuItem('Delete for everyone', <Trash2 size={13} />, async () => { try { await deleteMessage(msg._id || msg.id, 'everyone'); } catch {} toggleMsgMenu({ stopPropagation: () => {} }, null); }, false, true)}
-                                </>
-                            )}
-                        </div>
-                    )}
-                </div>
+                <button
+                    onClick={tb.openMenu}
+                    title="More" aria-haspopup="menu" aria-expanded={tb.menuOpen}
+                    style={toolbarBtn(tb.menuOpen)}
+                    onMouseEnter={e => { if (!tb.menuOpen) e.currentTarget.style.color = 'var(--text-primary)'; }}
+                    onMouseLeave={e => { if (!tb.menuOpen) e.currentTarget.style.color = 'var(--text-muted)'; }}
+                ><MoreHorizontal size={14} /></button>
             </div>
+            {tb.menuOpen && <MessageMoreMenu anchor={tb.menuAnchor} groups={tb.groups} onClose={tb.closeMenu} />}
+            {tb.translatePopover && (
+                <TranslatePopover
+                    pos={tb.translatePopover.pos}
+                    status={null}
+                    onSelect={tb.selectLanguage}
+                    onClose={tb.closeTranslatePopover}
+                    onRetry={tb.retryTranslation}
+                />
+            )}
         </div>
     );
 }
 
 export default ChannelMessageItem;
-
-function EditedBadge({ editHistory = [], editedAt, conversationId, conversationType }) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef(null);
-    const hasHistory = editHistory.length > 0;
-
-    
-    useEffect(() => {
-        if (!open) return;
-        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
-    }, [open]);
-
-    const formatTs = (ts) => {
-        if (!ts) return '';
-        const d = new Date(ts);
-        return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' at ' +
-               d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    };
-
-    return (
-        <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }} ref={ref}>
-            <button
-                onClick={() => hasHistory && setOpen(v => !v)}
-                style={{
-                    fontSize: '11px', fontStyle: 'italic', marginLeft: '4px',
-                    display: 'inline-flex', alignItems: 'center', gap: '4px',
-                    background: 'none', border: 'none', outline: 'none', padding: 0,
-                    color: hasHistory ? 'var(--accent)' : 'var(--text-muted)',
-                    cursor: hasHistory ? 'pointer' : 'default',
-                    transition: 'color 150ms ease',
-                    fontFamily: 'var(--font)',
-                }}
-                onMouseEnter={e => { if (hasHistory) e.currentTarget.style.color = 'var(--accent-hover)'; }}
-                onMouseLeave={e => { if (hasHistory) e.currentTarget.style.color = 'var(--accent)'; }}
-                title={hasHistory ? 'View edit history' : `Edited ${formatTs(editedAt)}`}
-            >
-                <History size={10} />
-                (edited)
-            </button>
-
-            {open && hasHistory && (
-                <div style={{
-                    position: 'absolute', bottom: '100%', left: 0, marginBottom: '6px',
-                    width: '280px', zIndex: 50, overflow: 'hidden',
-                    backgroundColor: 'var(--bg-surface)',
-                    border: '1px solid var(--border-accent)',
-                    borderRadius: '2px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.45)',
-                }}>
-                    {}
-                    <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '7px 12px', borderBottom: '1px solid var(--border-default)',
-                    }}>
-                        <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <History size={12} /> Edit History
-                        </span>
-                        <button
-                            onClick={() => setOpen(false)}
-                            style={{ background: 'none', border: 'none', outline: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', padding: '2px', borderRadius: '2px', transition: '100ms ease' }}
-                            onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                        >
-                            <X size={12} />
-                        </button>
-                    </div>
-
-                    {}
-                    <div style={{ maxHeight: '192px', overflowY: 'auto' }}>
-                        {[...editHistory].reverse().map((entry, i) => (
-                            <div key={i} style={{
-                                padding: '8px 12px',
-                                borderBottom: i < editHistory.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                            }}>
-                                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                                    {i === 0 ? 'Most recent previous version' : `Version ${editHistory.length - i}`}
-                                    {' · '}{formatTs(entry.editedAt)}
-                                </div>
-                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-words', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                                    {entry.isEncrypted && entry.ciphertext ? (
-                                        <EncryptedMessage
-                                            ciphertext={entry.ciphertext}
-                                            messageIv={entry.messageIv}
-                                            conversationId={conversationId}
-                                            conversationType={conversationType || 'channel'}
-                                            parentMessageId={null}
-                                        />
-                                    ) : entry.text && entry.text !== '[encrypted]' ? (
-                                        entry.text
-                                    ) : (
-                                        <span style={{ fontStyle: 'italic', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            🔒 Previous version was encrypted
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </span>
-    );
-}

@@ -4,6 +4,8 @@ const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
 const MessageReminder = require('../messages/MessageReminder');
 const Message = require('../messages/message.model');
+const { canAccessMessage } = require('../../modules/messages/messageAccess');
+const mongoose = require('mongoose');
 
 router.post('/messages/:id/remind', requireAuth, async (req, res) => {
   try {
@@ -18,13 +20,17 @@ router.post('/messages/:id/remind', requireAuth, async (req, res) => {
       return res.status(400).json({ message: 'remindAt must be a valid future date' });
     }
 
-    const message = await Message.findById(messageId).select('_id');
+    if (!mongoose.Types.ObjectId.isValid(messageId)) return res.status(400).json({ message: 'Invalid message id' });
+    const message = await Message.findById(messageId).select('_id channel dm');
     if (!message) return res.status(404).json({ message: 'Message not found' });
+    if (!(await canAccessMessage(message, userId))) {
+      return res.status(403).json({ message: 'You do not have access to this message' });
+    }
 
     
     const reminder = await MessageReminder.findOneAndUpdate(
       { userId, messageId },
-      { remindAt: remindDate, note: note.trim(), delivered: false, deliveredAt: null },
+      { remindAt: remindDate, note: String(note || '').trim().slice(0, 500), delivered: false, deliveredAt: null },
       { upsert: true, new: true }
     );
 
@@ -60,6 +66,7 @@ router.get('/reminders', requireAuth, async (req, res) => {
 router.delete('/reminders/:id', requireAuth, async (req, res) => {
   try {
     const userId = req.user.sub;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) return res.status(404).json({ message: 'Reminder not found' });
     const reminder = await MessageReminder.findOneAndDelete({
       _id: req.params.id,
       userId 

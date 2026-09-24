@@ -23,7 +23,12 @@ import ScheduleMeetingModal from './modals/ScheduleMeetingModal.jsx';
 
 import BookmarksPanel from './panels/BookmarksPanel.jsx';
 import ReminderPicker from './modals/ReminderPicker.jsx';
-import EditHistoryModal from './modals/EditHistoryModal.jsx';
+import ConvertToTaskModal from './modals/ConvertToTaskModal.jsx';
+import ThreadSummaryModal from './modals/ThreadSummaryModal.jsx';
+import MessageDiffViewer from '../MessageDiffViewer.jsx';
+import ConfirmationModal from '../../../shared/components/ui/ConfirmationModal.jsx';
+import { encryptMessageForSending } from '../../../services/messageEncryptionService';
+import { getMessageText, toggleBookmarkedBy, formatReminderTime } from '../../../utils/messageActionUtils';
 
 import useHeaderActions from './hooks/useHeaderActions.js';
 import useCanvasActions from './hooks/useCanvasActions.js';
@@ -130,6 +135,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [activeThread, setActiveThread] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
     const [typingUsers, setTypingUsers] = useState([]);
+    // A new conversation starts with nobody typing.
+    useEffect(() => { setTypingUsers([]); }, [chat?.id]);
     const typingTimersRef = useRef(new Map());
     useEffect(() => {
         const timers = typingTimersRef.current;
@@ -171,8 +178,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     const [forwardingMessageId, setForwardingMessageId] = useState(null);
     
-    const [messageInfoData, setMessageInfoData] = useState(null);
-    
     const [showPollModal, setShowPollModal] = useState(false);
     
     const [showContactModal, setShowContactModal] = useState(false);
@@ -180,8 +185,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [showMeetingModal, setShowMeetingModal] = useState(false);
     
     const [showBookmarks, setShowBookmarks] = useState(false);
-    const [reminderMsgId, setReminderMsgId] = useState(null);
+    // Message toolbar modals (one message each, null when closed).
+    const [reminderMsg, setReminderMsg] = useState(null);
     const [historyMsg, setHistoryMsg] = useState(null);
+    const [taskMsg, setTaskMsg] = useState(null);
+    const [summaryMsg, setSummaryMsg] = useState(null);
+    const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
     
     const [showSearch, setShowSearch] = useState(false);
@@ -397,6 +406,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
                         
                         ...(updates.editHistory !== undefined && { editHistory: updates.editHistory }),
+                        ...(updates.version !== undefined && { version: updates.version }),
+                        ...(updates.restoredFromVersion !== undefined && { restoredFromVersion: updates.restoredFromVersion }),
                         
                         ...(updates.payload?.ciphertext && {
                             ciphertext: updates.payload.ciphertext,
@@ -418,6 +429,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                         ...(updates.editedAt !== undefined && { editedAt: updates.editedAt }),
                         
                         ...(updates.editHistory !== undefined && { editHistory: updates.editHistory }),
+                        ...(updates.version !== undefined && { version: updates.version }),
+                        ...(updates.restoredFromVersion !== undefined && { restoredFromVersion: updates.restoredFromVersion }),
                         payload: payloadPatch
                     });
 
@@ -457,36 +470,22 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 break;
 
             case 'message-pinned':
-                
-                if (event.payload) {
-                    conversationRef.current.updateEvent(event.payload.messageId || event.payload._id, {
-                        
-                        isPinned: true,
-                        pinnedBy: event.payload.pinnedBy,
-                        pinnedAt: event.payload.pinnedAt,
-                        editedAt: event.payload.editedAt,
-                        payload: {
-                            ...event.payload,
-                            isPinned: true
-                        }
-                    });
-                }
-                break;
-
             case 'message-unpinned':
-                
+                // Only patch the pin fields; never replace the message payload
+                // (the event carries the ciphertext, not the decrypted message).
                 if (event.payload) {
+                    const pinned = event.payload.isPinned !== undefined
+                        ? !!event.payload.isPinned
+                        : event.type === 'message-pinned';
+                    const pinFields = {
+                        isPinned: pinned,
+                        pinnedBy: pinned ? (event.payload.pinnedBy ?? null) : null,
+                        pinnedByName: pinned ? (event.payload.pinnedByName ?? null) : null,
+                        pinnedAt: pinned ? (event.payload.pinnedAt ?? null) : null,
+                    };
                     conversationRef.current.updateEvent(event.payload.messageId || event.payload._id, {
-                        
-                        isPinned: false,
-                        pinnedBy: null,
-                        pinnedAt: null,
-                        payload: {
-                            ...event.payload,
-                            isPinned: false,
-                            pinnedBy: null,
-                            pinnedAt: null
-                        }
+                        ...pinFields,
+                        payload: pinFields,
                     });
                 }
                 break;
@@ -550,8 +549,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 break;
 
             case 'user-typing': {
-                const { userId, isTyping } = event.payload || {};
-                if (!userId) break;
+                const { userId, userName, isTyping } = event.payload || {};
+                if (!userId || String(userId) === String(currentUserId)) break;
+                const name = userName && userName !== 'Someone' ? userName : 'Someone';
                 const timers = typingTimersRef.current;
                 const existingTimer = timers.get(userId);
                 if (existingTimer) {
@@ -559,13 +559,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     timers.delete(userId);
                 }
                 if (isTyping) {
-                    setTypingUsers(prev => (prev.includes(userId) ? prev : [...prev, userId]));
+                    setTypingUsers(prev => (prev.some(u => u.id === userId) ? prev : [...prev, { id: userId, name }]));
+                    // Senders re-emit every ~2.5s while typing; drop them if that stops.
                     timers.set(userId, setTimeout(() => {
                         timers.delete(userId);
-                        setTypingUsers(prev => prev.filter(id => id !== userId));
-                    }, 3000));
+                        setTypingUsers(prev => prev.filter(u => u.id !== userId));
+                    }, 4000));
                 } else {
-                    setTypingUsers(prev => prev.filter(id => id !== userId));
+                    setTypingUsers(prev => prev.filter(u => u.id !== userId));
                 }
                 break;
             }
@@ -1056,57 +1057,228 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         setActiveThread(null);
     }, []);
 
-    
+    // ── Message toolbar actions (shared by channel + DM message items) ──
+    const patchEvent = useCallback((id, fields) => {
+        conversationRef.current?.updateEvent(id, fields);
+    }, []);
+
+    const isChannelAdmin = useMemo(() => {
+        if (chat?.type !== 'channel' || !currentUserId) return false;
+        const me = String(currentUserId);
+        return !!chat?.isAdmin
+            || (chat?.admins || []).some(a => String(a?._id || a) === me)
+            || String(chat?.createdBy?._id || chat?.createdBy || '') === me;
+    }, [chat?.type, chat?.isAdmin, chat?.admins, chat?.createdBy, currentUserId]);
+
+    const performDelete = useCallback(async (messageId, scope) => {
+        const existing = conversationRef.current?.events?.find(e => e.id === messageId);
+        if (scope === 'everyone' && existing) {
+            patchEvent(messageId, {
+                payload: { isDeleted: true, isDeletedUniversally: true, deletedBy: currentUserId, deletedByName: user?.username || null },
+            });
+        }
+        const result = await actions.deleteMessage(messageId, scope);
+        if (result?.success) {
+            if (scope === 'me') conversationRef.current?.removeEvent(messageId);
+            showToast(scope === 'me' ? 'Message deleted for you' : 'Message deleted for everyone', 'success');
+        } else {
+            if (scope === 'everyone' && existing) {
+                patchEvent(messageId, {
+                    payload: {
+                        isDeleted: existing.payload?.isDeleted || false,
+                        isDeletedUniversally: existing.payload?.isDeletedUniversally || false,
+                        deletedBy: existing.payload?.deletedBy || null,
+                        deletedByName: existing.payload?.deletedByName || null,
+                    },
+                });
+            }
+            showToast(result?.error || 'Failed to delete message', 'error');
+        }
+        return result;
+    }, [actions, patchEvent, currentUserId, user?.username, showToast]);
+
+    const [messageInfo, setMessageInfo] = useState(null);
+    const loadMessageInfo = useCallback(async (msg) => {
+        const id = msg._id || msg.id;
+        setMessageInfo({ msg, status: 'loading', data: null, error: null });
+        setActiveModal('message-info');
+        try {
+            const { data } = await api.get(`/api/v2/messages/${id}/info`);
+            setMessageInfo(cur => (cur && (cur.msg._id || cur.msg.id) === id ? { msg, status: 'done', data, error: null } : cur));
+        } catch (err) {
+            logger.error('[ChatWindowV2] Failed to fetch message info:', err);
+            setMessageInfo(cur => (cur && (cur.msg._id || cur.msg.id) === id
+                ? { msg, status: 'error', data: null, error: err?.response?.data?.message || 'Could not load message info' }
+                : cur));
+        }
+    }, []);
+
     const enhancedActions = useMemo(() => ({
         ...actions,
         sendMessage: handleSend,
-        
-        
+        isChannelAdmin,
+
+        // 'everyone' asks for confirmation first; 'me' is immediate.
         deleteMessage: async (messageId, scope = 'everyone') => {
-            const result = await actions.deleteMessage(messageId, scope);
-            if (result?.success && scope === 'me') {
-                conversation.removeEvent(messageId);
+            if (scope === 'everyone') {
+                setConfirmDeleteId(messageId);
+                return { success: false, pending: true };
             }
-            return result;
+            return performDelete(messageId, scope);
         },
-        
+
         forwardMessage: (messageId) => {
             setForwardingMessageId(messageId);
             setActiveModal('forward');
         },
-        
+
         replyToMessage: (message) => {
             setReplyingTo(message);
         },
-        
-        infoMessage: async (messageId, decryptedText) => {
+
+        copyText: async (msg) => {
+            const text = getMessageText(msg);
+            if (!text) { showToast('Nothing to copy', 'error'); return; }
             try {
-                const response = await api.get(`/api/v2/messages/${messageId}/info`);
-                
-                const data = response.data;
-                if (decryptedText && data.message) {
-                    data.message.text = decryptedText;
+                await navigator.clipboard.writeText(text);
+                showToast('Copied', 'success');
+            } catch {
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = text;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    showToast(ok ? 'Copied' : 'Could not copy text', ok ? 'success' : 'error');
+                } catch {
+                    showToast('Could not copy text', 'error');
                 }
-                setMessageInfoData(data);
-                setActiveModal('message-info');
-            } catch (err) {
-                logger.error('[ChatWindowV2] Failed to fetch message info:', err);
             }
         },
-        
-        onRemind: (messageId) => setReminderMsgId(messageId),
-        
-        onShowHistory: (msg) => setHistoryMsg(msg),
-        
-        onConvertToTask: async (messageId) => {
+
+        togglePin: async (msg) => {
+            const id = msg.id;
+            const next = !msg.isPinned;
+            const before = { isPinned: !!msg.isPinned, pinnedByName: msg.pinnedByName || null };
+            const set = (fields) => patchEvent(id, { ...fields, payload: fields });
+            set({ isPinned: next, pinnedByName: next ? (user?.username || 'You') : null });
             try {
-                await api.post(`/api/v2/messages/${messageId}/convert-task`);
-                showToast('Task created from message!', 'success');
+                await api.post(`/api/v2/messages/${id}/pin`, { pin: next });
+                showToast(next ? 'Message pinned' : 'Message unpinned', 'success');
             } catch (err) {
-                showToast(err?.response?.data?.message || 'Failed to create task', 'error');
+                set(before);
+                showToast(err?.response?.data?.message || `Failed to ${next ? 'pin' : 'unpin'} message`, 'error');
             }
         },
-    }), [actions, handleSend, showToast]); 
+
+        toggleBookmark: async (msg) => {
+            const id = msg.id;
+            const before = Array.isArray(msg.bookmarkedBy) ? msg.bookmarkedBy : [];
+            const optimistic = toggleBookmarkedBy(before, currentUserId);
+            patchEvent(id, { bookmarkedBy: optimistic.bookmarkedBy });
+            try {
+                const { data } = await api.post(`/api/v2/messages/${id}/bookmark`);
+                const saved = typeof data?.bookmarked === 'boolean' ? data.bookmarked : optimistic.bookmarked;
+                if (saved !== optimistic.bookmarked) {
+                    patchEvent(id, { bookmarkedBy: toggleBookmarkedBy(optimistic.bookmarkedBy, currentUserId).bookmarkedBy });
+                }
+                showToast(saved ? 'Saved' : 'Removed from saved', 'success');
+            } catch (err) {
+                patchEvent(id, { bookmarkedBy: before });
+                showToast(err?.response?.data?.message || 'Failed to update saved messages', 'error');
+            }
+        },
+
+        // Encrypts with the conversation key; never sends plaintext.
+        editMessage: async (msg, newText) => {
+            const text = (newText || '').trim();
+            if (!text) return false;
+            let enc = null;
+            try {
+                enc = await encryptMessageForSending(text, conversationId, conversationType);
+            } catch (err) {
+                logger.warn('[ChatWindowV2] Edit encryption failed:', err?.message);
+            }
+            if (!enc?.ciphertext || !enc?.messageIv) {
+                showToast('Could not encrypt your edit, so it was not saved. Try again once encryption is ready.', 'error');
+                return false;
+            }
+            const id = msg.id;
+            const existing = conversationRef.current?.events?.find(e => e.id === id);
+            const nowIso = new Date().toISOString();
+            const nextVersion = (Number(msg.version) || 1) + 1;
+            patchEvent(id, {
+                decryptedContent: text,
+                text,
+                editedAt: nowIso,
+                version: nextVersion,
+                restoredFromVersion: null,
+                payload: { editedAt: nowIso, ciphertext: enc.ciphertext, messageIv: enc.messageIv, isEncrypted: true, version: nextVersion, restoredFromVersion: null },
+            });
+            try {
+                const { data } = await api.patch(`/api/v2/messages/${id}`, { ciphertext: enc.ciphertext, messageIv: enc.messageIv });
+                const saved = data?.message;
+                if (saved) {
+                    const fields = {
+                        ...(saved.editedAt && { editedAt: saved.editedAt }),
+                        ...(saved.version !== undefined && { version: saved.version }),
+                        ...(Array.isArray(saved.editHistory) && { editHistory: saved.editHistory }),
+                    };
+                    patchEvent(id, { ...fields, payload: fields });
+                }
+                return true;
+            } catch (err) {
+                if (existing) {
+                    patchEvent(id, {
+                        decryptedContent: existing.decryptedContent,
+                        text: existing.text,
+                        editedAt: existing.editedAt,
+                        version: existing.version,
+                        restoredFromVersion: existing.restoredFromVersion,
+                        payload: {
+                            ...(existing.payload || {}),
+                            editedAt: existing.payload?.editedAt ?? null,
+                            version: existing.payload?.version ?? null,
+                            restoredFromVersion: existing.payload?.restoredFromVersion ?? null,
+                        },
+                    });
+                }
+                showToast(err?.response?.data?.message || 'Failed to edit message', 'error');
+                return false;
+            }
+        },
+
+        infoMessage: (msg) => loadMessageInfo(msg),
+        onRemind: (msg) => setReminderMsg(msg),
+        onShowHistory: (msg) => setHistoryMsg(msg),
+        onConvertToTask: (msg) => setTaskMsg(msg),
+        onSummarizeThread: (msg) => setSummaryMsg(msg),
+    }), [actions, handleSend, showToast, isChannelAdmin, performDelete, patchEvent, currentUserId, user?.username, conversationId, conversationType, loadMessageInfo]);
+
+    // Stream update after a version restore from the history viewer.
+    const handleVersionRestored = useCallback((message, plaintext, restoredVersion) => {
+        if (!historyMsg) return;
+        const id = historyMsg.id;
+        const restoredFrom = message?.restoredFromVersion ?? restoredVersion ?? null;
+        const editedAt = message?.editedAt || new Date().toISOString();
+        const payloadFields = {
+            editedAt,
+            restoredFromVersion: restoredFrom,
+            ...(message?.version !== undefined && { version: message.version }),
+            ...(message?.payload?.ciphertext && { ciphertext: message.payload.ciphertext, messageIv: message.payload.messageIv, isEncrypted: true }),
+        };
+        patchEvent(id, {
+            ...(plaintext != null && { decryptedContent: plaintext, text: plaintext }),
+            editedAt,
+            restoredFromVersion: restoredFrom,
+            ...(message?.version !== undefined && { version: message.version }),
+            ...(Array.isArray(message?.editHistory) && { editHistory: message.editHistory }),
+            payload: payloadFields,
+        });
+    }, [historyMsg, patchEvent]);
 
     
     const handleForward = useCallback(async (targets) => {
@@ -1209,7 +1381,6 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 chat={chat}
                 onClose={onClose}
                 connected={socket?.connected || false}
-                typingUsers={typingUsers}
                 onCreatePoll={() => setActiveModal('poll')}
                 showSearch={showSearch}
                 setShowSearch={setShowSearch}
@@ -1256,6 +1427,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
             {}
             <CentralContentView
+                typingUsers={typingUsers}
                 
                 activeTab={activeTab}
                 tabs={tabs}
@@ -1355,7 +1527,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             {}
             <ModalRenderer
                 activeModal={activeModal}
-                onClose={() => { setActiveModal(null); setForwardingMessageId(null); }}
+                onClose={() => { setActiveModal(null); setForwardingMessageId(null); setMessageInfo(null); }}
                 modalProps={{
                     
                     onCreate: handleCreatePoll,
@@ -1380,7 +1552,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                     onForward: handleForward,
 
                     
-                    messageInfoData,
+                    messageInfo,
+                    onRetryMessageInfo: messageInfo ? () => loadMessageInfo(messageInfo.msg) : undefined,
                 }}
             />
             {}
@@ -1391,12 +1564,52 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 channelName={chat?.name || ''}
             />
             {}
-            {reminderMsgId && (
+            {reminderMsg && (
                 <ReminderPicker
-                    messageId={reminderMsgId}
-                    onClose={() => setReminderMsgId(null)}
+                    messageId={reminderMsg._id || reminderMsg.id}
+                    onClose={() => setReminderMsg(null)}
+                    onSet={(_reminder, at) => showToast(`Reminder set for ${formatReminderTime(at)}`, 'success')}
                 />
             )}
+            {taskMsg && (
+                <ConvertToTaskModal
+                    msg={taskMsg}
+                    onClose={() => setTaskMsg(null)}
+                    onCreated={(task, title) => {
+                        showToast(`Task created: ${title}`, 'success');
+                        if (task?._id) patchEvent(taskMsg.id, { linkedTaskId: task._id });
+                    }}
+                />
+            )}
+            {summaryMsg && (
+                <ThreadSummaryModal
+                    msg={summaryMsg}
+                    conversationId={conversationId}
+                    conversationType={conversationType}
+                    onClose={() => setSummaryMsg(null)}
+                    showToast={showToast}
+                />
+            )}
+            {historyMsg && (
+                <MessageDiffViewer
+                    msg={historyMsg}
+                    conversationId={conversationId}
+                    conversationType={conversationType}
+                    currentUserId={currentUserId}
+                    onClose={() => setHistoryMsg(null)}
+                    onRestored={handleVersionRestored}
+                    showToast={showToast}
+                />
+            )}
+            <ConfirmationModal
+                isOpen={!!confirmDeleteId}
+                onClose={() => setConfirmDeleteId(null)}
+                onConfirm={() => { const id = confirmDeleteId; if (id) performDelete(id, 'everyone'); }}
+                title="Delete for everyone"
+                message="This message will be removed for everyone in this conversation. This cannot be undone."
+                confirmText="Delete"
+                variant="danger"
+            />
             {}
             <ContactPickerModal
                 isOpen={showContactModal}

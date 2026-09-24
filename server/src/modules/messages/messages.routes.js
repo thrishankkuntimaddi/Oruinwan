@@ -15,6 +15,8 @@ router.post('/ai/suggestions',    messagesController.getSmartReplies);
 router.post('/ai/translate',      messagesController.translateMessage);
 router.post('/ai/thread-summary', messagesController.getThreadSummary);
 
+router.get('/bookmarks',                messagesController.getBookmarks);
+
 router.get('/reminders',                messagesController.getUserReminders);
 router.delete('/reminders/:reminderId', messagesController.cancelReminder);
 
@@ -133,6 +135,7 @@ router.get('/missed', async (req, res) => {
 router.get('/:messageId/info', messagesController.getMessageInfo);
 
 router.post('/:messageId/vote', messagesController.voteOnPoll);
+router.post('/:messageId/poll/close', messagesController.closePoll);
 
 router.patch('/:messageId', messagesController.editMessage);
 
@@ -151,6 +154,12 @@ router.post('/:messageId/reminder', messagesController.scheduleReminder);
 router.post('/:messageId/checklist/:itemIdx', messagesController.checklistToggle);
 
 router.get('/:messageId/diff', messagesController.getMessageDiff);
+
+router.get('/:messageId/versions', messagesController.getMessageVersions);
+
+router.post('/:messageId/restore', messagesController.restoreMessageVersion);
+
+router.post('/:messageId/bookmark', messagesController.toggleBookmark);
 
 router.post('/:messageId/convert-task', messagesController.convertToTask);
 

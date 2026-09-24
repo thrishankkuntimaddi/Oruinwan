@@ -82,7 +82,7 @@ export default function AttachMenu({
         { label: "Document",   icon: <FileText size={16} />, action: () => fileInputRef.current?.click() },
         { label: "Voice Note", icon: <Mic size={16} />,      action: () => { onClose?.(); onOpenVoiceRecorder?.(); }, hide: !onOpenVoiceRecorder },
         { label: "Contact",    icon: <User size={16} />,     action: () => { onAttach?.("contact"); onClose?.(); } },
-        { label: "Poll",       icon: <BarChart2 size={16} />,action: () => { onCreatePoll?.(); onClose?.(); }, hide: !onCreatePoll || conversationType === 'dm' },
+        { label: "Poll",       icon: <BarChart2 size={16} />,action: () => { onCreatePoll?.(); onClose?.(); }, hide: !onCreatePoll },
         { label: "Meeting",    icon: <Calendar size={16} />, action: () => { onAttach?.("meeting"); onClose?.(); } },
     ].filter(i => !i.hide);
 

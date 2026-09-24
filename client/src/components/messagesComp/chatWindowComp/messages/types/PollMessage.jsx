@@ -1,272 +1,247 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { BarChart2, Users, Clock, Lock, CheckCircle, Circle, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { BarChart2, Users, Clock, Lock, Check, Loader2, ChevronDown, ChevronUp, StopCircle } from 'lucide-react';
 import api from '@services/api';
+import logger from '../../../../../utils/logger';
 
-function formatDate(dateStr) {
+/*
+ * Poll card rendered inside a message row.
+ *
+ * Votes are applied optimistically: the card updates the instant an option is
+ * clicked, the request runs in the background, and the server's answer (or the
+ * realtime `poll:vote_updated` broadcast) replaces the local state. On failure
+ * the previous state is restored.
+ */
+
+const idOf = (v) => (v && typeof v === 'object' ? String(v._id ?? v.id ?? '') : String(v ?? ''));
+
+function formatEnd(dateStr) {
     if (!dateStr) return null;
-    return new Date(dateStr).toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'
-    });
+    return new Date(dateStr).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+/** Apply a user's new selection to a poll locally (mirrors the server rules). */
+function applyVote(poll, userId, indices, userName) {
+    const me = String(userId);
+    const options = poll.options.map((opt, i) => {
+        const others = (opt.votes || []).filter((v) => idOf(v) !== me);
+        return indices.includes(i)
+            ? { ...opt, votes: [...others, { _id: me, username: userName || 'You' }] }
+            : { ...opt, votes: others };
+    });
+    const voters = new Set();
+    options.forEach((o) => o.votes.forEach((v) => voters.add(idOf(v))));
+    return { ...poll, options, totalVotes: voters.size };
+}
+
+const S = {
+    card: {
+        marginTop: '4px', maxWidth: '420px', border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--bg-surface)', borderRadius: '4px', overflow: 'hidden',
+    },
+    head: { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 14px 4px' },
+    badge: {
+        fontSize: '10px', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase',
+        color: 'var(--accent)', backgroundColor: 'var(--accent-dim, rgba(184,149,106,0.12))',
+        padding: '2px 6px', borderRadius: '2px',
+    },
+    question: { fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.4, padding: '4px 14px 0', margin: 0 },
+    meta: { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', padding: '4px 14px 10px', fontSize: '11px', color: 'var(--text-muted)' },
+    metaItem: { display: 'inline-flex', alignItems: 'center', gap: '4px' },
+    options: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '0 10px 10px' },
+    footer: {
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px',
+        padding: '8px 14px', borderTop: '1px solid var(--border-subtle)', fontSize: '11px', color: 'var(--text-muted)',
+    },
+};
+
 export default function PollMessage({ msg, currentUserId }) {
-    const poll = msg?.poll;
     const messageId = msg?._id || msg?.id;
+    const incoming = msg?.poll || null;
 
-    const [localPoll, setLocalPoll] = useState(poll);
-    const [pending, setPending] = useState(false);
+    const [poll, setPoll] = useState(incoming);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [closing, setClosing] = useState(false);
     const [error, setError] = useState(null);
-    
-    const [expandedVoters, setExpandedVoters] = useState(null);
+    const [expanded, setExpanded] = useState(null);
+    const lastConfirmed = useRef(incoming);
 
-    
+    // Server/realtime updates always win over local optimistic state.
     useEffect(() => {
-        if (poll) setLocalPoll(poll);
-    }, [poll]);
-
-    if (!localPoll) return null;
-
-    const {
-        question,
-        options = [],
-        allowMultiple = false,
-        anonymous = false,
-        endDate,
-        isActive = true,
-        totalVotes = 0,
-        createdBy,
-    } = localPoll;
-
-    
-    const creatorName = msg?.sender?.username || msg?.payload?.sender?.username || null;
-
-    const isExpired = endDate ? new Date(endDate) < new Date() : false;
-    const closed = !isActive || isExpired;
-
-    
-    const userIdStr = currentUserId?.toString();
-    const userVotedIndices = useMemo(() =>
-        options.reduce((acc, opt, i) => {
-            const voted = opt.votes?.some(v =>
-                (v._id?.toString() || v?.toString()) === userIdStr
-            );
-            if (voted) acc.push(i);
-            return acc;
-        }, []),
-        [options, userIdStr]
-    );
-    const hasVoted = userVotedIndices.length > 0;
-    
-    const canVote = !closed && !pending;
-
-    
-    const optionsWithStats = useMemo(() =>
-        options.map((opt, i) => {
-            const count = opt.votes?.length || 0;
-            const pct = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
-            
-            const voterNames = !anonymous
-                ? (opt.votes || []).map(v => v.username || v.name || '?')
-                : [];
-            return { ...opt, voteCount: count, percentage: pct, index: i, voterNames };
-        }),
-        [options, totalVotes, anonymous]
-    );
-
-    
-    const submitVote = useCallback(async (indices) => {
-        if (!indices) return;
-        setPending(true);
-        setError(null);
-        try {
-            const { data } = await api.post(`/api/v2/messages/${messageId}/vote`, {
-                optionIndices: indices,
-            });
-            setLocalPoll(data.message?.poll || localPoll);
-        } catch (err) {
-            setError(err?.response?.data?.message || 'Vote failed. Try again.');
-        } finally {
-            setPending(false);
+        if (incoming) {
+            lastConfirmed.current = incoming;
+            setPoll(incoming);
         }
-    }, [messageId, localPoll]);
+    }, [incoming]);
 
-    
-    const handleOptionClick = useCallback((idx) => {
-        if (!canVote) return;
+    const me = currentUserId ? String(currentUserId) : '';
+    const options = useMemo(() => poll?.options || [], [poll]);
+    const totalVotes = poll?.totalVotes || 0;
+    const allowMultiple = !!poll?.allowMultiple;
+    const anonymous = !!poll?.anonymous;
+    const isExpired = poll?.endDate ? new Date(poll.endDate) < new Date() : false;
+    const closed = poll ? (poll.isActive === false || isExpired) : true;
+    const creatorId = idOf(poll?.createdBy || msg?.sender);
+    const isCreator = !!me && creatorId === me;
 
-        
-        
-        
-        const alreadyVotedHere = userVotedIndices.includes(idx);
-
-        let newIndices;
-        if (!allowMultiple) {
-            
-            newIndices = alreadyVotedHere ? [] : [idx];
-        } else {
-            
-            newIndices = alreadyVotedHere
-                ? userVotedIndices.filter(i => i !== idx)
-                : [...userVotedIndices, idx];
-        }
-
-        submitVote(newIndices);
-    }, [canVote, allowMultiple, userVotedIndices, submitVote]);
-
-    const toggleVotersList = (idx) => {
-        setExpandedVoters(prev => prev === idx ? null : idx);
-    };
-
+    const myVotes = useMemo(
+        () => options.reduce((acc, opt, i) => ((opt.votes || []).some((v) => idOf(v) === me) ? [...acc, i] : acc), []),
+        [options, me]
+    );
+    const hasVoted = myVotes.length > 0;
     const showResults = hasVoted || closed;
 
+    const rows = useMemo(() => options.map((opt, i) => {
+        const count = opt.votes?.length || 0;
+        return {
+            text: opt.text,
+            index: i,
+            count,
+            pct: totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0,
+            voters: anonymous ? [] : (opt.votes || []).map((v) => (typeof v === 'object' ? v.username : null)).filter(Boolean),
+        };
+    }), [options, totalVotes, anonymous]);
+
+    const vote = useCallback(async (indices) => {
+        if (!poll || closed || !messageId) return;
+        setError(null);
+        // Optimistic: show the result immediately.
+        setPoll((p) => applyVote(p, me, indices));
+        setPendingCount((n) => n + 1);
+        try {
+            const { data } = await api.post(`/api/v2/messages/${messageId}/vote`, { optionIndices: indices });
+            if (data?.message?.poll) {
+                lastConfirmed.current = data.message.poll;
+                setPoll(data.message.poll);
+            }
+        } catch (err) {
+            logger.error('[Poll] vote failed:', err);
+            setPoll(lastConfirmed.current);
+            setError(err?.response?.data?.message || 'Vote failed. Try again.');
+        } finally {
+            setPendingCount((n) => n - 1);
+        }
+    }, [poll, closed, messageId, me]);
+
+    const onOption = useCallback((idx) => {
+        if (closed) return;
+        const mine = myVotes.includes(idx);
+        const next = allowMultiple
+            ? (mine ? myVotes.filter((i) => i !== idx) : [...myVotes, idx])
+            : (mine ? [] : [idx]);
+        vote(next);
+    }, [closed, myVotes, allowMultiple, vote]);
+
+    const endPoll = useCallback(async () => {
+        if (!messageId || closing) return;
+        setClosing(true);
+        setError(null);
+        try {
+            const { data } = await api.post(`/api/v2/messages/${messageId}/poll/close`);
+            if (data?.message?.poll) {
+                lastConfirmed.current = data.message.poll;
+                setPoll(data.message.poll);
+            }
+        } catch (err) {
+            setError(err?.response?.data?.message || 'Could not end the poll.');
+        } finally {
+            setClosing(false);
+        }
+    }, [messageId, closing]);
+
+    if (!poll) return null;
+
     return (
-        <div className="mt-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden max-w-sm shadow-sm">
-            {}
-            <div className="flex items-center gap-2 px-4 pt-3 pb-1">
-                <div className="w-7 h-7 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center flex-shrink-0">
-                    <BarChart2 size={14} className="text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                        {creatorName && (
-                            <span className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">
-                                {creatorName}
-                            </span>
-                        )}
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 uppercase tracking-wide whitespace-nowrap">
-                            {allowMultiple ? 'Multiple Choice' : 'Single Choice'} Poll
-                        </span>
-                    </div>
-                </div>
+        <div style={S.card}>
+            <div style={S.head}>
+                <BarChart2 size={14} style={{ color: 'var(--accent)' }} />
+                <span style={S.badge}>{allowMultiple ? 'Multiple choice' : 'Poll'}</span>
+                {closed && <span style={{ ...S.badge, color: 'var(--text-muted)', backgroundColor: 'var(--bg-active)' }}>Closed</span>}
             </div>
 
-            {}
-            <div className="px-4 pt-1 pb-2">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug">
-                    {question}
-                </h3>
-                <div className="flex items-center gap-3 mt-1 text-[11px] text-gray-400 dark:text-gray-500">
-                    <span className="flex items-center gap-1">
-                        <Users size={10} />
-                        {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
-                    </span>
-                    {endDate && (
-                        <span className="flex items-center gap-1">
-                            <Clock size={10} />
-                            {isExpired ? 'Ended' : 'Ends'} {formatDate(endDate)}
-                        </span>
-                    )}
-                    {anonymous && (
-                        <span className="flex items-center gap-1">
-                            <Lock size={10} />
-                            Anonymous
-                        </span>
-                    )}
-                    {closed && (
-                        <span className="text-orange-500 dark:text-orange-400 font-semibold">Closed</span>
-                    )}
-                </div>
+            <p style={S.question}>{poll.question}</p>
+
+            <div style={S.meta}>
+                <span style={S.metaItem}><Users size={11} /> {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}</span>
+                {poll.endDate && <span style={S.metaItem}><Clock size={11} /> {isExpired ? 'Ended' : 'Ends'} {formatEnd(poll.endDate)}</span>}
+                {anonymous && <span style={S.metaItem}><Lock size={11} /> Anonymous</span>}
             </div>
 
-            {}
-            <div className="px-3 pb-1 space-y-1.5">
-                {optionsWithStats.map((opt) => {
-                    const isUserVote = userVotedIndices.includes(opt.index);
-                    const isExpanded = expandedVoters === opt.index;
-
+            <div style={S.options}>
+                {rows.map((row) => {
+                    const mine = myVotes.includes(row.index);
+                    const open = expanded === row.index;
                     return (
-                        <div key={opt.index}>
+                        <div key={row.index}>
                             <button
-                                onClick={() => handleOptionClick(opt.index)}
-                                disabled={pending || closed}
-                                className={`w-full text-left rounded-xl border transition-all relative overflow-hidden
-                                    ${closed
-                                        ? 'cursor-not-allowed opacity-60'
-                                        : 'cursor-pointer active:scale-[0.98]'
-                                    }
-                                    ${isUserVote
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                                        : 'border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-750 hover:border-blue-300 dark:hover:border-blue-600'
-                                    }`}
+                                type="button"
+                                onClick={() => onOption(row.index)}
+                                disabled={closed}
+                                aria-pressed={mine}
+                                style={{
+                                    position: 'relative', width: '100%', textAlign: 'left', overflow: 'hidden',
+                                    padding: '9px 12px', borderRadius: '3px', fontFamily: 'inherit',
+                                    border: `1px solid ${mine ? 'var(--accent)' : 'var(--border-default)'}`,
+                                    backgroundColor: 'var(--bg-input)', color: 'var(--text-primary)',
+                                    cursor: closed ? 'default' : 'pointer', transition: 'border-color 120ms ease',
+                                }}
+                                onMouseEnter={(e) => { if (!closed && !mine) e.currentTarget.style.borderColor = 'var(--border-hover)'; }}
+                                onMouseLeave={(e) => { if (!mine) e.currentTarget.style.borderColor = 'var(--border-default)'; }}
                             >
-                                {}
-                                {showResults && opt.percentage > 0 && (
-                                    <div
-                                        className={`absolute left-0 top-0 bottom-0 rounded-xl transition-all duration-700 ease-out
-                                            ${isUserVote
-                                                ? 'bg-blue-200 dark:bg-blue-800/50'
-                                                : 'bg-gray-200 dark:bg-gray-600/40'
-                                            }`}
-                                        style={{ width: `${opt.percentage}%` }}
+                                {showResults && (
+                                    <span
+                                        aria-hidden
+                                        style={{
+                                            position: 'absolute', inset: 0, width: `${row.pct}%`,
+                                            backgroundColor: mine ? 'rgba(184,149,106,0.18)' : 'var(--bg-active)',
+                                            transition: 'width 350ms cubic-bezier(0.16,1,0.3,1)',
+                                        }}
                                     />
                                 )}
-
-                                <div className="relative z-10 flex items-center justify-between px-3 py-2.5">
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        {}
-                                        {!hasVoted && !closed ? (
-                                            allowMultiple
-                                                ? <div className="w-4 h-4 rounded border-2 border-gray-300 dark:border-gray-500 flex-shrink-0" />
-                                                : <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-500 flex-shrink-0" />
-                                        ) : isUserVote ? (
-                                            <CheckCircle size={16} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                                        ) : (
-                                            <div className="w-4 h-4 flex-shrink-0" />
-                                        )}
-                                        <span className={`text-sm font-medium truncate
-                                            ${isUserVote
-                                                ? 'text-blue-700 dark:text-blue-300'
-                                                : 'text-gray-800 dark:text-gray-200'
-                                            }`}>
-                                            {opt.text}
+                                <span style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                                        <span
+                                            aria-hidden
+                                            style={{
+                                                width: '14px', height: '14px', flexShrink: 0,
+                                                borderRadius: allowMultiple ? '2px' : '50%',
+                                                border: `1.5px solid ${mine ? 'var(--accent)' : 'var(--text-muted)'}`,
+                                                backgroundColor: mine ? 'var(--accent)' : 'transparent',
+                                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                            }}
+                                        >
+                                            {mine && <Check size={10} strokeWidth={3} style={{ color: 'var(--bg-base, #0c0c0c)' }} />}
                                         </span>
-                                    </div>
-
+                                        <span style={{ fontSize: '13px', fontWeight: mine ? 600 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {row.text}
+                                        </span>
+                                    </span>
                                     {showResults && (
-                                        <div className="flex items-center gap-1.5 ml-2 flex-shrink-0">
-                                            <span className={`text-xs font-bold tabular-nums
-                                                ${isUserVote
-                                                    ? 'text-blue-600 dark:text-blue-400'
-                                                    : 'text-gray-500 dark:text-gray-400'
-                                                }`}>
-                                                {opt.percentage}%
-                                            </span>
-                                            <span className="text-[10px] text-gray-400">({opt.voteCount})</span>
-                                            {!anonymous && opt.voteCount > 0 && (
-                                                <div
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flexShrink: 0, fontSize: '12px', color: mine ? 'var(--accent)' : 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>
+                                            <strong>{row.pct}%</strong>
+                                            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{row.count}</span>
+                                            {!anonymous && row.voters.length > 0 && (
+                                                <span
                                                     role="button"
                                                     tabIndex={0}
-                                                    onClick={(e) => { e.stopPropagation(); toggleVotersList(opt.index); }}
-                                                    onKeyDown={(e) => e.key === 'Enter' && toggleVotersList(opt.index)}
-                                                    className="p-0.5 hover:text-blue-500 transition-colors cursor-pointer"
+                                                    title="Who voted"
+                                                    onClick={(e) => { e.stopPropagation(); setExpanded(open ? null : row.index); }}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setExpanded(open ? null : row.index); } }}
+                                                    style={{ display: 'inline-flex', color: 'var(--text-muted)' }}
                                                 >
-                                                    {isExpanded
-                                                        ? <ChevronUp size={12} className="text-gray-400" />
-                                                        : <ChevronDown size={12} className="text-gray-400" />
-                                                    }
-                                                </div>
+                                                    {open ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                                </span>
                                             )}
-                                        </div>
+                                        </span>
                                     )}
-                                </div>
+                                </span>
                             </button>
-
-                            {}
-                            {isExpanded && !anonymous && opt.voterNames.length > 0 && (
-                                <div className="mt-1 ml-3 px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-100 dark:border-gray-600">
-                                    <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
-                                        Voted by
-                                    </p>
-                                    <div className="flex flex-wrap gap-1">
-                                        {opt.voterNames.map((name, i) => (
-                                            <span
-                                                key={i}
-                                                className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-medium"
-                                            >
-                                                {name}
-                                            </span>
-                                        ))}
-                                    </div>
+                            {open && row.voters.length > 0 && (
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', padding: '6px 4px 2px' }}>
+                                    {row.voters.map((name, i) => (
+                                        <span key={i} style={{ fontSize: '11px', color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '1px 6px', borderRadius: '2px' }}>
+                                            {name}
+                                        </span>
+                                    ))}
                                 </div>
                             )}
                         </div>
@@ -274,33 +249,31 @@ export default function PollMessage({ msg, currentUserId }) {
                 })}
             </div>
 
-            {}
-            {pending && (
-                <div className="px-3 pb-3 pt-1 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
-                    <Loader2 size={12} className="animate-spin" />
-                    Submitting vote…
-                </div>
-            )}
+            {error && <div style={{ padding: '0 14px 8px', fontSize: '11px', color: 'var(--text-danger, #e05252)' }}>{error}</div>}
 
-            {}
-            {error && (
-                <div className="px-4 pb-3">
-                    <p className="text-xs text-red-500 dark:text-red-400">{error}</p>
-                </div>
-            )}
-
-            {}
-            <div className="px-4 pb-3 pt-0.5">
-                {hasVoted && !closed && (
-                    <p className="text-[11px] text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                        <CheckCircle size={10} />
-                        You voted · Tap an option to see who voted
-                    </p>
-                )}
-                {!hasVoted && !closed && (
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                        {allowMultiple ? 'Tap options to toggle your vote' : 'Tap an option to vote instantly'}
-                    </p>
+            <div style={S.footer}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    {pendingCount > 0 && <Loader2 size={11} className="animate-spin" />}
+                    {closed
+                        ? 'Voting has ended'
+                        : hasVoted
+                            ? 'You voted. Click again to change.'
+                            : allowMultiple ? 'Select one or more options' : 'Select one option'}
+                </span>
+                {isCreator && !closed && (
+                    <button
+                        type="button"
+                        onClick={endPoll}
+                        disabled={closing}
+                        style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 500,
+                            color: 'var(--text-secondary)', background: 'transparent', border: '1px solid var(--border-default)',
+                            borderRadius: '2px', padding: '3px 8px', cursor: closing ? 'default' : 'pointer', fontFamily: 'inherit',
+                        }}
+                    >
+                        {closing ? <Loader2 size={11} className="animate-spin" /> : <StopCircle size={11} />}
+                        End poll
+                    </button>
                 )}
             </div>
         </div>

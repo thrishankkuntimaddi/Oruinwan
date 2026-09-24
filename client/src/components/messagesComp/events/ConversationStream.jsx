@@ -306,6 +306,7 @@ function ConversationStream({
                         event={event}
                         actions={actions}
                         isDM={true}
+                        onThreadOpen={onThreadOpen}
                         onReply={onReply}
                         currentUserId={currentUserId}
                         openMsgMenuId={openMsgMenuId}

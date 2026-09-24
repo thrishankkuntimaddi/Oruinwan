@@ -23,7 +23,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
         setLoading(true);
         setError(null);
         try {
-            const res = await api.get("/api/messages/bookmarks");
+            const res = await api.get("/api/v2/messages/bookmarks");
             setMessages(res.data.messages || []);
         } catch (err) {
             setError("Failed to load bookmarks");
@@ -36,7 +36,7 @@ export default function BookmarksPanel({ open, onClose, onJumpToMessage, inline 
 
     const handleRemoveBookmark = useCallback(async (messageId) => {
         try {
-            await api.post(`/api/messages/${messageId}/bookmark`);
+            await api.post(`/api/v2/messages/${messageId}/bookmark`);
             setMessages(prev => prev.filter(m => m._id !== messageId));
         } catch {  }
     }, []);

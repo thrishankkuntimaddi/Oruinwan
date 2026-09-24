@@ -259,6 +259,9 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
                         editedAt: data.editedAt,
                         
                         editHistory: data.editHistory || [],
+                        ...(data.version !== undefined && { version: data.version }),
+                        // Normal edits clear it, restores set it.
+                        restoredFromVersion: data.restoredFromVersion ?? null,
                         
                         ...(data.payload?.ciphertext && {
                             payload: {

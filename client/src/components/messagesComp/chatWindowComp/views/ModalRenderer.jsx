@@ -34,7 +34,8 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
         onForward,
 
         
-        messageInfoData,
+        messageInfo,
+        onRetryMessageInfo,
     } = modalProps || {};
 
     switch (activeModal) {
@@ -61,11 +62,10 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
         case 'message-info':
             return (
                 <MessageInfoModal
-                    msg={messageInfoData?.message}
-                    members={messageInfoData?.members || []}
-                    readBy={messageInfoData?.readBy || []}
-                    currentUserId={currentUserId}
+                    info={messageInfo}
+                    msg={messageInfo?.msg}
                     onClose={onClose}
+                    onRetry={onRetryMessageInfo}
                 />
             );
 

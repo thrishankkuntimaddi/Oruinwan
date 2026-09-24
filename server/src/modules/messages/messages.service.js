@@ -7,6 +7,8 @@ const Workspace = require('../../../models/Workspace');
 const {} = require('../../../utils/memberHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
 const logger = require('../../shared/utils/logger');
+const mongoose = require('mongoose');
+const { loadAccessibleMessage } = require('./messageAccess');
 
 async function createMessage(messageData, io = null) {
     const {
@@ -548,64 +550,132 @@ async function getUserDMSessions(userId, workspaceId) {
     return sessionList;
 }
 
+function httpError(status, message) {
+    return Object.assign(new Error(message), { status });
+}
+
+function roomFor(message) {
+    if (message.channel) return `channel:${message.channel._id || message.channel}`;
+    if (message.dm) return `dm:${message.dm._id || message.dm}`;
+    return null;
+}
+
+/** Snapshot of the message's current content in the editHistory entry shape. */
+function snapshotCurrentContent(message) {
+    const encrypted = !!message.payload?.ciphertext;
+    return {
+        text: encrypted ? null : (message.text || ''),
+        ciphertext: encrypted ? message.payload.ciphertext : null,
+        messageIv: encrypted ? (message.payload.messageIv || null) : null,
+        isEncrypted: encrypted,
+        // When this state became current: last edit, or creation for the original.
+        editedAt: message.editedAt || message.createdAt || message.updatedAt || new Date(),
+        restoredFromVersion: message.restoredFromVersion ?? null,
+    };
+}
+
 async function editMessage(messageId, userId, { text, ciphertext, messageIv } = {}, io) {
+    const hasCipher = typeof ciphertext === 'string' && ciphertext.trim() !== '';
+    const hasText = typeof text === 'string' && text.trim() !== '';
+    if (!hasCipher && !hasText) throw httpError(400, 'Edit cannot be empty');
+    if (hasCipher && !(typeof messageIv === 'string' && messageIv.trim() !== '')) {
+        throw httpError(400, 'messageIv is required with ciphertext');
+    }
+
     const message = await Message.findById(messageId)
         .populate('sender', 'username email profilePicture');
-    if (!message) throw new Error('Message not found');
+    if (!message) throw httpError(404, 'Message not found');
 
     if (message.sender._id.toString() !== userId.toString()) {
-        const err = new Error('Unauthorized: only the sender can edit this message');
-        err.status = 403;
-        throw err;
+        throw httpError(403, 'Unauthorized: only the sender can edit this message');
     }
 
-    if (message.isDeleted) {
-        const err = new Error('Cannot edit a deleted message');
-        err.status = 400;
-        throw err;
+    if (message.isDeleted || message.isDeletedUniversally) {
+        throw httpError(400, 'Cannot edit a deleted message');
     }
 
-    if (ciphertext && messageIv) {
-        
-        
-        message.editHistory = message.editHistory || [];
-        message.editHistory.push({
-            text: null,
-            ciphertext: message.payload?.ciphertext || null,
-            messageIv: message.payload?.messageIv || null,
-            isEncrypted: true,
-            editedAt: message.editedAt || message.updatedAt || new Date()
-        });
-        message.markModified('editHistory');
+    if (hasCipher && message.payload?.ciphertext === ciphertext) {
+        throw httpError(400, 'Edit is identical to the current message');
+    }
+    if (!hasCipher && message.text === text) {
+        throw httpError(400, 'Edit is identical to the current message');
+    }
 
-        message.payload = {
-            ...(message.payload || {}),
-            ciphertext,
-            messageIv,
-            isEncrypted: true
-        };
+    message.editHistory = message.editHistory || [];
+    message.editHistory.push(snapshotCurrentContent(message));
+    message.markModified('editHistory');
+
+    if (hasCipher) {
+        const prev = message.payload?.toObject ? message.payload.toObject() : (message.payload || {});
+        message.payload = { ...prev, ciphertext, messageIv, isEncrypted: true };
         message.markModified('payload');
-    } else if (text) {
-        
-        message.editHistory = message.editHistory || [];
-        message.editHistory.push({
-            text: message.text || '',
-            editedAt: message.editedAt || message.updatedAt || new Date()
-        });
-        message.markModified('editHistory');
-
+    } else {
         message.text = text;
     }
 
+    message.restoredFromVersion = null;
     message.editedAt = new Date();
     message.version = (message.version || 1) + 1;
     await message.save();
 
-    const room = message.channel
-        ? `channel:${message.channel}`
-        : `dm:${message.dm}`;
+    const room = roomFor(message);
+    if (io && room) {
+        io.to(room).emit('message:edited', message.toObject());
+    }
 
-    if (io) {
+    return message;
+}
+
+/**
+ * Restore an older version of a message. The current content is pushed into
+ * editHistory first, so no version is ever lost.
+ */
+async function restoreMessageVersion(messageId, userId, versionIndex, io) {
+    const message = await Message.findById(messageId)
+        .populate('sender', 'username email profilePicture');
+    if (!message) throw httpError(404, 'Message not found');
+
+    const senderId = message.sender?._id || message.sender;
+    if (String(senderId) !== String(userId)) {
+        throw httpError(403, 'Only the sender can restore a previous version');
+    }
+    if (message.isDeleted || message.isDeletedUniversally) {
+        throw httpError(400, 'Cannot restore a deleted message');
+    }
+
+    const history = message.editHistory || [];
+    const idx = Number(versionIndex);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= history.length) {
+        throw httpError(400, 'Invalid versionIndex');
+    }
+
+    const target = history[idx];
+    const targetVersion = idx + 1;
+    const targetEncrypted = !!(target.ciphertext && target.messageIv);
+    if (!targetEncrypted && (target.text === null || target.text === undefined)) {
+        throw httpError(400, 'Selected version has no restorable content');
+    }
+
+    history.push(snapshotCurrentContent(message));
+    message.editHistory = history;
+    message.markModified('editHistory');
+
+    const prev = message.payload?.toObject ? message.payload.toObject() : (message.payload || {});
+    if (targetEncrypted) {
+        message.payload = { ...prev, ciphertext: target.ciphertext, messageIv: target.messageIv, isEncrypted: true };
+    } else {
+        message.payload = { ...prev, ciphertext: undefined, messageIv: undefined, isEncrypted: false };
+        message.text = target.text;
+    }
+    message.markModified('payload');
+
+    message.restoredFromVersion = targetVersion;
+    message.editedAt = new Date();
+    message.version = (message.version || 1) + 1;
+    await message.save();
+
+    const room = roomFor(message);
+    if (io && room) {
         io.to(room).emit('message:edited', message.toObject());
     }
 
@@ -801,33 +871,83 @@ async function resolveThread(messageId, userId, io) {
     };
 }
 
-async function convertToTask(messageId, userId, taskData, io) {
-    const message = await Message.findById(messageId)
-        .populate('sender', 'username')
-        .lean();
-    if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
-    if (message.linkedTaskId) throw Object.assign(new Error('Message is already linked to a task'), { status: 409 });
+const TASK_PRIORITIES = ['lowest', 'low', 'medium', 'high', 'highest'];
+const PRIORITY_ALIASES = { urgent: 'highest', critical: 'highest', normal: 'medium', none: 'lowest' };
+
+function normalizePriority(p) {
+    const v = String(p || '').toLowerCase().trim();
+    if (TASK_PRIORITIES.includes(v)) return v;
+    return PRIORITY_ALIASES[v] || 'medium';
+}
+
+/**
+ * Create a task from a message. The title/description are plaintext supplied
+ * by the client (the server cannot read E2EE content). Workspace and company
+ * always come from the message; any client-supplied workspaceId is ignored.
+ */
+async function convertToTask(messageId, userId, taskData = {}, io) {
+    const title = typeof taskData.title === 'string' ? taskData.title.trim() : '';
+    if (!title) throw httpError(400, 'title is required');
+    if (title.length > 500) throw httpError(400, 'title is too long');
+
+    const message = await loadAccessibleMessage(Message, messageId, userId, {
+        select: 'channel dm workspace company sender linkedTaskId isDeletedUniversally',
+        lean: true,
+    });
+    if (message.isDeletedUniversally) throw httpError(400, 'Cannot convert a deleted message');
+    if (message.linkedTaskId) throw httpError(409, 'Message is already linked to a task');
+
+    let workspaceId = message.workspace || null;
+    let companyId = message.company || null;
+    if (!workspaceId && message.channel) {
+        const ch = await _Channel.findById(message.channel).select('workspace company').lean();
+        workspaceId = ch?.workspace || null;
+        companyId = companyId || ch?.company || null;
+    }
+
+    let assignedTo = [userId];
+    if (Array.isArray(taskData.assigneeIds) && taskData.assigneeIds.length) {
+        const ids = [...new Set(taskData.assigneeIds.map(String))];
+        if (ids.some(id => !mongoose.Types.ObjectId.isValid(id))) throw httpError(400, 'Invalid assigneeIds');
+        if (!workspaceId) throw httpError(400, 'Assignees require a workspace message');
+        const ws = await Workspace.findById(workspaceId).select('members company').lean();
+        const active = new Set((ws?.members || [])
+            .filter(m => m.user && m.status !== 'removed')
+            .map(m => String(m.user)));
+        const invalid = ids.filter(id => !active.has(id));
+        if (invalid.length) throw httpError(400, `Assignees are not workspace members: ${invalid.join(', ')}`);
+        assignedTo = ids;
+        companyId = companyId || ws?.company || null;
+    }
+
+    let dueDate = null;
+    if (taskData.dueDate) {
+        dueDate = new Date(taskData.dueDate);
+        if (isNaN(dueDate.getTime())) throw httpError(400, 'Invalid dueDate');
+    }
 
     const Task = require('../../../models/Task');
-
     const task = await Task.create({
-        title:            taskData.title || `Task from message by ${message.sender?.username || 'user'}`,
-        description:      taskData.description || message.text || '[Converted from message]',
-        dueDate:          taskData.dueDate || null,
-        priority:         taskData.priority || 'medium',
-        status:           'todo',
-        workspace:        taskData.workspaceId || message.workspace,
-        project:          taskData.projectId   || null,
-        createdBy:        userId,
-        assignees:        taskData.assignees   || [userId],
-        sourceMessageId:  message._id,        
+        title,
+        description:   typeof taskData.description === 'string' ? taskData.description.slice(0, 10000) : '',
+        dueDate,
+        priority:      normalizePriority(taskData.priority),
+        status:        'todo',
+        company:       companyId,
+        workspace:     workspaceId,
+        taskType:      workspaceId ? 'workspace' : 'personal',
+        visibility:    'private',
+        createdBy:     userId,
+        assignedTo,
+        linkedMessage: message._id,
+        linkedDM:      message.dm || null,
+        source:        'manual',
     });
 
-    
     await Message.findByIdAndUpdate(messageId, { $set: { linkedTaskId: task._id } });
 
-    if (io) {
-        const room = message.channel ? `channel:${message.channel}` : `dm:${message.dm}`;
+    const room = roomFor(message);
+    if (io && room) {
         io.to(room).emit('message:task_created', {
             messageId,
             taskId:    task._id,
@@ -838,24 +958,87 @@ async function convertToTask(messageId, userId, taskData, io) {
     return task;
 }
 
-async function getMessageDiff(messageId, userId) {
-    const message = await Message.findById(messageId)
-        .select('text payload editHistory editedAt version isDeleted channel dm sender')
-        .lean();
-    if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
+/** All versions of a message, oldest → newest, with ciphertext for client-side decryption. */
+async function getMessageVersions(messageId, userId) {
+    const message = await loadAccessibleMessage(Message, messageId, userId, {
+        select: 'text payload editHistory editedAt version isDeleted isDeletedUniversally channel dm sender restoredFromVersion createdAt',
+        lean: true,
+    });
+
+    const senderId = String(message.sender?._id || message.sender);
+    const deleted = !!(message.isDeleted || message.isDeletedUniversally);
+    const history = message.editHistory || [];
 
     return {
-        messageId,
-        version:     message.version    || 1,
-        editedAt:    message.editedAt   || null,
-        currentText: message.text       || (message.payload?.isEncrypted ? '[Encrypted]' : ''),
-        editHistory: (message.editHistory || []).map((h, i) => ({
+        messageId: String(message._id || messageId),
+        senderId,
+        canRestore: senderId === String(userId) && !deleted && history.length > 0,
+        current: {
+            version:     message.version || history.length + 1,
+            editedAt:    message.editedAt || null,
+            isEncrypted: !!message.payload?.ciphertext,
+            ciphertext:  message.payload?.ciphertext || null,
+            messageIv:   message.payload?.messageIv || null,
+            text:        message.payload?.ciphertext ? null : (message.text || ''),
+            restoredFromVersion: message.restoredFromVersion ?? null,
+        },
+        versions: history.map((h, i) => ({
+            index:       i,
             version:     i + 1,
-            text:        h.text       || (h.isEncrypted ? '[Encrypted]' : null),
-            isEncrypted: h.isEncrypted || false,
+            editedAt:    h.editedAt || null,
+            isEncrypted: !!(h.isEncrypted || h.ciphertext),
+            ciphertext:  h.ciphertext || null,
+            messageIv:   h.messageIv || null,
+            text:        h.text ?? null,
+            restoredFromVersion: h.restoredFromVersion ?? null,
+        })),
+    };
+}
+
+/** Legacy diff endpoint: the /versions shape plus the old fields. */
+async function getMessageDiff(messageId, userId) {
+    const v = await getMessageVersions(messageId, userId);
+    return {
+        ...v,
+        version:     v.current.version,
+        editedAt:    v.current.editedAt,
+        currentText: v.current.text || (v.current.isEncrypted ? '[Encrypted]' : ''),
+        editHistory: v.versions.map(h => ({
+            version:     h.version,
+            text:        h.text || (h.isEncrypted ? '[Encrypted]' : null),
+            isEncrypted: h.isEncrypted,
             editedAt:    h.editedAt,
         })),
     };
+}
+
+async function toggleBookmark(messageId, userId) {
+    const message = await loadAccessibleMessage(Message, messageId, userId, {
+        select: 'bookmarkedBy channel dm',
+    });
+    const isBookmarked = (message.bookmarkedBy || []).some(id => String(id) === String(userId));
+    await Message.updateOne(
+        { _id: message._id },
+        isBookmarked ? { $pull: { bookmarkedBy: userId } } : { $addToSet: { bookmarkedBy: userId } }
+    );
+    return { bookmarked: !isBookmarked, messageId: String(message._id) };
+}
+
+async function getBookmarks(userId, { limit = 50, skip = 0 } = {}) {
+    const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 100);
+    const sk = Math.max(parseInt(skip, 10) || 0, 0);
+    return Message.find({
+        bookmarkedBy: userId,
+        isDeletedUniversally: { $ne: true },
+        hiddenFor: { $ne: userId },
+    })
+        .sort({ createdAt: -1 })
+        .skip(sk)
+        .limit(lim)
+        .select('-hiddenFor -bookmarkedBy -editHistory')
+        .populate('sender', 'username profilePicture')
+        .populate('channel', 'name')
+        .lean();
 }
 
 module.exports = {
@@ -872,4 +1055,9 @@ module.exports = {
     resolveThread,
     convertToTask,
     getMessageDiff,
+    getMessageVersions,
+    restoreMessageVersion,
+    toggleBookmark,
+    getBookmarks,
+    normalizePriority,
 };
