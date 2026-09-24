@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Workspace = require('../../../models/Workspace');
 
 function canView(note, userId) {
@@ -37,7 +38,7 @@ async function isWorkspaceMember(userId, workspaceId) {
         if (!workspace) return false;
         return workspace.isMember(userId);
     } catch (err) {
-        console.error('Error checking workspace membership:', err);
+        logger.error('Error checking workspace membership:', err);
         return false;
     }
 }

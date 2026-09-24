@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import AdminSidebar from '../../components/admin/AdminSidebar';
 import { getCompanyAnalytics } from '../../services/analyticsService';
+import logger from '../../utils/logger';
 
 const AdminAnalyticsDashboard = () => {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ const AdminAnalyticsDashboard = () => {
         setAnalyticsData(data);
         setLoading(false);
       } catch (error) {
-        console.error("Error loading analytics:", error);
+        logger.error("Error loading analytics:", error);
         setLoading(false);
       }
     };

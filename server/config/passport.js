@@ -1,6 +1,6 @@
 const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
-const LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
+const _LinkedInStrategy = require("passport-linkedin-oauth2").Strategy;
 const User = require("../models/User");
 
 passport.serializeUser((user, done) => {
@@ -35,12 +35,18 @@ passport.use(
                 }
 
                 
+                // Auto-link to an existing account only when BOTH sides have a verified email:
+                // the local account must be verified and GitHub must not mark the address unverified.
+                // Otherwise an attacker could pre-register (or add on GitHub) a victim's email and
+                // take over the account.
+                const githubEmailVerified = profile.emails?.[0]?.verified !== false;
                 if (email) {
-                    user = await User.findOne({ email });
+                    user = await User.findOne({ email: String(email).toLowerCase() });
                     if (user) {
+                        if (!user.verified || !githubEmailVerified || user.githubId) {
+                            return done(null, false, { message: "An account with this email already exists. Sign in with your password and link GitHub from settings." });
+                        }
                         user.githubId = profile.id;
-                        
-                        
                         await user.save();
                         return done(null, user);
                     }

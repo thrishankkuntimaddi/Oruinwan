@@ -1,11 +1,12 @@
+const logger = require('../../utils/logger');
 const Channel = require("../features/channels/channel.model.js");
 const ConversationKey = require('../../models/ConversationKey');
 
 async function generateAuditDigest() {
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('📊 [AUDIT][PHASE1][DIGEST] Key Distribution Health Report');
-    console.log(`   Generated at: ${new Date().toISOString()}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.info('📊 [AUDIT][PHASE1][DIGEST] Key Distribution Health Report');
+    logger.info(`   Generated at: ${new Date().toISOString()}`);
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     try {
         
@@ -13,8 +14,8 @@ async function generateAuditDigest() {
         const totalChannels = channels.length;
 
         if (totalChannels === 0) {
-            console.log('   ℹ️ No channels found in database');
-            console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            logger.info('   ℹ️ No channels found in database');
+            logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             return;
         }
 
@@ -85,53 +86,53 @@ async function generateAuditDigest() {
         const partialPercent = Math.round((partialChannels / totalChannels) * 100);
         const unhealthyPercent = Math.round((unhealthyChannels / totalChannels) * 100);
 
-        console.log(`\n📈 [AUDIT][PHASE1][DIGEST] Summary:`);
-        console.log(`   ├─ Total channels: ${totalChannels}`);
-        console.log(`   ├─ Healthy (100% coverage): ${healthyChannels} (${healthPercent}%)`);
-        console.log(`   ├─ Partial coverage: ${partialChannels} (${partialPercent}%)`);
-        console.log(`   ├─ No conversation key: ${unhealthyChannels} (${unhealthyPercent}%)`);
-        console.log(`   └─ Total users affected: ${totalGaps}`);
+        logger.info(`\n📈 [AUDIT][PHASE1][DIGEST] Summary:`);
+        logger.info(`   ├─ Total channels: ${totalChannels}`);
+        logger.info(`   ├─ Healthy (100% coverage): ${healthyChannels} (${healthPercent}%)`);
+        logger.info(`   ├─ Partial coverage: ${partialChannels} (${partialPercent}%)`);
+        logger.info(`   ├─ No conversation key: ${unhealthyChannels} (${unhealthyPercent}%)`);
+        logger.info(`   └─ Total users affected: ${totalGaps}`);
 
         
         
         
         if (gapDetails.length > 0) {
-            console.log(`\n⚠️ [AUDIT][PHASE1][DIGEST] INV-001 Violations Detected:`);
+            logger.info(`\n⚠️ [AUDIT][PHASE1][DIGEST] INV-001 Violations Detected:`);
 
             
             gapDetails.sort((a, b) => b.gap - a.gap);
 
             const topGaps = gapDetails.slice(0, 10);
             topGaps.forEach((detail, index) => {
-                console.log(`   ${index + 1}. Channel: ${detail.channelName} (${detail.channelId})`);
-                console.log(`      ├─ Members: ${detail.members}`);
-                console.log(`      ├─ Keys: ${detail.keys}`);
-                console.log(`      ├─ Gap: ${detail.gap} users (${detail.gapPercent}% without keys)`);
-                console.log(`      └─ Status: INVARIANT VIOLATION`);
+                logger.info(`   ${index + 1}. Channel: ${detail.channelName} (${detail.channelId})`);
+                logger.info(`      ├─ Members: ${detail.members}`);
+                logger.info(`      ├─ Keys: ${detail.keys}`);
+                logger.info(`      ├─ Gap: ${detail.gap} users (${detail.gapPercent}% without keys)`);
+                logger.info(`      └─ Status: INVARIANT VIOLATION`);
             });
 
             if (gapDetails.length > 10) {
-                console.log(`   ... and ${gapDetails.length - 10} more channels with gaps`);
+                logger.info(`   ... and ${gapDetails.length - 10} more channels with gaps`);
             }
         } else {
-            console.log(`\n✅ No INV-001 violations detected across ${healthyChannels} healthy channels`);
+            logger.info(`\n✅ No INV-001 violations detected across ${healthyChannels} healthy channels`);
         }
 
         
         
         
         if (criticalChannels.length > 0) {
-            console.log(`\n🚨 [AUDIT][PHASE1][DIGEST] CRITICAL: Channels without encryption keys:`);
+            logger.info(`\n🚨 [AUDIT][PHASE1][DIGEST] CRITICAL: Channels without encryption keys:`);
 
             const topCritical = criticalChannels.slice(0, 5);
             topCritical.forEach((critical, index) => {
-                console.log(`   ${index + 1}. Channel: ${critical.channelName} (${critical.channelId})`);
-                console.log(`      ├─ Members: ${critical.members}`);
-                console.log(`      └─ Issue: NO CONVERSATION KEY EXISTS (Phase 5 failure)`);
+                logger.info(`   ${index + 1}. Channel: ${critical.channelName} (${critical.channelId})`);
+                logger.info(`      ├─ Members: ${critical.members}`);
+                logger.info(`      └─ Issue: NO CONVERSATION KEY EXISTS (Phase 5 failure)`);
             });
 
             if (criticalChannels.length > 5) {
-                console.log(`   ... and ${criticalChannels.length - 5} more channels without keys`);
+                logger.info(`   ... and ${criticalChannels.length - 5} more channels without keys`);
             }
         }
 
@@ -139,25 +140,25 @@ async function generateAuditDigest() {
         
         
         const overallHealthScore = Math.round((healthyChannels / totalChannels) * 100);
-        console.log(`\n📊 [AUDIT][PHASE1][DIGEST] Overall Health Score: ${overallHealthScore}%`);
+        logger.info(`\n📊 [AUDIT][PHASE1][DIGEST] Overall Health Score: ${overallHealthScore}%`);
 
         if (overallHealthScore === 100) {
-            console.log(`   🎉 Perfect! All channels have complete key coverage.`);
+            logger.info(`   🎉 Perfect! All channels have complete key coverage.`);
         } else if (overallHealthScore >= 90) {
-            console.log(`   ✅ Good. Most channels are healthy.`);
+            logger.info(`   ✅ Good. Most channels are healthy.`);
         } else if (overallHealthScore >= 70) {
-            console.log(`   ⚠️ Warning. Significant number of channels with gaps.`);
+            logger.info(`   ⚠️ Warning. Significant number of channels with gaps.`);
         } else {
-            console.log(`   🚨 Critical. Major key distribution issues detected.`);
+            logger.info(`   🚨 Critical. Major key distribution issues detected.`);
         }
 
     } catch (error) {
-        console.error(`❌ [AUDIT][PHASE1][DIGEST] Failed to generate report:`, error);
-        console.error(`   Error message: ${error.message}`);
-        console.error(`   Stack trace: ${error.stack}`);
+        logger.error(`❌ [AUDIT][PHASE1][DIGEST] Failed to generate report:`, error);
+        logger.error(`   Error message: ${error.message}`);
+        logger.error(`   Stack trace: ${error.stack}`);
     }
 
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 }
 
 module.exports = { generateAuditDigest };

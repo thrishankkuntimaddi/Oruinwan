@@ -1,4 +1,5 @@
 import React from 'react';
+import logger from '../../../../utils/logger';
 
 class MessageErrorBoundary extends React.Component {
     constructor(props) {
@@ -11,7 +12,7 @@ class MessageErrorBoundary extends React.Component {
     }
 
     componentDidCatch(error, errorInfo) {
-        console.error('Message rendering error:', error, errorInfo);
+        logger.error('Message rendering error:', error, errorInfo);
     }
 
     render() {

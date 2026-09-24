@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const UserCryptoState = require('../../models/UserCryptoState');
 
@@ -50,7 +51,7 @@ exports.initIdentityCryptoState = async (req, res) => {
                 });
             }
 
-            console.log(`⚠️ Overwriting crypto state for user ${userId} (explicit recovery/rotation)`);
+            logger.info(`⚠️ Overwriting crypto state for user ${userId} (explicit recovery/rotation)`);
 
             
             cryptoState.identityPublicKey = identityPublicKey;
@@ -66,7 +67,7 @@ exports.initIdentityCryptoState = async (req, res) => {
 
             await cryptoState.save();
 
-            console.log(`✅ Updated crypto state for user ${userId} (version ${cryptoState.version})`);
+            logger.info(`✅ Updated crypto state for user ${userId} (version ${cryptoState.version})`);
         } else {
             
             cryptoState = await UserCryptoState.create({
@@ -82,7 +83,7 @@ exports.initIdentityCryptoState = async (req, res) => {
                 version: version || 1
             });
 
-            console.log(`✅ Created crypto state for user ${userId}`);
+            logger.info(`✅ Created crypto state for user ${userId}`);
         }
 
         return res.json({
@@ -91,7 +92,7 @@ exports.initIdentityCryptoState = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ [initIdentityCryptoState] Error:', err);
+        logger.error('❌ [initIdentityCryptoState] Error:', err);
         return res.status(500).json({
             message: 'Failed to save identity crypto state'
         });
@@ -140,7 +141,7 @@ exports.getIdentityCryptoState = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ [getIdentityCryptoState] Error:', err);
+        logger.error('❌ [getIdentityCryptoState] Error:', err);
         return res.status(500).json({
             message: 'Failed to fetch identity crypto state'
         });
@@ -152,7 +153,7 @@ exports.wrapUmekWithServerKEK = (umekBytes) => {
         const kekManager = require('../../services/kekManager.service');
         const { version, key } = kekManager.getActiveKEK();
 
-        console.log(`🔐 [PHASE 4D] Wrapping UMEK with KEK version ${version}`);
+        logger.info(`🔐 [PHASE 4D] Wrapping UMEK with KEK version ${version}`);
 
         
         const iv = crypto.randomBytes(12);
@@ -174,7 +175,7 @@ exports.wrapUmekWithServerKEK = (umekBytes) => {
 
         return { envelope, kekVersion: version };
     } catch (err) {
-        console.error('❌ [wrapUmekWithServerKEK] Error:', err);
+        logger.error('❌ [wrapUmekWithServerKEK] Error:', err);
         throw new Error('Failed to wrap UMEK');
     }
 };
@@ -201,7 +202,7 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
 
         
         if (cryptoState.umekProtectionType !== 'SERVER_KEK') {
-            console.warn(`⚠️ Attempted SERVER_KEK unwrap for user ${userId} who has ${cryptoState.umekProtectionType} protection`);
+            logger.warn(`⚠️ Attempted SERVER_KEK unwrap for user ${userId} who has ${cryptoState.umekProtectionType} protection`);
             return res.status(403).json({
                 message: 'This account uses password-based protection',
                 code: 'WRONG_PROTECTION_TYPE'
@@ -215,9 +216,9 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
         let kekKey;
         try {
             kekKey = kekManager.getKEKForUnwrap(kekVersion);
-            console.log(`🔓 [PHASE 4D] Unwrapping UMEK with KEK version ${kekVersion}`);
+            logger.info(`🔓 [PHASE 4D] Unwrapping UMEK with KEK version ${kekVersion}`);
         } catch (error) {
-            console.error(`❌ [PHASE 4D] KEK version ${kekVersion} not available:`, error);
+            logger.error(`❌ [PHASE 4D] KEK version ${kekVersion} not available:`, error);
             return res.status(500).json({
                 message: 'Server encryption key not available',
                 code: 'KEK_NOT_AVAILABLE'
@@ -282,7 +283,7 @@ exports.unwrapUmekWithServerKEK = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ [unwrapUmekWithServerKEK] Error:', err);
+        logger.error('❌ [unwrapUmekWithServerKEK] Error:', err);
         return res.status(500).json({
             message: 'Failed to unwrap UMEK'
         });
@@ -332,7 +333,7 @@ exports.rotateUMEK = async (req, res) => {
 
         
         if (cryptoState.version !== currentVersion) {
-            console.warn(`⚠️ Version conflict for user ${userId}: current=${cryptoState.version}, provided=${currentVersion}`);
+            logger.warn(`⚠️ Version conflict for user ${userId}: current=${cryptoState.version}, provided=${currentVersion}`);
             return res.status(409).json({
                 message: 'Version conflict. Another update occurred. Please fetch latest state and retry.',
                 currentVersion: cryptoState.version,
@@ -340,7 +341,7 @@ exports.rotateUMEK = async (req, res) => {
             });
         }
 
-        console.log(`🔄 [PHASE 2] Rotating UMEK for user ${userId} (${cryptoState.umekProtectionType} → ${umekProtectionType})`);
+        logger.info(`🔄 [PHASE 2] Rotating UMEK for user ${userId} (${cryptoState.umekProtectionType} → ${umekProtectionType})`);
 
         
         cryptoState.encryptedIdentityPrivateKey = encryptedIdentityPrivateKey;
@@ -358,7 +359,7 @@ exports.rotateUMEK = async (req, res) => {
             cryptoState.umekEnvelopeIv = null;
 
             if (hadServerKEK) {
-                console.log(`🔒 [PHASE 2] Wiped SERVER_KEK envelope for user ${userId} (migration is IRREVERSIBLE)`);
+                logger.info(`🔒 [PHASE 2] Wiped SERVER_KEK envelope for user ${userId} (migration is IRREVERSIBLE)`);
             }
         } else {
 
@@ -395,7 +396,7 @@ exports.rotateUMEK = async (req, res) => {
         
         if (!wasMigration) {
             try {
-                const User = require('../../models/User');
+                const User = require('../../../models/User');
                 const securityNotification = require('../../services/securityNotification.service');
 
                 
@@ -416,9 +417,9 @@ exports.rotateUMEK = async (req, res) => {
             }
         }
 
-        console.log(`✅ [PHASE 2] UMEK rotated for user ${userId} (version ${cryptoState.version})`);
-        console.log(`   - Identity keys: UNCHANGED ✅`);
-        console.log(`   - UMEK protection: ${umekProtectionType}`);
+        logger.info(`✅ [PHASE 2] UMEK rotated for user ${userId} (version ${cryptoState.version})`);
+        logger.info(`   - Identity keys: UNCHANGED ✅`);
+        logger.info(`   - UMEK protection: ${umekProtectionType}`);
 
         return res.json({
             success: true,
@@ -427,7 +428,7 @@ exports.rotateUMEK = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('❌ [rotateUMEK] Error:', err);
+        logger.error('❌ [rotateUMEK] Error:', err);
         return res.status(500).json({
             message: 'Failed to rotate UMEK protection'
         });

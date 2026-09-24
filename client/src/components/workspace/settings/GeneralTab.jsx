@@ -2,6 +2,7 @@ import React from 'react';
 import { Rocket, Briefcase, Zap, Palette, FlaskConical, Globe, ShieldCheck, TrendingUp, Lightbulb, Flame, Target, Trophy, Shield } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
+import logger from '../../../utils/logger';
 
 const iconOptions = [
     { id: 'rocket',    name: 'Rocket',    Icon: Rocket     },
@@ -185,7 +186,7 @@ const GeneralTab = ({
                                     showToast('Workspace updated successfully');
                                     window.location.reload();
                                 } catch (error) {
-                                    console.error('Error updating workspace:', error);
+                                    logger.error('Error updating workspace:', error);
                                     showToast(error.response?.data?.message || 'Failed to update workspace', 'error');
                                 } finally { setSavingIcon(false); setSavingName(false); }
                             }}
@@ -306,7 +307,7 @@ const GeneralTab = ({
                                                 setEditingRules(false);
                                                 await refreshWorkspace();
                                             } catch (error) {
-                                                console.error('Error updating rules:', error);
+                                                logger.error('Error updating rules:', error);
                                                 showToast(error.response?.data?.message || 'Failed to update rules', 'error');
                                             } finally { setSavingRules(false); }
                                         }}

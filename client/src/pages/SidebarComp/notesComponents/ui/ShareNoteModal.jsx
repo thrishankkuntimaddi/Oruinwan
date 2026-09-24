@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Users, Check, UserPlus, Globe, Lock } from 'lucide-react';
 import api from '@services/api';
+import logger from '../../../../utils/logger';
 
 const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
   const [members, setMembers] = useState([]);
@@ -18,7 +19,7 @@ const ShareNoteModal = ({ note, workspaceId, onClose, onShare }) => {
           m => (m._id || m.id) !== (note.owner?._id || note.owner)
         );
         setMembers(allMembers);
-      } catch (e) { console.error('Failed to load members', e); }
+      } catch (e) { logger.error('Failed to load members', e); }
       finally { setLoading(false); }
     };
     load();

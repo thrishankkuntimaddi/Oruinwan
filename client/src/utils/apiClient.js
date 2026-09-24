@@ -1,4 +1,5 @@
 import { getDeviceId, clearDeviceId } from './deviceId';
+import logger from './logger';
 
 export async function authenticatedFetch(url, options = {}) {
     const deviceId = getDeviceId();
@@ -25,7 +26,7 @@ export async function authenticatedFetch(url, options = {}) {
         if (response.status === 403) {
             const data = await response.json().catch(() => ({}));
             if (data.code === 'DEVICE_REVOKED') {
-                console.error('❌ [PHASE 3] Device has been revoked');
+                logger.error('❌ [PHASE 3] Device has been revoked');
                 handleDeviceRevocation();
                 throw new Error('DEVICE_REVOKED');
             }

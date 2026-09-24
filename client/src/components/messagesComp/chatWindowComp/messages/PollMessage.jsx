@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { CheckCircle, Circle, Users, Clock, Lock, BarChart2 } from 'lucide-react';
+import logger from '../../../../utils/logger';
 
 export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId, formatTime }) {
     const [pollData, setPollData] = useState(null);
@@ -21,7 +22,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                 
                 const pollId = pollProp || msg?.payload?.poll || msg?.poll;
                 if (!pollId) {
-                    console.error('No poll ID found');
+                    logger.error('No poll ID found');
                     setLoading(false);
                     return;
                 }
@@ -39,7 +40,7 @@ export default function PollMessage({ poll: pollProp, msg, onVote, currentUserId
                 setPollData(data.data?.poll || data.poll);
                 setLoading(false);
             } catch (error) {
-                console.error('Error fetching poll:', error);
+                logger.error('Error fetching poll:', error);
                 setLoading(false);
             }
         };

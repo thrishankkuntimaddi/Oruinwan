@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from '@services/api';
 import { useToast } from "../../contexts/ToastContext";
 import { X, Search, Check, Info, Hash, ChevronRight, Globe, Lock, UserPlus } from 'lucide-react';
+import logger from '../../utils/logger';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
@@ -29,7 +30,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
                 const res = await api.get(`/api/workspaces/${workspaceId}/all-members`);
                 setWorkspaceMembers(res.data.members || []);
             } catch (err) {
-                console.error("Failed to load members:", err);
+                logger.error("Failed to load members:", err);
                 showToast("Failed to load workspace members", "error");
             } finally {
                 setLoadingMembers(false);
@@ -92,7 +93,7 @@ export default function CreateChannelModal({ onClose, onCreated, workspaceId }) 
             onCreated && onCreated(channel);
             onClose();
         } catch (err) {
-            console.error("Create channel failed:", err);
+            logger.error("Create channel failed:", err);
             const errorMsg = err?.response?.data?.message || "Failed to create channel";
             showToast(errorMsg, "error");
         }

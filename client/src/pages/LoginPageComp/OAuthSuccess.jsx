@@ -1,17 +1,45 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { saveAccessToken } from "../../utils/tokenUtils";
+import logger from '../../utils/logger';
+
+// Server redirects to `/oauth-success#access=<token>` (fragment: never sent to
+// servers, logged, or leaked via Referer). Legacy `?access=` is still accepted
+// during the transition.
+function readOAuthParams() {
+  if (typeof window === 'undefined') return { access: null, requiresPasswordSetup: false };
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+  const query = new URLSearchParams(window.location.search);
+  const access = hash.get('access') || query.get('access');
+  const requiresPasswordSetup =
+    (hash.get('requiresPasswordSetup') || query.get('requiresPasswordSetup')) === 'true';
+  return { access, requiresPasswordSetup };
+}
+
+function scrubTokenFromUrl() {
+  try {
+    window.history.replaceState(window.history.state, '', window.location.pathname);
+  } catch {
+    // ignore (non-browser environment)
+  }
+}
 
 export default function OAuthSuccess() {
   const { loadUser } = useAuth();
-  const [params] = useSearchParams();
   const navigate = useNavigate();
+  // Read once on mount, then remove the token from the address bar/history.
+  const [{ access, requiresPasswordSetup }] = useState(readOAuthParams);
   const [isProcessing, setIsProcessing] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
 
-  const access = params.get("access");
-  const requiresPasswordSetup = params.get("requiresPasswordSetup") === 'true';
+  useEffect(() => {
+    scrubTokenFromUrl();
+    if (!access) {
+      logger.warn('OAuth success page reached without an access token');
+      navigate("/login", { replace: true });
+    }
+  }, [access, navigate]);
 
   useEffect(() => {
     if (!access || isProcessing) return;
@@ -20,40 +48,21 @@ export default function OAuthSuccess() {
       setIsProcessing(true);
 
       try {
-        
         saveAccessToken(access);
-
-        
-        
-        
-        
-        
-        
         await loadUser();
-
-        
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        
-        
-        
-        if (requiresPasswordSetup) {
-          navigate("/set-password");
-        } else {
-          navigate("/workspaces");
-        }
+        navigate(requiresPasswordSetup ? "/set-password" : "/workspaces", { replace: true });
       } catch (error) {
-        console.error("❌ OAuth error:", error);
+        logger.error("❌ OAuth error:", error);
 
-        
         if (loadAttempts < 1) {
-
           setLoadAttempts(prev => prev + 1);
           setIsProcessing(false);
           return;
         }
 
-        navigate("/login");
+        navigate("/login", { replace: true });
       }
     };
 

@@ -31,7 +31,7 @@ router.get('/messages', async (req, res) => {
     const { limit = 50, channelId } = req.query;
 
     
-    const InternalMessage = require('../../models/InternalMessage');
+    const InternalMessage = require('../../../models/InternalMessage');
     const query = { workspaceId: req.workspaceId };
     if (channelId) query.channelId = channelId;
 
@@ -51,7 +51,7 @@ router.get('/messages', async (req, res) => {
 
 router.get('/tasks', async (req, res) => {
   try {
-    const Task = require('../../models/Task');
+    const Task = require('../../../models/Task');
     const { status, limit = 50 } = req.query;
 
     const query = { workspaceId: req.workspaceId, deletedAt: null };
@@ -79,7 +79,7 @@ router.post('/tasks', async (req, res) => {
       return res.status(403).json({ error: 'API key does not have tasks:write permission' });
     }
 
-    const Task = require('../../models/Task');
+    const Task = require('../../../models/Task');
     const { title, description, priority, dueDate, assigneeId } = req.body;
     if (!title) return res.status(400).json({ error: 'title is required' });
 
@@ -121,7 +121,7 @@ router.get('/files', async (req, res) => {
 
 router.get('/users', async (req, res) => {
   try {
-    const Workspace = require('../../features/workspaces/workspace.model');
+    const Workspace = require('../../../models/Workspace');
 
     const ws = await Workspace.findById(req.workspaceId)
       .populate('members.user', 'username firstName lastName avatarUrl email')

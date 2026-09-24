@@ -16,7 +16,6 @@
 
 // NOTE: `io` is imported from socket.io-client.
 // Each platform (web, desktop, mobile) provides this dependency in its own package.json.
-console.log("🔥 PLATFORM SOCKET USED");
 import { io } from 'socket.io-client';
 
 // ─── Default Socket Configuration ────────────────────────────────────────────

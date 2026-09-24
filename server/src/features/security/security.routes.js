@@ -1,4 +1,6 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
+const { sendError } = require('../../shared/utils/httpError');
 const router = express.Router();
 const { query, validationResult } = require('express-validator');
 
@@ -17,8 +19,7 @@ const AuditLog = require('../../../models/AuditLog');
 const gate = [requireAuth, requireCompanyMember, requireCompanyRole('admin')];
 
 function handleError(res, err) {
-    console.error('[SECURITY ROUTES]', err.message);
-    return res.status(err.status || 500).json({ success: false, error: err.message });
+    return sendError(res, err);
 }
 
 function validationGuard(req, res) {

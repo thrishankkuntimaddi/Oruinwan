@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
@@ -34,7 +35,7 @@ router.get('/messages/me', requireAuth, async (req, res) => {
 
         return res.json({ messages });
     } catch (error) {
-        console.error('GET MY MESSAGES ERROR:', error);
+        logger.error('GET MY MESSAGES ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 });

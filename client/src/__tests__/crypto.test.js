@@ -149,8 +149,10 @@ describe('Crypto Utilities', () => {
             const result1 = await encryptAESGCM(plaintext, key);
             const result2 = await encryptAESGCM(plaintext, key);
 
-            expect(result1.ciphertext).not.toEqual(result2.ciphertext);
-            expect(result1.iv).not.toEqual(result2.iv);
+            // Compare byte contents: ArrayBuffers have no enumerable keys, so
+            // toEqual would treat two same-length buffers as equal.
+            expect(Array.from(new Uint8Array(result1.ciphertext))).not.toEqual(Array.from(new Uint8Array(result2.ciphertext)));
+            expect(Array.from(new Uint8Array(result1.iv))).not.toEqual(Array.from(new Uint8Array(result2.iv)));
         });
 
         test('decryption fails with wrong key', async () => {

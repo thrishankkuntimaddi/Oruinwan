@@ -4,6 +4,7 @@ import Card from './Card';
 import ImageCropEditor from './ImageCropEditor';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
+import { useRevokeObjectUrl } from '../../hooks/useRevokeObjectUrl';
 
 const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
 
@@ -360,6 +361,8 @@ const ProfileTab = ({ user, profileData, setProfileData, loading, handleProfileU
     const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
     const [showAvatarPicker, setShowAvatarPicker] = useState(false);
     const fileInputRef = useRef(null);
+    useRevokeObjectUrl(previewUrl);
+    useRevokeObjectUrl(cropSrc);
 
     const handleImageSelect = (e) => {
         const file = e.target.files?.[0];

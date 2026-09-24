@@ -1,8 +1,26 @@
 import { generateWorkspaceKey, exportKey, importKey } from '../utils/crypto';
 import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519 } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
+import logger from '../utils/logger';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
+
+// Current user id from the initialized identity (set on login/rehydration),
+// falling back to the access token's `sub` claim.
+function getCurrentUserId() {
+    if (identityKeyService.myUserId) return String(identityKeyService.myUserId);
+    try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return null;
+        const part = token.split('.')[1];
+        if (!part) return null;
+        const json = atob(part.replace(/-/g, '+').replace(/_/g, '/'));
+        const sub = JSON.parse(json)?.sub;
+        return sub ? String(sub) : null;
+    } catch {
+        return null;
+    }
+}
 
 class ConversationKeyService {
     constructor() {
@@ -50,7 +68,7 @@ class ConversationKeyService {
                 const userKeyData = publicKeys.get(userId);
 
                 if (!userKeyData) {
-                    console.warn(`⚠️ No public key found for user ${userId}, skipping`);
+                    logger.warn(`⚠️ No public key found for user ${userId}, skipping`);
                     continue;
                 }
 
@@ -82,7 +100,7 @@ class ConversationKeyService {
                 encryptedKeys
             };
         } catch (error) {
-            console.error('Failed to create and distribute conversation key:', error);
+            logger.error('Failed to create and distribute conversation key:', error);
             throw error;
         }
     }
@@ -124,7 +142,7 @@ class ConversationKeyService {
 
             return { conversationKey, encryptedKeys };
         } catch (error) {
-            console.error('Failed to create and store conversation key:', error);
+            logger.error('Failed to create and store conversation key:', error);
             throw error;
         }
     }
@@ -175,7 +193,7 @@ class ConversationKeyService {
             }
 
         } catch (error) {
-            console.error(`❌ [DM ONLY] Failed to ensure conversation key for dm:${conversationId}:`, error);
+            logger.error(`❌ [DM ONLY] Failed to ensure conversation key for dm:${conversationId}:`, error);
             throw error;
         }
     }
@@ -206,7 +224,7 @@ class ConversationKeyService {
             }
 
         } catch (error) {
-            console.error('Failed to store conversation keys:', error);
+            logger.error('Failed to store conversation keys:', error);
             throw error;
         }
     }
@@ -246,14 +264,14 @@ class ConversationKeyService {
                     
                     
                     
-                    console.error(`🚫 [AUDIT][PHASE1][CLIENT-FETCH] Server returned 403 KEY_NOT_DISTRIBUTED`);
-                    console.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-                    console.error(`   ├─ Meaning: Conversation key EXISTS but user lacks access`);
-                    console.error(`   ├─ INV-001 violation: User in channel.members but NOT in encryptedKeys[]`);
-                    console.error(`   └─ Action: User BLOCKED from sending messages`);
-                    console.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+                    logger.error(`🚫 [AUDIT][PHASE1][CLIENT-FETCH] Server returned 403 KEY_NOT_DISTRIBUTED`);
+                    logger.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+                    logger.error(`   ├─ Meaning: Conversation key EXISTS but user lacks access`);
+                    logger.error(`   ├─ INV-001 violation: User in channel.members but NOT in encryptedKeys[]`);
+                    logger.error(`   └─ Action: User BLOCKED from sending messages`);
+                    logger.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
-                    console.warn(`🚫 [FIX 4] 403 Forbidden for conversation key in ${conversationType}:${conversationId}`);
+                    logger.warn(`🚫 [FIX 4] 403 Forbidden for conversation key in ${conversationType}:${conversationId}`);
 
                     
                     try {
@@ -267,15 +285,24 @@ class ConversationKeyService {
 
                         if (channelResponse.ok) {
                             const channelData = await channelResponse.json();
-                            const currentUserId = localStorage.getItem('userId'); 
+                            const currentUserId = getCurrentUserId();
 
-                            
+                            if (!currentUserId) {
+                                return {
+                                    status: 'ACCESS_DENIED',
+                                    reason: 'FORBIDDEN',
+                                    message: 'Access to encryption keys denied',
+                                    conversationId,
+                                    conversationType
+                                };
+                            }
+
                             const isMember = channelData.channel?.members?.some(m =>
-                                (m.user?._id || m.user) === currentUserId || m === currentUserId
+                                String(m?.user?._id || m?.user || m?._id || m) === currentUserId
                             );
 
                             if (!isMember) {
-                                console.error(`❌ [FIX 4] User is NOT a member of channel ${conversationId}`);
+                                logger.error(`❌ [FIX 4] User is NOT a member of channel ${conversationId}`);
                                 return {
                                     status: 'ACCESS_DENIED',
                                     reason: 'NOT_A_MEMBER',
@@ -284,7 +311,7 @@ class ConversationKeyService {
                                     conversationType
                                 };
                             } else {
-                                console.error(`⚠️ [FIX 4] User IS a member but key access denied (system error)`);
+                                logger.error(`⚠️ [FIX 4] User IS a member but key access denied (system error)`);
                                 return {
                                     status: 'SYSTEM_ERROR',
                                     reason: 'KEY_ACCESS_ERROR',
@@ -295,7 +322,7 @@ class ConversationKeyService {
                             }
                         }
                     } catch (reconciliationError) {
-                        console.error('[FIX 4] Membership reconciliation failed:', reconciliationError);
+                        logger.error('[FIX 4] Membership reconciliation failed:', reconciliationError);
                     }
 
                     
@@ -312,12 +339,12 @@ class ConversationKeyService {
                     
                     
                     
-                    console.warn(`❌ [AUDIT][PHASE1][CLIENT-FETCH] Server returned 404 NOT_FOUND`);
-                    console.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-                    console.warn(`   ├─ Meaning: No conversation key exists OR user not distributed`);
-                    console.warn(`   ├─ Possible reasons: (1) New channel (2) Late joiner (3) Legacy key`);
-                    console.warn(`   └─ Action: Cannot decrypt messages`);
-                    console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+                    logger.warn(`❌ [AUDIT][PHASE1][CLIENT-FETCH] Server returned 404 NOT_FOUND`);
+                    logger.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+                    logger.warn(`   ├─ Meaning: No conversation key exists OR user not distributed`);
+                    logger.warn(`   ├─ Possible reasons: (1) New channel (2) Late joiner (3) Legacy key`);
+                    logger.warn(`   └─ Action: Cannot decrypt messages`);
+                    logger.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
                     
                     
@@ -325,8 +352,8 @@ class ConversationKeyService {
                     
                     
 
-                    console.warn(`⚠️ [PHASE 4] Conversation key missing for user in ${conversationType}:${conversationId}`);
-                    console.warn(`   This may indicate: (1) new channel, (2) late joiner, or (3) legacy key`);
+                    logger.warn(`⚠️ [PHASE 4] Conversation key missing for user in ${conversationType}:${conversationId}`);
+                    logger.warn(`   This may indicate: (1) new channel, (2) late joiner, or (3) legacy key`);
 
                     
                     return {
@@ -366,7 +393,7 @@ class ConversationKeyService {
 
             return conversationKey;
         } catch (error) {
-            console.error(`Failed to fetch conversation key for ${conversationType}:${conversationId}:`, error);
+            logger.error(`Failed to fetch conversation key for ${conversationType}:${conversationId}:`, error);
             throw error;
         }
     }
@@ -410,13 +437,13 @@ class ConversationKeyService {
                     this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
 
                 } catch (error) {
-                    console.error(`Failed to decrypt key for ${conversationType}:${conversationId}:`, error);
+                    logger.error(`Failed to decrypt key for ${conversationType}:${conversationId}:`, error);
                     
                 }
             }
 
         } catch (error) {
-            console.error('Failed to fetch workspace conversation keys:', error);
+            logger.error('Failed to fetch workspace conversation keys:', error);
             throw error;
         }
     }
@@ -488,7 +515,7 @@ class ConversationKeyService {
             }
 
         } catch (error) {
-            console.error('Failed to add participant:', error);
+            logger.error('Failed to add participant:', error);
             throw error;
         }
     }
@@ -517,7 +544,7 @@ class ConversationKeyService {
 
             return await response.json();
         } catch (error) {
-            console.error('[conversationKeyService] fetchConversationKeys error:', error);
+            logger.error('[conversationKeyService] fetchConversationKeys error:', error);
             throw error;
         }
     }

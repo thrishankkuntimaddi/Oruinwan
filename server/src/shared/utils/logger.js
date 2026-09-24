@@ -4,17 +4,19 @@ const pino = require('pino');
 
 const isDev = (process.env.NODE_ENV || 'development') !== 'production';
 
-const transport = isDev
-  ? {
-      target: 'pino-pretty',
-      options: {
-        colorize: true,
-        translateTime: 'SYS:HH:MM:ss',
-        ignore: 'pid,hostname',
-        messageFormat: '{msg}',
-      },
-    }
-  : undefined; 
+// In development, pretty-print through a *synchronous* stream. A worker-thread
+// transport can drop the final lines when the process exits immediately after
+// logging (fatal env validation, uncaught exceptions), which is exactly when
+// those lines matter most. Production writes JSON to stdout (sync by default).
+const destination = isDev
+  ? require('pino-pretty')({
+      colorize: true,
+      translateTime: 'SYS:HH:MM:ss',
+      ignore: 'pid,hostname',
+      messageFormat: '{msg}',
+      sync: true,
+    })
+  : undefined;
 
 const logger = pino(
   {
@@ -31,7 +33,7 @@ const logger = pino(
     
     base: isDev ? undefined : { service: 'chttrix-server', env: process.env.NODE_ENV },
   },
-  transport ? pino.transport(transport) : undefined
+  destination
 );
 
 module.exports = logger;

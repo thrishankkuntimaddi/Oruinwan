@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { Activity, Cpu, Database, HardDrive, Zap, AlertTriangle, CheckCircle, Clock } from 'lucide-react';
+import logger from '../../../../utils/logger';
 
 const SystemHealth = () => {
     const [metrics, setMetrics] = useState({
@@ -22,7 +23,7 @@ const SystemHealth = () => {
             const res = await api.get('/api/admin/health/metrics');
             setMetrics(res.data);
         } catch (err) {
-            console.error('Failed to fetch system health:', err);
+            logger.error('Failed to fetch system health:', err);
         } finally {
             setLoading(false);
         }

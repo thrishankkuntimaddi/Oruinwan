@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const multer = require('multer');
 const { uploadToGCS } = require('./upload.service');
 
@@ -39,15 +40,21 @@ async function uploadFile(req, res) {
             folder = 'channels';
         }
 
-        const attachment = await uploadToGCS(req.file, folder);
+        // Record the uploader + company on the object so /uploads/file can authorize reads.
+        const User = require('../../../models/User');
+        const uploader = await User.findById(req.user.sub).select('companyId').lean();
+        const attachment = await uploadToGCS(req.file, folder, {
+            userId: req.user.sub,
+            companyId: uploader?.companyId || undefined,
+        });
 
         return res.status(200).json(attachment);
     } catch (err) {
-        console.error('[UploadController] uploadFile error:', err);
+        logger.error({ err }, '[UploadController] uploadFile error');
         if (err.code === 'LIMIT_FILE_SIZE') {
             return res.status(413).json({ error: 'File too large (max 100 MB)' });
         }
-        return res.status(500).json({ error: 'Upload failed', details: err.message });
+        return res.status(500).json({ error: 'Upload failed' });
     }
 }
 

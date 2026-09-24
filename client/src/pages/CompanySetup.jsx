@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useRevokeObjectUrl } from '../hooks/useRevokeObjectUrl';
 import api from '@services/api';
 import {
     Users, Mail, CheckCircle, ArrowRight, ArrowLeft, Upload,
@@ -52,6 +53,7 @@ const CompanySetup = () => {
     const [timezone, setTimezone] = useState('Asia/Kolkata');
     const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
+    useRevokeObjectUrl(logoPreview);
     const logoInputRef = useRef();
 
     

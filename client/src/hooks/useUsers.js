@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { userService } from '../services/userService';
+import logger from '../utils/logger';
 
 export const useUsers = (companyId) => {
     const [users, setUsers] = useState([]);
@@ -33,7 +34,7 @@ export const useUsers = (companyId) => {
 
             setUsers(formattedUsers);
         } catch (err) {
-            console.error('Error loading users:', err);
+            logger.error('Error loading users:', err);
             setError(err.response?.data?.message || 'Failed to load users');
         } finally {
             setLoading(false);

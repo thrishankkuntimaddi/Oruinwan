@@ -6,6 +6,7 @@ import {
     importPrivateKeyJWK,
     checkCryptoSupport
 } from '../utils/cryptoIdentity';
+import logger from '../utils/logger';
 
 const DB_NAME = 'ChttrixE2EE';
 const DB_VERSION = 1;
@@ -86,6 +87,39 @@ async function deleteIdentityKeyPair(userId) {
     });
 }
 
+// The identity private key is persisted as a NON-EXTRACTABLE CryptoKey
+// (IndexedDB stores CryptoKey objects via structured clone), never as raw JWK.
+// Legacy entries holding `privateKeyJWK` are migrated on first read.
+function isCryptoKey(value) {
+    return typeof CryptoKey !== 'undefined' && value instanceof CryptoKey;
+}
+
+async function loadCachedPrivateKey(userId, algorithm) {
+    const cached = await getIdentityKeyPair(userId);
+    if (!cached) return null;
+
+    if (isCryptoKey(cached.privateKey)) {
+        return cached;
+    }
+
+    if (cached.privateKeyJWK) {
+        const alg = cached.algorithm || algorithm;
+        const privateKey = await importPrivateKeyJWK(cached.privateKeyJWK, alg, false);
+        const { privateKeyJWK: _legacyJwk, ...rest } = cached;
+        const migrated = { ...rest, privateKey, algorithm: alg };
+        try {
+            await storeIdentityKeyPair(userId, migrated);
+            logger.debug('🔐 [PHASE 1] Migrated cached identity key to non-extractable CryptoKey');
+        } catch (err) {
+            logger.warn('⚠️ [PHASE 1] Identity key migration failed; removing legacy JWK entry:', err);
+            await deleteIdentityKeyPair(userId).catch(() => { });
+        }
+        return migrated;
+    }
+
+    return null;
+}
+
 class IdentityKeyService {
     constructor() {
         this.publicKeysCache = new Map(); 
@@ -100,8 +134,18 @@ class IdentityKeyService {
 
     
     setupLogoutListener() {
-        window.addEventListener('auth:logout', () => {
-            this.clearCache();
+        window.addEventListener('auth:logout', (event) => {
+            const userId = event?.detail?.userId || this.myUserId;
+            if (userId) {
+                // Remove the cached identity private key from IndexedDB so it
+                // cannot be loaded by a later session without re-authentication.
+                this.deleteKeys(userId).catch((err) => {
+                    logger.warn('⚠️ [PHASE 1] Failed to delete cached identity keys on logout:', err);
+                    this.clearCache();
+                });
+            } else {
+                this.clearCache();
+            }
         });
     }
 
@@ -111,7 +155,7 @@ class IdentityKeyService {
             const keyData = await getIdentityKeyPair(userId);
             return keyData !== null;
         } catch (error) {
-            console.error('Error checking identity key:', error);
+            logger.error('Error checking identity key:', error);
             return false;
         }
     }
@@ -123,7 +167,7 @@ class IdentityKeyService {
             throw new Error('IndexedDB not available - cannot use E2EE');
         }
 
-        console.log('🔐 [PHASE 1] Initializing identity keys for user:', userId);
+        logger.debug('🔐 [PHASE 1] Initializing identity keys for user:', userId);
 
         try {
             
@@ -131,16 +175,16 @@ class IdentityKeyService {
 
             if (cryptoState) {
                 
-                console.log('✅ [PHASE 1] Found existing crypto state on server');
+                logger.debug('✅ [PHASE 1] Found existing crypto state on server');
 
                 
-                const cachedIdentity = await getIdentityKeyPair(userId);
-                if (cachedIdentity && cachedIdentity.privateKeyJWK) {
-                    console.log('✅ [PHASE 1] Using cached decrypted identity key (no password needed)');
+                const cachedIdentity = await loadCachedPrivateKey(userId, cryptoState.algorithm);
+                if (cachedIdentity) {
+                    logger.debug('✅ [PHASE 1] Using cached identity key (no password needed)');
 
                     
                     const { identityPublicKey, algorithm } = cryptoState;
-                    this.myPrivateKey = await importPrivateKeyJWK(cachedIdentity.privateKeyJWK, algorithm);
+                    this.myPrivateKey = cachedIdentity.privateKey;
                     this.myPublicKey = await importPublicKeyPEM(identityPublicKey, algorithm);
                     this.myAlgorithm = algorithm;
                     this.myUserId = userId;
@@ -151,12 +195,12 @@ class IdentityKeyService {
                         algorithm: this.myAlgorithm
                     });
 
-                    console.log('✅ [PHASE 1] Identity keys loaded from cache (session rehydration)');
+                    logger.debug('✅ [PHASE 1] Identity keys loaded from cache (session rehydration)');
                     return { status: 'READY', existed: true, algorithm };
                 }
 
                 
-                console.log('🔐 [PHASE 1] No cached identity found, need to decrypt...');
+                logger.debug('🔐 [PHASE 1] No cached identity found, need to decrypt...');
 
                 const { identityPublicKey, encryptedIdentityPrivateKey, identityPrivateKeyIv, umekProtectionType, umekEnvelope, umekSalt, algorithm } = cryptoState;
 
@@ -165,25 +209,25 @@ class IdentityKeyService {
                 if (umekProtectionType === 'PASSWORD') {
                     
                     if (!password) {
-                        console.warn('🔐 [PHASE 1] Password-protected identity cache missing - password required');
+                        logger.warn('🔐 [PHASE 1] Password-protected identity cache missing - password required');
                         return {
                             status: 'PASSWORD_REQUIRED',
                             reason: 'CACHE_MISSING_PASSWORD_NEEDED'
                         };
                     }
-                    console.log('🔑 [PHASE 1] Deriving UMEK from password...');
+                    logger.debug('🔑 [PHASE 1] Deriving UMEK from password...');
                     const { deriveUMEKFromPassword, base64ToArrayBuffer } = await import('../utils/crypto.js');
                     const salt = base64ToArrayBuffer(umekSalt);
                     umek = await deriveUMEKFromPassword(password, new Uint8Array(salt));
                 } else if (umekProtectionType === 'SERVER_KEK') {
-                    console.log('🔑 [PHASE 1] Unwrapping UMEK from server KEK...');
+                    logger.debug('🔑 [PHASE 1] Unwrapping UMEK from server KEK...');
                     umek = await this._unwrapUMEKFromServer(umekEnvelope);
                 } else {
                     throw new Error('Unknown UMEK protection type: ' + umekProtectionType);
                 }
 
                 
-                console.log('🔓 [PHASE 1] Decrypting identity private key...');
+                logger.debug('🔓 [PHASE 1] Decrypting identity private key...');
                 const { decryptIdentityPrivateKey } = await import('../utils/crypto.js');
                 const privateKeyJWK = await decryptIdentityPrivateKey(
                     encryptedIdentityPrivateKey,
@@ -192,7 +236,7 @@ class IdentityKeyService {
                 );
 
                 
-                this.myPrivateKey = await importPrivateKeyJWK(JSON.parse(privateKeyJWK), algorithm);
+                this.myPrivateKey = await importPrivateKeyJWK(JSON.parse(privateKeyJWK), algorithm, false);
                 this.myPublicKey = await importPublicKeyPEM(identityPublicKey, algorithm);
                 this.myAlgorithm = algorithm;
                 this.myUserId = userId;
@@ -206,33 +250,33 @@ class IdentityKeyService {
                 
                 try {
                     await storeIdentityKeyPair(userId, {
-                        privateKeyJWK: JSON.parse(privateKeyJWK),
+                        privateKey: this.myPrivateKey,
                         publicKeyPEM: identityPublicKey,
                         algorithm,
                         version: cryptoState.version || 1
                     });
-                    console.log('💾 [PHASE 1] Cached decrypted identity in IndexedDB (password won\'t be needed on refresh)');
+                    logger.debug('💾 [PHASE 1] Cached decrypted identity in IndexedDB (password won\'t be needed on refresh)');
                 } catch (err) {
-                    console.warn('⚠️ [PHASE 1] IndexedDB cache failed (non-critical):', err);
+                    logger.warn('⚠️ [PHASE 1] IndexedDB cache failed (non-critical):', err);
                 }
 
                 
                 
                 try {
-                    console.log('📤 [PHASE 1] Verifying public key distribution...');
+                    logger.debug('📤 [PHASE 1] Verifying public key distribution...');
                     await this._uploadPublicKeyToIdentityService(identityPublicKey, algorithm, cryptoState.version || 1);
-                    console.log('✅ [PHASE 1] Public key ensured in identity service');
+                    logger.debug('✅ [PHASE 1] Public key ensured in identity service');
                 } catch (err) {
                     
-                    console.warn('⚠️ [PHASE 1] Public key upload warning (non-critical):', err.message);
+                    logger.warn('⚠️ [PHASE 1] Public key upload warning (non-critical):', err.message);
                 }
 
-                console.log('✅ [PHASE 1] Identity keys recovered and cached successfully');
+                logger.debug('✅ [PHASE 1] Identity keys recovered and cached successfully');
                 return { status: 'READY', existed: true, algorithm };
 
             } else {
                 
-                console.log('🆕 [PHASE 1] No crypto state found, generating new identity keys...');
+                logger.debug('🆕 [PHASE 1] No crypto state found, generating new identity keys...');
 
                 
                 const keyPair = await generateIdentityKeyPair();
@@ -250,7 +294,7 @@ class IdentityKeyService {
 
                 if (password) {
                     
-                    console.log('🔑 [PHASE 1] Deriving UMEK from password...');
+                    logger.debug('🔑 [PHASE 1] Deriving UMEK from password...');
                     const salt = generateSalt();
                     umek = await deriveUMEKFromPassword(password, salt);
                     umekProtectionType = 'PASSWORD';
@@ -262,7 +306,7 @@ class IdentityKeyService {
                     umekEnvelope = arrayBufferToBase64(umekBytes);
                 } else {
                     
-                    console.log('🔑 [PHASE 1] Generating random UMEK...');
+                    logger.debug('🔑 [PHASE 1] Generating random UMEK...');
                     umek = await generateUMEK();
                     umekProtectionType = 'SERVER_KEK';
 
@@ -275,14 +319,14 @@ class IdentityKeyService {
                 }
 
                 
-                console.log('🔒 [PHASE 1] Encrypting identity private key with UMEK...');
+                logger.debug('🔒 [PHASE 1] Encrypting identity private key with UMEK...');
                 const { encryptedPrivateKey, iv } = await encryptIdentityPrivateKey(
                     JSON.stringify(privateKeyJWK),
                     umek
                 );
 
                 
-                console.log('📤 [PHASE 1] Uploading encrypted identity state to server...');
+                logger.debug('📤 [PHASE 1] Uploading encrypted identity state to server...');
                 await this._uploadCryptoStateToServer({
                     identityPublicKey: publicKeyPEM,
                     encryptedIdentityPrivateKey: encryptedPrivateKey,
@@ -296,7 +340,8 @@ class IdentityKeyService {
                 });
 
                 
-                this.myPrivateKey = keyPair.privateKey;
+                // Keep only a non-extractable handle to the private key in memory/IndexedDB.
+                this.myPrivateKey = await importPrivateKeyJWK(privateKeyJWK, keyPair.algorithm, false);
                 this.myPublicKey = keyPair.publicKey;
                 this.myAlgorithm = keyPair.algorithm;
                 this.myUserId = userId;
@@ -310,33 +355,33 @@ class IdentityKeyService {
                 
                 try {
                     await storeIdentityKeyPair(userId, {
-                        privateKeyJWK,
+                        privateKey: this.myPrivateKey,
                         publicKeyPEM,
                         algorithm: keyPair.algorithm,
                         version: keyPair.version
                     });
-                    console.log('💾 [PHASE 1] Cached keys in IndexedDB');
+                    logger.debug('💾 [PHASE 1] Cached keys in IndexedDB');
                 } catch (err) {
-                    console.warn('⚠️ [PHASE 1] IndexedDB cache failed (non-critical):', err);
+                    logger.warn('⚠️ [PHASE 1] IndexedDB cache failed (non-critical):', err);
                 }
 
                 
                 
                 try {
-                    console.log('📤 [PHASE 1] Uploading public key to identity service...');
+                    logger.debug('📤 [PHASE 1] Uploading public key to identity service...');
                     await this._uploadPublicKeyToIdentityService(publicKeyPEM, keyPair.algorithm, keyPair.version);
-                    console.log('✅ [PHASE 1] Public key uploaded to identity service');
+                    logger.debug('✅ [PHASE 1] Public key uploaded to identity service');
                 } catch (err) {
-                    console.error('❌ [PHASE 1] CRITICAL: Failed to upload public key to identity service:', err);
+                    logger.error('❌ [PHASE 1] CRITICAL: Failed to upload public key to identity service:', err);
                     throw new Error('Public key distribution failed - cannot proceed with E2EE');
                 }
 
-                console.log('✅ [PHASE 1] New identity keys created and uploaded');
+                logger.debug('✅ [PHASE 1] New identity keys created and uploaded');
                 return { status: 'READY', existed: false, algorithm: keyPair.algorithm };
             }
 
         } catch (error) {
-            console.error('❌ [PHASE 1] Identity key initialization failed:', error);
+            logger.error('❌ [PHASE 1] Identity key initialization failed:', error);
             throw error;
         }
     }
@@ -358,7 +403,7 @@ class IdentityKeyService {
 
         
         if (response.status === 404) {
-            console.info('🆕 [PHASE 1] No crypto state on server (first login)');
+            logger.info('🆕 [PHASE 1] No crypto state on server (first login)');
             return null; 
         }
 
@@ -366,7 +411,7 @@ class IdentityKeyService {
         if (response.status === 403) {
             const data = await response.json().catch(() => ({}));
             if (data.code === 'DEVICE_REVOKED') {
-                console.error('❌ [PHASE 3] Device revoked - clearing session');
+                logger.error('❌ [PHASE 3] Device revoked - clearing session');
                 const { clearDeviceId } = await import('../utils/deviceId.js');
                 clearDeviceId();
                 window.location.href = '/login?reason=device_revoked';
@@ -406,7 +451,7 @@ class IdentityKeyService {
 
             return await response.json();
         } catch (error) {
-            console.error('Error uploading crypto state:', error);
+            logger.error('Error uploading crypto state:', error);
             throw error;
         }
     }
@@ -435,7 +480,7 @@ class IdentityKeyService {
 
             return await response.json();
         } catch (error) {
-            console.error('Error uploading public key to identity service:', error);
+            logger.error('Error uploading public key to identity service:', error);
             throw error;
         }
     }
@@ -564,18 +609,18 @@ class IdentityKeyService {
                 ['encrypt', 'decrypt']
             );
 
-            console.log('✅ [ESK] UMEK unwrapped using ephemeral session key (never plaintext over network)');
+            logger.debug('✅ [ESK] UMEK unwrapped using ephemeral session key (never plaintext over network)');
             return umek;
 
         } catch (error) {
-            console.error('Error unwrapping UMEK:', error);
+            logger.error('Error unwrapping UMEK:', error);
             throw error;
         }
     }
 
     
     async rotateUMEK(oldPassword, newPassword) {
-        console.log('🔄 [PHASE 2] Starting UMEK rotation (password change)');
+        logger.debug('🔄 [PHASE 2] Starting UMEK rotation (password change)');
 
         try {
             
@@ -590,13 +635,13 @@ class IdentityKeyService {
             }
 
             
-            console.log('🔑 Deriving OLD UMEK from old password...');
+            logger.debug('🔑 Deriving OLD UMEK from old password...');
             const { deriveUMEKFromPassword, base64ToArrayBuffer } = await import('../utils/crypto.js');
             const oldSalt = base64ToArrayBuffer(cryptoState.umekSalt);
             const oldUMEK = await deriveUMEKFromPassword(oldPassword, new Uint8Array(oldSalt));
 
             
-            console.log('🔓 Decrypting identity private key...');
+            logger.debug('🔓 Decrypting identity private key...');
             const { decryptIdentityPrivateKey } = await import('../utils/crypto.js');
             let identityPrivateKeyJWK;
             try {
@@ -606,20 +651,20 @@ class IdentityKeyService {
                     oldUMEK
                 );
             } catch (err) {
-                console.error('❌ Failed to decrypt with old password:', err);
+                logger.error('❌ Failed to decrypt with old password:', err);
                 throw new Error('Incorrect old password');
             }
 
-            console.log('✅ Old password validated');
+            logger.debug('✅ Old password validated');
 
             
-            console.log('🔑 Deriving NEW UMEK from new password...');
+            logger.debug('🔑 Deriving NEW UMEK from new password...');
             const { generateSalt } = await import('../utils/crypto.js');
             const newSalt = generateSalt();
             const newUMEK = await deriveUMEKFromPassword(newPassword, newSalt);
 
             
-            console.log('🔒 Re-encrypting identity private key with NEW UMEK...');
+            logger.debug('🔒 Re-encrypting identity private key with NEW UMEK...');
             const { encryptIdentityPrivateKey, arrayBufferToBase64 } = await import('../utils/crypto.js');
             const { encryptedPrivateKey, iv } = await encryptIdentityPrivateKey(
                 identityPrivateKeyJWK,
@@ -627,7 +672,7 @@ class IdentityKeyService {
             );
 
             
-            console.log('📤 Uploading rotated UMEK to server...');
+            logger.debug('📤 Uploading rotated UMEK to server...');
             await this._rotateUMEKOnServer({
                 encryptedIdentityPrivateKey: encryptedPrivateKey,
                 identityPrivateKeyIv: iv,
@@ -636,19 +681,19 @@ class IdentityKeyService {
                 currentVersion: cryptoState.version
             });
 
-            console.log('✅ [PHASE 2] Password changed successfully');
-            console.log('   - Identity keys: UNCHANGED ✅');
-            console.log('   - UMEK protection: Rotated to new password ✅');
+            logger.debug('✅ [PHASE 2] Password changed successfully');
+            logger.debug('   - Identity keys: UNCHANGED ✅');
+            logger.debug('   - UMEK protection: Rotated to new password ✅');
 
         } catch (error) {
-            console.error('❌ [PHASE 2] UMEK rotation failed:', error);
+            logger.error('❌ [PHASE 2] UMEK rotation failed:', error);
             throw error;
         }
     }
 
     
     async migrateToPasswordProtection(newPassword) {
-        console.log('🔄 [PHASE 2] Starting OAuth → PASSWORD migration');
+        logger.debug('🔄 [PHASE 2] Starting OAuth → PASSWORD migration');
 
         try {
             
@@ -663,11 +708,11 @@ class IdentityKeyService {
             }
 
             
-            console.log('🔑 Recovering UMEK from server KEK...');
+            logger.debug('🔑 Recovering UMEK from server KEK...');
             const currentUMEK = await this._unwrapUMEKFromServer(cryptoState.umekEnvelope);
 
             
-            console.log('🔓 Decrypting identity private key...');
+            logger.debug('🔓 Decrypting identity private key...');
             const { decryptIdentityPrivateKey } = await import('../utils/crypto.js');
             const identityPrivateKeyJWK = await decryptIdentityPrivateKey(
                 cryptoState.encryptedIdentityPrivateKey,
@@ -676,13 +721,13 @@ class IdentityKeyService {
             );
 
             
-            console.log('🔑 Deriving NEW UMEK from password...');
+            logger.debug('🔑 Deriving NEW UMEK from password...');
             const { deriveUMEKFromPassword, generateSalt } = await import('../utils/crypto.js');
             const newSalt = generateSalt();
             const newUMEK = await deriveUMEKFromPassword(newPassword, newSalt);
 
             
-            console.log('🔒 Re-encrypting identity private key with password-derived UMEK...');
+            logger.debug('🔒 Re-encrypting identity private key with password-derived UMEK...');
             const { encryptIdentityPrivateKey, arrayBufferToBase64 } = await import('../utils/crypto.js');
             const { encryptedPrivateKey, iv } = await encryptIdentityPrivateKey(
                 identityPrivateKeyJWK,
@@ -690,7 +735,7 @@ class IdentityKeyService {
             );
 
             
-            console.log('📤 Uploading migrated UMEK to server...');
+            logger.debug('📤 Uploading migrated UMEK to server...');
             await this._rotateUMEKOnServer({
                 encryptedIdentityPrivateKey: encryptedPrivateKey,
                 identityPrivateKeyIv: iv,
@@ -699,14 +744,14 @@ class IdentityKeyService {
                 currentVersion: cryptoState.version
             });
 
-            console.log('✅ [PHASE 2] Migrated to password protection');
-            console.log('   - Identity keys: UNCHANGED ✅');
-            console.log('   - UMEK protection: SERVER_KEK → PASSWORD ✅');
-            console.log('   - OAuth login: Still works ✅');
-            console.log('   - Email+password login: Now works ✅');
+            logger.debug('✅ [PHASE 2] Migrated to password protection');
+            logger.debug('   - Identity keys: UNCHANGED ✅');
+            logger.debug('   - UMEK protection: SERVER_KEK → PASSWORD ✅');
+            logger.debug('   - OAuth login: Still works ✅');
+            logger.debug('   - Email+password login: Now works ✅');
 
         } catch (error) {
-            console.error('❌ [PHASE 2] Migration failed:', error);
+            logger.error('❌ [PHASE 2] Migration failed:', error);
             throw error;
         }
     }
@@ -740,7 +785,7 @@ class IdentityKeyService {
 
             return await response.json();
         } catch (error) {
-            console.error('Error rotating UMEK on server:', error);
+            logger.error('Error rotating UMEK on server:', error);
             throw error;
         }
     }
@@ -796,7 +841,7 @@ class IdentityKeyService {
 
             return { publicKey, algorithm };
         } catch (error) {
-            console.error(`Failed to fetch public key for user ${userId}:`, error);
+            logger.error(`Failed to fetch public key for user ${userId}:`, error);
             throw error;
         }
     }
@@ -851,7 +896,7 @@ class IdentityKeyService {
 
             return result;
         } catch (error) {
-            console.error('Batch fetch public keys failed:', error);
+            logger.error('Batch fetch public keys failed:', error);
             throw error;
         }
     }
@@ -879,7 +924,7 @@ class IdentityKeyService {
             }
 
         } catch (error) {
-            console.error('Failed to upload public key:', error);
+            logger.error('Failed to upload public key:', error);
             throw error;
         }
     }

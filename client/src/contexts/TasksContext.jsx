@@ -4,6 +4,7 @@ import api from '@services/api';
 import { useToast } from "./ToastContext";
 import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
+import logger from '../utils/logger';
 
 const TasksContext = createContext();
 
@@ -137,7 +138,7 @@ export const TasksProvider = ({ children }) => {
 
             setTasks(mappedTasks);
         } catch (error) {
-            console.error("Failed to load tasks:", error);
+            logger.error("Failed to load tasks:", error);
             showToast(error.response?.data?.message || "Failed to load tasks", "error");
             setTasks([]);
         } finally {
@@ -331,7 +332,7 @@ export const TasksProvider = ({ children }) => {
 
             return newFrontendTasks;
         } catch (error) {
-            console.error("Failed to create task:", error);
+            logger.error("Failed to create task:", error);
             showToast(error.response?.data?.message || "Failed to create task", "error");
             return null;
         }
@@ -414,7 +415,7 @@ export const TasksProvider = ({ children }) => {
                 showToast("Task completed successfully", "success");
             }
         } catch (error) {
-            console.error("Failed to update task:", error);
+            logger.error("Failed to update task:", error);
             showToast("Failed to update task", "error");
 
             
@@ -433,7 +434,7 @@ export const TasksProvider = ({ children }) => {
 
             showToast("Task moved to trash", "success");
         } catch (error) {
-            console.error("Failed to delete task:", error);
+            logger.error("Failed to delete task:", error);
             showToast("Failed to delete task", "error");
             
             loadTasks();
@@ -447,7 +448,7 @@ export const TasksProvider = ({ children }) => {
             setTasks(prev => prev.filter(task => task.id !== id));
             showToast("Task permanently deleted", "success");
         } catch (error) {
-            console.error("Failed to permanently delete task:", error);
+            logger.error("Failed to permanently delete task:", error);
             showToast("Failed to permanently delete task", "error");
         }
     }, [showToast]);
@@ -461,7 +462,7 @@ export const TasksProvider = ({ children }) => {
             ));
             showToast("Task restored", "success");
         } catch (error) {
-            console.error("Failed to restore task:", error);
+            logger.error("Failed to restore task:", error);
             showToast("Failed to restore task", "error");
         }
     }, [showToast]);
@@ -534,7 +535,7 @@ export const TasksProvider = ({ children }) => {
             }
 
         } catch (error) {
-            console.error("Failed to handle transfer request:", error);
+            logger.error("Failed to handle transfer request:", error);
             showToast(error.response?.data?.message || "Failed to process request", "error");
         }
     }, [showToast, user, mapBackendStatus, mapBackendPriority]);

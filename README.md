@@ -8,7 +8,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-green.svg)](https://nodejs.org/)
-[![React](https://img.shields.io/badge/React-18-blue.svg)](https://react.dev/)
+[![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
+[![CI](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/actions/workflows/ci.yml)
 [![MongoDB](https://img.shields.io/badge/MongoDB-7-brightgreen.svg)](https://mongodb.com/)
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4-black.svg)](https://socket.io/)
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
@@ -168,7 +169,7 @@ Chttrix is architected as a true **multi-tenant SaaS** platform with workspace i
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         CLIENT LAYER                                 │
-│  React 18 SPA (Vite) · Vanilla CSS Design System · Socket.IO Client │
+│  React 19 SPA (Vite) · Tailwind + Monolith Flow tokens · Socket.IO   │
 │  Web / Electron Desktop / React Native Mobile                        │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │ HTTPS + WSS
@@ -206,16 +207,17 @@ The server uses a **feature-module pattern** — each domain (channels, tasks, n
 ### Frontend
 | Technology | Purpose |
 |---|---|
-| **React 18** | UI framework |
+| **React 19** | UI framework |
 | **Vite** | Build tool & dev server |
-| **React Router DOM v6** | Client-side routing |
+| **React Router DOM v7** | Client-side routing |
 | **Socket.IO Client** | Real-time events |
 | **Lucide React** | Icon system |
 | **Recharts** | Analytics charts |
 | **React Markdown** | Message rendering |
 | **emoji-picker-react** | Emoji picker |
 | **react-rnd** | Resizable panels |
-| **Vanilla CSS** | Custom design system (Monolith Flow) |
+| **Tailwind CSS 3** | Utility classes on top of the Monolith Flow design tokens in `index.css` |
+| **Vitest + Testing Library** | Unit and component tests |
 | **XLSX** | Spreadsheet export |
 
 ### Backend
@@ -237,6 +239,8 @@ The server uses a **feature-module pattern** — each domain (channels, tasks, n
 | **@google-cloud/storage** | GCS file storage |
 | **google-auth-library** | Google OAuth verification |
 | **open-graph-scraper** | Link preview metadata |
+| **pino** | Structured logging (pretty in dev, JSON in prod) |
+| **Jest** | Unit tests for server, `ai/` and `sdk/` |
 
 ### Infrastructure
 | Technology | Purpose |
@@ -248,6 +252,7 @@ The server uses a **feature-module pattern** — each domain (channels, tasks, n
 | **Vercel** | Frontend deployment (optional) |
 | **Electron** | Desktop wrapper |
 | **React Native (Expo)** | Mobile app |
+| **GitHub Actions** | CI: lint, test and build on every push and PR |
 
 ---
 
@@ -362,31 +367,38 @@ ChttrixCollab/
 │   │   ├── shared/                 # Shared middleware, validators
 │   │   └── utils/                  # Server-side utilities
 │
-├── ai/                             # Standalone AI orchestration layer
-│   ├── agents/                     # AI agent definitions
-│   ├── memory/                     # Conversation memory management
-│   ├── orchestrator/               # Multi-agent orchestration
-│   ├── api/                        # AI API endpoints
-│   └── events/                     # AI event hooks
+├── ai/                             # Chttrix Intelligence (framework-free, see ai/README.md)
+│   ├── api/ai.gateway.js           # Boundary the server calls: chat / summarize / generateTask
+│   ├── orchestrator/               # Intent → agent routing, memory, activity events
+│   ├── agents/                     # ChatAgent (tool calling), SummarizeAgent, TaskAgent
+│   ├── tools/registry.js           # Tool declarations + executors (actions injected by server)
+│   ├── memory/                     # Bounded LRU/TTL conversation memory
+│   ├── providers/                  # Gemini provider + mock provider for tests
+│   ├── events/                     # Activity event descriptors
+│   └── __tests__/                  # Jest suite (runs with the mock provider)
 │
 ├── mobile/                         # React Native (Expo) mobile app
-│   ├── src/                        # Mobile source
-│   ├── constants/                  # Mobile design tokens
-│   └── sdk/                        # Chttrix SDK usage
+│   ├── src/screens/                # Auth, workspace select, tabs, chat, notes, files, knowledge, settings
+│   ├── src/services/               # API client (with token refresh), socket, storage, crypto (E2EE)
+│   ├── src/hooks/                  # Offline queue, connectivity, presence
+│   └── src/theme.js                # Monolith Flow design tokens for RN
 │
 ├── desktop/                        # Electron desktop app
-│   ├── electron/                   # Main process
-│   └── renderer/                   # Renderer (Chromium shell)
+│   ├── electron/                   # Main process, preload bridge, tray, notifications, store
+│   ├── renderer/                   # Offline fallback page
+│   └── assets/                     # App and tray icons
 │
-├── sdk/                            # Chttrix SDK (JS/TS)
-│   ├── src/                        # SDK source
-│   └── types/                      # TypeScript definitions
+├── sdk/                            # @chttrix/sdk — JavaScript client (see sdk/js/README.md)
+│   ├── js/chttrix-sdk.js           # UMD client: API keys, user tokens, webhooks, AI, realtime
+│   ├── js/index.d.ts               # TypeScript definitions
+│   └── __tests__/                  # Jest suite (mocked fetch)
 │
-├── platform/                       # Platform utilities
-│   ├── sdk/                        # Platform-level SDK
-│   └── types/                      # Platform TypeScript types
+├── platform/                       # Code shared by client, server and mobile
+│   ├── sdk/                        # Browser API client, token manager, socket client, E2EE helpers
+│   └── constants/                  # API versions, socket event names, encryption constants
 │
-├── package.json                    # Root workspace orchestrator
+├── .github/workflows/ci.yml        # CI: server lint+test, client lint+test+build
+├── package.json                    # Root workspace orchestrator (npm workspaces: client, server)
 ├── nixpacks.toml                   # Railway deployment config
 ├── railway.json                    # Railway service config
 └── vercel.json                     # Vercel deployment config
@@ -443,11 +455,21 @@ Fill in the values — see [Environment Variables](#-environment-variables) belo
 npm run dev
 
 # Or individually:
-npm run server   # Backend on :5000
-npm run client   # Frontend on :5173
+npm run server   # Backend on :8080 (PORT in server/.env)
+npm run client   # Frontend on :3000 (Vite proxies /api and /uploads to :8080)
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 5. Run the Checks
+
+```bash
+npm run lint     # ESLint for server, client, ai/ and sdk/
+npm test         # Jest (server, ai/, sdk/) and Vitest (client)
+npm run build    # Production client build into /dist
+```
+
+The same three commands run in CI on every push and pull request.
 
 ---
 
@@ -467,7 +489,7 @@ REFRESH_TOKEN_SECRET=<32-char-random-string>
 SERVER_KEK=<64-char-hex-string>
 
 # ─── Frontend URL (CORS) ────────────────────────────────────
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=http://localhost:3000
 
 # ─── Google OAuth ────────────────────────────────────────────
 GOOGLE_CLIENT_ID=<your-google-client-id>
@@ -504,8 +526,8 @@ NODE_ENV=development
 ### Client (`client/.env`)
 
 ```env
-VITE_API_URL=http://localhost:5000
-VITE_SOCKET_URL=http://localhost:5000
+VITE_API_URL=http://localhost:8080/api
+VITE_BACKEND_URL=http://localhost:8080
 VITE_GOOGLE_CLIENT_ID=<same-google-client-id>
 VITE_VAPID_PUBLIC_KEY=<same-vapid-public-key>
 ```
@@ -641,7 +663,7 @@ The Redis adapter ensures that Socket.IO events broadcast correctly across all s
 
 ## 🤖 AI System
 
-Chttrix Intelligence is powered by **Google Gemini** (`gemini-1.5-flash` / `gemini-pro`) via the `@google/generative-ai` SDK.
+Chttrix Intelligence is powered by **Google Gemini** (`gemini-2.5-flash` by default) via the `@google/generative-ai` SDK, behind a provider abstraction so the whole layer runs with a mock provider in tests.
 
 ### Capabilities
 | Feature | How it Works |
@@ -654,11 +676,15 @@ Chttrix Intelligence is powered by **Google Gemini** (`gemini-1.5-flash` / `gemi
 | **AI Insights** | Aggregated workspace stats → Gemini generates executive summary |
 
 ### AI Architecture (`/ai` directory)
-The standalone AI module includes:
-- **Agents** — specialized sub-agents for different task types
-- **Memory** — conversation history management (short-term + persistent)
-- **Orchestrator** — routes requests to the appropriate agent
-- **API** — REST endpoints for AI interactions
+The server's AI controller is transport only. It hands plain payloads to `ai/api/ai.gateway.js`, which delegates to the orchestrator:
+
+- **Orchestrator** — maps an intent (`chat`, `summarize`, `generate_task`) to an agent, injects memory and tools, and returns the result plus an activity event descriptor
+- **Agents** — `ChatAgent` (multi-round tool calling), `SummarizeAgent`, `TaskAgent` (strict JSON extraction with fallback)
+- **Tools** — declarations plus executors; the server injects the side-effect implementations from `server/utils/aiActions.js`
+- **Memory** — bounded per user and workspace (turn cap, TTL, LRU size cap, no timers), cleared on logout
+- **Providers** — `gemini` and `mock`; selected with `AI_PROVIDER`
+
+Configuration and extension points are documented in [`ai/README.md`](ai/README.md).
 
 ---
 
@@ -753,46 +779,69 @@ The mobile web view uses a dedicated 5-tab bottom navigation bar:
 - `isMobile` breakpoint: `window.innerWidth < 768`
 
 ### React Native App (`/mobile`)
-- Built with **Expo** for iOS + Android
-- Uses **Chttrix SDK** for API communication
-- Shares design tokens with web
+Expo 54 / React Native 0.81 app that talks to the same API and Socket.IO server as the web client.
+
+- **Auth** — email/password sign-in and registration; access and refresh tokens in SecureStore. Native clients send `x-client-platform: ios|android`, and the server returns the refresh token in the login and refresh bodies for them (web keeps the httpOnly cookie). One shared refresh request retries a 401 once, then signs out.
+- **End-to-end encryption** — the same scheme as the web client, in pure JavaScript (`@noble/ciphers`, `@noble/curves`, `@noble/hashes`): PBKDF2 unlock of the identity key, RSA-OAEP or X25519 conversation-key unwrap, AES-256-GCM messages, HKDF thread keys. An Unlock screen handles accounts that need the password again.
+- **Chat** — DM and channel screens with pagination, jump-to-date, reactions, typing, read receipts, reconnect catch-up and an offline queue that stores ciphertext only.
+- **Everything else** — workspace switcher, tasks (v2 API), notes with editor, files, knowledge pages, notifications with push registration, settings and profile.
+- **Limits** — an account that has never signed in on the web has no identity keys yet, so mobile cannot decrypt until it does; attachments, polls and threads show placeholders.
+
+```bash
+cd mobile
+npm install --workspaces=false
+EXPO_PUBLIC_API_URL=http://<your-ip>:8080/api EXPO_PUBLIC_SOCKET_URL=http://<your-ip>:8080 npx expo start
+npx expo export --platform android   # verifies the bundle compiles
+```
 
 ---
 
 ## 🖥 Desktop App
 
-The Electron desktop app (`/desktop`) wraps the Chttrix web app in a native Chromium shell:
-- Native OS notifications
-- System tray integration
-- Platform-specific shortcuts
-- Application menu (File, Edit, View, Window)
+The Electron desktop app (`/desktop`) wraps the hosted Chttrix web client in a hardened Chromium shell. Details in [`desktop/README.md`](desktop/README.md).
+
+- **Native notifications** with click-to-navigate, dock and tray unread badge, Do Not Disturb, and a bridge the web client calls through `window.chttrixDesktop`
+- **System tray** with open, notifications, DnD, check-for-updates and quit; closing the window hides it on every platform
+- **Deep links** via `chttrix://workspace/<id>/channel/<id>`, single-instance lock, auto-update through `electron-updater`
+- **Security** — context isolation and sandbox, origin-checked permissions, CSP on the offline page, only http/https/mailto links open externally, OAuth popups confined to a preload-free window
+- **Offline fallback** page with automatic retry when the web client is unreachable
 
 ```bash
 cd desktop
-npm install
-npm run dev    # Development with hot reload
-npm run build  # Package for distribution
+npm install --workspaces=false
+npm start            # loads http://localhost:3000 (set CHTTRIX_WEB_URL to override)
+npm run icons        # regenerate assets/icon.png and tray-icon.png
+npm run build:mac    # or build:win / build:linux
 ```
 
 ---
 
 ## 🔧 SDK & Developer Platform
 
-### Chttrix SDK (`/sdk`)
+### Chttrix SDK (`/sdk/js`)
+Zero-dependency JavaScript client for Node 18+ and browsers. Full docs in [`sdk/js/README.md`](sdk/js/README.md).
+
 ```bash
-npm install @chttrix/sdk
+npm install ./sdk/js            # or, once published: npm install @chttrix/sdk
 ```
 
 ```js
-import { ChttrixClient } from '@chttrix/sdk';
+const { ChttrixSDK } = require('@chttrix/sdk');
 
-const client = new ChttrixClient({ token: '<api-token>' });
+// Server-to-server with a workspace API key from the Developer Portal
+const chttrix = new ChttrixSDK({ baseUrl: 'https://api.example.com', apiKey: 'chx_...' });
+const { tasks } = await chttrix.tasks.list({ status: 'todo' });
+await chttrix.tasks.create({ title: 'Rotate credentials', priority: 'high' });
 
-// Listen to real-time events
-client.on('message', (msg) => console.log(msg));
+// On behalf of a user
+await chttrix.auth.login(email, password);
+await chttrix.webhooks.subscribe({ workspaceId, url, events: ['task.created', 'message.sent'] });
+const { text } = await chttrix.ai.chat({ message: 'Summarise #general', workspaceId });
 
-// Send a message
-await client.messages.send({ channelId: '...', content: 'Hello!' });
+// Realtime (optional socket.io-client)
+const { io } = require('socket.io-client');
+chttrix.realtime.connect({ io });
+chttrix.realtime.on('new-message', console.log);
 ```
 
 ### Developer Portal (In-App)
@@ -809,24 +858,26 @@ Navigate to `Settings → Developer` or `/workspace/:id/developer`:
 ### Railway (Recommended)
 
 ```toml
-# nixpacks.toml — already configured
-[phases.build]
-cmds = ["cd client && npm install && npm run build"]
+# nixpacks.toml — already configured (Node 20)
+[phases.install]
+cmds = ["cd server && npm ci --production=false"]
 
 [start]
-cmd = "cd server && npm start"
+cmd = "node server/server.js"
 ```
 
-Set all environment variables in Railway's dashboard and deploy.
+The server requires the sibling `ai/` and `platform/` folders at runtime, so the whole repository is the deploy unit. Set all environment variables in Railway's dashboard and deploy.
 
 ### Docker
 
-```dockerfile
-# A Dockerfile is included in /server
-cd server
-docker build -t chttrix-server .
-docker run -p 5000:5000 --env-file .env chttrix-server
+Build from the **repository root** so `ai/` and `platform/` are included in the image:
+
+```bash
+docker build -f server/Dockerfile -t chttrix-server .
+docker run -p 8080:8080 --env-file server/.env chttrix-server
 ```
+
+The image is a two-stage Node 20 build, runs as the `node` user and exposes `/api/health` for the health check.
 
 ### Vercel (Frontend Only)
 
@@ -847,6 +898,8 @@ Set `VITE_API_URL` to your deployed server URL.
 - [ ] GCS key JSON uploaded and `GOOGLE_APPLICATION_CREDENTIALS` set
 - [ ] VAPID keys generated and set on both server and client
 - [ ] `NODE_ENV=production`
+- [ ] `GEMINI_API_KEY` set (or `AI_PROVIDER=mock` for environments without AI)
+- [ ] CI is green on the commit you deploy
 
 ---
 
@@ -930,8 +983,11 @@ git checkout -b feat/your-feature-name
 # 3. Make changes following the code style
 # - Use named exports for components
 # - Follow the feature-module pattern for backend
-# - Use CSS variables from the design system (no hardcoded colors)
-# - No Tailwind — use Vanilla CSS with design tokens
+# - Use the design tokens from index.css (no hardcoded colors); Tailwind utilities are fine
+# - Log through the logger (server: utils/logger, client: utils/logger), never console.*
+
+# 3b. Run the checks
+npm run lint && npm test
 
 # 4. Commit with conventional commits
 git commit -m "feat(tasks): add recurring task support"
@@ -955,7 +1011,7 @@ git push origin feat/your-feature-name
 ### Code Style Guidelines
 - **Components** — Functional components with hooks only (no class components)
 - **State** — Local `useState`, context for shared state, no Redux
-- **Styling** — CSS variables from `index.css`, inline `style={{}}` props (no Tailwind)
+- **Styling** — Tailwind utilities plus CSS variables from `index.css`; no hardcoded colors
 - **Icons** — Lucide React exclusively, size 14-20px, `strokeWidth={2}`
 - **API calls** — Always through the service layer in `/services/`
 - **Real-time** — Use `useSocket` hook from contexts
@@ -968,6 +1024,8 @@ git push origin feat/your-feature-name
 - [ ] Lucide icons used (not emoji or other icon libraries)
 - [ ] Protected routes use `RequireAuth` + `RequireWorkspace` guards
 - [ ] Backend routes validated with `express-validator`
+- [ ] Every route checks workspace/company membership, not just authentication
+- [ ] `npm run lint` and `npm test` pass locally; CI is green
 
 ---
 

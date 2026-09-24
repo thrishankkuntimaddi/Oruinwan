@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 function registerHuddleHandlers(io, socket) {
 
     
@@ -30,7 +31,7 @@ function registerHuddleHandlers(io, socket) {
 
             } else if (dmId) {
                 
-                const DMSession = require('../../features/chatlist/dmSession.model');
+                const DMSession = require('../../../models/DMSession');
                 const dm = await DMSession.findById(dmId).select('participants');
                 const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
                 if (!dm || !participants.includes(String(socket.user.id))) {
@@ -45,7 +46,7 @@ function registerHuddleHandlers(io, socket) {
 
             } else if (workspaceId) {
                 
-                const WorkspaceModel = require('../../features/workspaces/workspace.model');
+                const WorkspaceModel = require('../../../models/Workspace');
                 const ws = await WorkspaceModel.findOne({
                     _id: workspaceId,
                     'members.user': socket.user.id
@@ -61,7 +62,7 @@ function registerHuddleHandlers(io, socket) {
                 });
             }
         } catch (err) {
-            console.error('[huddle:start] Membership check failed:', err);
+            logger.error('[huddle:start] Membership check failed:', err);
             socket.emit('error', { message: 'Failed to verify membership' });
         }
     });
@@ -96,7 +97,7 @@ function registerHuddleHandlers(io, socket) {
             }
         } else if (dmId) {
             try {
-                const DMSession = require('../../features/chatlist/dmSession.model');
+                const DMSession = require('../../../models/DMSession');
                 const dm = await DMSession.findById(dmId).select('participants');
                 const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
                 if (!dm || !participants.includes(String(socket.user.id))) {
@@ -109,7 +110,7 @@ function registerHuddleHandlers(io, socket) {
             }
         } else if (workspaceId) {
             try {
-                const WorkspaceModel = require('../../features/workspaces/workspace.model');
+                const WorkspaceModel = require('../../../models/Workspace');
                 const ws = await WorkspaceModel.findOne({
                     _id: workspaceId,
                     'members.user': socket.user.id
@@ -180,7 +181,7 @@ function registerHuddleHandlers(io, socket) {
         
         
         if (!socket.rooms.has(`huddle:${huddleId}`)) {
-            console.warn(`🚫 [huddle:end] User ${socket.user.id} denied — not in huddle:${huddleId}`);
+            logger.warn(`🚫 [huddle:end] User ${socket.user.id} denied — not in huddle:${huddleId}`);
             socket.emit('error', { message: 'Not in this huddle' });
             return;
         }
@@ -191,12 +192,12 @@ function registerHuddleHandlers(io, socket) {
                 const Channel = require('../../features/channels/channel.model');
                 const channel = await Channel.findById(channelId).select('members');
                 if (!channel || !channel.isMember(socket.user.id)) {
-                    console.warn(`🚫 [huddle:end] User ${socket.user.id} denied — not a member of channel:${channelId}`);
+                    logger.warn(`🚫 [huddle:end] User ${socket.user.id} denied — not a member of channel:${channelId}`);
                     socket.emit('error', { message: 'Not a member of this channel' });
                     return;
                 }
             } catch (err) {
-                console.error('[huddle:end] Channel membership check failed:', err);
+                logger.error('[huddle:end] Channel membership check failed:', err);
                 socket.emit('error', { message: 'Failed to verify channel membership' });
                 return;
             }

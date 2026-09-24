@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const settingsService = require("./settings.service");
 
 exports.updateCompanyProfile = async (req, res) => {
@@ -16,7 +17,7 @@ exports.updateCompanyProfile = async (req, res) => {
             company
         });
     } catch (err) {
-        console.error("UPDATE COMPANY PROFILE ERROR:", err);
+        logger.error("UPDATE COMPANY PROFILE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -37,7 +38,7 @@ exports.updateSecuritySettings = async (req, res) => {
             settings
         });
     } catch (err) {
-        console.error("UPDATE SECURITY SETTINGS ERROR:", err);
+        logger.error("UPDATE SECURITY SETTINGS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -58,7 +59,7 @@ exports.updateDomainSettings = async (req, res) => {
             settings
         });
     } catch (err) {
-        console.error("UPDATE DOMAIN SETTINGS ERROR:", err);
+        logger.error("UPDATE DOMAIN SETTINGS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

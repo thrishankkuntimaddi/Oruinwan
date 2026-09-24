@@ -5,6 +5,7 @@ import api from '@services/api';
 import { formatTime } from '../helpers/helpers';
 import { batchDecryptMessages } from '../../../../services/messageEncryptionService';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
+import logger from '../../../../utils/logger';
 
 export default function ThreadsTab({ channelId, currentUserId, socket }) {
     const [threads, setThreads] = useState([]);
@@ -22,13 +23,13 @@ export default function ThreadsTab({ channelId, currentUserId, socket }) {
                 try {
                     decryptedThreads = await batchDecryptMessages(activeThreads, channelId, 'channel', null);
                 } catch (err) {
-                    console.error('[THREADS_TAB][DECRYPT] Failed to decrypt threads:', err);
+                    logger.error('[THREADS_TAB][DECRYPT] Failed to decrypt threads:', err);
                     decryptedThreads = activeThreads;
                 }
             }
             setThreads(decryptedThreads);
         } catch (err) {
-            console.error('[THREADS_TAB][ERROR] Failed to fetch threads:', err);
+            logger.error('[THREADS_TAB][ERROR] Failed to fetch threads:', err);
             setThreads([]);
         } finally {
             setLoading(false);

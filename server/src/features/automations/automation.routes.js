@@ -4,6 +4,7 @@ const logger   = require('../../../utils/logger');
 const service  = require('./automation.service');
 const templates = require('./automation.templates');
 
+const mongoose = require('mongoose');
 const Workspace = require('../../../models/Workspace');
 
 async function _requireWorkspaceAdmin(userId, workspaceId, res) {
@@ -18,6 +19,27 @@ async function _requireWorkspaceAdmin(userId, workspaceId, res) {
     });
     if (!member || !['admin', 'owner'].includes(member.role)) {
         res.status(403).json({ message: 'Only workspace admins can manage automations' });
+        return false;
+    }
+    return true;
+}
+
+async function _requireWorkspaceMember(userId, workspaceId, res) {
+    if (!mongoose.Types.ObjectId.isValid(String(workspaceId))) {
+        res.status(400).json({ message: 'Invalid workspaceId' });
+        return false;
+    }
+    const ws = await Workspace.findById(workspaceId).select('members').lean();
+    if (!ws) {
+        res.status(404).json({ message: 'Workspace not found' });
+        return false;
+    }
+    const isMember = (ws.members || []).some(m => {
+        const id = m.user?._id?.toString() || m.user?.toString() || m.toString();
+        return id === userId.toString();
+    });
+    if (!isMember) {
+        res.status(403).json({ message: 'Not a member of this workspace' });
         return false;
     }
     return true;
@@ -53,6 +75,8 @@ router.get('/', async (req, res) => {
         const { workspaceId, page = 1, limit = 20 } = req.query;
         if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
 
+        if (!(await _requireWorkspaceMember(req.user.sub, workspaceId, res))) return;
+
         const result = await service.getAutomations(workspaceId, {
             page:  parseInt(page, 10),
             limit: parseInt(limit, 10)
@@ -68,6 +92,8 @@ router.get('/:id', async (req, res) => {
     try {
         const { workspaceId } = req.query;
         if (!workspaceId) return res.status(400).json({ message: 'workspaceId is required' });
+
+        if (!(await _requireWorkspaceMember(req.user.sub, workspaceId, res))) return;
 
         const automation = await service.getAutomation(req.params.id, workspaceId);
         res.json({ automation });

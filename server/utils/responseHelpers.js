@@ -1,5 +1,6 @@
+const logger = require('./logger');
 exports.handleError = (res, err, context = "ERROR", message = "Server error", statusCode = 500) => {
-  console.error(`${context}:`, err);
+  logger.error(`${context}:`, err);
   return res.status(statusCode).json({ message });
 };
 

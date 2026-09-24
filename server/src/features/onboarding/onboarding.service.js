@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const bcrypt = require('bcryptjs');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
@@ -143,7 +144,7 @@ async function onboardIndividual(params) {
             try {
                 await assignMembers(deptId, companyId, [user._id.toString()], 'add');
             } catch (err) {
-                console.warn('[ONBOARDING] assignMembers warning:', deptId, err.message);
+                logger.warn('[ONBOARDING] assignMembers warning:', deptId, err.message);
             }
         }
     }

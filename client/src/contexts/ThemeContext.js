@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAuth } from './AuthContext';
 import api from '@services/api';
+import logger from '../utils/logger';
 
 const ThemeContext = createContext();
 
@@ -51,7 +52,7 @@ export const ThemeProvider = ({ children }) => {
                 });
 
             } catch (err) {
-                console.error("Failed to save theme preference:", err);
+                logger.error("Failed to save theme preference:", err);
                 
                 
             }

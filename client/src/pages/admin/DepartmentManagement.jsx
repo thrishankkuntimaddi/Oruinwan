@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import DepartmentModal from '../../components/company/DepartmentModal';
 import DepartmentDetailsModal from '../../components/company/DepartmentDetailsModal';
 import { getDepartments, deleteDepartment } from '../../services/departmentService';
+import logger from '../../utils/logger';
 
 const inputSt = {
     background: 'var(--bg-input)', border: '1px solid var(--border-default)',
@@ -30,7 +31,7 @@ const DepartmentManagement = () => {
             const res = await getDepartments(company._id);
             setDepartments(res.departments || []);
         } catch (err) {
-            console.error('Failed to fetch departments', err);
+            logger.error('Failed to fetch departments', err);
         } finally {
             setLoading(false);
         }

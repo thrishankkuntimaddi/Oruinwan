@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const User = require('../../models/User');
 
 const MENTION_REGEX = /@([a-zA-Z0-9_.-]+)/g;
@@ -40,7 +41,7 @@ async function resolveHandlesToIds(handles, companyId, senderId) {
             .map(u => u._id.toString())
             .filter(id => id !== senderId?.toString()); 
     } catch (err) {
-        console.error('[mentionParser] resolveHandlesToIds error:', err.message);
+        logger.error('[mentionParser] resolveHandlesToIds error:', err.message);
         return [];
     }
 }

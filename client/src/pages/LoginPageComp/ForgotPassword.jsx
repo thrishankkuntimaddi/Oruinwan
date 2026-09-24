@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Mail, ArrowLeft, Key, CheckCircle2 } from 'lucide-react';
+import logger from '../../utils/logger';
 
 const inputSt = {
     width: '100%', boxSizing: 'border-box',
@@ -34,7 +35,7 @@ export default function ForgotPassword() {
             });
             setSent(true);
         } catch (err) {
-            console.error('Forgot Password Error:', err);
+            logger.error('Forgot Password Error:', err);
         } finally { setLoading(false); }
     };
 

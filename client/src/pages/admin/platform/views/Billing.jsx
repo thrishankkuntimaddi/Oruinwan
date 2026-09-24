@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { DollarSign, TrendingUp, CreditCard, Calendar, Download, Search } from 'lucide-react';
+import logger from '../../../../utils/logger';
 
 const planColor = (plan) => {
     if (plan === 'enterprise') return 'var(--accent)';
@@ -34,7 +35,7 @@ const Billing = () => {
             setStats(statsRes.data);
             setBillingData(billingRes.data);
         } catch (err) {
-            console.error('Failed to fetch billing data:', err);
+            logger.error('Failed to fetch billing data:', err);
         } finally { setLoading(false); }
     };
 

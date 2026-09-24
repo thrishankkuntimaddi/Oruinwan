@@ -1,9 +1,10 @@
 import React from 'react';
+import logger from '../../utils/logger';
 
 export default function SystemEventItem({ event, currentUserId, creatorName }) {
     
     if (!event.timestamp || isNaN(new Date(event.timestamp))) {
-        console.warn('[SYSTEM_EVENT][WARN] Skipping render — invalid timestamp', event);
+        logger.warn('[SYSTEM_EVENT][WARN] Skipping render — invalid timestamp', event);
         return null;
     }
 

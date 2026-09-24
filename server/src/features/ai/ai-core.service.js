@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const { summarizeDocument, semanticSearch, cacheStats, clearCache } = require('./ai.summarizer.service');
 const crypto = require('crypto');
@@ -9,6 +10,7 @@ exports.cacheStats      = cacheStats;
 exports.clearCache      = clearCache;
 
 const _cache = new Map();
+const CACHE_MAX_ENTRIES = 500;
 
 function _cacheKey(...parts) {
     return crypto.createHash('sha256').update(parts.join('|')).digest('hex');
@@ -20,7 +22,14 @@ function _cacheGet(key) {
     return e.value;
 }
 function _cacheSet(key, value, ttlMs = 300_000) {
+    // Re-insert so the key moves to the newest position (Map preserves insertion order).
+    _cache.delete(key);
     _cache.set(key, { value, expiresAt: Date.now() + ttlMs });
+    // Bounded: evict oldest entries first.
+    while (_cache.size > CACHE_MAX_ENTRIES) {
+        const oldestKey = _cache.keys().next().value;
+        _cache.delete(oldestKey);
+    }
 }
 
 let _model = null;
@@ -28,7 +37,7 @@ function _getModel() {
     if (!_model) {
         const { GoogleGenerativeAI } = require('@google/generative-ai');
         const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || '';
-        _model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-2.0-flash' });
+        _model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: (process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash') });
     }
     return _model;
 }
@@ -65,7 +74,7 @@ async function extractTasks(text) {
         _cacheSet(key, items, 300_000);
         return { items, fallback: false };
     } catch (err) {
-        console.error('[AICore] extractTasks error:', err.message);
+        logger.error('[AICore] extractTasks error:', err.message);
         return { items: [], fallback: true };
     }
 }
@@ -102,7 +111,7 @@ async function answerQuestion(query, contextDocs = []) {
         _cacheSet(key, answer, 300_000);
         return { answer, fallback: false };
     } catch (err) {
-        console.error('[AICore] answerQuestion error:', err.message);
+        logger.error('[AICore] answerQuestion error:', err.message);
         return { answer: 'I was unable to find an answer. Please try again.', fallback: true };
     }
 }
@@ -148,7 +157,7 @@ async function generateReplies(messages = []) {
         _cacheSet(key, final, 120_000);
         return { suggestions: final, fallback: false };
     } catch (err) {
-        console.error('[AICore] generateReplies error:', err.message);
+        logger.error('[AICore] generateReplies error:', err.message);
         return { suggestions: FALLBACKS[0], fallback: true };
     }
 }

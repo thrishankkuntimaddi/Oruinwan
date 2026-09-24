@@ -1,5 +1,7 @@
+const logger = require('../../../utils/logger');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
@@ -29,23 +31,33 @@ async function processDocuments(documents) {
                 const base64Data = doc.content.replace(/^data:([A-Za-z-+/]+);base64,/, '');
                 const buffer = Buffer.from(base64Data, 'base64');
 
-                const uniqueName = `${Date.now()}_${doc.name.replace(/\s+/g, '_')}`;
-                const uploadDir = path.join(__dirname, '../../uploads/verification_docs');
+                // Sanitize: basename only, strict charset, bounded length (prevents path traversal).
+                const safeBase = path.basename(String(doc.name))
+                    .replace(/\s+/g, '_')
+                    .replace(/[^A-Za-z0-9._-]/g, '')
+                    .replace(/^\.+/, '')
+                    .slice(0, 100) || 'document';
+                const uniqueName = `${Date.now()}_${crypto.randomBytes(6).toString('hex')}_${safeBase}`;
+                const uploadDir = path.resolve(__dirname, '../../uploads/verification_docs');
 
                 if (!fs.existsSync(uploadDir)) {
                     fs.mkdirSync(uploadDir, { recursive: true });
                 }
 
-                const filePath = path.join(uploadDir, uniqueName);
+                const filePath = path.resolve(uploadDir, uniqueName);
+                if (!filePath.startsWith(uploadDir + path.sep)) {
+                    logger.warn('Rejected verification document with unsafe name');
+                    continue;
+                }
                 fs.writeFileSync(filePath, buffer);
 
                 processedDocuments.push({
-                    name: doc.name,
+                    name: safeBase,
                     url: `/uploads/verification_docs/${uniqueName}`,
                     uploadedAt: new Date()
                 });
             } catch (err) {
-                console.warn(`Failed to process document ${doc.name}:`, err.message);
+                logger.warn('Failed to process verification document:', err.message);
             }
         }
     }
@@ -248,7 +260,7 @@ async function createWorkspaceWithChannels({ company, adminUser, deptName, deptI
                 members: [adminUser._id.toString()]
             });
         } catch (keyError) {
-            console.error(`Failed to bootstrap key for channel ${chanId}:`, keyError);
+            logger.error(`Failed to bootstrap key for channel ${chanId}:`, keyError);
             throw new Error('Failed to initialize channel encryption');
         }
     }

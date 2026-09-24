@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { ArrowLeft, Shield, AlertTriangle, Save, Globe, Mail } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
+import logger from '../../../../utils/logger';
 
 const CompanyDetail = ({ companyId, onBack }) => {
     const [company, setCompany] = useState(null);
@@ -16,7 +17,7 @@ const CompanyDetail = ({ companyId, onBack }) => {
             const res = await api.get('/api/admin/active-companies');
             const found = res.data.find(c => c._id === companyId);
             if (found) { setCompany(found); setPlan(found.plan || 'free'); }
-        } catch (err) { console.error(err); }
+        } catch (err) { logger.error(err); }
         finally { setLoading(false); }
     };
 

@@ -68,7 +68,7 @@ const UserSchema = new mongoose.Schema(
 
     
     
-    inviteToken: { type: String, default: null },  
+    inviteToken: { type: String, default: null, select: false },
     inviteTokenExpiry: { type: Date, default: null },  
     inviteEmailStatus: {
       type: String,
@@ -148,11 +148,11 @@ const UserSchema = new mongoose.Schema(
 
     
     verified: { type: Boolean, default: false },
-    verificationTokenHash: String,
+    verificationTokenHash: { type: String, select: false },
     verificationTokenExpires: Date,
 
     
-    resetPasswordTokenHash: String,
+    resetPasswordTokenHash: { type: String, select: false },
     resetPasswordExpires: Date,
 
     
@@ -179,6 +179,8 @@ const UserSchema = new mongoose.Schema(
     
     googleId: { type: String, unique: true, sparse: true },
     profilePicture: { type: String },
+    // GCS object path of the uploaded avatar, so the old object can be deleted on replace/remove.
+    profilePictureGcsPath: { type: String, default: null },
     googleAccount: { type: Boolean, default: false },
 
     
@@ -204,7 +206,7 @@ const UserSchema = new mongoose.Schema(
 
     
     twoFactorEnabled: { type: Boolean, default: false },
-    twoFactorSecret: { type: String, default: null }, 
+    twoFactorSecret: { type: String, default: null, select: false },
 
     
     devices: [{
@@ -216,11 +218,14 @@ const UserSchema = new mongoose.Schema(
     }],
 
     
-    deviceTokens: [{
-      token: { type: String, required: true },        
-      platform: { type: String, enum: ['ios', 'android', 'web', 'unknown'], default: 'unknown' },
-      registeredAt: { type: Date, default: Date.now }
-    }],
+    deviceTokens: {
+      type: [{
+        token: { type: String, required: true },
+        platform: { type: String, enum: ['ios', 'android', 'web', 'unknown'], default: 'unknown' },
+        registeredAt: { type: Date, default: Date.now }
+      }],
+      select: false
+    },
 
     
     legalHold: { type: Boolean, default: false },
@@ -299,13 +304,17 @@ const UserSchema = new mongoose.Schema(
     deactivatedAt: { type: Date, default: null },
 
     
-    otpCodes: [{
-      code: { type: String, required: true },
-      type: { type: String, required: true }, 
-      expiresAt: { type: Date, required: true },
-      used: { type: Boolean, default: false },
-      createdAt: { type: Date, default: Date.now }
-    }],
+    otpCodes: {
+      type: [{
+        code: { type: String, required: true },
+        type: { type: String, required: true },
+        expiresAt: { type: Date, required: true },
+        used: { type: Boolean, default: false },
+        usedAt: { type: Date },
+        createdAt: { type: Date, default: Date.now }
+      }],
+      select: false
+    },
 
     
     createdAt: { type: Date, default: Date.now },
@@ -329,5 +338,39 @@ UserSchema.pre("save", function (next) {
     next(err);
   }
 });
+
+// Fields that must never leave the server through res.json(user) / JSON.stringify(user).
+// Note: .lean() results bypass this transform — project secrets out explicitly there.
+const SENSITIVE_TOP_LEVEL_FIELDS = [
+  'passwordHash',
+  'refreshTokens',
+  'twoFactorSecret',
+  'otpCodes',
+  'inviteToken',
+  'resetPasswordTokenHash',
+  'verificationTokenHash',
+  'deviceTokens',
+];
+
+function stripSensitive(doc, ret) {
+  for (const field of SENSITIVE_TOP_LEVEL_FIELDS) {
+    delete ret[field];
+  }
+  if (ret.encryption && typeof ret.encryption === 'object') {
+    delete ret.encryption.encryptedPrivateKey;
+  }
+  if (Array.isArray(ret.emails)) {
+    for (const e of ret.emails) {
+      if (e && typeof e === 'object') {
+        delete e.verificationTokenHash;
+        delete e.verificationTokenExpires;
+      }
+    }
+  }
+  return ret;
+}
+
+UserSchema.set('toJSON', { transform: stripSensitive });
+UserSchema.statics.SENSITIVE_FIELDS = SENSITIVE_TOP_LEVEL_FIELDS;
 
 module.exports = mongoose.model("User", UserSchema);

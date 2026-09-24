@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '../../../contexts/ToastContext';
 import api from '@services/api';
 import { Shield, Mail, Clock, CheckCircle, XCircle, RotateCw, Search, Trash, Link2, AlertTriangle, Trash2, Users } from 'lucide-react';
+import logger from '../../../utils/logger';
 
 const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
     const { showToast } = useToast();
@@ -21,7 +22,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
             const response = await api.get(`/api/workspaces/${activeWorkspace.id}/invites`);
             setInvitations(response.data);
         } catch (error) {
-            console.error('Error fetching invitations:', error);
+            logger.error('Error fetching invitations:', error);
             showToast(error.response?.data?.message || 'Failed to load invitations', 'error');
         } finally {
             setLoading(false);
@@ -96,7 +97,7 @@ const InvitationsTab = ({ activeWorkspace, isAdmin }) => {
             setSelectedInvites(new Set());
             fetchInvitations();
         } catch (error) {
-            console.error('❌ Delete error:', error);
+            logger.error('❌ Delete error:', error);
             showToast(error.response?.data?.message || 'Failed to bulk delete invitations', 'error');
         } finally {
             setBulkActionLoading(false);

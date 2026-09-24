@@ -1,87 +1,57 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, RefreshControl, Alert,
+  TouchableOpacity, RefreshControl,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
-import { getMe, logoutApi } from '../services/api';
-import { connectSocket, joinWorkspace, signalActive, disconnectSocket } from '../services/socket';
+import { useConnectivity } from '../hooks/useConnectivity';
+import Avatar from '../components/Avatar';
 
 export default function HomeScreen({ navigation }) {
-  const { user, workspace, setUser, clearSession } = useApp();
+  const { user, workspace, e2ee, refreshUser } = useApp();
+  const { socketStatus } = useConnectivity();
   const [refreshing, setRefreshing] = useState(false);
+  const insets = useSafeAreaInsets();
 
-  
-  useEffect(() => {
-    loadUser();
-    connectSocket().then(() => signalActive()).catch(() => {});
-  }, []);
-
-  
-  useEffect(() => {
-    if (workspace?._id) joinWorkspace(workspace._id);
-  }, [workspace?._id]);
-
-  async function loadUser() {
-    try {
-      const { data } = await getMe();
-      const u = data.user || data;
-      await setUser(u);
-    } catch (_) {}
-  }
-
-  async function handleLogout() {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: async () => {
-          try { await logoutApi(); } catch (_) {}
-          disconnectSocket();
-          await clearSession();
-          navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
-        },
-      },
-    ]);
-  }
-
-  async function onRefresh() {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await loadUser();
+    await refreshUser();
     setRefreshing(false);
-  }
+  }, [refreshUser]);
 
   const quickAccess = [
     { label: 'Channels', tab: 'Channels', icon: '#', desc: 'Team discussions' },
     { label: 'Direct Messages', tab: 'DMs', icon: '💬', desc: 'Private messages' },
     { label: 'Tasks', tab: 'Tasks', icon: '📋', desc: 'Your work items' },
     { label: 'Notifications', tab: 'Notifications', icon: '🔔', desc: 'Activity feed' },
+    { label: 'Notes', tab: 'Notes', icon: '📝', desc: 'Docs & meeting notes' },
+    { label: 'Files', tab: 'Files', icon: '🗂', desc: 'Workspace files' },
+    { label: 'Knowledge', tab: 'Knowledge', icon: '📚', desc: 'Handbook & wiki' },
+    { label: 'Settings', tab: 'Settings', icon: '⚙️', desc: 'Profile & security' },
   ];
+
+  const e2eeLocked = e2ee.status === 'password_required' || e2ee.status === 'locked';
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#b8956a" />
       }
     >
       {}
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {(user?.username || 'U')[0].toUpperCase()}
-          </Text>
-        </View>
+        <Avatar name={user?.username} uri={user?.profilePicture} size={48} style={{ marginRight: 14 }} />
         <View style={styles.headerText}>
           <Text style={styles.greeting}>Hello, {user?.username || 'there'} 👋</Text>
           <Text style={styles.subGreeting}>
             {user?.companyRole ? `${user.companyRole} · ` : ''}Chttrix Mobile
           </Text>
         </View>
-        <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Sign Out</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.logoutBtn}>
+          <Text style={styles.settingsText}>⚙︎ Settings</Text>
         </TouchableOpacity>
       </View>
 
@@ -109,7 +79,13 @@ export default function HomeScreen({ navigation }) {
         </TouchableOpacity>
       )}
 
-      {}
+      {e2eeLocked ? (
+        <TouchableOpacity style={[styles.banner, { marginBottom: 16 }]} onPress={() => navigation.navigate('Unlock')}>
+          <Text style={styles.bannerTitle}>🔒 Unlock encrypted messages</Text>
+          <Text style={styles.bannerBody}>Enter your password once to read and send end-to-end encrypted messages on this device.</Text>
+        </TouchableOpacity>
+      ) : null}
+
       <Text style={styles.sectionTitle}>Quick Access</Text>
       <View style={styles.grid}>
         {quickAccess.map((item) => (
@@ -131,9 +107,11 @@ export default function HomeScreen({ navigation }) {
 
       {}
       <View style={styles.banner}>
-        <Text style={styles.bannerTitle}>📱 Real-time sync active</Text>
+        <Text style={styles.bannerTitle}>
+          {socketStatus === 'connected' ? '📱 Real-time sync active' : '⏳ Connecting to real-time sync…'}
+        </Text>
         <Text style={styles.bannerBody}>
-          Messages, tasks, and notifications stay in sync across all your devices instantly.
+          Messages are end-to-end encrypted; tasks and notifications stay in sync across your devices.
         </Text>
       </View>
     </ScrollView>
@@ -149,7 +127,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6,
     borderWidth: 1, borderColor: '#222222',
   },
-  logoutText: { color: '#e05252', fontSize: 12, fontWeight: '600' },
+  settingsText: { color: '#b8956a', fontSize: 12, fontWeight: '600' },
   avatar: {
     width: 48, height: 48, borderRadius: 24,
     backgroundColor: '#1c1c1c',

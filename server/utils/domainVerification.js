@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const dns = require("dns").promises;
 const crypto = require("crypto");
 
@@ -13,36 +14,36 @@ exports.generateDomainVerificationToken = () => {
 
 exports.verifyDomainTXT = async (domain, expectedToken) => {
     try {
-        console.log(`🔍 Verifying domain: ${domain}`);
-        console.log(`🔑 Expected token: ${expectedToken}`);
+        logger.info(`🔍 Verifying domain: ${domain}`);
+        logger.info(`🔑 Expected token: ${expectedToken}`);
 
         
         const records = await dns.resolveTxt(domain);
 
-        console.log(`📋 Found ${records.length} TXT records`);
+        logger.info(`📋 Found ${records.length} TXT records`);
 
         
         for (const record of records) {
             const txtValue = Array.isArray(record) ? record.join("") : record;
-            console.log(`   - ${txtValue}`);
+            logger.info(`   - ${txtValue}`);
 
             if (txtValue === `chttrix-verification=${expectedToken}`) {
-                console.log(`✅ Domain verified successfully!`);
+                logger.info(`✅ Domain verified successfully!`);
                 return true;
             }
         }
 
-        console.log(`❌ Verification token not found in TXT records`);
+        logger.info(`❌ Verification token not found in TXT records`);
         return false;
 
     } catch (err) {
-        console.error(`❌ DNS lookup failed for ${domain}:`, err.message);
+        logger.error(`❌ DNS lookup failed for ${domain}:`, err.message);
 
         
         if (err.code === "ENOTFOUND") {
-            console.log(`   Domain not found or has no DNS records`);
+            logger.info(`   Domain not found or has no DNS records`);
         } else if (err.code === "ENODATA") {
-            console.log(`   No TXT records found for this domain`);
+            logger.info(`   No TXT records found for this domain`);
         }
 
         return false;

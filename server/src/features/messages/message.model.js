@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const mongoose = require("mongoose");
 
 const ReactionSchema = new mongoose.Schema({
@@ -209,7 +210,7 @@ MessageSchema.post("save", async function (doc) {
         $set: { lastMessageAt: doc.createdAt }
       });
     } catch (err) {
-      console.error("[Message Schema post-save] Failed to update channel counters:", err);
+      logger.error("[Message Schema post-save] Failed to update channel counters:", err);
     }
   }
 });

@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const express = require('express');
 const router = express.Router();
@@ -92,14 +93,14 @@ router.get('/:provider/callback', async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {
-    console.error(`[SSO] ${provider} error:`, error);
+    logger.error(`[SSO] ${provider} error:`, error);
     return res.redirect(`${FRONTEND_URL()}/login?error=sso_${provider}_failed`);
   }
 
   
   const storedState = req.cookies?.[`sso_state_${provider}`];
   if (!state || !storedState || state !== storedState) {
-    console.error(`[SSO] ${provider}: state mismatch — CSRF attempt?`);
+    logger.error(`[SSO] ${provider}: state mismatch — CSRF attempt?`);
     res.clearCookie(`sso_state_${provider}`);
     return res.redirect(`${FRONTEND_URL()}/login?error=sso_state_mismatch`);
   }
@@ -186,7 +187,7 @@ router.get('/:provider/callback', async (req, res) => {
     
     return res.redirect(`${FRONTEND_URL()}/oauth-success#access=${token}`);
   } catch (err) {
-    console.error(`[SSO] ${provider} callback error:`, err.response?.data || err.message);
+    logger.error(`[SSO] ${provider} callback error:`, err.response?.data || err.message);
     return res.redirect(`${FRONTEND_URL()}/login?error=sso_${provider}_failed`);
   }
 });

@@ -3,14 +3,13 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import * as Icons from "lucide-react";
 import api from '@services/api';
-import { useTheme } from "../contexts/ThemeContext";
+import logger from '../utils/logger';
 
 const JoinWorkspace = () => {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { user } = useAuth();
     const token = searchParams.get('token');
-    const { theme, toggleTheme } = useTheme();
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -24,15 +23,13 @@ const JoinWorkspace = () => {
             return;
         }
 
-        
         const fetchDetails = async () => {
             try {
                 const response = await api.get(`/api/workspaces/invite/${token}`);
-                const data = response.data;
-                setWorkspaceDetails(data);
+                setWorkspaceDetails(response.data);
                 setLoading(false);
             } catch (err) {
-                setError(err.response?.data?.message || err.message || "Failed to fetch");
+                setError(err.response?.data?.message || err.message || "Failed to fetch invitation details");
                 setLoading(false);
             }
         };
@@ -42,7 +39,6 @@ const JoinWorkspace = () => {
 
     const handleJoin = async () => {
         if (!user) {
-            
             localStorage.setItem('pendingInvite', token);
             navigate('/login');
             return;
@@ -51,10 +47,8 @@ const JoinWorkspace = () => {
         setJoining(true);
         try {
             const response = await api.post('/api/workspaces/join', { token });
-
             const data = response.data;
 
-            
             localStorage.setItem('currentWorkspace', data.workspace.id);
             localStorage.removeItem('pendingInvite');
 
@@ -64,59 +58,213 @@ const JoinWorkspace = () => {
                 }
             });
         } catch (err) {
-            console.error('Join workspace error:', err);
+            logger.error('Join workspace error:', err);
             setError(err.response?.data?.message || err.message || "Failed to join workspace");
             setJoining(false);
         }
     };
 
-    
     const renderWorkspaceIcon = (iconName) => {
-        if (!iconName) return <Icons.Rocket size={48} strokeWidth={1.5} />;
-
-        
+        if (!iconName) return <Icons.Rocket size={24} style={{ color: 'var(--accent, #b8956a)' }} />;
         const IconComponent = Icons[iconName.charAt(0).toUpperCase() + iconName.slice(1)];
         if (IconComponent) {
-            return <IconComponent size={48} strokeWidth={1.5} />;
+            return <IconComponent size={24} style={{ color: 'var(--accent, #b8956a)' }} />;
         }
+        return <Icons.Hash size={24} style={{ color: 'var(--accent, #b8956a)' }} />;
+    };
 
-        
-        return <Icons.Hash size={48} strokeWidth={1.5} />;
+    const styles = {
+        root: {
+            minHeight: '100vh',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--bg-base, #0c0c0c)',
+            fontFamily: 'var(--font, Inter, system-ui, sans-serif)',
+            position: 'relative',
+            color: 'var(--text-primary, #e4e4e4)',
+            padding: '24px',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+        },
+        bgGlow: {
+            position: 'absolute',
+            top: '30%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '500px',
+            height: '500px',
+            background: 'radial-gradient(circle, var(--accent-dim, rgba(184,149,106,0.07)) 0%, transparent 70%)',
+            pointerEvents: 'none',
+            zIndex: 0
+        },
+        topBrand: {
+            position: 'absolute',
+            top: '24px',
+            left: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            cursor: 'pointer',
+            zIndex: 10
+        },
+        card: {
+            position: 'relative',
+            zIndex: 1,
+            width: '100%',
+            maxWidth: '440px',
+            background: 'var(--bg-surface, #111111)',
+            border: '1px solid var(--border-default, #222222)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+            padding: '36px 32px',
+            boxSizing: 'border-box',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center'
+        },
+        iconBox: {
+            width: '52px',
+            height: '52px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--accent-dim, rgba(184,149,106,0.12))',
+            border: '1px solid rgba(184,149,106,0.3)',
+            marginBottom: '20px',
+            flexShrink: 0
+        },
+        title: {
+            fontSize: '22px',
+            fontWeight: 700,
+            color: 'var(--text-primary, #e4e4e4)',
+            letterSpacing: '-0.02em',
+            margin: '0 0 8px 0'
+        },
+        accentText: {
+            color: 'var(--accent, #b8956a)'
+        },
+        inviterBadge: {
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            padding: '4px 12px',
+            background: 'var(--bg-input, #141414)',
+            border: '1px solid var(--border-subtle, #191919)',
+            fontSize: '12px',
+            color: 'var(--text-secondary, #7a7a7a)',
+            marginBottom: '16px'
+        },
+        description: {
+            fontSize: '13px',
+            color: 'var(--text-secondary, #7a7a7a)',
+            lineHeight: 1.6,
+            margin: '0 0 24px 0',
+            maxWidth: '360px'
+        },
+        statsGrid: {
+            width: '100%',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '12px',
+            marginBottom: '28px'
+        },
+        statBox: {
+            background: 'var(--bg-input, #141414)',
+            border: '1px solid var(--border-subtle, #191919)',
+            padding: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '4px'
+        },
+        statValue: {
+            fontSize: '18px',
+            fontWeight: 700,
+            color: 'var(--text-primary, #e4e4e4)'
+        },
+        statLabel: {
+            fontSize: '10px',
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            color: 'var(--text-secondary, #7a7a7a)',
+            textTransform: 'uppercase'
+        },
+        primaryBtn: {
+            width: '100%',
+            padding: '12px 16px',
+            background: 'var(--accent, #b8956a)',
+            color: '#0c0c0c',
+            border: 'none',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 150ms ease',
+            fontFamily: 'inherit'
+        },
+        secondaryBtn: {
+            width: '100%',
+            padding: '10px 16px',
+            background: 'transparent',
+            border: 'none',
+            color: 'var(--text-secondary, #7a7a7a)',
+            fontSize: '13px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'color 150ms ease',
+            marginTop: '8px',
+            fontFamily: 'inherit'
+        },
+        footerText: {
+            marginTop: '24px',
+            fontSize: '11px',
+            color: 'var(--text-secondary, #7a7a7a)',
+            letterSpacing: '0.05em'
+        }
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500">
-                <div className="text-center">
-                    <Icons.Loader className="w-12 h-12 text-indigo-600 dark:text-indigo-400 animate-spin mx-auto mb-4" />
-                    <p className="text-slate-600 dark:text-slate-400 font-medium">Verifying invitation...</p>
+            <div style={styles.root}>
+                <div style={styles.bgGlow} />
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', zIndex: 1 }}>
+                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', opacity: 0.5 }} />
+                    <div style={{ height: '2px', width: '80px', background: 'var(--accent-dim, rgba(184,149,106,0.2))', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: 'var(--accent, #b8956a)', animation: 'slideBar 1.2s ease-in-out infinite' }} />
+                    </div>
+                    <p style={{ fontSize: '13px', color: 'var(--text-secondary, #7a7a7a)', margin: 0 }}>Verifying invitation...</p>
                 </div>
+                <style>{`@keyframes slideBar { from{left:-40px} to{left:100%} }`}</style>
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500 p-6">
-                {}
-                <div className="absolute top-6 right-6 z-50">
-                    <button
-                        onClick={toggleTheme}
-                        className="p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-                    >
-                        {theme === 'dark' ? <Icons.Sun size={20} /> : <Icons.Moon size={20} />}
-                    </button>
+            <div style={styles.root}>
+                <div style={styles.bgGlow} />
+                <div style={styles.topBrand} onClick={() => navigate('/workspaces')}>
+                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Chttrix</span>
                 </div>
 
-                <div className="backdrop-blur-xl bg-white/70 dark:bg-[#0B0F19]/60 border border-white/50 dark:border-white/10 shadow-2xl rounded-3xl p-8 max-w-md w-full text-center">
-                    <div className="w-20 h-20 bg-red-100 dark:bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Icons.AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
+                <div style={{ ...styles.card, border: '1px solid rgba(224,82,82,0.3)' }}>
+                    <div style={{ ...styles.iconBox, background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.3)' }}>
+                        <Icons.AlertCircle size={22} style={{ color: 'var(--state-danger, #e05252)' }} />
                     </div>
-                    <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Invitation Error</h1>
-                    <p className="text-slate-600 dark:text-slate-400 mb-8">{error}</p>
+                    <h1 style={styles.title}>Invitation Error</h1>
+                    <p style={{ ...styles.description, color: 'var(--text-secondary)', marginBottom: '24px' }}>{error}</p>
                     <button
                         onClick={() => navigate('/workspaces')}
-                        className="w-full py-3.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-500/25"
+                        style={styles.primaryBtn}
+                        onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover, #c9a87c)'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'var(--accent, #b8956a)'}
                     >
                         Go to Workspaces
                     </button>
@@ -125,118 +273,100 @@ const JoinWorkspace = () => {
         );
     }
 
-    if (!workspaceDetails) {
-        return null;
-    }
+    if (!workspaceDetails) return null;
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 dark:bg-[#030712] transition-colors duration-500 relative overflow-hidden font-sans selection:bg-indigo-500 selection:text-white">
-            {}
-            <div className={`absolute inset-0 transition-opacity duration-1000 ${theme === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-                <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/2"></div>
-                <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] translate-y-1/2 -translate-x-1/2"></div>
+        <div style={styles.root}>
+            <div style={styles.bgGlow} />
+
+            <div style={styles.topBrand} onClick={() => navigate('/workspaces')}>
+                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px' }} />
+                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Chttrix</span>
             </div>
 
-            <div className={`absolute inset-0 transition-opacity duration-1000 ${theme === 'dark' ? 'opacity-0' : 'opacity-100'}`}>
-                <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-blue-100/60 via-purple-100/30 to-transparent blur-[80px]"></div>
-                <div className="absolute top-[20%] -right-[10%] w-[50%] h-[50%] rounded-full bg-gradient-to-bl from-indigo-100/60 via-pink-100/30 to-transparent blur-[80px]"></div>
-            </div>
+            <div style={styles.card}>
+                <div style={styles.iconBox}>
+                    {renderWorkspaceIcon(workspaceDetails.workspaceIcon)}
+                </div>
 
-            {}
-            <div className="absolute top-6 right-6 z-50">
-                <button
-                    onClick={toggleTheme}
-                    className="p-3 rounded-xl bg-white/50 dark:bg-slate-800/50 backdrop-blur-md border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-white/80 dark:hover:bg-slate-700/80 transition-all shadow-sm"
-                >
-                    {theme === 'dark' ? <Icons.Sun size={20} /> : <Icons.Moon size={20} />}
-                </button>
-            </div>
+                <h1 style={styles.title}>
+                    Join <span style={styles.accentText}>{workspaceDetails.workspaceName}</span>
+                </h1>
 
-            <div className="relative z-10 w-full max-w-lg px-6">
-                <div className="backdrop-blur-xl bg-white/70 dark:bg-[#0B0F19]/60 border border-white/50 dark:border-white/10 shadow-2xl rounded-3xl p-8 md:p-10 animate-fade-in-up">
+                <div style={styles.inviterBadge}>
+                    <span>Invited by</span>
+                    <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{workspaceDetails.invitedBy}</strong>
+                </div>
 
-                    {}
-                    <div className="text-center mb-8">
-                        <div
-                            className="w-24 h-24 rounded-3xl flex items-center justify-center text-white mx-auto mb-6 shadow-xl transform rotate-3 transition-transform hover:rotate-6"
-                            style={{ backgroundColor: workspaceDetails.workspaceColor || '#4F46E5' }}
-                        >
-                            <span className="text-5xl drop-shadow-md">
-                                {renderWorkspaceIcon(workspaceDetails.workspaceIcon)}
-                            </span>
-                        </div>
+                {workspaceDetails.workspaceDescription && (
+                    <p style={styles.description}>
+                        {workspaceDetails.workspaceDescription}
+                    </p>
+                )}
 
-                        <h1 className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
-                            Join <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">{workspaceDetails.workspaceName}</span>
-                        </h1>
+                <div style={styles.statsGrid}>
+                    <div style={styles.statBox}>
+                        <Icons.Users size={16} style={{ color: 'var(--accent, #b8956a)', marginBottom: '2px' }} />
+                        <span style={styles.statValue}>{workspaceDetails.memberCount}</span>
+                        <span style={styles.statLabel}>Members</span>
+                    </div>
+                    <div style={styles.statBox}>
+                        <Icons.Shield size={16} style={{ color: 'var(--accent, #b8956a)', marginBottom: '2px' }} />
+                        <span style={{ ...styles.statValue, textTransform: 'capitalize' }}>{workspaceDetails.role}</span>
+                        <span style={styles.statLabel}>Your Role</span>
+                    </div>
+                </div>
 
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm font-medium text-slate-600 dark:text-slate-300 mb-4">
-                            <span>Invited by</span>
-                            <span className="font-bold text-slate-900 dark:text-white">{workspaceDetails.invitedBy}</span>
-                        </div>
-
-                        {workspaceDetails.workspaceDescription && (
-                            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed max-w-sm mx-auto">
-                                {workspaceDetails.workspaceDescription}
-                            </p>
+                <div style={{ width: '100%' }}>
+                    <button
+                        onClick={handleJoin}
+                        disabled={joining}
+                        style={{
+                            ...styles.primaryBtn,
+                            opacity: joining ? 0.7 : 1,
+                            cursor: joining ? 'not-allowed' : 'pointer'
+                        }}
+                        onMouseEnter={e => { if (!joining) e.currentTarget.style.background = 'var(--accent-hover, #c9a87c)'; }}
+                        onMouseLeave={e => { if (!joining) e.currentTarget.style.background = 'var(--accent, #b8956a)'; }}
+                    >
+                        {joining ? (
+                            <>
+                                <Icons.Loader size={16} className="animate-spin" />
+                                Joining...
+                            </>
+                        ) : (
+                            <>
+                                {user ? 'Join Workspace' : 'Sign In & Join'}
+                                <Icons.ArrowRight size={15} />
+                            </>
                         )}
-                    </div>
+                    </button>
 
-                    {}
-                    <div className="grid grid-cols-2 gap-4 mb-8">
-                        <div className="bg-slate-50/50 dark:bg-white/5 rounded-2xl p-4 text-center border border-slate-200/50 dark:border-white/5">
-                            <Icons.Users className="w-6 h-6 text-blue-500 dark:text-blue-400 mx-auto mb-2" />
-                            <p className="text-xl font-bold text-slate-900 dark:text-white">{workspaceDetails.memberCount}</p>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Members</p>
-                        </div>
-                        <div className="bg-slate-50/50 dark:bg-white/5 rounded-2xl p-4 text-center border border-slate-200/50 dark:border-white/5">
-                            <Icons.Shield className="w-6 h-6 text-purple-500 dark:text-purple-400 mx-auto mb-2" />
-                            <p className="text-xl font-bold text-slate-900 dark:text-white capitalize">{workspaceDetails.role}</p>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Your Role</p>
-                        </div>
-                    </div>
-
-                    {}
-                    <div className="space-y-4">
-                        <button
-                            onClick={handleJoin}
-                            disabled={joining}
-                            className="group w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold rounded-xl shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                            {joining ? (
-                                <>
-                                    <Icons.Loader className="w-5 h-5 animate-spin" />
-                                    Joining...
-                                </>
-                            ) : (
-                                <>
-                                    {user ? 'Join Workspace' : 'Sign In & Join'}
-                                    <Icons.ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </>
-                            )}
-                        </button>
-
-                        <button
-                            onClick={() => navigate('/workspaces')}
-                            disabled={joining}
-                            className="w-full py-4 text-slate-500 dark:text-slate-400 font-bold hover:text-slate-700 dark:hover:text-white transition-colors"
-                        >
-                            No thanks, maybe later
-                        </button>
-                    </div>
-
-                    {!user && (
-                        <p className="text-center text-xs text-slate-400 dark:text-slate-500 mt-6 font-medium">
-                            Join securely. Create an account after accepting.
-                        </p>
-                    )}
+                    <button
+                        onClick={() => navigate('/workspaces')}
+                        disabled={joining}
+                        style={styles.secondaryBtn}
+                        onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
+                        onMouseLeave={e => e.currentTarget.style.color = 'var(--text-secondary)'}
+                    >
+                        No thanks, maybe later
+                    </button>
                 </div>
-                <div className={`mt-8 text-center text-xs font-medium transition-colors duration-500 ${theme === 'dark' ? 'text-white/20' : 'text-slate-300'}`}>
-                    Secure Invite System
-                </div>
+
+                {!user && (
+                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '20px', margin: '20px 0 0 0' }}>
+                        Secure Invite System • Sign in or create an account to proceed
+                    </p>
+                )}
+            </div>
+
+            <div style={styles.footerText}>
+                © 2026 Chttrix Inc.
             </div>
         </div>
     );
 };
 
 export default JoinWorkspace;
+
+

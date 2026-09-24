@@ -3,85 +3,58 @@
 /**
  * Chttrix Desktop — System Tray
  *
- * Creates a tray icon with a context menu:
- *  - Open Chttrix
- *  - Do Not Disturb toggle
- *  - Toggle Notifications
- *  - Separator + Quit
+ * Menu:
+ *  - Open Chttrix (recreates the window if it was destroyed)
+ *  - Do Not Disturb / Enable-Disable Notifications
+ *  - Check for updates
+ *  - About + Quit
  *
- * Exports refreshTrayMenu() so main.js can rebuild the menu
- * when notification state changes via IPC.
+ * All state changes are delegated to handlers supplied by main.js so the tray,
+ * the renderer IPC (save-setting / toggle-notifications) and the in-memory
+ * notification state always go through the same code path.
  */
 
-const { Tray, Menu, nativeImage, BrowserWindow, app } = require('electron');
+const { Tray, Menu, nativeImage, app } = require('electron');
 const path = require('path');
 const notifications = require('./notifications');
-const store = require('./store');
 
 let tray = null;
-
-// ─── Focus helper ─────────────────────────────────────────────────────────────
-function focusMainWindow() {
-  const wins = BrowserWindow.getAllWindows();
-  if (wins.length > 0) {
-    const win = wins[0];
-    if (win.isMinimized()) win.restore();
-    win.show();
-    win.focus();
-  }
-}
+let handlers = {
+  openWindow: () => {},
+  toggleWindow: () => {},
+  setNotificationsEnabled: () => {},
+  setDoNotDisturb: () => {},
+  checkForUpdates: () => {},
+  quit: () => app.quit(),
+};
 
 // ─── Context Menu Builder ─────────────────────────────────────────────────────
 function buildContextMenu() {
-  const notifEnabled  = notifications.isEnabled();
-  const dndEnabled    = store.get('doNotDisturb');
-  const version       = app.getVersion();
+  const notifEnabled = notifications.isEnabled();
+  const dndEnabled   = notifications.isDoNotDisturb();
+  const version      = app.getVersion();
 
   return Menu.buildFromTemplate([
-    {
-      label: 'Open Chttrix',
-      click: focusMainWindow,
-    },
+    { label: 'Open Chttrix', click: () => handlers.openWindow() },
     { type: 'separator' },
     {
-      label: dndEnabled ? '✅ Do Not Disturb' : '🌙 Do Not Disturb',
-      type:  'checkbox',
+      label: 'Do Not Disturb',
+      type: 'checkbox',
       checked: dndEnabled,
-      click: () => {
-        const next = !dndEnabled;
-        store.set('doNotDisturb', next);
-        notifications.setEnabled(!next);
-        store.set('notificationsEnabled', !next);
-        refreshTrayMenu();
-        // Notify renderer so its settings UI stays in sync
-        const wins = BrowserWindow.getAllWindows();
-        if (wins.length > 0) {
-          wins[0].webContents.send('notifications-toggled', { enabled: !next });
-        }
-      },
+      click: () => handlers.setDoNotDisturb(!dndEnabled),
     },
     {
-      label: notifEnabled ? '🔕 Disable Notifications' : '🔔 Enable Notifications',
-      click: () => {
-        const next = !notifEnabled;
-        notifications.setEnabled(next);
-        store.set('notificationsEnabled', next);
-        refreshTrayMenu();
-        const wins = BrowserWindow.getAllWindows();
-        if (wins.length > 0) {
-          wins[0].webContents.send('notifications-toggled', { enabled: next });
-        }
-      },
+      label: notifEnabled ? 'Disable Notifications' : 'Enable Notifications',
+      click: () => handlers.setNotificationsEnabled(!notifEnabled),
     },
     { type: 'separator' },
-    {
-      label: `About Chttrix v${version}`,
-      enabled: false,
-    },
+    { label: 'Check for Updates…', click: () => handlers.checkForUpdates() },
+    { label: `About Chttrix v${version}`, enabled: false },
+    { type: 'separator' },
     {
       label: 'Quit Chttrix',
       accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
-      click: () => app.quit(),
+      click: () => handlers.quit(),
     },
   ]);
 }
@@ -98,59 +71,47 @@ function refreshTrayMenu() {
 }
 
 /**
- * Initialise the system tray.
- * Should be called once after app.whenReady().
+ * Initialise the system tray. Call once after app.whenReady().
+ * @param {Partial<typeof handlers>} opts
  */
-function createTray() {
+function createTray(opts = {}) {
+  handlers = { ...handlers, ...opts };
+  if (tray) return tray;
+
   const iconPath = path.join(__dirname, '..', 'assets', 'tray-icon.png');
 
-  let icon;
-  try {
-    icon = nativeImage.createFromPath(iconPath);
-    if (icon.isEmpty()) throw new Error('empty');
-  } catch {
-    icon = nativeImage.createEmpty();
-  }
-
-  if (process.platform === 'darwin') {
+  let icon = nativeImage.createFromPath(iconPath);
+  if (icon.isEmpty()) {
+    console.warn('[Tray] Missing tray icon at', iconPath, '— run `npm run icons`');
+  } else if (process.platform === 'darwin') {
+    // Coloured icon: do NOT mark as template (a template image would render
+    // the filled square as a solid silhouette and hide the "C").
     icon = icon.resize({ width: 16, height: 16 });
-    icon.setTemplateImage(true);
   }
 
   tray = new Tray(icon);
   tray.setToolTip('Chttrix — Company Workspace OS');
   tray.setContextMenu(buildContextMenu());
 
-  // Single click: show/hide window (all platforms)
-  tray.on('click', () => {
-    const wins = BrowserWindow.getAllWindows();
-    if (wins.length > 0) {
-      const win = wins[0];
-      win.isVisible() ? win.hide() : win.show();
-    }
-  });
-
+  // Single click: show/hide window (Windows/Linux; macOS opens the menu)
+  tray.on('click', () => handlers.toggleWindow());
   // Double-click: always show window (Windows primarily)
-  tray.on('double-click', focusMainWindow);
+  tray.on('double-click', () => handlers.openWindow());
 
   return tray;
 }
 
 /**
  * Update the tray tooltip and macOS dock badge with the unread count.
- * @param {number} count
+ * @param {number} count non-negative integer (validated by caller)
  */
 function setUnreadCount(count) {
+  if (process.platform === 'darwin' || process.platform === 'linux') {
+    app.setBadgeCount(count);
+  }
   if (!tray) return;
   const label = count > 0 ? `${count} unread message${count === 1 ? '' : 's'}` : 'No new messages';
   tray.setToolTip(`Chttrix — ${label}`);
-
-  if (process.platform === 'darwin') {
-    app.setBadgeCount(count);
-  }
-
-  // Rebuild menu to reflect updated state
-  refreshTrayMenu();
 }
 
 module.exports = { createTray, setUnreadCount, refreshTrayMenu };

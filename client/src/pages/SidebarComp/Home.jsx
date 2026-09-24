@@ -5,6 +5,7 @@ import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from '@services/api';
 import { useSocket } from "../../contexts/SocketContext";
 import EmptyState from "./states/EmptyState";
+import logger from '../../utils/logger';
 
 const Home = () => {
   const { workspaceId, id, dmId } = useParams();
@@ -132,7 +133,7 @@ const Home = () => {
                 }
               } catch (resolveErr) {
                 
-                console.error('[Home] ❌ Could not resolve DM');
+                logger.error('[Home] ❌ Could not resolve DM');
                 setActiveChat(null);
                 return;
               }
@@ -199,7 +200,7 @@ const Home = () => {
 
         setActiveChat(null);
       } catch (err) {
-        console.error("Error detecting chat metadata:", err);
+        logger.error("Error detecting chat metadata:", err);
       } finally {
         setIsLoading(false);
       }
@@ -273,6 +274,7 @@ const Home = () => {
         </div>
       ) : activeChat ? (
         <ChatWindowV2
+          key={activeChat.id || activeChat._id}
           chat={activeChat}
           onClose={() => {
             setActiveChat(null);

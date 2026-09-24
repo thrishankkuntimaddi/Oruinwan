@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const companyService = require("./company.service");
 const metricsService = require("./metrics.service");
 const Company = require("../../../models/Company");
@@ -24,7 +25,7 @@ exports.getCompanyMetrics = async (req, res) => {
         return res.json({ metrics });
 
     } catch (err) {
-        console.error("GET COMPANY METRICS ERROR:", err);
+        logger.error("GET COMPANY METRICS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -38,7 +39,7 @@ exports.getCompanyAnalytics = async (req, res) => {
 
         return res.json(analytics);
     } catch (err) {
-        console.error("GET COMPANY ANALYTICS ERROR:", err);
+        logger.error("GET COMPANY ANALYTICS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

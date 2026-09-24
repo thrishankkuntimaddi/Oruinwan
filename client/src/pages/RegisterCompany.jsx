@@ -12,6 +12,7 @@ import Step2AdministratorForm from "./register/steps/Step2AdministratorForm";
 import Step3AccountForm from "./register/steps/Step3AccountForm";
 import Step4DocumentsForm from "./register/steps/Step4DocumentsForm";
 import Step5ReviewForm from "./register/steps/Step5ReviewForm";
+import logger from '../utils/logger';
 
 const RegisterCompany = () => {
     const navigate = useNavigate();
@@ -328,7 +329,7 @@ const RegisterCompany = () => {
             });
             setIsLoading(false);
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             setIsLoading(false);
             showToast(error.response?.data?.message || "Failed to send OTP", "error");
         }
@@ -416,7 +417,7 @@ const RegisterCompany = () => {
 
             setIsSuccess(true);
         } catch (error) {
-            console.error(error);
+            logger.error(error);
             showToast(error.response?.data?.message || "Failed to register", "error");
         } finally {
             setIsLoading(false);

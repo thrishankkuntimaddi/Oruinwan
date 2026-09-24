@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const InternalMessage = require('../../../models/InternalMessage');
 const User = require('../../../models/User');
 const _Department = require('../../../models/Department');
@@ -53,7 +54,7 @@ exports.sendMessage = async (req, res) => {
             return res.status(400).json({ message: 'Invalid message direction. Use this endpoint for manager-admin communication only.' });
         }
 
-        console.log('[INTERNAL MESSAGE] Sending:', {
+        logger.info('[INTERNAL MESSAGE] Sending:', {
             from: req.user.email,
             to: recipient.email,
             type: messageType
@@ -79,14 +80,14 @@ exports.sendMessage = async (req, res) => {
         if (req.app.get('io')) {
             const io = req.app.get('io');
             
-            io.to(`user-${recipientId}`).emit('internal-message', message);
+            io.to(`user:${recipientId}`).emit('internal-message', message);
         }
 
-        console.log('[INTERNAL MESSAGE] Created successfully:', message._id);
+        logger.info('[INTERNAL MESSAGE] Created successfully:', message._id);
 
         return res.status(201).json({ message });
     } catch (error) {
-        console.error('SEND INTERNAL MESSAGE ERROR:', error);
+        logger.error('SEND INTERNAL MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -122,7 +123,7 @@ exports.getConversation = async (req, res) => {
 
         return res.json({ messages });
     } catch (error) {
-        console.error('GET CONVERSATION ERROR:', error);
+        logger.error('GET CONVERSATION ERROR:', error);
         return res.status(500).json({ message: 'Failed to load conversation' });
     }
 };
@@ -150,7 +151,7 @@ exports.getAdminInbox = async (req, res) => {
 
         return res.json({ conversations });
     } catch (error) {
-        console.error('GET ADMIN INBOX ERROR:', error);
+        logger.error('GET ADMIN INBOX ERROR:', error);
         return res.status(500).json({ message: 'Failed to load inbox' });
     }
 };
@@ -176,7 +177,7 @@ exports.getManagerInbox = async (req, res) => {
 
         return res.json({ messages, unreadCount });
     } catch (error) {
-        console.error('GET MANAGER INBOX ERROR:', error);
+        logger.error('GET MANAGER INBOX ERROR:', error);
         return res.status(500).json({ message: 'Failed to load inbox' });
     }
 };
@@ -205,7 +206,7 @@ exports.markAsRead = async (req, res) => {
 
         return res.json({ message });
     } catch (error) {
-        console.error('MARK AS READ ERROR:', error);
+        logger.error('MARK AS READ ERROR:', error);
         return res.status(500).json({ message: 'Failed to mark as read' });
     }
 };
@@ -221,7 +222,7 @@ exports.getUnreadCount = async (req, res) => {
 
         return res.json({ count });
     } catch (error) {
-        console.error('GET UNREAD COUNT ERROR:', error);
+        logger.error('GET UNREAD COUNT ERROR:', error);
         return res.status(500).json({ message: 'Failed to get unread count' });
     }
 };

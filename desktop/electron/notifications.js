@@ -6,14 +6,26 @@
  * Uses Electron's built-in Notification API.
  * Supports: messages, mentions, task reminders, system alerts.
  * All notifications click to focus the app and optionally deep-link.
+ *
+ * State:
+ *  - enabled       user preference ("notificationsEnabled")
+ *  - doNotDisturb  temporary mute ("doNotDisturb")
+ *  A notification is only shown when enabled && !doNotDisturb.
  */
 
-const { Notification, BrowserWindow } = require('electron');
+const { Notification } = require('electron');
 const path = require('path');
 
 const ICON_PATH = path.join(__dirname, '..', 'assets', 'icon.png');
 
 let notificationsEnabled = true;
+let doNotDisturb = false;
+let soundEnabled = true;
+
+// Electron Notification objects are garbage-collected once nothing references
+// them, which silently drops their click handlers. Keep every live notification
+// here until it is clicked, closed or fails.
+const activeNotifications = new Set();
 
 // ─── Core ─────────────────────────────────────────────────────────────────────
 
@@ -31,10 +43,10 @@ function showNotification({
   title = 'Chttrix',
   body  = '',
   type  = 'system',
-  silent = false,
+  silent = !soundEnabled,
   onClick,
 } = {}) {
-  if (!notificationsEnabled) return;
+  if (!notificationsEnabled || doNotDisturb) return;
   if (!Notification.isSupported()) return;
 
   const notification = new Notification({
@@ -45,17 +57,15 @@ function showNotification({
     urgency: type === 'mention' ? 'critical' : 'normal', // Linux urgency
   });
 
+  activeNotifications.add(notification);
+  const release = () => activeNotifications.delete(notification);
+
   notification.on('click', () => {
-    // Bring app window to front
-    const wins = BrowserWindow.getAllWindows();
-    if (wins.length > 0) {
-      const win = wins[0];
-      if (win.isMinimized()) win.restore();
-      win.show();
-      win.focus();
-    }
+    release();
     if (typeof onClick === 'function') onClick({ type });
   });
+  notification.on('close', release);
+  notification.on('failed', release);
 
   notification.show();
 }
@@ -78,8 +88,9 @@ function notifyMessage({ senderName, preview, onClick } = {}) {
  * Task due / reminder notification.
  */
 function notifyTaskReminder({ taskTitle, dueDate, onClick } = {}) {
-  const body = dueDate
-    ? `Due: ${new Date(dueDate).toLocaleDateString()}`
+  const due = dueDate ? new Date(dueDate) : null;
+  const body = due && !Number.isNaN(due.getTime())
+    ? `Due: ${due.toLocaleDateString()}`
     : 'A task requires your attention';
   showNotification({
     title: `📋 ${taskTitle || 'Task Reminder'}`,
@@ -111,6 +122,18 @@ function isEnabled() {
   return notificationsEnabled;
 }
 
+function setDoNotDisturb(value) {
+  doNotDisturb = !!value;
+}
+
+function isDoNotDisturb() {
+  return doNotDisturb;
+}
+
+function setSoundEnabled(value) {
+  soundEnabled = !!value;
+}
+
 module.exports = {
   showNotification,
   notifyMessage,
@@ -118,4 +141,7 @@ module.exports = {
   notifyMention,
   setEnabled,
   isEnabled,
+  setDoNotDisturb,
+  isDoNotDisturb,
+  setSoundEnabled,
 };

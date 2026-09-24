@@ -12,7 +12,6 @@
 
 import { getAccessToken } from '../auth/tokenManager.js';
 
-console.log("🔥 PLATFORM API CLIENT USED");
 
 // ─── Default Headers ──────────────────────────────────────────────────────────
 
@@ -43,11 +42,14 @@ export async function request(method, url, body = null, opts = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
+  // Spread caller options first so the merged headers (incl. Authorization)
+  // are not clobbered by opts.headers.
+  const { headers: _ignoredHeaders, ...restOpts } = opts;
   const fetchOptions = {
+    ...restOpts,
     method: method.toUpperCase(),
     headers,
     credentials: opts.credentials ?? 'include',
-    ...opts,
   };
 
   if (body !== null) {

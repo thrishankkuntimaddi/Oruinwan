@@ -1,22 +1,46 @@
 const otpService = require("../services/otp.service");
+const otpStore = require("../services/otpStore");
 const { handleError } = require("../../../utils/responseHelpers");
 const Company = require("../../../models/Company");
-const { sendOTP } = require("../../../utils/sendOTP");
+const User = require("../../../models/User");
+
+const OTP_TYPES = ["email", "phone"];
+const PHONE_RE = /^\+?[0-9]{7,15}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function otpError(res, err, context) {
+    const status = err && (err.status || err.statusCode);
+    if (status === 429 || status === 502) {
+        return res.status(status).json({ message: err.message });
+    }
+    return handleError(res, err, context);
+}
+
+// Caller must be owner/admin of the company they are acting on.
+async function assertCompanyAdmin(req, companyId) {
+    const userId = req.user && (req.user.sub || req.user._id);
+    if (!userId) return false;
+    const user = await User.findById(userId).select("companyId companyRole").lean();
+    return !!user && !!user.companyId && String(user.companyId) === String(companyId)
+        && ["owner", "admin"].includes(user.companyRole);
+}
 
 exports.sendOtp = async (req, res) => {
     try {
         const { target, type } = req.body;
-        if (!target) return res.status(400).json({ message: "Target is required" });
+        if (!target || typeof target !== "string") return res.status(400).json({ message: "Target is required" });
+        if (!OTP_TYPES.includes(type)) return res.status(400).json({ message: "Invalid OTP type" });
+        if (type === "email" && !EMAIL_RE.test(target)) return res.status(400).json({ message: "Invalid email" });
+        if (type === "phone" && !PHONE_RE.test(target.replace(/[\s-]/g, ""))) return res.status(400).json({ message: "Invalid phone" });
 
-        
         const result = await otpService.generateAndSendOTP({ target, type });
 
         return res.json({
             message: "OTP sent successfully",
-            ...(result.devMode ? { devNote: "Check server terminal for code" } : {})
+            ...(result.devMode ? { devNote: "OTP delivery is not configured in this environment" } : {})
         });
     } catch (err) {
-        return handleError(res, err, "SEND OTP ERROR");
+        return otpError(res, err, "SEND OTP ERROR");
     }
 };
 
@@ -24,12 +48,11 @@ exports.verifyOtp = async (req, res) => {
     try {
         const { target, otp } = req.body;
 
-        if (!target || !otp) {
+        if (!target || !otp || typeof target !== "string") {
             return res.status(400).json({ message: "Target and OTP are required" });
         }
 
-        
-        const result = otpService.verifyOTP(target, otp);
+        const result = otpService.verifyOTP(target, String(otp));
 
         if (!result.valid) {
             return res.status(400).json({ message: result.error });
@@ -42,43 +65,41 @@ exports.verifyOtp = async (req, res) => {
     }
 };
 
+const phoneKey = (companyId) => `company-phone:${companyId}`;
+
 exports.sendPhoneOtp = async (req, res) => {
     try {
         const { phone, companyId } = req.body;
 
-        if (!phone || !companyId) {
+        if (!phone || !companyId || typeof phone !== "string") {
             return res.status(400).json({ message: "Phone and company ID are required" });
         }
+        if (!PHONE_RE.test(phone.replace(/[\s-]/g, ""))) {
+            return res.status(400).json({ message: "Invalid phone" });
+        }
+        if (!(await assertCompanyAdmin(req, companyId))) {
+            return res.status(403).json({ message: "Access denied" });
+        }
 
-        const company = await Company.findById(companyId);
+        const company = await Company.findById(companyId).select("_id");
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
 
-        
-        const otp = Math.floor(100000 + Math.random() * 900000);
+        otpService.checkSendThrottle(phoneKey(companyId));
+        const otp = otpService.generateOTP();
+        // Phone is only written to the company after successful verification.
+        otpStore.set(phoneKey(companyId), { otp, phone, expires: Date.now() + 5 * 60 * 1000, attempts: 0 }, 5 * 60 * 1000);
 
-        
-        company.ownerPhone = phone;
-        company.phoneOTP = otp.toString();
-        company.phoneOTPExpiresAt = Date.now() + 5 * 60 * 1000; 
-        await company.save();
-
-        
-        let formattedPhone = phone;
-        if (!formattedPhone.startsWith('+')) {
-            formattedPhone = `+91${formattedPhone}`;
+        const sendResult = await otpService.sendOTPByType({ target: phone, type: "phone", otp });
+        if (!sendResult.success) {
+            otpStore.delete(phoneKey(companyId));
+            return res.status(502).json({ message: "Failed to deliver verification code" });
         }
 
-        
-        await sendOTP(formattedPhone, otp);
-
-        return res.json({
-            message: "OTP sent successfully",
-            devNote: process.env.NODE_ENV !== "production" ? "Check server terminal for code" : undefined
-        });
+        return res.json({ message: "OTP sent successfully" });
     } catch (err) {
-        return handleError(res, err, "SEND PHONE OTP ERROR");
+        return otpError(res, err, "SEND PHONE OTP ERROR");
     }
 };
 
@@ -89,31 +110,23 @@ exports.verifyPhoneOtp = async (req, res) => {
         if (!companyId || !otp) {
             return res.status(400).json({ message: "Company ID and OTP are required" });
         }
+        if (!(await assertCompanyAdmin(req, companyId))) {
+            return res.status(403).json({ message: "Access denied" });
+        }
+
+        const pending = otpStore.get(phoneKey(companyId));
+        const phone = pending && pending.phone;
+        const result = otpService.verifyOTP(phoneKey(companyId), String(otp));
+        if (!result.valid) {
+            return res.status(400).json({ message: result.error });
+        }
 
         const company = await Company.findById(companyId);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
         }
 
-        
-        if (!company.phoneOTP || !company.phoneOTPExpiresAt) {
-            return res.status(400).json({ message: "OTP not found. Please request a new one." });
-        }
-
-        
-        if (Date.now() > company.phoneOTPExpiresAt) {
-            company.phoneOTP = undefined;
-            company.phoneOTPExpiresAt = undefined;
-            await company.save();
-            return res.status(400).json({ message: "OTP expired. Please request a new one." });
-        }
-
-        
-        if (company.phoneOTP !== otp) {
-            return res.status(400).json({ message: "Invalid OTP" });
-        }
-
-        
+        company.ownerPhone = phone;
         company.phoneVerified = true;
         company.phoneOTP = undefined;
         company.phoneOTPExpiresAt = undefined;

@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const MessageReminder = require('./MessageReminder');
 const Message         = require('./message.model');
@@ -72,9 +73,9 @@ async function deliverDueReminders(io) {
       { $set: { delivered: true, deliveredAt: now } }
     );
 
-    console.log(`[reminder.service] ✅ Delivered ${due.length} reminder(s)`);
+    logger.info(`[reminder.service] ✅ Delivered ${due.length} reminder(s)`);
   } catch (err) {
-    console.error('[reminder.service] ❌ Error delivering reminders:', err.message);
+    logger.error('[reminder.service] ❌ Error delivering reminders:', err.message);
   }
 }
 

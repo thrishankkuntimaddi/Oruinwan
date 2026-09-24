@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 class SocketEmitter {
     constructor(io) {
         this.io = io;
@@ -30,7 +31,7 @@ class SocketEmitter {
             }
         });
 
-        console.log(`📤 Emitted new message to ${room}`);
+        logger.info(`📤 Emitted new message to ${room}`);
     }
 
     
@@ -77,7 +78,7 @@ class SocketEmitter {
     
     emitMeetingCreated(channelId, meeting) {
         this.io.to(`channel:${channelId}`).emit('meeting:created', meeting);
-        console.log(`📹 Emitted meeting created to channel:${channelId}`);
+        logger.info(`📹 Emitted meeting created to channel:${channelId}`);
     }
 
     
@@ -95,7 +96,7 @@ class SocketEmitter {
     
     emitHuddleStarted(channelId, huddleData) {
         this.io.to(`channel:${channelId}`).emit('huddle:started', huddleData);
-        console.log(`🎙️ Emitted huddle started to channel:${channelId}`);
+        logger.info(`🎙️ Emitted huddle started to channel:${channelId}`);
     }
 
     

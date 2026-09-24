@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import logger from '../../../../utils/logger';
 
 const ICE_SERVERS = [
     { urls: 'stun:stun.l.google.com:19302' },
@@ -120,7 +121,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
                 isLocal: true,
             }]);
         } catch (err) {
-            console.error('[useHuddle] Failed to get microphone:', err);
+            logger.error('[useHuddle] Failed to get microphone:', err);
             throw err;
         }
     }, [socket, channelId, dmId, workspaceId, currentUser]);
@@ -153,7 +154,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
                 }];
             });
         } catch (err) {
-            console.error('[useHuddle] Failed to get microphone:', err);
+            logger.error('[useHuddle] Failed to get microphone:', err);
             throw err;
         }
     }, [socket, channelId, dmId, workspaceId, currentUser]);
@@ -203,7 +204,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
                     await pc.setLocalDescription(offer);
                     socket.emit('huddle:offer', { huddleId: hid, targetUserId: userId, offer });
                 } catch (err) {
-                    console.error('[useHuddle] Error creating offer:', err);
+                    logger.error('[useHuddle] Error creating offer:', err);
                 }
             }
         };
@@ -217,7 +218,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
                 await pc.setLocalDescription(answer);
                 socket.emit('huddle:answer', { huddleId: hid, targetUserId: fromUserId, answer });
             } catch (err) {
-                console.error('[useHuddle] Error handling offer:', err);
+                logger.error('[useHuddle] Error handling offer:', err);
             }
         };
 
@@ -227,7 +228,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
                 const pc = peersRef.current[fromUserId];
                 if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
             } catch (err) {
-                console.error('[useHuddle] Error handling answer:', err);
+                logger.error('[useHuddle] Error handling answer:', err);
             }
         };
 
@@ -237,7 +238,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
                 const pc = peersRef.current[fromUserId];
                 if (pc && candidate) await pc.addIceCandidate(new RTCIceCandidate(candidate));
             } catch (err) {
-                console.error('[useHuddle] Error adding ICE candidate:', err);
+                logger.error('[useHuddle] Error adding ICE candidate:', err);
             }
         };
 

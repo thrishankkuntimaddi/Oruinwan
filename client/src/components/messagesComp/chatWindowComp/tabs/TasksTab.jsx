@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api from '@services/api';
 import { useWorkspace } from '../../../../contexts/WorkspaceContext';
+import logger from '../../../../utils/logger';
 
 const TRANSITIONS = {
     backlog: ['todo', 'cancelled'],
@@ -425,7 +426,7 @@ function TaskDetailPanel({ task, members, onClose, onUpdate, onDelete }) {
             setSubtasks(p => [...p, res.data.subtask || { title: newSub.trim(), _id: Date.now() }]);
             setNewSub('');
             setAddingSub(false);
-        } catch (e) { console.error('Subtask failed', e); }
+        } catch (e) { logger.error('Subtask failed', e); }
     };
 
     return (
@@ -925,7 +926,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
             if (res.data.tasks?.[0])
                 setTasks(p => p.find(x => x._id === res.data.tasks[0]._id) ? p : [...p, res.data.tasks[0]]);
             setShowModal(false);
-        } catch (err) { console.error('Create task failed:', err.response?.data || err); }
+        } catch (err) { logger.error('Create task failed:', err.response?.data || err); }
     }, [channelId, workspaceId]);
 
     const handleInlineAdd = useCallback(async (title, status) => {
@@ -941,7 +942,7 @@ export default function TasksTab({ channelId, channelName, workspaceId: workspac
                 setSelected(s => s?._id === taskId ? updated : s);
             }
         } catch (err) {
-            console.error('Update failed:', err.response?.data || err);
+            logger.error('Update failed:', err.response?.data || err);
             loadTasks();
         }
     }, [loadTasks]);

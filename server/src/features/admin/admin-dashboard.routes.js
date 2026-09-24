@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const User = require('../../../models/User');
@@ -52,7 +53,7 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Admin Dashboard Users Access Error:', error);
+        logger.error('Admin Dashboard Users Access Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -78,7 +79,7 @@ router.get('/departments', requireAuth, requireAdmin, async (req, res) => {
 
         res.json({ departments });
     } catch (error) {
-        console.error('Admin Dashboard Departments Error:', error);
+        logger.error('Admin Dashboard Departments Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -117,7 +118,7 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
 
         res.json({ workspaces });
     } catch (error) {
-        console.error('Admin Dashboard Workspaces Access Error:', error);
+        logger.error('Admin Dashboard Workspaces Access Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -165,7 +166,7 @@ router.get('/audit-security', requireAuth, requireAdmin, async (req, res) => {
             permissionChanges
         });
     } catch (error) {
-        console.error('Admin Dashboard Audit Security Error:', error);
+        logger.error('Admin Dashboard Audit Security Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -226,7 +227,7 @@ router.get('/workspaces', requireAuth, requireAdmin, async (req, res) => {
 
         res.json({ workspaces: enhancedWorkspaces });
     } catch (error) {
-        console.error('Admin Dashboard Workspaces Error:', error);
+        logger.error('Admin Dashboard Workspaces Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -251,7 +252,7 @@ router.get('/company-members', requireAuth, requireAdmin, async (req, res) => {
 
         res.json({ members });
     } catch (error) {
-        console.error('Company Members Error:', error);
+        logger.error('Company Members Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -291,7 +292,7 @@ router.get('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async 
 
         res.json({ members });
     } catch (error) {
-        console.error('Workspace Members Error:', error);
+        logger.error('Workspace Members Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -389,7 +390,7 @@ router.post('/workspaces/:workspaceId/members', requireAuth, requireAdmin, async
             }
         });
     } catch (error) {
-        console.error('Add Workspace Member Error:', error);
+        logger.error('Add Workspace Member Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -431,7 +432,7 @@ router.delete('/workspaces/:workspaceId/members/:userId', requireAuth, requireAd
 
         res.json({ message: 'Member removed from workspace' });
     } catch (error) {
-        console.error('Remove Workspace Member Error:', error);
+        logger.error('Remove Workspace Member Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });

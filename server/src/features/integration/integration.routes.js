@@ -1,4 +1,6 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
+const { sendError } = require('../../shared/utils/httpError');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 
@@ -11,8 +13,7 @@ const { requireCompanyRole } = require('../../shared/utils/companyRole');
 const { runHrSync } = require('./hr-sync.service');
 
 function handleError(res, err) {
-    console.error('[INTEGRATION]', err.message);
-    return res.status(err.status || 500).json({ success: false, error: err.message });
+    return sendError(res, err);
 }
 
 function validationGuard(req, res) {

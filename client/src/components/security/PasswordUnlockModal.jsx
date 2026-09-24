@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Lock, AlertCircle, Loader2, Eye, EyeOff, ShieldAlert } from 'lucide-react';
+import logger from '../../utils/logger';
 
 export default function PasswordUnlockModal({ onSubmit }) {
     const [password, setPassword] = useState('');
@@ -22,7 +23,7 @@ export default function PasswordUnlockModal({ onSubmit }) {
             await onSubmit(password);
             
         } catch (err) {
-            console.error('❌ [UNLOCK] Password unlock failed:', err);
+            logger.error('❌ [UNLOCK] Password unlock failed:', err);
 
             
             const rawMsg = err.message || '';

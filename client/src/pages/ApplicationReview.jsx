@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, CheckCircle, XCircle, RefreshCw, Mail, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '@services/api';
+import logger from '../utils/logger';
 
 const ApplicationReview = () => {
     const navigate = useNavigate();
@@ -44,7 +45,7 @@ const ApplicationReview = () => {
                 
             }
         } catch (error) {
-            console.error('Error fetching company status:', error);
+            logger.error('Error fetching company status:', error);
         } finally {
             setRefreshing(false);
         }

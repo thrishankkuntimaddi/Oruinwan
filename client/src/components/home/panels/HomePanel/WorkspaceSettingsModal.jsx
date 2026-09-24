@@ -10,6 +10,7 @@ import PermissionsTab from '../../../workspace/settings/PermissionsTab';
 import GeneralTab from '../../../workspace/settings/GeneralTab';
 import BillingTab from '../../../workspace/settings/BillingTab';
 import AdvancedTab from '../../../workspace/settings/AdvancedTab';
+import logger from '../../../../utils/logger';
 
 const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setShowDeleteConfirm }) => {
     const { activeWorkspace, refreshWorkspace } = useWorkspace();
@@ -56,7 +57,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
             const response = await api.get(`/api/workspaces/${activeWorkspace.id}/stats`);
             setStats(response.data);
         } catch (error) {
-            console.warn('Stats not available:', error?.response?.status);
+            logger.warn('Stats not available:', error?.response?.status);
         } finally {
             setLoadingStats(false);
         }
@@ -81,7 +82,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
             }));
             setMembers(normalised);
         } catch (error) {
-            console.error('Error fetching members:', error);
+            logger.error('Error fetching members:', error);
         } finally {
             setLoadingMembers(false);
         }
@@ -119,7 +120,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
             showToast('Permission updated successfully', 'success');
             await refreshWorkspace();
         } catch (error) {
-            console.error('Error updating permission:', error);
+            logger.error('Error updating permission:', error);
             showToast(error.response?.data?.message || 'Failed to update permission', 'error');
         } finally {
             setSavingPermissions(false);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCw, AlertTriangle } from 'lucide-react';
+import logger from '../../../utils/logger';
 
 class AppErrorBoundary extends React.Component {
     constructor(props) {
@@ -16,7 +17,7 @@ class AppErrorBoundary extends React.Component {
         
         if (import.meta.env.DEV) {
             const label = this.props.label || 'Unknown';
-            console.error(`[AppErrorBoundary][${label}] Caught render error:`, error, info.componentStack);
+            logger.error(`[AppErrorBoundary][${label}] Caught render error:`, error, info.componentStack);
         }
     }
 

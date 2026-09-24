@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
@@ -29,7 +30,7 @@ router.post('/messages/:id/remind', requireAuth, async (req, res) => {
 
     res.status(201).json({ reminder });
   } catch (err) {
-    console.error('Create reminder error:', err);
+    logger.error('Create reminder error:', err);
     res.status(500).json({ message: 'Failed to create reminder' });
   }
 });
@@ -51,7 +52,7 @@ router.get('/reminders', requireAuth, async (req, res) => {
 
     res.json({ reminders });
   } catch (err) {
-    console.error('Get reminders error:', err);
+    logger.error('Get reminders error:', err);
     res.status(500).json({ message: 'Failed to fetch reminders' });
   }
 });
@@ -68,7 +69,7 @@ router.delete('/reminders/:id', requireAuth, async (req, res) => {
 
     res.json({ message: 'Reminder cancelled' });
   } catch (err) {
-    console.error('Delete reminder error:', err);
+    logger.error('Delete reminder error:', err);
     res.status(500).json({ message: 'Failed to cancel reminder' });
   }
 });

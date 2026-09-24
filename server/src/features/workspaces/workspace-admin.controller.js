@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Workspace = require("../../../models/Workspace");
 const _User = require("../../../models/User");
 const Channel = require("../channels/channel.model.js");
@@ -60,7 +61,7 @@ exports.revokeInvite = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error("REVOKE INVITE ERROR:", err);
+        logger.error("REVOKE INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -153,7 +154,7 @@ exports.getWorkspaceInvites = async (req, res) => {
             duplicateCount: duplicateEmails.length
         });
     } catch (err) {
-        console.error("GET WORKSPACE INVITES ERROR:", err);
+        logger.error("GET WORKSPACE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -216,26 +217,35 @@ exports.resendInvite = async (req, res) => {
         const inviteLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/join-workspace?token=${raw}`;
 
         
-        const sendEmail = require("../../../utils/sendEmail");
-        try {
-            await sendEmail({
-                to: invite.email,
-                subject: `Reminder: Join ${workspace.name} on Chttrix`,
-                html: `
-                    <h2>You've been invited to join ${workspace.name}!</h2>
-                    <p>This is a reminder invitation. Click the link below to accept:</p>
-                    <a href="${inviteLink}" style="display: inline-block; padding: 12px 24px; background-color: #2563eb; color: white; text-decoration: none; border-radius: 8px;">Join Workspace</a>
-                    <p style="margin-top: 20px; color: #666;">This link will expire in 7 days.</p>
-                `
+        // Link-type invites carry no address; there is nothing to resend by email.
+        if (!invite.email) {
+            return res.status(400).json({
+                message: "This invite was created as a shareable link and has no email address. Copy the link and share it instead.",
+                emailSent: false,
+                invite: { id: invite._id, expiresAt: invite.expiresAt, inviteLink }
             });
-
-        } catch (_e) {
-            console.warn("⚠️ SMTP not configured — Email not sent");
-
         }
 
-        return res.json({
-            message: "Invite resent successfully",
+        const sendEmail = require("../../../utils/sendEmail");
+        let emailSent = false;
+        let emailError = null;
+        try {
+            const { workspaceInviteReminderTemplate } = require('../../../utils/emailTemplates');
+            const reminder = workspaceInviteReminderTemplate(invite.email.split('@')[0], workspace.name, inviteLink);
+            await sendEmail({ to: invite.email, subject: reminder.subject, html: reminder.html, text: reminder.text });
+
+            emailSent = true;
+        } catch (emailErr) {
+            logger.error({ err: emailErr.message, email: invite.email }, 'Invite reminder email could not be delivered');
+            emailError = emailErr.message;
+        }
+
+        return res.status(emailSent ? 200 : 502).json({
+            message: emailSent
+                ? "Invite resent successfully"
+                : "Invite renewed, but the email could not be delivered. Share the invite link manually or fix the email provider.",
+            emailSent,
+            emailError,
             invite: {
                 id: invite._id,
                 email: invite.email,
@@ -244,7 +254,7 @@ exports.resendInvite = async (req, res) => {
             }
         });
     } catch (err) {
-        console.error("RESEND INVITE ERROR:", err);
+        logger.error("RESEND INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -298,7 +308,7 @@ exports.suspendMember = async (req, res) => {
             userId: targetUserId
         });
     } catch (err) {
-        console.error("SUSPEND MEMBER ERROR:", err);
+        logger.error("SUSPEND MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -342,7 +352,7 @@ exports.restoreMember = async (req, res) => {
             userId: targetUserId
         });
     } catch (err) {
-        console.error("RESTORE MEMBER ERROR:", err);
+        logger.error("RESTORE MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -401,7 +411,7 @@ exports.changeRole = async (req, res) => {
             newRole
         });
     } catch (err) {
-        console.error("CHANGE ROLE ERROR:", err);
+        logger.error("CHANGE ROLE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -471,7 +481,7 @@ exports.removeMember = async (req, res) => {
             removedUserId: targetUserId
         });
     } catch (err) {
-        console.error("REMOVE MEMBER ERROR:", err);
+        logger.error("REMOVE MEMBER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -541,7 +551,7 @@ exports.bulkRevokeInvites = async (req, res) => {
             errors: errors.length > 0 ? errors : undefined
         });
     } catch (err) {
-        console.error("BULK REVOKE INVITES ERROR:", err);
+        logger.error("BULK REVOKE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -592,7 +602,7 @@ exports.bulkDeleteInvites = async (req, res) => {
 
         
         if (result.deletedCount === 0) {
-            console.warn('⚠️ No invitations were deleted - they may be active pending invitations');
+            logger.warn('⚠️ No invitations were deleted - they may be active pending invitations');
         }
 
         return res.json({
@@ -603,7 +613,7 @@ exports.bulkDeleteInvites = async (req, res) => {
             totalRequested: inviteIds.length
         });
     } catch (err) {
-        console.error("BULK DELETE INVITES ERROR:", err);
+        logger.error("BULK DELETE INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -640,7 +650,7 @@ exports.cleanupExpiredInvites = async (req, res) => {
             deletedCount: result.deletedCount
         });
     } catch (err) {
-        console.error("CLEANUP EXPIRED INVITES ERROR:", err);
+        logger.error("CLEANUP EXPIRED INVITES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

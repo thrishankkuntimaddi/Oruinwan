@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';
+import { sameId } from '../../../hooks/conversationUtils';
 import Header from './header/header.jsx';
 import ChannelTabs from './tabs/ChannelTabs.jsx';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -34,6 +35,7 @@ import { useHuddle } from './hooks/useHuddle.js';
 import HuddleOverlay from './huddle/HuddleOverlay.jsx';
 
 import './chatWindow.css';
+import logger from '../../../utils/logger';
 
 function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId, onChatUpdate }) {
     const { user, encryptionReady } = useAuth();
@@ -117,7 +119,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 navigate(`/workspace/${activeWorkspace?.id}/channel/${chat.id}`);
             }
         } catch (err) {
-            console.error('Join channel error:', err);
+            logger.error('Join channel error:', err);
             showToast(err.response?.data?.message || 'Failed to join channel', 'error');
         } finally {
             setIsJoining(false);
@@ -128,6 +130,14 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [activeThread, setActiveThread] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
     const [typingUsers, setTypingUsers] = useState([]);
+    const typingTimersRef = useRef(new Map());
+    useEffect(() => {
+        const timers = typingTimersRef.current;
+        return () => {
+            timers.forEach(clearTimeout);
+            timers.clear();
+        };
+    }, []);
     const [recording, setRecording] = useState(false);
 
     
@@ -539,17 +549,30 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 }
                 break;
 
-            case 'user-typing':
-                
-                const { userId, isTyping } = event.payload;
+            case 'user-typing': {
+                const { userId, isTyping } = event.payload || {};
+                if (!userId) break;
+                const timers = typingTimersRef.current;
+                const existingTimer = timers.get(userId);
+                if (existingTimer) {
+                    clearTimeout(existingTimer);
+                    timers.delete(userId);
+                }
                 if (isTyping) {
-                    setTypingUsers(prev => [...new Set([...prev, userId])]);
-                    setTimeout(() => {
+                    setTypingUsers(prev => (prev.includes(userId) ? prev : [...prev, userId]));
+                    timers.set(userId, setTimeout(() => {
+                        timers.delete(userId);
                         setTypingUsers(prev => prev.filter(id => id !== userId));
-                    }, 3000);
+                    }, 3000));
                 } else {
                     setTypingUsers(prev => prev.filter(id => id !== userId));
                 }
+                break;
+            }
+
+            case 'reconnect':
+                // Fetch anything that arrived while the socket was disconnected.
+                conversationRef.current?.loadNewer?.({ force: true });
                 break;
 
             case 'member-joined':
@@ -569,19 +592,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 break;
 
             case 'member-left':
-                
-                conversationRef.current.addRealtimeEvent({
-                    id: `system_${Date.now()}`,
-                    type: 'system',
-                    systemEvent: 'member_left',
-                    systemData: {
-                        userId: event.payload?.userId,
-                        userName: event.payload?.userName || event.payload?.username,
-                        channelName: event.payload?.channelName,
-                    },
-                    createdAt: new Date().toISOString(),
-                    payload: {}
-                });
+                // The server also emits a persisted system 'new-message' for the
+                // departure; rendering here would duplicate the "left" pill.
                 break;
 
             case 'thread-reply':
@@ -696,7 +708,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     useEffect(() => {
         if (!rawSocket || chat?.type !== 'channel') return;
 
-        const handleTabAdded = ({ tab }) => {
+        const currentChannelId = chat?.id;
+        const isForThisChannel = (payload) => sameId(payload?.channelId, currentChannelId);
+
+        const handleTabAdded = (payload) => {
+            if (!isForThisChannel(payload)) return;
+            const { tab } = payload;
             setTabs(prev => {
                 const exists = prev.find(t => t._id === tab._id);
                 if (exists) return prev;
@@ -704,7 +721,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             });
         };
 
-        const handleTabUpdated = ({ tabId, name, content, emoji, coverColor, wordCount, lastEditedBy, lastEditedAt }) => {
+        const handleTabUpdated = (payload) => {
+            if (!isForThisChannel(payload)) return;
+            const { tabId, name, content, emoji, coverColor, wordCount, lastEditedBy, lastEditedAt } = payload;
             setTabs(prev => prev.map(t =>
                 t._id === tabId ? {
                     ...t,
@@ -719,7 +738,9 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             ));
         };
 
-        const handleTabDeleted = ({ tabId }) => {
+        const handleTabDeleted = (payload) => {
+            if (!isForThisChannel(payload)) return;
+            const { tabId } = payload;
             setTabs(prev => prev.filter(t => t._id !== tabId));
             if (activeTab === tabId) setActiveTab('chat');
         };
@@ -733,10 +754,22 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             rawSocket.off('tab-updated', handleTabUpdated);
             rawSocket.off('tab-deleted', handleTabDeleted);
         };
-    }, [rawSocket, chat?.type, activeTab]);
+    }, [rawSocket, chat?.type, chat?.id, activeTab]);
 
     
-    const handleMessageChange = messageInputActions.handleMessageChange;
+    // Typing indicator: tell the room we're typing at most every 2.5s while the
+    // draft changes (receivers time the indicator out on their side).
+    const lastTypingEmitRef = useRef(0);
+    const handleMessageChange = useCallback((e) => {
+        messageInputActions.handleMessageChange(e);
+        const value = e?.target?.value;
+        if (!value || !socket?.emitTyping) return;
+        const now = Date.now();
+        if (now - lastTypingEmitRef.current > 2500) {
+            lastTypingEmitRef.current = now;
+            socket.emitTyping(true);
+        }
+    }, [messageInputActions, socket]);
     const handleEmojiPick = messageInputActions.handleEmojiPick;
     const handleAttach = messageInputActions.handleAttach;
 
@@ -861,7 +894,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 showToast(result.error || 'Failed to send attachment', 'error');
             }
         } catch (err) {
-            console.error('[ChatWindowV2] handleSendAttachment error:', err);
+            logger.error('[ChatWindowV2] handleSendAttachment error:', err);
             showToast('Failed to send attachment', 'error');
         }
         setShowAttach(false);
@@ -891,7 +924,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
             }
         } catch (err) {
-            console.error('[ChatWindowV2] handleSendContact error:', err);
+            logger.error('[ChatWindowV2] handleSendContact error:', err);
             showToast('Failed to share contact', 'error');
         }
         setShowContactModal(false);
@@ -922,7 +955,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 await conversation.addRealtimeEvent(normalizedEvent, currentUserId);
             }
         } catch (err) {
-            console.error('[ChatWindowV2] handleSendMeeting error:', err);
+            logger.error('[ChatWindowV2] handleSendMeeting error:', err);
             showToast('Failed to schedule meeting', 'error');
         }
         setShowMeetingModal(false);
@@ -964,7 +997,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             setShowPollModal(false);
             setActiveModal(null);
         } catch (err) {
-            console.error('[ChatWindowV2] handleCreatePoll error:', err);
+            logger.error('[ChatWindowV2] handleCreatePoll error:', err);
             showToast(err?.response?.data?.message || 'Failed to create poll', 'error');
         }
     }, [conversationId, conversationType, conversation, currentUserId, showToast]);
@@ -1057,7 +1090,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 setMessageInfoData(data);
                 setActiveModal('message-info');
             } catch (err) {
-                console.error('[ChatWindowV2] Failed to fetch message info:', err);
+                logger.error('[ChatWindowV2] Failed to fetch message info:', err);
             }
         },
         
@@ -1143,10 +1176,10 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
 
             const succeeded = results.filter(r => r.status === 'fulfilled').length;
             const failed = results.filter(r => r.status === 'rejected').length;
-            if (failed > 0) console.warn(`[ChatWindowV2] Forward: ${succeeded} succeeded, ${failed} failed`);
+            if (failed > 0) logger.warn(`[ChatWindowV2] Forward: ${succeeded} succeeded, ${failed} failed`);
 
         } catch (err) {
-            console.error('[ChatWindowV2] Forward failed:', err);
+            logger.error('[ChatWindowV2] Forward failed:', err);
         } finally {
             setActiveModal(null);
             setForwardingMessageId(null);

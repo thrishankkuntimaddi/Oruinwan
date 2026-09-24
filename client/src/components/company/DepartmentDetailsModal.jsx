@@ -4,6 +4,7 @@ import { updateDepartment, addWorkspaceToDepartment, removeWorkspaceFromDepartme
 import { getCompanyMembers } from '../../services/companyService';
 import { workspaceService } from '../../services/workspaceService';
 import { useToast } from '../../contexts/ToastContext';
+import logger from '../../utils/logger';
 
 const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpdate }) => {
     const { showToast } = useToast();
@@ -32,7 +33,7 @@ const DepartmentDetailsModal = ({ isOpen, onClose, department, companyId, onUpda
             setAllWorkspaces(wsRes.data?.workspaces || []);
             setAllUsers(usrRes.members || []);
         } catch (error) {
-            console.error("Failed to fetch data", error);
+            logger.error("Failed to fetch data", error);
         }
     }, [companyId]);
 

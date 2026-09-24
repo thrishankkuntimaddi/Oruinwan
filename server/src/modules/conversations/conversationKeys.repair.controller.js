@@ -1,21 +1,22 @@
+const logger = require('../../../utils/logger');
 const conversationKeysService = require('./conversationKeys.service');
 
 async function repairConversationKey(req, res) {
     const { channelId, userId } = req.body;
     const callerId = req.user?.sub; 
 
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    console.log(`🔧 [AUDIT][PHASE2][TRIGGER] Repair endpoint called`);
-    console.log(`   ├─ Caller: ${callerId}`);
-    console.log(`   ├─ Channel: ${channelId}`);
-    console.log(`   ├─ User: ${userId}`);
-    console.log(`   └─ Timestamp: ${new Date().toISOString()}`);
-    console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+    logger.info(`🔧 [AUDIT][PHASE2][TRIGGER] Repair endpoint called`);
+    logger.info(`   ├─ Caller: ${callerId}`);
+    logger.info(`   ├─ Channel: ${channelId}`);
+    logger.info(`   ├─ User: ${userId}`);
+    logger.info(`   └─ Timestamp: ${new Date().toISOString()}`);
+    logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
     try {
         
         if (!channelId || !userId) {
-            console.error(`❌ [AUDIT][PHASE2][TRIGGER] Missing required fields`);
+            logger.error(`❌ [AUDIT][PHASE2][TRIGGER] Missing required fields`);
             return res.status(400).json({
                 success: false,
                 error: 'Missing required fields: channelId and userId'
@@ -29,9 +30,9 @@ async function repairConversationKey(req, res) {
         );
 
         
-        console.log(`📊 [AUDIT][PHASE2][TRIGGER] Repair completed`);
-        console.log(`   ├─ Result: ${result.result}`);
-        console.log(`   └─ Reason: ${result.reason || 'N/A'}`);
+        logger.info(`📊 [AUDIT][PHASE2][TRIGGER] Repair completed`);
+        logger.info(`   ├─ Result: ${result.result}`);
+        logger.info(`   └─ Reason: ${result.reason || 'N/A'}`);
 
         
         if (result.result === 'REPAIR_SUCCESS') {
@@ -61,7 +62,7 @@ async function repairConversationKey(req, res) {
         }
 
     } catch (error) {
-        console.error(`❌ [AUDIT][PHASE2][TRIGGER] Endpoint exception:`, error);
+        logger.error(`❌ [AUDIT][PHASE2][TRIGGER] Endpoint exception:`, error);
         return res.status(500).json({
             success: false,
             error: 'Internal server error',

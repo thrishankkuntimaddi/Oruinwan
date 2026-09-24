@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const mongoose = require('mongoose');
 const UserCryptoState = require('../models/UserCryptoState');
 const kekManager = require('../services/kekManager.service');
@@ -46,11 +47,11 @@ async function rotateUserKEK(cryptoState, fromVersion, toVersion) {
 
         await cryptoState.save();
 
-        console.log(`✅ Rotated KEK for user ${userId} (v${fromVersion} → v${toVersion})`);
+        logger.info(`✅ Rotated KEK for user ${userId} (v${fromVersion} → v${toVersion})`);
 
         return true;
     } catch (error) {
-        console.error(`❌ Failed to rotate KEK for user ${cryptoState.userId}:`, error.message);
+        logger.error(`❌ Failed to rotate KEK for user ${cryptoState.userId}:`, error.message);
         return false;
     }
 }
@@ -64,14 +65,14 @@ async function rotateServerKEK(options = {}) {
         dryRun = false
     } = options;
 
-    console.log('\n🔄 Server KEK Rotation Started');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log(`From Version: ${fromVersion}`);
-    console.log(`To Version: ${toVersion}`);
-    console.log(`Batch Size: ${batchSize}`);
-    console.log(`Delay: ${delayMs}ms`);
-    console.log(`Dry Run: ${dryRun ? 'YES' : 'NO'}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    logger.info('\n🔄 Server KEK Rotation Started');
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.info(`From Version: ${fromVersion}`);
+    logger.info(`To Version: ${toVersion}`);
+    logger.info(`Batch Size: ${batchSize}`);
+    logger.info(`Delay: ${delayMs}ms`);
+    logger.info(`Dry Run: ${dryRun ? 'YES' : 'NO'}`);
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     
     if (!kekManager.kekVersionExists(fromVersion)) {
@@ -94,7 +95,7 @@ async function rotateServerKEK(options = {}) {
             }
         });
     } catch (_auditError) {
-        console.warn('⚠️ Failed to log audit event (non-critical)');
+        logger.warn('⚠️ Failed to log audit event (non-critical)');
     }
 
     
@@ -107,15 +108,15 @@ async function rotateServerKEK(options = {}) {
     };
 
     const totalUsers = await UserCryptoState.countDocuments(query);
-    console.log(`📊 Found ${totalUsers} users to rotate\n`);
+    logger.info(`📊 Found ${totalUsers} users to rotate\n`);
 
     if (totalUsers === 0) {
-        console.log('✅ No users need rotation');
+        logger.info('✅ No users need rotation');
         return { success: true, rotated: 0, failed: 0 };
     }
 
     if (dryRun) {
-        console.log('🔍 DRY RUN - No changes will be made');
+        logger.info('🔍 DRY RUN - No changes will be made');
         return { success: true, rotated: 0, failed: 0 };
     }
 
@@ -131,7 +132,7 @@ async function rotateServerKEK(options = {}) {
 
         if (users.length === 0) break;
 
-        console.log(`Processing batch: ${processed + 1}-${processed + users.length} of ${totalUsers}`);
+        logger.info(`Processing batch: ${processed + 1}-${processed + users.length} of ${totalUsers}`);
 
         for (const user of users) {
             const success = await rotateUserKEK(user, fromVersion, toVersion);
@@ -164,15 +165,15 @@ async function rotateServerKEK(options = {}) {
             }
         });
     } catch (_auditError) {
-        console.warn('⚠️ Failed to log audit event (non-critical)');
+        logger.warn('⚠️ Failed to log audit event (non-critical)');
     }
 
-    console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('✅ Server KEK Rotation Complete');
-    console.log(`   Total: ${totalUsers}`);
-    console.log(`   Succeeded: ${succeeded}`);
-    console.log(`   Failed: ${failed}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+    logger.info('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    logger.info('✅ Server KEK Rotation Complete');
+    logger.info(`   Total: ${totalUsers}`);
+    logger.info(`   Succeeded: ${succeeded}`);
+    logger.info(`   Failed: ${failed}`);
+    logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 
     return { success: failed === 0, rotated: succeeded, failed };
 }
@@ -197,13 +198,13 @@ if (require.main === module) {
         useNewUrlParser: true,
         useUnifiedTopology: true
     }).then(async () => {
-        console.log('✅ Connected to MongoDB');
+        logger.info('✅ Connected to MongoDB');
 
         try {
             const result = await rotateServerKEK(options);
             process.exit(result.success ? 0 : 1);
         } catch (error) {
-            console.error('❌ Rotation failed:', error);
+            logger.error('❌ Rotation failed:', error);
 
             
             try {
@@ -222,7 +223,7 @@ if (require.main === module) {
             process.exit(1);
         }
     }).catch(error => {
-        console.error('❌ Failed to connect to MongoDB:', error);
+        logger.error('❌ Failed to connect to MongoDB:', error);
         process.exit(1);
     });
 }

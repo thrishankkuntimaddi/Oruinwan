@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const User = require('../../../models/User');
 const sendEmail = require('../../../utils/sendEmail');
@@ -30,7 +31,7 @@ async function sendInviteEmail(toEmail, companyName, rawToken, options = {}) {
         await sendEmail({ to: toEmail, subject: tpl.subject, html: tpl.html, text: tpl.text });
         return { sent: true };
     } catch (err) {
-        console.warn('[INVITE] Email failed for', toEmail, '—', err.message);
+        logger.warn('[INVITE] Email failed for', toEmail, '—', err.message);
         return { sent: false, reason: err.message };
     }
 }
@@ -116,7 +117,7 @@ async function acceptInvite(rawToken, password) {
             }
         } catch (err) {
             
-            console.warn('[INVITE] assignMembers failed on acceptance:', err.message);
+            logger.warn('[INVITE] assignMembers failed on acceptance:', err.message);
         }
     }
 

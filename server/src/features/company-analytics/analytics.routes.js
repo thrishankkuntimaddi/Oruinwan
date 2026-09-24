@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const { query, validationResult } = require('express-validator');
@@ -8,7 +9,7 @@ const { requireCompanyRole } = require('../../shared/utils/companyRole');
 const { getCompanyAnalytics, getActivityAnalytics } = require('./analytics.service');
 
 function handleError(res, err) {
-    console.error('[ANALYTICS]', err.message);
+    logger.error('[ANALYTICS]', err.message);
     return res.status(err.status || 500).json({ success: false, error: err.message });
 }
 

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
@@ -27,7 +28,7 @@ router.post('/:id/bookmark', requireAuth, async (req, res) => {
       return res.json({ bookmarked: true });
     }
   } catch (err) {
-    console.error('Bookmark toggle error:', err);
+    logger.error('Bookmark toggle error:', err);
     res.status(500).json({ message: 'Failed to toggle bookmark' });
   }
 });
@@ -51,7 +52,7 @@ router.get('/bookmarks', requireAuth, async (req, res) => {
 
     res.json({ messages });
   } catch (err) {
-    console.error('Get bookmarks error:', err);
+    logger.error('Get bookmarks error:', err);
     res.status(500).json({ message: 'Failed to fetch bookmarks' });
   }
 });

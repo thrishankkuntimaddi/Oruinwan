@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { decryptReceivedMessage } from '../../services/messageEncryptionService';
 import { Lock } from 'lucide-react';
+import logger from '../../utils/logger';
 
 function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationType, parentMessageId = null }) {
     const [decrypted, setDecrypted] = useState(null);
@@ -38,7 +39,7 @@ function EncryptedMessage({ ciphertext, messageIv, conversationId, conversationT
             } catch (err) {
                 
                 
-                console.error('[E2EE] Decryption failed (non-blocking):', err);
+                logger.error('[E2EE] Decryption failed (non-blocking):', err);
 
                 
                 if (err.message?.includes('not found')) {

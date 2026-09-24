@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { Globe, MessageSquare, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import logger from '../../../../utils/logger';
 
 const getPlanColor = (plan) => {
     if (plan === 'enterprise') return 'var(--accent)';
@@ -22,7 +23,7 @@ const ActiveCompanies = () => {
             const res = await api.get('/api/admin/active-companies');
             setCompanies(res.data);
         } catch (err) {
-            console.error(err);
+            logger.error(err);
         } finally {
             setLoading(false);
         }

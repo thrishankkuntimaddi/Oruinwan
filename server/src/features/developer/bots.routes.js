@@ -67,7 +67,7 @@ router.post('/bots/:id/message', async (req, res) => {
     if (!channelId && !dmUserId) return res.status(400).json({ error: 'channelId or dmUserId is required' });
 
     
-    const InternalMessage = require('../../models/InternalMessage');
+    const InternalMessage = require('../../../models/InternalMessage');
     const message = await InternalMessage.create({
       workspaceId: bot.workspaceId,
       channelId: channelId || undefined,

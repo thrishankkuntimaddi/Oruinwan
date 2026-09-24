@@ -4,7 +4,7 @@ const Message = require('../../features/messages/message.model.js');
 const DMSession = require('../../../models/DMSession');
 const _Channel = require('../../features/channels/channel.model.js');
 const Workspace = require('../../../models/Workspace');
-const { _isMember } = require('../../../utils/memberHelpers');
+const {} = require('../../../utils/memberHelpers');
 const conversationKeysService = require('../conversations/conversationKeys.service');
 const logger = require('../../shared/utils/logger');
 

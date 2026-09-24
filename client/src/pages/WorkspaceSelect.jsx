@@ -16,6 +16,7 @@ import CreateWorkspaceModal from "./workspaceSelectComponents/CreateWorkspaceMod
 import HelpModalsContainer from "./workspaceSelectComponents/HelpModalsContainer.jsx";
 import LoadingState from "./workspaceSelectComponents/LoadingState.jsx";
 import ErrorState from "./workspaceSelectComponents/ErrorState.jsx";
+import logger from '../utils/logger';
 
 const WorkspaceSelect = () => {
     const navigate = useNavigate();
@@ -81,7 +82,7 @@ const WorkspaceSelect = () => {
             }
             setIsLoadingWorkspaces(false);
         } catch (err) {
-            console.error('❌ Error loading workspaces:', err);
+            logger.error('❌ Error loading workspaces:', err);
             setLoadError('Failed to load workspaces');
             setIsLoadingWorkspaces(false);
         }
@@ -166,7 +167,7 @@ const WorkspaceSelect = () => {
                             inviteType: 'email'
                         });
                     } catch (inviteError) {
-                        console.error("Failed to send invites", inviteError);
+                        logger.error("Failed to send invites", inviteError);
                     }
                 }
 
@@ -174,7 +175,7 @@ const WorkspaceSelect = () => {
                 resetCreateModal();
                 navigate(`/workspace/${newWorkspaceId}/home`);
             } catch (error) {
-                console.error("Failed to create workspace", error);
+                logger.error("Failed to create workspace", error);
                 if (error.response?.data?.message) {
                     setNameError(error.response.data.message);
                 } else {

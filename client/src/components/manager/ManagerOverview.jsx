@@ -3,6 +3,7 @@ import { useOutletContext, useNavigate } from 'react-router-dom';
 import { Users, Activity, CheckCircle2, Clock, TrendingUp, MessageSquare, Calendar, LayoutGrid, RefreshCw, Shield, Briefcase } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
+import logger from '../../utils/logger';
 
 const T = { ff: 'Inter, system-ui, sans-serif' };
 
@@ -21,7 +22,7 @@ export default function ManagerOverview() {
             setLoading(true);
             const res = await api.get(`/api/manager/dashboard/metrics/${deptId}`);
             setMetrics(res.data);
-        } catch (e) { console.error(e); }
+        } catch (e) { logger.error(e); }
         finally { setLoading(false); }
     }, [selectedDepartment]);
 

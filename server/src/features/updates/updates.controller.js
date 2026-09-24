@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Update = require("../../../models/Update");
 const User = require("../../../models/User");
 const Workspace = require("../../../models/Workspace");
@@ -36,7 +37,7 @@ exports.getUpdates = async (req, res) => {
         return res.json({ updates });
 
     } catch (err) {
-        console.error("GET UPDATES ERROR:", err);
+        logger.error("GET UPDATES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -119,7 +120,7 @@ exports.postUpdate = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("POST UPDATE ERROR:", err);
+        logger.error("POST UPDATE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -173,7 +174,7 @@ exports.updateUpdate = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("UPDATE UPDATE ERROR:", err);
+        logger.error("UPDATE UPDATE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -212,7 +213,7 @@ exports.deleteUpdate = async (req, res) => {
         return res.json({ message: "Update deleted successfully" });
 
     } catch (err) {
-        console.error("DELETE UPDATE ERROR:", err);
+        logger.error("DELETE UPDATE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -264,7 +265,7 @@ exports.addReaction = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("ADD REACTION ERROR:", err);
+        logger.error("ADD REACTION ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -287,7 +288,7 @@ exports.markAsRead = async (req, res) => {
         return res.json({ message: "Marked as read" });
 
     } catch (err) {
-        console.error("MARK AS READ ERROR:", err);
+        logger.error("MARK AS READ ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -323,7 +324,7 @@ exports.getCompanyUpdates = async (req, res) => {
         return res.json({ updates });
 
     } catch (err) {
-        console.error("GET COMPANY UPDATES ERROR:", err);
+        logger.error("GET COMPANY UPDATES ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

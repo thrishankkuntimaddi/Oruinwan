@@ -17,6 +17,7 @@ import HelpWhatsNewView from "../profile/views/help/HelpWhatsNewView";
 import HelpContactView from "../profile/views/help/HelpContactView";
 
 import DeleteAccountModal from "../profile/modals/DeleteAccountModal";
+import logger from '../../utils/logger';
 
 const ProfileMenu = ({ onClose }) => {
   const { user, setUser, updateProfile, updatePassword, logout } = useAuth();
@@ -104,7 +105,7 @@ const ProfileMenu = ({ onClose }) => {
       }));
       setSessions(formatted);
     } catch (err) {
-      console.error("Failed to fetch sessions", err);
+      logger.error("Failed to fetch sessions", err);
       showToast("Failed to load sessions", "error");
     }
   };
@@ -115,7 +116,7 @@ const ProfileMenu = ({ onClose }) => {
       setSessions(prev => prev.filter(s => s.id !== id));
       showToast("Session logged out successfully.", "success");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast("Failed to log out session", "error");
     }
   };
@@ -126,7 +127,7 @@ const ProfileMenu = ({ onClose }) => {
       setSessions(prev => prev.filter(s => s.current));
       showToast("Logged out of all other devices.", "success");
     } catch (err) {
-      console.error("Logout All Error:", err);
+      logger.error("Logout All Error:", err);
       showToast("Failed to log out all devices", "error");
     }
   };
@@ -143,7 +144,7 @@ const ProfileMenu = ({ onClose }) => {
       await api.patch("/api/users/status", { status: newStatus });
       showToast(`Status changed to ${newStatus.toUpperCase()}`, "success");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast("Failed to update status", "error");
     }
   };
@@ -164,7 +165,7 @@ const ProfileMenu = ({ onClose }) => {
       setUser(updatedUser);
       showToast("Profile updated successfully!", "success");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast(err.response?.data?.message || "Failed to update profile", "error");
     }
   };
@@ -201,7 +202,7 @@ const ProfileMenu = ({ onClose }) => {
       setPassData({ old: "", new: "", confirm: "" });
       setShowPasswords({ old: false, new: false, confirm: false });
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast(err.response?.data?.message || "Failed to update password", "error");
     }
   };
@@ -217,7 +218,7 @@ const ProfileMenu = ({ onClose }) => {
       setNewEmail("");
       showToast("Verification code sent to your email. Please verify.", "success");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast(err.response?.data?.message || "Failed to add email", "error");
     }
   };
@@ -236,7 +237,7 @@ const ProfileMenu = ({ onClose }) => {
       setVerificationCode("");
       setVerifyingEmailId(null);
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast(err.response?.data?.message || "Verification failed", "error");
     }
   };
@@ -246,7 +247,7 @@ const ProfileMenu = ({ onClose }) => {
       await api.post(`/api/users/emails/${emailId}/resend`);
       showToast("Verification code resent!", "success");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast("Failed to resend code", "error");
     }
   };
@@ -258,7 +259,7 @@ const ProfileMenu = ({ onClose }) => {
       setUser({ ...user, email: data.email });
       showToast("Primary email updated!", "success");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast("Failed to update primary email", "error");
     }
   };
@@ -269,7 +270,7 @@ const ProfileMenu = ({ onClose }) => {
       setEmails(emails.filter(e => e.id !== emailId));
       showToast("Email removed", "success");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast("Failed to delete email", "error");
     }
   };
@@ -285,7 +286,7 @@ const ProfileMenu = ({ onClose }) => {
       await logout();
       window.location.replace("/");
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       showToast("Failed to delete account", "error");
     }
   };

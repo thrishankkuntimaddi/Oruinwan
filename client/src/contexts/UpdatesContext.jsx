@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import api from '@services/api';
 import { useSocket } from "./SocketContext";
 import { useAuth } from "./AuthContext";
+import logger from '../utils/logger';
 
 const UpdatesContext = createContext();
 
@@ -55,7 +56,7 @@ export const UpdatesProvider = ({ children }) => {
             const mapped = (response.data.updates || []).map(mapUpdateToPost);
             setPosts(mapped);
         } catch (error) {
-            console.error("[UpdatesContext] Failed to load updates:", error);
+            logger.error("[UpdatesContext] Failed to load updates:", error);
         } finally {
             setLoading(false);
         }
@@ -131,7 +132,7 @@ export const UpdatesProvider = ({ children }) => {
             
             
         } catch (error) {
-            console.error("[UpdatesContext] Failed to post update:", error);
+            logger.error("[UpdatesContext] Failed to post update:", error);
         }
     };
 
@@ -141,7 +142,7 @@ export const UpdatesProvider = ({ children }) => {
             await api.post(`/api/company/updates/${id}/react`, { emoji: "👍" });
             
         } catch (error) {
-            console.error("[UpdatesContext] Failed to react:", error);
+            logger.error("[UpdatesContext] Failed to react:", error);
         }
     };
 
@@ -151,13 +152,13 @@ export const UpdatesProvider = ({ children }) => {
             await api.delete(`/api/company/updates/${id}`);
             
         } catch (error) {
-            console.error("[UpdatesContext] Failed to delete update:", error);
+            logger.error("[UpdatesContext] Failed to delete update:", error);
         }
     };
 
     
     const addComment = () => {
-        console.warn("[UpdatesContext] Comments on updates are not yet implemented.");
+        logger.warn("[UpdatesContext] Comments on updates are not yet implemented.");
     };
 
     

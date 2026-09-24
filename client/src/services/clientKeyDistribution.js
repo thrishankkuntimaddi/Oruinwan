@@ -1,5 +1,6 @@
 import api from './api';
 import conversationKeyService from './conversationKeyService';
+import logger from '../utils/logger';
 
 export async function handleKeyNeededEvent(payload, currentUserId) {
     const { channelId, newUserId, conversationType } = payload;
@@ -21,7 +22,7 @@ export async function handleKeyNeededEvent(payload, currentUserId) {
         const newUserPublicKeyData = await api.get(`/api/users/${newUserId}/public-key`);
 
         if (!newUserPublicKeyData?.data?.publicKey) {
-            console.error(`🔐 [Key Distribution] Failed - no public key for user ${newUserId}`);
+            logger.error(`🔐 [Key Distribution] Failed - no public key for user ${newUserId}`);
             return;
         }
 
@@ -46,7 +47,7 @@ export async function handleKeyNeededEvent(payload, currentUserId) {
             conversationType
         });
     } catch (error) {
-        console.error(`❌ [Key Distribution] Failed:`, error);
+        logger.error(`❌ [Key Distribution] Failed:`, error);
         
     }
 }

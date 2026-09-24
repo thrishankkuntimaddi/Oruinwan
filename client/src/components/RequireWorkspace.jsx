@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../contexts/WorkspaceContext';
+import logger from '../utils/logger';
 
 const WorkspaceLoadingShell = ({ label = 'Loading workspace...' }) => (
     <div style={{
@@ -35,7 +36,7 @@ const RequireWorkspace = ({ children }) => {
 
     
     if (!workspaceId) {
-        console.warn('🔒 [RequireWorkspace] No workspaceId in URL - redirecting to /workspaces');
+        logger.warn('🔒 [RequireWorkspace] No workspaceId in URL - redirecting to /workspaces');
         return <Navigate to="/workspaces" replace />;
     }
 
@@ -47,7 +48,7 @@ const RequireWorkspace = ({ children }) => {
             return <WorkspaceLoadingShell label="Verifying access..." />;
         }
 
-        console.error('🚨 [RequireWorkspace] SECURITY: User tried to access workspace they are not a member of!', {
+        logger.error('🚨 [RequireWorkspace] SECURITY: User tried to access workspace they are not a member of!', {
             workspaceId,
             userWorkspaces: workspaces.map(w => w.id)
         });

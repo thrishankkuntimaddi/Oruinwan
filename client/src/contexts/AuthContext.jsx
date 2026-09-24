@@ -1,7 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
-import { setOnTokenRefreshed, API_BASE } from '@services/api';
+import { setOnTokenRefreshed, refreshAccessToken, API_BASE } from '@services/api';
 import api from '@services/api';
 import { getDeviceMetadata, clearDeviceId } from '../utils/deviceId';
+import logger from '../utils/logger';
+import { clearAllAiHistory } from '../utils/aiChatHistoryStorage';
 
 export const AuthContext = createContext(null);
 
@@ -24,34 +26,14 @@ export const AuthProvider = ({ children }) => {
   
   const silentRefresh = async () => {
     try {
-      const storedRefreshToken = localStorage.getItem('refreshToken');
-      const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
-        method: "POST",
-        credentials: "include",
-        headers: { 'Content-Type': 'application/json' },
-        
-        body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
-      });
-
-      if (refreshRes.ok) {
-        const refreshData = await refreshRes.json();
-        if (refreshData.accessToken) {
-          localStorage.setItem("accessToken", refreshData.accessToken);
-          setAccessToken(refreshData.accessToken);
-          
-          if (refreshData.refreshToken) {
-            localStorage.setItem('refreshToken', refreshData.refreshToken);
-          }
-          console.log('✅ [SILENT REFRESH] New access token obtained');
-          return refreshData.accessToken;
-        }
-      } else {
-        console.warn(`⚠️ [SILENT REFRESH] Failed with status ${refreshRes.status}`);
-      }
+      const token = await refreshAccessToken();
+      setAccessToken(token);
+      logger.debug('✅ [SILENT REFRESH] New access token obtained');
+      return token;
     } catch (refreshErr) {
-      console.error("❌ [SILENT REFRESH] Network error:", refreshErr);
+      logger.warn('⚠️ [SILENT REFRESH] Failed:', refreshErr?.response?.status || refreshErr?.message);
+      return null;
     }
-    return null;
   };
 
   const loadUser = async () => {
@@ -60,12 +42,12 @@ export const AuthProvider = ({ children }) => {
       let token = localStorage.getItem("accessToken");
 
       if (!token) {
-        console.log('🔄 [LOAD USER] No access token in storage — attempting silent refresh via cookie...');
+        logger.debug('🔄 [LOAD USER] No access token in storage — attempting silent refresh via cookie...');
         token = await silentRefresh();
 
         if (!token) {
           
-          console.log('ℹ️ [LOAD USER] No valid session — user is logged out');
+          logger.debug('ℹ️ [LOAD USER] No valid session — user is logged out');
           setUser(null);
           setAccessToken(null);
           setLoading(false);
@@ -85,12 +67,12 @@ export const AuthProvider = ({ children }) => {
 
       
       if (res.status === 401) {
-        console.log('🔄 [LOAD USER] Access token rejected by /me — attempting silent refresh...');
+        logger.debug('🔄 [LOAD USER] Access token rejected by /me — attempting silent refresh...');
         const newToken = await silentRefresh();
 
         if (!newToken) {
           
-          console.warn('⚠️ [LOAD USER] Silent refresh failed after /me 401 — clearing session');
+          logger.warn('⚠️ [LOAD USER] Silent refresh failed after /me 401 — clearing session');
           setUser(null);
           setAccessToken(null);
           localStorage.removeItem("accessToken");
@@ -105,7 +87,7 @@ export const AuthProvider = ({ children }) => {
         });
 
         if (!retryRes.ok) {
-          console.warn('⚠️ [LOAD USER] /me still failed after refresh — clearing session');
+          logger.warn('⚠️ [LOAD USER] /me still failed after refresh — clearing session');
           setUser(null);
           setAccessToken(null);
           localStorage.removeItem("accessToken");
@@ -125,13 +107,13 @@ export const AuthProvider = ({ children }) => {
         initializeEncryption(data);
       } else {
         
-        console.warn(`⚠️ [LOAD USER] /me returned ${res.status} — clearing access token`);
+        logger.warn(`⚠️ [LOAD USER] /me returned ${res.status} — clearing access token`);
         setUser(null);
         setAccessToken(null);
         localStorage.removeItem("accessToken");
       }
     } catch (err) {
-      console.error("❌ Error loading user:", err);
+      logger.error("❌ Error loading user:", err);
       setUser(null);
       setAccessToken(null);
       localStorage.removeItem("accessToken");
@@ -148,7 +130,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const userId = data._id || data.id || data.sub;
         if (!userId) {
-          console.warn('⚠️ [PHASE 1] No user ID found, skipping initialization');
+          logger.warn('⚠️ [PHASE 1] No user ID found, skipping initialization');
           return;
         }
 
@@ -157,14 +139,14 @@ export const AuthProvider = ({ children }) => {
 
         if (result?.status === 'PASSWORD_REQUIRED') {
           
-          console.log('🔐 [PHASE 1] Password-protected identity - cache missing, encryption deferred');
+          logger.debug('🔐 [PHASE 1] Password-protected identity - cache missing, encryption deferred');
           setEncryptionReady(false);
           setRequiresPassword(true);
           return;
         }
 
         if (result?.status === 'READY') {
-          console.log('✅ [PHASE 1] Identity keys ready (from cache or newly generated)');
+          logger.debug('✅ [PHASE 1] Identity keys ready (from cache or newly generated)');
           setEncryptionReady(true);
           setRequiresPassword(false);
 
@@ -178,7 +160,7 @@ export const AuthProvider = ({ children }) => {
             }
           })
             .then(res => res.json())
-            .then(data => console.log('✅ [AUTO-REPAIR] Completed:', data))
+            .then(data => logger.debug('✅ [AUTO-REPAIR] Completed:', data))
             .catch(() => { });
         }
       } catch (err) {
@@ -191,15 +173,15 @@ export const AuthProvider = ({ children }) => {
         if (isServerError) {
           
           
-          console.warn('⚠️ [PHASE 1] Transient server error during encryption init (not a password issue):', err.message);
+          logger.warn('⚠️ [PHASE 1] Transient server error during encryption init (not a password issue):', err.message);
           setEncryptionReady(false);
           
           return;
         }
 
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.error('❌ [PHASE 1] HARD crypto failure:', err);
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.error('❌ [PHASE 1] HARD crypto failure:', err);
+        logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         
         setEncryptionReady(false);
         setRequiresPassword(true);
@@ -216,7 +198,7 @@ export const AuthProvider = ({ children }) => {
     
     
     const handleForceLogout = () => {
-      console.warn('🔴 [AUTH] Force logout event received from API interceptor');
+      logger.warn('🔴 [AUTH] Force logout event received from API interceptor');
       logoutRef.current();
     };
     window.addEventListener('auth:force-logout', handleForceLogout);
@@ -234,8 +216,14 @@ export const AuthProvider = ({ children }) => {
   
   
   
+  const currentUserIdRef = useRef(null);
   useEffect(() => {
-    if (!user) {
+    currentUserIdRef.current = user ? (user._id || user.id || user.sub || null) : null;
+  }, [user]);
+
+  const refreshUserKey = user ? (user._id || user.id || 'anon') : null;
+  useEffect(() => {
+    if (!refreshUserKey) {
       return; 
     }
 
@@ -244,63 +232,33 @@ export const AuthProvider = ({ children }) => {
     
     const REFRESH_INTERVAL = 10 * 60 * 1000; 
 
-    console.log('⏰ [TOKEN REFRESH] Setting up automatic refresh every 10 minutes');
+    logger.debug('⏰ [TOKEN REFRESH] Setting up automatic refresh every 10 minutes');
 
     const refreshInterval = setInterval(async () => {
       try {
-        console.log('🔄 [TOKEN REFRESH] Attempting automatic token refresh...');
+        logger.debug('🔄 [TOKEN REFRESH] Attempting automatic token refresh...');
 
         
         const existingToken = localStorage.getItem('accessToken');
         if (!existingToken) {
-          console.log('⏭️ [TOKEN REFRESH] No access token in storage, skipping proactive refresh');
+          logger.debug('⏭️ [TOKEN REFRESH] No access token in storage, skipping proactive refresh');
           return;
         }
 
-        const storedRefreshToken = localStorage.getItem('refreshToken');
-        const refreshRes = await fetch(`${API_BASE}/api/auth/refresh`, {
-          method: "POST",
-          credentials: "include",
-          headers: { 'Content-Type': 'application/json' },
-          
-          body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
-        });
-
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          if (refreshData.accessToken) {
-            setAccessToken(refreshData.accessToken);
-            localStorage.setItem("accessToken", refreshData.accessToken);
-            if (refreshData.refreshToken) {
-              localStorage.setItem('refreshToken', refreshData.refreshToken);
-            }
-            console.log('✅ [TOKEN REFRESH] Access token refreshed successfully');
-          }
-        } else {
-          
-          
-          
-          
-          
-          
-          
-          console.warn(
-            `⚠️ [TOKEN REFRESH] Proactive refresh failed (status ${refreshRes.status}). ` +
-            'Will retry on next API call via Axios interceptor — NOT logging out.'
-          );
-        }
+        await refreshAccessToken();
+        logger.debug('✅ [TOKEN REFRESH] Access token refreshed successfully');
       } catch (error) {
         
-        console.error('❌ [TOKEN REFRESH] Network error during proactive refresh (will retry on next API call):', error.message);
+        logger.warn('⚠️ [TOKEN REFRESH] Proactive refresh failed (will retry on next API call via interceptor — NOT logging out):', error.message);
       }
     }, REFRESH_INTERVAL);
 
     
     return () => {
-      console.log('🛑 [TOKEN REFRESH] Clearing automatic refresh interval');
+      logger.debug('🛑 [TOKEN REFRESH] Clearing automatic refresh interval');
       clearInterval(refreshInterval);
     };
-  }, [user]); 
+  }, [refreshUserKey]); 
 
   
   
@@ -325,9 +283,6 @@ export const AuthProvider = ({ children }) => {
       if (data.accessToken) {
         localStorage.setItem("accessToken", data.accessToken);
         setAccessToken(data.accessToken);
-      }
-      if (data.refreshToken) {
-        localStorage.setItem('refreshToken', data.refreshToken);
       }
 
       
@@ -355,13 +310,13 @@ export const AuthProvider = ({ children }) => {
           const result = await identityKeyService.initializeIdentityKeys(userId, password);
 
           if (result?.status === 'PASSWORD_REQUIRED') {
-            console.warn('🔐 [PHASE 1] Password required during login (unusual)');
+            logger.warn('🔐 [PHASE 1] Password required during login (unusual)');
             setEncryptionReady(false);
             return;
           }
 
           if (result?.status === 'READY') {
-            console.log('✅ [PHASE 1] Identity keys initialized successfully');
+            logger.debug('✅ [PHASE 1] Identity keys initialized successfully');
             setEncryptionReady(true);
             setRequiresPassword(false);
 
@@ -374,13 +329,13 @@ export const AuthProvider = ({ children }) => {
               }
             })
               .then(res => res.json())
-              .then(repairData => console.log('✅ [AUTO-REPAIR] Completed:', repairData))
+              .then(repairData => logger.debug('✅ [AUTO-REPAIR] Completed:', repairData))
               .catch(() => { });
           }
         } catch (err) {
-          console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-          console.error('❌ [PHASE 1] HARD crypto failure:', err);
-          console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+          logger.error('❌ [PHASE 1] HARD crypto failure:', err);
+          logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
           setEncryptionReady(false);
         }
       })();
@@ -403,17 +358,18 @@ export const AuthProvider = ({ children }) => {
   
   
   const logout = useCallback(async () => {
+    const loggedOutUserId = currentUserIdRef.current;
     try {
       await api.post('/api/auth/logout', {});
     } catch (err) {
-      console.error("Logout error:", err);
+      logger.error("Logout error:", err);
     }
 
     setUser(null);
     setAccessToken(null);
     localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
     sessionStorage.removeItem("lastLoginAttempt");
+    clearAllAiHistory();
 
     
     setEncryptionReady(false);
@@ -424,7 +380,7 @@ export const AuthProvider = ({ children }) => {
     
     
     
-    window.dispatchEvent(new Event('auth:logout'));
+    window.dispatchEvent(new CustomEvent('auth:logout', { detail: { userId: loggedOutUserId } }));
   }, []); 
 
   
@@ -499,13 +455,13 @@ export const AuthProvider = ({ children }) => {
       if (resultNoPass?.status === 'READY') {
         setRequiresPassword(false);
         setEncryptionReady(true);
-        console.log('✅ [UNLOCK] Encryption unlocked via server KEK (no password needed)');
+        logger.debug('✅ [UNLOCK] Encryption unlocked via server KEK (no password needed)');
         return;
       }
     } catch (serverKekErr) {
       
       
-      console.warn('⚠️ [UNLOCK] Server KEK unlock failed, trying password:', serverKekErr.message);
+      logger.warn('⚠️ [UNLOCK] Server KEK unlock failed, trying password:', serverKekErr.message);
     }
 
     
@@ -520,7 +476,7 @@ export const AuthProvider = ({ children }) => {
     if (result?.status === 'READY') {
       setRequiresPassword(false);
       setEncryptionReady(true);
-      console.log('✅ [UNLOCK] Encryption unlocked successfully');
+      logger.debug('✅ [UNLOCK] Encryption unlocked successfully');
     }
   };
 

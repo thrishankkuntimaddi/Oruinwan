@@ -11,6 +11,7 @@ import {
     getOwnerOverview,
     getActivityHealth
 } from '../../services/ownerDashboardService';
+import logger from '../../utils/logger';
 
 const OwnerDashboard = () => {
     const { isCompanyOwner } = useCompany();
@@ -32,7 +33,7 @@ const OwnerDashboard = () => {
             setOverviewData(overview);
             setActivityData(activity);
         } catch (error) {
-            console.error("Error fetching owner dashboard data:", error);
+            logger.error("Error fetching owner dashboard data:", error);
             showToast("Failed to load dashboard data", "error");
         }
     }, [showToast]);

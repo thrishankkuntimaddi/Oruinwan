@@ -1,10 +1,11 @@
+const logger = require('../../../utils/logger');
 const Company = require('../../../models/Company');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Department = require('../../../models/Department');
 const { logAction } = require('../../../utils/historyLogger');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const sendEmail = require('../../../utils/sendEmail');
 const XLSX = require('xlsx');
 const { uploadToGCS } = require('../../modules/uploads/upload.service');
 
@@ -204,7 +205,7 @@ async function processSetupStep({ companyId, userId, step, data, files }) {
             
             if (files.logo && files.logo[0]) {
                 const logoFile = files.logo[0];
-                const gcsResult = await uploadToGCS(logoFile, `company-logos/${companyId}`);
+                const gcsResult = await uploadToGCS(logoFile, `company-logos/${companyId}`, { userId, companyId });
                 updates['settings.logo'] = gcsResult.url;
                 updates.logo = gcsResult.url;
             }
@@ -422,18 +423,7 @@ function generateTempPassword() {
 
 async function sendWelcomeEmail({ to, name, companyName, companyEmail, loginEmail, tempPassword }) {
     try {
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT || '587'),
-            secure: false,
-            auth: {
-                user: process.env.SMTP_USER || process.env.EMAIL_USER,
-                pass: process.env.SMTP_PASS || process.env.EMAIL_PASS
-            }
-        });
-
-        await transporter.sendMail({
-            from: `"${companyName} via Chttrix" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
+        await sendEmail({
             to,
             subject: `You're invited to join ${companyName} on Chttrix`,
             html: `
@@ -462,7 +452,7 @@ async function sendWelcomeEmail({ to, name, companyName, companyEmail, loginEmai
             `
         });
     } catch (err) {
-        console.error('[WELCOME EMAIL] Failed to send to', to, ':', err.message);
+        logger.error('[WELCOME EMAIL] Failed to send to', to, ':', err.message);
         
     }
 }

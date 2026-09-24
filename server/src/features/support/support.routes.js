@@ -31,7 +31,7 @@ router.post('/tickets', async (req, res) => {
 
         res.status(201).json({ message: "Ticket created successfully", ticket });
     } catch (err) {
-        console.error("CREATE TICKET ERROR:", err);
+        logger.error("CREATE TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
@@ -45,7 +45,7 @@ router.get('/tickets', async (req, res) => {
 
         res.json({ tickets });
     } catch (err) {
-        console.error("GET TICKETS ERROR:", err);
+        logger.error("GET TICKETS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
@@ -63,7 +63,7 @@ router.get('/tickets/:id', async (req, res) => {
 
         res.json({ ticket });
     } catch (err) {
-        console.error("GET TICKET ERROR:", err);
+        logger.error("GET TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });
@@ -98,7 +98,7 @@ router.post('/tickets/:id/message', async (req, res) => {
         res.json({ message: "Message added", ticket });
 
     } catch (err) {
-        console.error("ADD TICKET MESSAGE ERROR:", err);
+        logger.error("ADD TICKET MESSAGE ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });

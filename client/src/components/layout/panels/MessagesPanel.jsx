@@ -9,6 +9,7 @@ import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import api from '@services/api';
+import logger from '../../../utils/logger';
 
 const MessagesPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
@@ -71,7 +72,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 });
                 setContacts(formatted);
             } catch (err) {
-                console.error("Failed to load DMs:", err);
+                logger.error("Failed to load DMs:", err);
             } finally {
                 setIsLoading(false);
             }
@@ -129,7 +130,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 navigate(`/workspace/${workspaceId}/messages/dm/${targetUserId}`);
             }
         } catch (err) {
-            console.error('[MessagesPanel] Failed to resolve DM session:', err);
+            logger.error('[MessagesPanel] Failed to resolve DM session:', err);
             showToast('Could not start conversation. Please try again.', 'error');
         }
     };
@@ -191,7 +192,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             });
             setContacts(formatted);
         } catch (err) {
-            console.error('Failed to send broadcast:', err);
+            logger.error('Failed to send broadcast:', err);
             showToast('Failed to send broadcast. Please try again.', 'error');
             throw err; 
         }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
+import logger from '../utils/logger';
 
 export const useChannels = (workspaceId) => {
     const [channels, setChannels] = useState([]);
@@ -8,7 +9,7 @@ export const useChannels = (workspaceId) => {
 
     const loadChannels = useCallback(async () => {
         if (!workspaceId) {
-            console.warn('No workspaceId provided to useChannels hook');
+            logger.warn('No workspaceId provided to useChannels hook');
             setLoading(false);
             return;
         }
@@ -36,7 +37,7 @@ export const useChannels = (workspaceId) => {
 
             setChannels(formattedChannels);
         } catch (err) {
-            console.error('Error loading channels:', err);
+            logger.error('Error loading channels:', err);
             setError(err.response?.data?.message || 'Failed to load channels');
         } finally {
             setLoading(false);

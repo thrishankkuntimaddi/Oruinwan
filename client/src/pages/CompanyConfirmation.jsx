@@ -7,6 +7,7 @@ import {
     CheckCircle, ArrowRight, Shield,
     MessageSquare, CheckSquare, Layers, Sun, Moon, Users, Star
 } from 'lucide-react';
+import logger from '../utils/logger';
 
 const FEATURES = [
     { icon: MessageSquare, label: 'Real-time Channels & DMs', color: 'text-indigo-400' },
@@ -39,7 +40,7 @@ const CompanyConfirmation = () => {
             );
             navigate('/company/setup');
         } catch (err) {
-            console.error('Setup Start Error:', err);
+            logger.error('Setup Start Error:', err);
         } finally {
             setIsLoading(false);
         }

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Shield, CheckCircle, AlertCircle, RefreshCw, Trash2, Loader } from "lucide-react";
 import { useToast } from "../../contexts/ToastContext";
 import { API_BASE } from '@services/api';
+import logger from '../../utils/logger';
 
 const DomainSettings = ({ companyId }) => {
     const { showToast } = useToast();
@@ -61,7 +62,7 @@ const DomainSettings = ({ companyId }) => {
             setStatus(null);
             setTokenData(null);
             showToast("Verification cleared", "success");
-        } catch (e) { console.error(e); }
+        } catch (e) { logger.error(e); }
     };
 
     return (

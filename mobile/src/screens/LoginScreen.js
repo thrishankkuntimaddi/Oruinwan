@@ -4,8 +4,8 @@ import {
   StyleSheet, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
-import { login } from '../services/api';
-import { saveToken } from '../services/storage';
+import { login } from '../services/api/auth';
+import { errorMessage } from '../services/http';
 import { useApp } from '../context/AppContext';
 import { T } from '../theme';
 
@@ -14,7 +14,7 @@ export default function LoginScreen({ navigation }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
   const [errors, setErrors]     = useState({});
-  const { setUser, workspace }  = useApp();
+  const { signIn }              = useApp();
 
   function validate() {
     const e = {};
@@ -29,15 +29,12 @@ export default function LoginScreen({ navigation }) {
     try {
       setLoading(true);
       const { data } = await login(email.trim(), password);
-      const token = data.accessToken || data.token;
-      const user  = data.user;
-      if (!token) throw new Error('No access token received');
-      await saveToken(token);
-      if (user) await setUser(user);
-      navigation.replace(workspace ? 'Main' : 'WorkspaceSelect');
+      if (!(data?.accessToken || data?.token) || !data?.user) throw new Error('No access token received');
+      // The navigator switches to the signed-in stack; the password is used once,
+      // in memory, to unlock the E2EE identity key and is not stored.
+      await signIn(data, password);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Login failed. Please try again.';
-      Alert.alert('Sign In Error', msg);
+      Alert.alert('Sign In Error', errorMessage(err, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }

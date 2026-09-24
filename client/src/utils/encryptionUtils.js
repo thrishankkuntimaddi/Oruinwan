@@ -1,3 +1,4 @@
+import logger from './logger';
 export async function generateKeyPair() {
     try {
         
@@ -20,7 +21,7 @@ export async function generateKeyPair() {
 
         return { publicKey, privateKey };
     } catch (err) {
-        console.error('Failed to generate keypair:', err);
+        logger.error('Failed to generate keypair:', err);
         throw new Error('Key generation failed');
     }
 }
@@ -77,7 +78,7 @@ export async function encryptPrivateKey(privateKey, password) {
             authTag: btoa(String.fromCharCode(...authTag))
         };
     } catch (err) {
-        console.error('Failed to encrypt private key:', err);
+        logger.error('Failed to encrypt private key:', err);
         throw new Error('Private key encryption failed');
     }
 }
@@ -129,7 +130,7 @@ export async function decryptPrivateKey(encryptedData, password) {
 
         return new TextDecoder().decode(decrypted);
     } catch (err) {
-        console.error('Failed to decrypt private key:', err);
+        logger.error('Failed to decrypt private key:', err);
         throw new Error('Private key decryption failed');
     }
 }
@@ -179,7 +180,7 @@ export async function deriveSharedSecret(myPrivateKey, theirPublicKey) {
 
         return sharedSecret;
     } catch (err) {
-        console.error('Failed to derive shared secret:', err);
+        logger.error('Failed to derive shared secret:', err);
         throw new Error('Shared secret derivation failed');
     }
 }
@@ -204,7 +205,7 @@ export async function encryptMessage(plaintext, sharedSecret) {
             iv: btoa(String.fromCharCode(...iv))
         };
     } catch (err) {
-        console.error('Failed to encrypt message:', err);
+        logger.error('Failed to encrypt message:', err);
         throw new Error('Message encryption failed');
     }
 }
@@ -227,7 +228,7 @@ export async function decryptMessage(ciphertext, messageIv, sharedSecret) {
 
         return new TextDecoder().decode(decrypted);
     } catch (err) {
-        console.error('Failed to decrypt message:', err);
+        logger.error('Failed to decrypt message:', err);
         return '[Encrypted message - decryption failed]';
     }
 }

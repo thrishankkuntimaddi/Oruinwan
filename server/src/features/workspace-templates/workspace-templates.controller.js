@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
 const Workspace = require('../../../models/Workspace');
 const Channel = require('../channels/channel.model');
@@ -242,7 +243,7 @@ exports.importTemplate = async (req, res) => {
           }
         } catch (chErr) {
           
-          console.error('[TEMPLATE IMPORT] Channel create error:', chErr.message);
+          logger.error('[TEMPLATE IMPORT] Channel create error:', chErr.message);
         }
       }
     }

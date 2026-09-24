@@ -3,6 +3,7 @@ import { channelService } from "../services/channelService";
 import { messageService } from "../services/messageService";
 import api from '@services/api';
 import { useSocket } from "./SocketContext";
+import logger from '../utils/logger';
 
 const ContactsContext = createContext();
 export const useContacts = () => useContext(ContactsContext);
@@ -36,24 +37,24 @@ export default function ContactsProvider({ children }) {
       const [channelsRes, chatListRes, favoritesRes, membersRes] = await Promise.all([
         
         workspaceId ? channelService.getMyChannels(workspaceId).catch(err => {
-          console.warn("Channels fetch failed:", err);
+          logger.warn("Channels fetch failed:", err);
           return { data: { channels: [] } };
         }) : Promise.resolve({ data: { channels: [] } }),
 
         messageService.getWorkspaceDMs(workspaceId).catch(err => {
-          console.warn("DM fetch failed:", err);
+          logger.warn("DM fetch failed:", err);
           return { data: { sessions: [] } };
         }),
 
         
         workspaceId ? api.get(`/api/favorites/${workspaceId}`).catch(err => {
-          console.warn("Favorites fetch failed:", err);
+          logger.warn("Favorites fetch failed:", err);
           return { data: { favorites: [] } };
         }) : Promise.resolve({ data: { favorites: [] } }),
 
         
         workspaceId ? api.get(`/api/workspaces/${workspaceId}/members`).catch(err => {
-          console.warn("Members fetch failed:", err);
+          logger.warn("Members fetch failed:", err);
           return { data: { members: [] } };
         }) : Promise.resolve({ data: { members: [] } })
       ]);
@@ -136,7 +137,7 @@ export default function ContactsProvider({ children }) {
       setContacts([...filteredChannels, ...dmsData]);
 
     } catch (err) {
-      console.error("Error loading contacts:", err);
+      logger.error("Error loading contacts:", err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -217,13 +218,14 @@ export default function ContactsProvider({ children }) {
     socket.on('invited-to-channel', handleInvited);
     socket.on('removed-from-channel', handleRemoved);
     socket.on('new-dm-session', handleNewDMSession);
-    socket.on('channel-privacy-changed', (data) => {
+    const handlePrivacyChanged = (data) => {
       setChannels(prev => prev.map(ch =>
         ch.id === data.channelId
           ? { ...ch, isPrivate: data.isPrivate }
           : ch
       ));
-    });
+    };
+    socket.on('channel-privacy-changed', handlePrivacyChanged);
 
     return () => {
       socket.off('channel-created', handleChannelCreated);
@@ -232,7 +234,7 @@ export default function ContactsProvider({ children }) {
       socket.off('invited-to-channel', handleInvited);
       socket.off('removed-from-channel', handleRemoved);
       socket.off('new-dm-session', handleNewDMSession);
-      socket.off('channel-privacy-changed');
+      socket.off('channel-privacy-changed', handlePrivacyChanged);
     };
   }, [socket, loadAllData]);
 
@@ -255,13 +257,13 @@ export default function ContactsProvider({ children }) {
   const toggleFavorite = async (id) => {
     const item = allItems.find(i => i.id === id);
     if (!item) {
-      console.error('❌ Item not found:', id);
+      logger.error('❌ Item not found:', id);
       return;
     }
 
     const workspaceId = getCurrentWorkspaceId();
     if (!workspaceId) {
-      console.error('❌ No workspace ID found in URL');
+      logger.error('❌ No workspace ID found in URL');
       return;
     }
 
@@ -302,7 +304,7 @@ export default function ContactsProvider({ children }) {
         });
       }
     } catch (err) {
-      console.error('Failed to toggle favorite:', err);
+      logger.error('Failed to toggle favorite:', err);
       
       setChannels(updateFavorite);
       setDms(updateFavorite);

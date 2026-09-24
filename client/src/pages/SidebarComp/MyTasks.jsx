@@ -21,6 +21,7 @@ import { useTasks } from '../../contexts/TasksContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useContacts } from '../../contexts/ContactsContext';
 import api from '@services/api';
+import logger from '../../utils/logger';
 
 const JIRA_BLUE = '#b8956a'; 
 const BOARD_BG = 'var(--bg-base)';
@@ -998,7 +999,7 @@ export default function MyTasks() {
             try {
               await api.post(`/api/v2/tasks/${transferTask.id}/transfer-request`, { newAssigneeId, note });
               setTransferTask(null);
-            } catch (e) { console.error(e); }
+            } catch (e) { logger.error(e); }
           }}
         />
       )}

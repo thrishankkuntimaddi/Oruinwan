@@ -1,6 +1,5 @@
 import { useContext, useEffect, useState, useRef, useCallback } from "react";
 import api from '@services/api';
-import { io } from "socket.io-client";
 import { Search, Plus, Archive, Users, Hash, Lock, MessageCircle, MoreVertical, CheckCheck, X } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import CreateChannelModal from "./CreateChannelModal";
@@ -12,6 +11,7 @@ import { API_BASE } from '@services/api';
 import { channelService } from "../../services/channelService";
 
 import { Button, Input, Avatar, Badge } from "../../shared/components/ui";
+import logger from '../../utils/logger';
 
 const Tabs = ["All", "Direct Messages", "Channels"];
 
@@ -123,7 +123,7 @@ export default function MessageList({ onSelectChat }) {
 
       setItems([...sortedChannels, ...sortedDMs]);
     } catch (err) {
-      console.error("Failed to load chat list:", err);
+      logger.error("Failed to load chat list:", err);
     }
   }, [myId, workspaceId]);
 
@@ -511,7 +511,7 @@ export default function MessageList({ onSelectChat }) {
                 id: item.id
               });
             } catch (err) {
-              console.error("reset unread failed:", err);
+              logger.error("reset unread failed:", err);
             }
           }
 

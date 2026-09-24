@@ -8,6 +8,7 @@ import { API_BASE } from '@services/api';
 import { encryptMessageForSending, batchDecryptMessages } from "../../../services/messageEncryptionService";
 import { useThreadFollow } from "../../../hooks/useThreadFollow";
 import { getAvatarUrl } from "../../../utils/avatarUtils";
+import logger from '../../../utils/logger';
 
 export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "", style = {} }) {
     const { showToast } = useToast();
@@ -38,7 +39,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
     const loadThread = useCallback(async () => {
         if (!channelId) {
-            console.error('[THREAD][FATAL] Cannot load thread without channelId');
+            logger.error('[THREAD][FATAL] Cannot load thread without channelId');
             return;
         }
 
@@ -53,8 +54,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             const res = await api.get(`/api/v2/messages/thread/${messageId}`);
 
             
-            console.log(`[THREAD][FETCH][DECRYPT] Loaded ${res.data.replies?.length || 0} replies for thread ${messageId}`);
-            console.log(`[THREAD][FETCH][DECRYPT] Decrypting with context:`, {
+            logger.debug(`[THREAD][FETCH][DECRYPT] Loaded ${res.data.replies?.length || 0} replies for thread ${messageId}`);
+            logger.debug(`[THREAD][FETCH][DECRYPT] Decrypting with context:`, {
                 channelId,
                 conversationType,
                 replyCount: res.data.replies?.length || 0
@@ -71,9 +72,9 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                         null
                     );
                     decryptedParent = decryptedParents[0] || res.data.parent;
-                    console.log(`[THREAD][FETCH][DECRYPT] Parent message decrypted`);
+                    logger.debug(`[THREAD][FETCH][DECRYPT] Parent message decrypted`);
                 } catch (err) {
-                    console.error('[THREAD][FETCH][DECRYPT] Failed to decrypt parent:', err);
+                    logger.error('[THREAD][FETCH][DECRYPT] Failed to decrypt parent:', err);
                 }
             }
 
@@ -94,7 +95,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                         reply.payload?.messageIv;
 
                     if (!isValid) {
-                        console.log(`[THREAD][DECRYPT][SKIP] Reply ${idx + 1} invalid:`, {
+                        logger.debug(`[THREAD][DECRYPT][SKIP] Reply ${idx + 1} invalid:`, {
                             hasId: !!reply?._id,
                             hasCiphertext: !!reply?.payload?.ciphertext,
                             hasIv: !!reply?.payload?.messageIv,
@@ -104,12 +105,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     return isValid;
                 });
 
-                console.log(`[THREAD][NORMALIZE] Filtered ${validReplies.length}/${decryptedReplies.length} valid encrypted replies`);
+                logger.debug(`[THREAD][NORMALIZE] Filtered ${validReplies.length}/${decryptedReplies.length} valid encrypted replies`);
 
                 if (validReplies.length > 0) {
                     try {
                         const messageId = parentMessage._id || parentMessage.id;
-                        console.log(`[THREAD][DECRYPT][INPUT] Batch decrypting ${validReplies.length} replies with parent ${messageId}:`,
+                        logger.debug(`[THREAD][DECRYPT][INPUT] Batch decrypting ${validReplies.length} replies with parent ${messageId}:`,
                             validReplies.map(r => r._id)
                         );
 
@@ -120,20 +121,20 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                             conversationType,
                             null  
                         );
-                        console.log(`[THREAD][DECRYPT][SUCCESS] Decrypted ${decryptedReplies.length} replies successfully`);
+                        logger.debug(`[THREAD][DECRYPT][SUCCESS] Decrypted ${decryptedReplies.length} replies successfully`);
                     } catch (err) {
-                        console.error('[THREAD][FETCH][DECRYPT] Failed to decrypt replies:', err);
+                        logger.error('[THREAD][FETCH][DECRYPT] Failed to decrypt replies:', err);
                         
                         decryptedReplies = validReplies;
                     }
                 } else {
-                    console.log(`[THREAD][DECRYPT][SKIP] No valid encrypted replies to decrypt`);
+                    logger.debug(`[THREAD][DECRYPT][SKIP] No valid encrypted replies to decrypt`);
                     decryptedReplies = [];
                 }
             } else if (decryptedReplies.length === 0) {
-                console.log(`[THREAD][DECRYPT][SKIP] No replies to decrypt`);
+                logger.debug(`[THREAD][DECRYPT][SKIP] No replies to decrypt`);
             } else {
-                console.log(`[THREAD][DECRYPT][SKIP] Missing channelId, cannot decrypt`);
+                logger.debug(`[THREAD][DECRYPT][SKIP] Missing channelId, cannot decrypt`);
             }
 
             
@@ -144,7 +145,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 setInitialFollowStatus(res.data.followStatus);
             }
         } catch (err) {
-            console.error("Load thread failed:", err);
+            logger.error("Load thread failed:", err);
         } finally {
             setLoading(false);
         }
@@ -168,7 +169,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             
             const socketClientTempId = data.clientTempId || reply.clientTempId;
 
-            console.log(`[THREAD][REALTIME] Received thread reply:`, {
+            logger.debug(`[THREAD][REALTIME] Received thread reply:`, {
                 replyId: reply._id,
                 replyParentId,
                 currentThreadParent: messageId,
@@ -180,7 +181,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
 
             
             if (replyParentId !== messageId) {
-                console.log(`[THREAD][REALTIME] Parent mismatch, ignoring`);
+                logger.debug(`[THREAD][REALTIME] Parent mismatch, ignoring`);
                 return;
             }
 
@@ -204,7 +205,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             if (canDecrypt) {
                 try {
                     const messageId = parentMessage._id || parentMessage.id;
-                    console.log(`[THREAD][DECRYPT][INPUT] Realtime reply ${normalizedReply._id} valid, decrypting with parent ${messageId}...`);
+                    logger.debug(`[THREAD][DECRYPT][INPUT] Realtime reply ${normalizedReply._id} valid, decrypting with parent ${messageId}...`);
                     
                     const decrypted = await batchDecryptMessages(
                         [normalizedReply],
@@ -213,13 +214,13 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                         null  
                     );
                     decryptedReply = decrypted[0] || normalizedReply;
-                    console.log(`[THREAD][REALTIME][DECRYPT] Successfully decrypted reply`);
+                    logger.debug(`[THREAD][REALTIME][DECRYPT] Successfully decrypted reply`);
                 } catch (err) {
-                    console.error('[THREAD][REALTIME][DECRYPT] Failed to decrypt reply:', err);
+                    logger.error('[THREAD][REALTIME][DECRYPT] Failed to decrypt reply:', err);
                     
                 }
             } else {
-                console.log(`[THREAD][DECRYPT][SKIP] Reply cannot be decrypted:`, {
+                logger.debug(`[THREAD][DECRYPT][SKIP] Reply cannot be decrypted:`, {
                     hasId: !!normalizedReply?._id,
                     hasCiphertext: !!normalizedReply?.payload?.ciphertext,
                     hasIv: !!normalizedReply?.payload?.messageIv,
@@ -230,7 +231,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             setReplies((prev) => {
                 
                 if (prev.find((r) => r._id === decryptedReply._id)) {
-                    console.log(`[THREAD][REALTIME] Reply already exists (duplicate), skipping`);
+                    logger.debug(`[THREAD][REALTIME] Reply already exists (duplicate), skipping`);
                     return prev;
                 }
 
@@ -240,7 +241,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     : -1;
 
                 if (optimisticMatchIndex !== -1) {
-                    console.log(`[THREAD][REALTIME][RECONCILE] Replacing optimistic reply:`, {
+                    logger.debug(`[THREAD][REALTIME][RECONCILE] Replacing optimistic reply:`, {
                         optimisticId: prev[optimisticMatchIndex]._id,
                         realId: decryptedReply._id,
                         clientTempId: decryptedReply.clientTempId
@@ -251,7 +252,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                 }
 
                 
-                console.log(`[THREAD][REALTIME] Adding new reply from other user`);
+                logger.debug(`[THREAD][REALTIME] Adding new reply from other user`);
                 return [...prev, decryptedReply];
             });
         };
@@ -280,8 +281,8 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             const messageId = parentMessage._id || parentMessage.id;
 
             
-            console.log(`[THREAD][SEND][E2EE] Encrypting reply for parent ${messageId}`);
-            console.log(`[THREAD][SEND][CTX] Using channel context:`, {
+            logger.debug(`[THREAD][SEND][E2EE] Encrypting reply for parent ${messageId}`);
+            logger.debug(`[THREAD][SEND][CTX] Using channel context:`, {
                 channelId,
                 conversationType,
                 parentId: messageId
@@ -295,13 +296,13 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             );
 
             if (!encryptedPayload) {
-                console.error('[THREAD][SEND][E2EE] Encryption failed');
+                logger.error('[THREAD][SEND][E2EE] Encryption failed');
                 showToast('Failed to encrypt message', 'error');
                 setSending(false);
                 return;
             }
 
-            console.log(`[THREAD][SEND][E2EE] Encryption successful, sending to backend`);
+            logger.debug(`[THREAD][SEND][E2EE] Encryption successful, sending to backend`);
 
             
             const tempId = "temp-" + Date.now();
@@ -325,10 +326,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                     clientTempId: tempId
                 });
 
-            console.log(`[THREAD][SEND][E2EE] Reply created successfully: ${res.data.reply._id}`);
+            logger.debug(`[THREAD][SEND][E2EE] Reply created successfully: ${res.data.reply._id}`);
 
             
-            console.log(`[THREAD][NORMALIZE] Normalizing server response:`, {
+            logger.debug(`[THREAD][NORMALIZE] Normalizing server response:`, {
                 replyId: res.data.reply._id,
                 hasCiphertext: !!res.data.reply.payload?.ciphertext,
                 hasIv: !!res.data.reply.payload?.messageIv,
@@ -354,7 +355,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             if (serverReplyValid) {
                 try {
                     const messageId = parentMessage._id || parentMessage.id;
-                    console.log(`[THREAD][DECRYPT][INPUT] Server response valid, decrypting ${normalizedServerReply._id} with parent ${messageId}`);
+                    logger.debug(`[THREAD][DECRYPT][INPUT] Server response valid, decrypting ${normalizedServerReply._id} with parent ${messageId}`);
                     
                     const decrypted = await batchDecryptMessages(
                         [normalizedServerReply],
@@ -363,13 +364,13 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                         null  
                     );
                     decryptedServerReply = decrypted[0] || normalizedServerReply;
-                    console.log(`[THREAD][DECRYPT][SUCCESS] Server reply decrypted successfully`);
+                    logger.debug(`[THREAD][DECRYPT][SUCCESS] Server reply decrypted successfully`);
                 } catch (err) {
-                    console.error('[THREAD][DECRYPT] Failed to decrypt server reply:', err);
+                    logger.error('[THREAD][DECRYPT] Failed to decrypt server reply:', err);
                     
                 }
             } else {
-                console.log(`[THREAD][DECRYPT][SKIP] Server reply cannot be decrypted:`, {
+                logger.debug(`[THREAD][DECRYPT][SKIP] Server reply cannot be decrypted:`, {
                     hasId: !!normalizedServerReply?._id,
                     hasCiphertext: !!normalizedServerReply?.payload?.ciphertext,
                     hasIv: !!normalizedServerReply?.payload?.messageIv,
@@ -385,7 +386,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
             
             markAsFollowing();
         } catch (err) {
-            console.error("[THREAD][SEND][E2EE] Send reply failed:", err);
+            logger.error("[THREAD][SEND][E2EE] Send reply failed:", err);
             showToast(err.response?.data?.message || "Failed to send reply", "error");
         } finally {
             setSending(false);

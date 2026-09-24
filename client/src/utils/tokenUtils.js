@@ -1,6 +1,6 @@
 import sdkTokenManager from '@platform/sdk/auth/tokenManager.js';
 
-export const { getAccessToken, getRefreshToken, setTokens, clearTokens, hasAccessToken } = sdkTokenManager;
+export const { getAccessToken, setTokens, clearTokens, hasAccessToken } = sdkTokenManager;
 
 export const saveAccessToken = (token) => sdkTokenManager.setTokens({ accessToken: token });
 

@@ -13,6 +13,7 @@ exports.extractMemberId = (member) => {
 
 exports.isMember = (members, userId) => {
     if (!members || !Array.isArray(members)) return false;
+    if (userId === undefined || userId === null) return false;
 
     return members.some(m => {
         const memberId = exports.extractMemberId(m);

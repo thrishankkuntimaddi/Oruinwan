@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { useHuddle } from '../components/messagesComp/chatWindowComp/hooks/useHuddle';
 import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
+import logger from '../utils/logger';
 
 const HuddleContext = createContext(null);
 
@@ -41,7 +42,7 @@ export function HuddleProvider({ workspaceId, children }) {
             setSelectedHuddle(newHuddle);
             return newHuddle;
         } catch (err) {
-            console.error('[HuddleContext] Failed to start huddle:', err);
+            logger.error('[HuddleContext] Failed to start huddle:', err);
             throw err;
         }
     }, [huddle]);
@@ -51,7 +52,7 @@ export function HuddleProvider({ workspaceId, children }) {
             await huddle.joinHuddle(huddleData.id);
             setSelectedHuddle({ ...huddleData, status: 'live' });
         } catch (err) {
-            console.error('[HuddleContext] Failed to join huddle:', err);
+            logger.error('[HuddleContext] Failed to join huddle:', err);
             throw err;
         }
     }, [huddle]);

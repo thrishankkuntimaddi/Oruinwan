@@ -21,6 +21,8 @@ import LinkPreviewMessage from "./types/LinkPreviewMessage";
 import MeetingMessage from "./types/MeetingMessage";
 
 import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
+import logger from '../../../../utils/logger';
+import { useToast } from '../../../../contexts/ToastContext';
 
 function DMMessageItem({
     msg,
@@ -52,6 +54,7 @@ function DMMessageItem({
 }) {
     
     const dmSessionId = msg.dmSessionId || null;
+    const { showToast } = useToast();
     
     const senderId = typeof msg.sender === 'object' ? msg.sender?._id : msg.sender;
     const isMe = senderId === currentUserId || msg.sender === "you" || msg.sender === "me";
@@ -106,30 +109,31 @@ function DMMessageItem({
             return;
         }
         if (!trimmed) return; 
+        // DMs are end-to-end encrypted: never fall back to sending plaintext.
+        if (!dmSessionId) {
+            showToast?.('Cannot edit: encryption session unavailable', 'error');
+            return;
+        }
+        let patchBody;
         try {
-            let patchBody = {};
-            if (dmSessionId) {
-                
-                try {
-                    const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
-                    const encrypted = await encryptMessageForSending(trimmed, dmSessionId, 'dm', null);
-                    if (encrypted?.ciphertext && encrypted?.messageIv) {
-                        patchBody = { ciphertext: encrypted.ciphertext, messageIv: encrypted.messageIv };
-                    } else {
-                        
-                        patchBody = { text: trimmed };
-                    }
-                } catch (encErr) {
-                    console.warn('[DMMessageItem] Encryption failed, falling back to plaintext:', encErr);
-                    patchBody = { text: trimmed };
-                }
-            } else {
-                
-                patchBody = { text: trimmed };
+            const { encryptMessageForSending } = await import('../../../../services/messageEncryptionService');
+            const encrypted = await encryptMessageForSending(trimmed, dmSessionId, 'dm', null);
+            if (!encrypted?.ciphertext || !encrypted?.messageIv) {
+                logger.warn('[DMMessageItem] Edit aborted — encryption not ready:', encrypted?.status);
+                showToast?.('Could not encrypt your edit. Please try again.', 'error');
+                return;
             }
+            patchBody = { ciphertext: encrypted.ciphertext, messageIv: encrypted.messageIv };
+        } catch (encErr) {
+            logger.warn('[DMMessageItem] Edit aborted — encryption failed:', encErr);
+            showToast?.('Could not encrypt your edit. Please try again.', 'error');
+            return;
+        }
+        try {
             await api.patch(`/api/v2/messages/${msg._id || msg.id}`, patchBody);
         } catch (err) {
-            console.error('[DMMessageItem] Edit failed:', err);
+            logger.error('[DMMessageItem] Edit failed:', err);
+            showToast?.('Failed to edit message', 'error');
         }
         setIsEditing(false);
     };
@@ -152,7 +156,7 @@ function DMMessageItem({
                 await api.post(`/api/v2/messages/${msg._id || msg.id}/react`, { emoji });
             }
         } catch (err) {
-            console.error('[DMMessageItem] Reaction toggle failed:', err);
+            logger.error('[DMMessageItem] Reaction toggle failed:', err);
         }
     };
 

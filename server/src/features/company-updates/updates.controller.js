@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const { validationResult } = require('express-validator');
 const updatesService = require('./updates.service');
 
@@ -13,7 +14,7 @@ function validationGuard(req, res) {
 }
 
 function handleError(res, err) {
-    console.error('[UPDATES CTRL]', err.message);
+    logger.error('[UPDATES CTRL]', err.message);
     return res.status(err.status || 500).json({ success: false, error: err.message });
 }
 

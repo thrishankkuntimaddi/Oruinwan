@@ -8,11 +8,11 @@ const client = twilio(
 
 async function sendOTP(phone, otp) {
     
-    console.log(`📱 Attempting to send OTP to ${phone}...`);
+    logger.info(`📱 Attempting to send OTP to ${phone}...`);
 
     
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
-        console.error("❌ Twilio not configured! Missing credentials.");
+        logger.error("❌ Twilio not configured! Missing credentials.");
         throw new Error("Twilio not configured");
     }
 
@@ -23,14 +23,14 @@ async function sendOTP(phone, otp) {
             to: phone,
         });
 
-        console.log(`✅ SMS sent successfully! SID: ${result.sid}`);
+        logger.info(`✅ SMS sent successfully! SID: ${result.sid}`);
         logger.success(`OTP sent → ${phone}`);
         return result;
     } catch (err) {
-        console.error("❌ TWILIO ERROR Details:");
-        console.error("  Message:", err.message);
-        console.error("  Code:", err.code);
-        console.error("  Status:", err.status);
+        logger.error("❌ TWILIO ERROR Details:");
+        logger.error("  Message:", err.message);
+        logger.error("  Code:", err.code);
+        logger.error("  Status:", err.status);
         logger.error("TWILIO ERROR ❌", err);
         throw err;
     }

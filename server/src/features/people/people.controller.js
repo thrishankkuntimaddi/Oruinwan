@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const { validationResult } = require('express-validator');
 const peopleService = require('./people.service');
 
@@ -14,7 +15,7 @@ function validationGuard(req, res) {
 
 function handleError(res, err) {
     const status = err.status || 500;
-    console.error('[PEOPLE CONTROLLER]', err.message);
+    logger.error('[PEOPLE CONTROLLER]', err.message);
     return res.status(status).json({ success: false, error: err.message || 'Server error' });
 }
 

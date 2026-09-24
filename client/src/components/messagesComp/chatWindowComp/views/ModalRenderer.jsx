@@ -5,6 +5,7 @@ import ContactInfoModal from '../modals/contactInfoModal.jsx';
 import ChannelManagementModal from '../../ChannelManagementModal.jsx';
 import ForwardMessageModal from '../modals/ForwardMessageModal.jsx';
 import MessageInfoModal from '../modals/MessageInfoModal.jsx';
+import logger from '../../../../utils/logger';
 
 export default function ModalRenderer({ activeModal, onClose, modalProps }) {
     if (!activeModal) return null;
@@ -106,7 +107,7 @@ export default function ModalRenderer({ activeModal, onClose, modalProps }) {
             );
 
         default:
-            console.warn(`Unknown modal type: ${activeModal}`);
+            logger.warn(`Unknown modal type: ${activeModal}`);
             return null;
     }
 }

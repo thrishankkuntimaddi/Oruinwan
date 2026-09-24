@@ -13,6 +13,7 @@ import {
     getTeamLoad,
     getUnassignedEmployees
 } from '../../services/managerDashboardService';
+import logger from '../../utils/logger';
 
 const ManagerDashboard = () => {
     const { userCompanyRole, isCompanyOwner } = useCompany();
@@ -37,7 +38,7 @@ const ManagerDashboard = () => {
             setTeamLoadData(teamData);
             setUnassignedData(unassigned);
         } catch (error) {
-            console.error("Error fetching manager dashboard data:", error);
+            logger.error("Error fetching manager dashboard data:", error);
             if (error.response?.status !== 404) {
                 showToast("Failed to load dashboard data", "error");
             }

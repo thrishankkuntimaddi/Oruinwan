@@ -1,6 +1,7 @@
+const logger = require('../../../utils/logger');
 const User = require('../../../models/User');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const sendEmail = require('../../../utils/sendEmail');
 
 const VALID_ROLES = ['owner', 'admin', 'manager', 'member', 'guest'];
 const VALID_STATUSES = ['active', 'suspended', 'removed'];
@@ -14,20 +15,9 @@ function generateTempPassword() {
 
 async function sendInviteEmail({ to, name, companyName, tempPassword }) {
     try {
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST || 'smtp.gmail.com',
-            port: parseInt(process.env.SMTP_PORT || '587'),
-            secure: false,
-            auth: {
-                user: process.env.SMTP_USER || process.env.EMAIL_USER,
-                pass: process.env.SMTP_PASS || process.env.EMAIL_PASS,
-            },
-        });
-
         const loginUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-        await transporter.sendMail({
-            from: `"${companyName} via Chttrix" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
+        await sendEmail({
             to,
             subject: `You've been invited to join ${companyName} on Chttrix`,
             html: `
@@ -55,7 +45,7 @@ async function sendInviteEmail({ to, name, companyName, tempPassword }) {
             `,
         });
     } catch (err) {
-        console.error('[PEOPLE SERVICE] Invite email failed for', to, ':', err.message);
+        logger.error('[PEOPLE SERVICE] Invite email failed for', to, ':', err.message);
         
     }
 }
@@ -137,7 +127,9 @@ async function listMembers(companyId, { callerRole, status, role, search } = {})
 
 async function getMember(memberId, companyId) {
     const member = await User.findOne({ _id: memberId, companyId })
-        .select('-passwordHash -refreshTokens -otpCodes -verificationTokenHash -resetPasswordTokenHash')
+        .select('-passwordHash -refreshTokens -otpCodes -verificationTokenHash -resetPasswordTokenHash ' +
+            '-twoFactorSecret -inviteToken -deviceTokens -encryption.encryptedPrivateKey ' +
+            '-emails.verificationTokenHash -emails.verificationTokenExpires')
         .populate('departments', 'name')
         .populate('managedDepartments', 'name')
         .populate('workspaces.workspace', 'name type')

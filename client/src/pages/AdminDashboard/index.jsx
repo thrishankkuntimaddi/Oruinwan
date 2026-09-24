@@ -15,6 +15,7 @@ import {
     getWorkspacesAccess,
     getAuditSecurity
 } from '../../services/adminDashboardService';
+import logger from '../../utils/logger';
 
 const AdminDashboard = () => {
     const { isCompanyAdmin } = useCompany();
@@ -54,7 +55,7 @@ const AdminDashboard = () => {
             setWorkspaceData(workspaces);
             setAuditData(audit);
         } catch (error) {
-            console.error("Error fetching admin dashboard data:", error);
+            logger.error("Error fetching admin dashboard data:", error);
             showToast("Failed to load dashboard data", "error");
         }
     }, [showToast]);

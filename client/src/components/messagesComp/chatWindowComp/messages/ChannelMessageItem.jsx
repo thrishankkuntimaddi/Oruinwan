@@ -25,6 +25,7 @@ import LinkPreviewMessage from "./types/LinkPreviewMessage";
 import MeetingMessage from "./types/MeetingMessage";
 
 import { wrapMentions, mentionRenderer } from '../../../../utils/renderWithMentions';
+import logger from '../../../../utils/logger';
 
 function ChannelMessageItem({
     msg,
@@ -151,7 +152,7 @@ function ChannelMessageItem({
                 await api.patch(`/api/v2/messages/${msg._id || msg.id}`, { text: trimmed });
             }
         } catch (err) {
-            console.error('Edit failed:', err);
+            logger.error('Edit failed:', err);
         }
         setIsEditing(false);
     };
@@ -179,7 +180,7 @@ function ChannelMessageItem({
                 await api.post(`/api/v2/messages/${msg._id || msg.id}/react`, { emoji });
             }
         } catch (err) {
-            console.error('Reaction toggle failed:', err);
+            logger.error('Reaction toggle failed:', err);
         }
     };
 

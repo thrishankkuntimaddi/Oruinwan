@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const mongoose = require('mongoose');
 const ActivityEvent = require('../../models/ActivityEvent');
@@ -44,7 +45,7 @@ exports.getFeed = async (req, res) => {
 
     return res.json({ events });
   } catch (err) {
-    console.error('[ActivityController] getFeed error:', err);
+    logger.error('[ActivityController] getFeed error:', err);
     return res.status(500).json({ message: 'Failed to fetch activity feed' });
   }
 };
@@ -66,7 +67,7 @@ exports.getMyActivity = async (req, res) => {
 
     return res.json({ events });
   } catch (err) {
-    console.error('[ActivityController] getMyActivity error:', err);
+    logger.error('[ActivityController] getMyActivity error:', err);
     return res.status(500).json({ message: 'Failed to fetch your activity' });
   }
 };
@@ -88,7 +89,7 @@ exports.getStats = async (req, res) => {
 
     return res.json({ stats });
   } catch (err) {
-    console.error('[ActivityController] getStats error:', err);
+    logger.error('[ActivityController] getStats error:', err);
     return res.status(500).json({ message: 'Failed to fetch activity stats' });
   }
 };

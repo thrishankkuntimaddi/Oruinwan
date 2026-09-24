@@ -17,6 +17,7 @@ import {
     getMessageVolumeAnalytics,
     getEngagementTrends
 } from '../../services/analyticsService';
+import logger from '../../utils/logger';
 
 const AnalyticsDashboard = () => {
     const { user } = useAuth();
@@ -69,7 +70,7 @@ const AnalyticsDashboard = () => {
             setEngagement(engagementData);
 
         } catch (error) {
-            console.error('Error fetching analytics:', error);
+            logger.error('Error fetching analytics:', error);
             showToast(error.response?.data?.message || 'Failed to load analytics', 'error');
         } finally {
             setLoading(false);

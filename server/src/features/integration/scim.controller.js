@@ -1,4 +1,6 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
+const { sendError, safeErrorMessage } = require('../../shared/utils/httpError');
 const User = require('../../../models/User');
 const ScimToken = require('../../../models/ScimToken');
 const Department = require('../../../models/Department');
@@ -170,8 +172,8 @@ exports.createUser = async (req, res) => {
         return res.status(201).json(scimUserResponse(user));
 
     } catch (err) {
-        console.error('[SCIM] createUser error:', err.message);
-        return scimError(res, err.status || 500, err.message);
+        logger.error({ err }, '[SCIM] createUser error');
+        return scimError(res, err.status || 500, safeErrorMessage(err, err.status || 500));
     }
 };
 
@@ -240,8 +242,8 @@ exports.updateUser = async (req, res) => {
         return res.json(scimUserResponse(user));
 
     } catch (err) {
-        console.error('[SCIM] updateUser error:', err.message);
-        return scimError(res, err.status || 500, err.message);
+        logger.error({ err }, '[SCIM] updateUser error');
+        return scimError(res, err.status || 500, safeErrorMessage(err, err.status || 500));
     }
 };
 
@@ -267,8 +269,8 @@ exports.deactivateUser = async (req, res) => {
         return res.status(204).send();
 
     } catch (err) {
-        console.error('[SCIM] deactivateUser error:', err.message);
-        return scimError(res, err.status || 500, err.message);
+        logger.error({ err }, '[SCIM] deactivateUser error');
+        return scimError(res, err.status || 500, safeErrorMessage(err, err.status || 500));
     }
 };
 
@@ -282,7 +284,8 @@ exports.getUser = async (req, res) => {
         if (!user) return scimError(res, 404, 'User not found');
         return res.json(scimUserResponse(user));
     } catch (err) {
-        return scimError(res, 500, err.message);
+        logger.error({ err }, '[SCIM] error');
+        return scimError(res, 500, safeErrorMessage(err, 500));
     }
 };
 
@@ -308,7 +311,8 @@ exports.listUsers = async (req, res) => {
         });
 
     } catch (err) {
-        return scimError(res, 500, err.message);
+        logger.error({ err }, '[SCIM] error');
+        return scimError(res, 500, safeErrorMessage(err, 500));
     }
 };
 
@@ -341,8 +345,7 @@ exports.issueToken = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[SCIM] issueToken error:', err.message);
-        return res.status(500).json({ success: false, error: err.message });
+        return sendError(res, err, { status: 500 });
     }
 };
 
@@ -357,7 +360,7 @@ exports.revokeToken = async (req, res) => {
 
         return res.json({ success: true, message: 'Token revoked' });
     } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
+        return sendError(res, err, { status: 500 });
     }
 };
 
@@ -370,6 +373,6 @@ exports.listTokens = async (req, res) => {
 
         return res.json({ success: true, tokens });
     } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
+        return sendError(res, err, { status: 500 });
     }
 };

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Message = require("../messages/message.model.js");
 const User = require("../../../models/User");
 const Channel = require("../channels/channel.model.js");
@@ -119,7 +120,7 @@ exports.getChatList = async (req, res) => {
 
     res.json({ chats: finalList });
   } catch (err) {
-    console.error("CHAT LIST ERROR:", err);
+    logger.error("CHAT LIST ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -153,7 +154,7 @@ exports.resetUnread = async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
-    console.error("RESET UNREAD ERROR:", err);
+    logger.error("RESET UNREAD ERROR:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

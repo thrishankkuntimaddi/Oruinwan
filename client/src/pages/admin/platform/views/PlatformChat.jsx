@@ -3,7 +3,8 @@ import api from '@services/api';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Send, Search, Circle, MessageSquare, Building2, CheckCheck } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
-import io from 'socket.io-client';
+import { useSocket } from '../../../../contexts/SocketContext';
+import logger from '../../../../utils/logger';
 
 const roleColor = (role) => {
     if (role === 'owner') return 'var(--accent)';
@@ -21,30 +22,31 @@ const PlatformChat = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef(null);
-    const socketRef = useRef(null);
+    const { socket } = useSocket();
     const { showToast } = useToast();
 
     const scrollToBottom = () => setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 50);
 
     const fetchUsers = useCallback(async () => {
         try { const res = await api.get('/api/admin/dm-users'); setUsers(res.data || []); }
-        catch (err) { console.error('Failed to fetch DM users:', err); showToast('Failed to load users', 'error'); }
+        catch (err) { logger.error('Failed to fetch DM users:', err); showToast('Failed to load users', 'error'); }
     }, [showToast]);
 
     const fetchMessages = useCallback(async (uid) => {
         try { const res = await api.get(`/api/admin/dm/user/${uid}`); setMessages(Array.isArray(res.data) ? res.data : []); }
-        catch (err) { console.error('Failed to fetch messages:', err); }
+        catch (err) { logger.error('Failed to fetch messages:', err); }
     }, []);
 
     useEffect(() => {
-        socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
-        socketRef.current.on('platform-message', (message) => {
+        if (!socket) return undefined;
+        const handlePlatformMessage = (message) => {
             setMessages(prev => prev.some(m => m._id === message._id) ? prev : [...prev, message]);
             scrollToBottom();
             fetchUsers();
-        });
-        return () => { if (socketRef.current) socketRef.current.disconnect(); };
-    }, [fetchUsers]);
+        };
+        socket.on('platform-message', handlePlatformMessage);
+        return () => { socket.off('platform-message', handlePlatformMessage); };
+    }, [socket, fetchUsers]);
 
     useEffect(() => { fetchUsers(); }, [fetchUsers]);
     useEffect(() => {

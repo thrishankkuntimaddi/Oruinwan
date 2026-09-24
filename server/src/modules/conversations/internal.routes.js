@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
@@ -8,7 +9,7 @@ function requirePlatformAdmin(req, res, next) {
 
     
     if (!req.user || !req.user.sub) {
-        console.error(`🚫 [AUDIT][PHASE2][AUTH] Unauthorized access attempt`);
+        logger.error(`🚫 [AUDIT][PHASE2][AUTH] Unauthorized access attempt`);
         return res.status(401).json({
             success: false,
             error: 'Authentication required'
@@ -18,23 +19,23 @@ function requirePlatformAdmin(req, res, next) {
     
     User.findById(req.user.sub).then(user => {
         if (!user || !user.roles || !user.roles.includes('chttrix_admin')) {
-            console.error(`🚫 [AUDIT][PHASE2][AUTH] Non-admin access attempt`);
-            console.error(`   ├─ User: ${req.user.sub}`);
-            console.error(`   ├─ Roles: ${user?.roles || 'unknown'}`);
-            console.error(`   └─ Required: chttrix_admin`);
+            logger.error(`🚫 [AUDIT][PHASE2][AUTH] Non-admin access attempt`);
+            logger.error(`   ├─ User: ${req.user.sub}`);
+            logger.error(`   ├─ Roles: ${user?.roles || 'unknown'}`);
+            logger.error(`   └─ Required: chttrix_admin`);
             return res.status(403).json({
                 success: false,
                 error: 'Platform admin authorization required'
             });
         }
 
-        console.log(`✅ [AUDIT][PHASE2][AUTH] Admin authorized`);
-        console.log(`   ├─ User: ${user.email}`);
-        console.log(`   └─ Roles: ${user.roles.join(', ')}`);
+        logger.info(`✅ [AUDIT][PHASE2][AUTH] Admin authorized`);
+        logger.info(`   ├─ User: ${user.email}`);
+        logger.info(`   └─ Roles: ${user.roles.join(', ')}`);
 
         next();
     }).catch(err => {
-        console.error(`❌ [AUDIT][PHASE2][AUTH] Authorization check failed:`, err);
+        logger.error(`❌ [AUDIT][PHASE2][AUTH] Authorization check failed:`, err);
         return res.status(500).json({
             success: false,
             error: 'Authorization check failed'

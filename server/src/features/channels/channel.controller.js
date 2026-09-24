@@ -5,9 +5,9 @@ const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Message = require('../messages/message.model.js');
 const { saveWithRetry } = require('../../../utils/mongooseRetry');
-const { handleError, _notFound, badRequest, forbidden } = require('../../../utils/responseHelpers');
-const { _extractMemberId, isMember, normalizeMemberFormat } = require('../../../utils/memberHelpers');
-const { _emitToWorkspace, _emitToChannel, _emitToUser, _emitToUsers } = require('../../../utils/socketHelpers');
+const { handleError, badRequest, forbidden } = require('../../../utils/responseHelpers');
+const { isMember, normalizeMemberFormat } = require('../../../utils/memberHelpers');
+const {} = require('../../../utils/socketHelpers');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 const logger = require('../../shared/utils/logger');
 
@@ -276,6 +276,9 @@ exports.inviteToChannel = async (req, res) => {
     const userId = req.user.sub;
     const channelId = req.params.id;
     const { userId: inviteeId } = req.body;
+    if (!inviteeId || !mongoose.Types.ObjectId.isValid(String(inviteeId))) {
+      return res.status(400).json({ message: "userId of the member to invite is required" });
+    }
 
     const channel = await Channel.findById(channelId);
     if (!channel) return res.status(404).json({ message: "Channel not found" });
@@ -1067,13 +1070,13 @@ exports.demoteAdmin = async (req, res) => {
       systemMessage
     });
   } catch (err) {
-    console.error("DEMOTE ADMIN ERROR:", err);
+    logger.error("DEMOTE ADMIN ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.removeMember = async (req, res) => {
-  console.log('🔄 [CHANNEL:MODULAR] Function invoked: removeMember');
+  logger.info('🔄 [CHANNEL:MODULAR] Function invoked: removeMember');
   try {
     const userId = req.user.sub;
     const channelId = req.params.id;
@@ -1170,7 +1173,7 @@ exports.removeMember = async (req, res) => {
       systemMessage
     });
   } catch (err) {
-    console.error("REMOVE MEMBER ERROR:", err);
+    logger.error("REMOVE MEMBER ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1235,7 +1238,7 @@ exports.toggleChannelPrivacy = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("TOGGLE PRIVACY ERROR:", err);
+    logger.error("TOGGLE PRIVACY ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1293,7 +1296,7 @@ exports.clearChannelMessages = async (req, res) => {
       deletedCount: result.deletedCount
     });
   } catch (err) {
-    console.error("CLEAR MESSAGES ERROR:", err);
+    logger.error("CLEAR MESSAGES ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1372,14 +1375,14 @@ exports.joinChannelViaLink = async (req, res) => {
         );
 
         if (distributed) {
-          console.log(`✅ [PHASE 4] Distributed conversation key for #${channel.name} to user ${userId}`);
+          logger.info(`✅ [PHASE 4] Distributed conversation key for #${channel.name} to user ${userId}`);
         } else {
-          console.warn(`⚠️ [PHASE 4] Could not distribute key for #${channel.name} to user ${userId}`);
+          logger.warn(`⚠️ [PHASE 4] Could not distribute key for #${channel.name} to user ${userId}`);
         }
       }
     } catch (keyError) {
       
-      console.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
+      logger.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
     }
 
     
@@ -1409,7 +1412,7 @@ exports.joinChannelViaLink = async (req, res) => {
       });
       if (io) io.to(`channel:${channel._id}`).emit('new-message', systemMsg);
     } catch (sysErr) {
-      console.error('[SYSTEM MSG] member_joined (joinChannelViaLink) failed:', sysErr);
+      logger.error('[SYSTEM MSG] member_joined (joinChannelViaLink) failed:', sysErr);
     }
     
 
@@ -1422,7 +1425,7 @@ exports.joinChannelViaLink = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("JOIN CHANNEL VIA LINK ERROR:", err);
+    logger.error("JOIN CHANNEL VIA LINK ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1481,7 +1484,7 @@ exports.addTab = async (req, res) => {
 
     return res.status(201).json({ tab: createdTab });
   } catch (err) {
-    console.error("ADD TAB ERROR:", err);
+    logger.error("ADD TAB ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1546,7 +1549,7 @@ exports.updateTab = async (req, res) => {
 
     return res.json({ tab: populatedTab || tab });
   } catch (err) {
-    console.error("UPDATE TAB ERROR:", err);
+    logger.error("UPDATE TAB ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1584,7 +1587,7 @@ exports.deleteTab = async (req, res) => {
 
     return res.json({ message: "Tab deleted", tabId });
   } catch (err) {
-    console.error("DELETE TAB ERROR:", err);
+    logger.error("DELETE TAB ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1609,13 +1612,13 @@ exports.getTabs = async (req, res) => {
 
     return res.json({ tabs: channel.tabs || [] });
   } catch (err) {
-    console.error("GET TABS ERROR:", err);
+    logger.error("GET TABS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.joinDiscoverableChannel = async (req, res) => {
-  console.log('🔄 [CHANNEL:MODULAR] Function invoked: joinDiscoverableChannel');
+  logger.info('🔄 [CHANNEL:MODULAR] Function invoked: joinDiscoverableChannel');
   try {
     const { id: channelId } = req.params;
     const userId = req.user.sub;
@@ -1630,7 +1633,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
 
     
     if (channel.isPrivate) {
-      console.log(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is private`);
+      logger.info(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is private`);
       return res.status(403).json({
         message: "Cannot join private channels without invitation",
         code: "CHANNEL_PRIVATE"
@@ -1639,7 +1642,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
 
     
     if (!channel.isDiscoverable) {
-      console.log(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is not discoverable`);
+      logger.info(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: Channel ${channelId} is not discoverable`);
       return res.status(403).json({
         message: "This channel is not open for self-service joining",
         code: "CHANNEL_NOT_DISCOVERABLE"
@@ -1658,7 +1661,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
     });
 
     if (!isWorkspaceMember) {
-      console.log(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: User ${userId} not a workspace member`);
+      logger.info(`❌ [CHANNEL:JOIN_DISCOVERABLE] Rejected: User ${userId} not a workspace member`);
       return res.status(403).json({
         message: "You must be a workspace member to join this channel",
         code: "NOT_WORKSPACE_MEMBER"
@@ -1672,7 +1675,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
     });
 
     if (isChannelMember) {
-      console.log(`⚠️ [CHANNEL:JOIN_DISCOVERABLE] User ${userId} already a member of channel ${channelId}`);
+      logger.info(`⚠️ [CHANNEL:JOIN_DISCOVERABLE] User ${userId} already a member of channel ${channelId}`);
       return res.status(400).json({
         message: "You are already a member of this channel",
         code: "ALREADY_MEMBER"
@@ -1680,7 +1683,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
     }
 
     
-    console.log(`✅ [CHANNEL:JOIN_DISCOVERABLE] Adding user ${userId} to channel ${channelId}`);
+    logger.info(`✅ [CHANNEL:JOIN_DISCOVERABLE] Adding user ${userId} to channel ${channelId}`);
 
     channel.members.push({
       user: new mongoose.Types.ObjectId(userId),
@@ -1697,9 +1700,9 @@ exports.joinDiscoverableChannel = async (req, res) => {
         'channel',
         userId
       );
-      console.log(`✅ [CHANNEL:JOIN_DISCOVERABLE] Distributed key to user ${userId} for channel ${channelId}`);
+      logger.info(`✅ [CHANNEL:JOIN_DISCOVERABLE] Distributed key to user ${userId} for channel ${channelId}`);
     } catch (keyError) {
-      console.error(`❌ [CHANNEL:JOIN_DISCOVERABLE] Key distribution failed:`, keyError.message);
+      logger.error(`❌ [CHANNEL:JOIN_DISCOVERABLE] Key distribution failed:`, keyError.message);
       
     }
 
@@ -1726,7 +1729,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
       const ioInst = req.app?.get('io');
       if (ioInst) ioInst.to(`channel:${channelId}`).emit('new-message', systemMsg);
     } catch (sysErr) {
-      console.error('[SYSTEM MSG] member_joined (joinDiscoverableChannel) failed:', sysErr);
+      logger.error('[SYSTEM MSG] member_joined (joinDiscoverableChannel) failed:', sysErr);
     }
     
 
@@ -1737,7 +1740,7 @@ exports.joinDiscoverableChannel = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("JOIN DISCOVERABLE CHANNEL ERROR:", err);
+    logger.error("JOIN DISCOVERABLE CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

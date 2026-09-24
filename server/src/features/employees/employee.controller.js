@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const employeeService = require("./employee.service");
 
 exports.inviteEmployee = async (req, res) => {
@@ -29,7 +30,7 @@ exports.inviteEmployee = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("INVITE EMPLOYEE ERROR:", err);
+        logger.error("INVITE EMPLOYEE ERROR:", err);
 
         if (err.message.includes('not found')) {
             return res.status(404).json({ message: err.message });
@@ -68,7 +69,7 @@ exports.bulkInviteEmployees = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("BULK INVITE ERROR:", err);
+        logger.error("BULK INVITE ERROR:", err);
 
         if (err.message.includes('not found')) {
             return res.status(404).json({ message: err.message });
@@ -112,7 +113,7 @@ exports.directCreateEmployee = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("DIRECT CREATE EMPLOYEE ERROR:", err);
+        logger.error("DIRECT CREATE EMPLOYEE ERROR:", err);
 
         if (err.message.includes('not found')) {
             return res.status(404).json({ message: err.message });
@@ -200,7 +201,7 @@ exports.acceptInvite = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("ACCEPT INVITE ERROR:", err);
+        logger.error("ACCEPT INVITE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -243,7 +244,7 @@ exports.checkEligibility = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("CHECK ELIGIBILITY ERROR:", err);
+        logger.error("CHECK ELIGIBILITY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

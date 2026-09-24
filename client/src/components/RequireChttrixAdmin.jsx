@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { Navigate } from "react-router-dom";
 import { AuthContext } from "../contexts/AuthContext";
 import LoadingScreen from "../shared/components/ui/LoadingScreen";
+import logger from '../utils/logger';
 
 export default function RequireChttrixAdmin({ children }) {
     const { user, loading } = useContext(AuthContext);
@@ -21,7 +22,7 @@ export default function RequireChttrixAdmin({ children }) {
 
     
     if (!isChttrixAdmin) {
-        console.warn("🚫 Access denied: User does not have chttrix_admin role");
+        logger.warn("🚫 Access denied: User does not have chttrix_admin role");
         return <Navigate to="/workspaces" replace />;
     }
 

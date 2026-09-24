@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import api from '@services/api';
-import io from 'socket.io-client';
+import { useSocket } from '../../contexts/SocketContext';
 
 const inputSt = {
     background: 'var(--bg-input)', border: '1px solid var(--border-default)',
@@ -24,21 +24,20 @@ const ContactAdmin = () => {
     const [newMessage, setNewMessage] = useState('');
     const [loadingMessages, setLoadingMessages] = useState(false);
     const messagesEndRef = useRef(null);
-    const socketRef = useRef(null);
+    const { socket } = useSocket();
     const [tickets, setTickets] = useState([]);
     const [loadingTickets, setLoadingTickets] = useState(false);
     const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
     const [newTicket, setNewTicket] = useState({ subject: '', priority: 'medium', description: '' });
 
     useEffect(() => {
-        if (user && activeTab === 'chat') {
-            socketRef.current = io(import.meta.env.VITE_BACKEND_URL);
-            socketRef.current.on('platform-message', (message) => {
-                setMessages(prev => prev.some(m => m._id === message._id) ? prev : [...prev, message]);
-            });
-            return () => { if (socketRef.current) socketRef.current.disconnect(); };
-        }
-    }, [user, activeTab]);
+        if (!socket || !user || activeTab !== 'chat') return undefined;
+        const handlePlatformMessage = (message) => {
+            setMessages(prev => prev.some(m => m._id === message._id) ? prev : [...prev, message]);
+        };
+        socket.on('platform-message', handlePlatformMessage);
+        return () => { socket.off('platform-message', handlePlatformMessage); };
+    }, [socket, user, activeTab]);
 
     const fetchMessages = useCallback(async (showLoading = true) => {
         if (!user) return;

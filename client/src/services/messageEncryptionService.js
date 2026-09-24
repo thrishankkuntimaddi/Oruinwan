@@ -1,5 +1,6 @@
 import { deriveThreadKey, generateIV } from '../utils/crypto';
 import conversationKeyService from './conversationKeyService';
+import logger from '../utils/logger';
 
 export async function encryptMessageForSending(plaintext, conversationId, conversationType, parentMessageId = null) {
     try {
@@ -18,7 +19,7 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
         
         
         if (!(encryptionKey instanceof CryptoKey)) {
-            console.warn('⚠️ [Encryption Guard] Key not ready, blocking send');
+            logger.warn('⚠️ [Encryption Guard] Key not ready, blocking send');
             return { status: 'ENCRYPTION_NOT_READY' };
         }
 
@@ -47,7 +48,7 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
             isEncrypted: true
         };
     } catch (error) {
-        console.error('Message encryption failed:', error);
+        logger.error('Message encryption failed:', error);
         throw error;
     }
 }
@@ -88,7 +89,7 @@ export async function decryptReceivedMessage(ciphertextBase64, ivBase64, convers
 
         return plaintext;
     } catch (error) {
-        console.error('Message decryption failed:', error);
+        logger.error('Message decryption failed:', error);
         
         return '🔒 Unable to decrypt message';
     }
@@ -115,10 +116,12 @@ export async function decryptMessageGracefully(message, conversationId, conversa
             parentId
         );
     } catch (error) {
-        console.error('Graceful decryption failed:', error);
+        logger.error('Graceful decryption failed:', error);
         return '🔒 Encrypted message';
     }
 }
+
+export const ENCRYPTED_KEY_UNAVAILABLE_PLACEHOLDER = '[Encrypted message — key unavailable]';
 
 export async function batchDecryptMessages(messages, conversationId, conversationType, userJoinedAt = null) {
     try {
@@ -142,12 +145,17 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
         }
 
         
-        const conversationKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
+        let conversationKey = null;
+        try {
+            conversationKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
+        } catch (keyErr) {
+            logger.warn('⚠️ [Batch Decrypt] Conversation key fetch failed:', keyErr?.message);
+        }
 
         if (!conversationKey) {
-            
-            console.warn('⚠️ [Batch Decrypt] No conversation key found - returning empty array');
-            return [];
+            // Keep every message: non-encrypted ones (system/poll/file/...) render
+            // normally, encrypted ones get a placeholder instead of being dropped.
+            logger.warn('⚠️ [Batch Decrypt] No conversation key available - using placeholders for encrypted messages');
         }
 
         
@@ -175,7 +183,7 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                     if (!ciphertext || !messageIv) {
                         
                         
-                        console.warn(`⚠️ [Batch Decrypt] No ciphertext for message ${message.id} (type=${message.type}) — passing through`);
+                        logger.warn(`⚠️ [Batch Decrypt] No ciphertext for message ${message.id} (type=${message.type}) — passing through`);
                         return {
                             ...message,
                             decryptedContent: message.payload?.text || message.text || null,
@@ -183,7 +191,15 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                         };
                     }
 
-                    
+                    if (!conversationKey) {
+                        return {
+                            ...message,
+                            decryptedContent: ENCRYPTED_KEY_UNAVAILABLE_PLACEHOLDER,
+                            isDecryptable: false,
+                            keyUnavailable: true
+                        };
+                    }
+
                     let decryptionKey = conversationKey;
                     
                     
@@ -214,7 +230,7 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
                         isDecryptable: true
                     };
                 } catch (error) {
-                    console.error(`❌ [Batch Decrypt] Failed to decrypt message ${message.id}:`, error);
+                    logger.error(`❌ [Batch Decrypt] Failed to decrypt message ${message.id}:`, error);
                     return {
                         ...message,
                         decryptedContent: '🔒 Unable to decrypt message',
@@ -226,7 +242,7 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
 
         return decrypted;
     } catch (error) {
-        console.error('❌ [Batch Decrypt] Batch decryption failed:', error);
+        logger.error('❌ [Batch Decrypt] Batch decryption failed:', error);
         
         return messages.map(message => ({
             ...message,

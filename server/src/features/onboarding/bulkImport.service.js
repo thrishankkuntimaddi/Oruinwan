@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
@@ -45,7 +46,7 @@ async function _sendWelcomeEmail({ toEmail, name, workEmail, companyName, tempPa
         await sendEmail({ to: toEmail, subject: tpl.subject, html: tpl.html, text: tpl.text });
         return { sent: true };
     } catch (err) {
-        console.warn('[BULK] Welcome email failed for', toEmail, '—', err.message);
+        logger.warn('[BULK] Welcome email failed for', toEmail, '—', err.message);
         return { sent: false, reason: err.message };
     }
 }
@@ -256,7 +257,7 @@ async function _processJobBatches(jobId, rows, companyId, requesterRole, invited
         );
 
     } catch (fatalErr) {
-        console.error('[BULK] Fatal worker error for job', jobId, fatalErr.message);
+        logger.error('[BULK] Fatal worker error for job', jobId, fatalErr.message);
         await BulkOnboardingJob.findOneAndUpdate(
             { jobId },
             { $set: { status: 'failed', completedAt: new Date() } }
@@ -314,7 +315,7 @@ async function startBulkJob({ companyId, requesterRole, fileBuffer, invitedBy })
     
     setImmediate(() => {
         _processJobBatches(jobId, deduped, companyId, requesterRole, invitedBy, deptMap)
-            .catch(err => console.error('[BULK] Unhandled worker error:', err.message));
+            .catch(err => logger.error('[BULK] Unhandled worker error:', err.message));
     });
 
     return {

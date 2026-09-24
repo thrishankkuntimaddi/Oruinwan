@@ -1,71 +1,28 @@
-const nodemailer = require('nodemailer');
 const logger = require('../../../utils/logger');
+const sendEmail = require('../../../utils/sendEmail');
 
-let _transporter = null;
-
-async function getTransporter() {
-    if (_transporter) return _transporter;
-
-    const hasSmtp = process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS;
-
-    if (hasSmtp) {
-        _transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT) || 587,
-            secure: Number(process.env.SMTP_PORT) === 465,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
-        logger.info('[EmailService] Using configured SMTP transport');
-    } else {
-        
-        const testAccount = await nodemailer.createTestAccount();
-        _transporter = nodemailer.createTransport({
-            host: 'smtp.ethereal.email',
-            port: 587,
-            secure: false,
-            auth: {
-                user: testAccount.user,
-                pass: testAccount.pass,
-            },
-        });
-        logger.info('[EmailService] Using Ethereal test transport (no SMTP configured)');
-    }
-
-    return _transporter;
-}
-
+/**
+ * Notification emails (mentions, assignments, digests). Delegates to the shared
+ * mailer so the same provider configuration (Brevo API, then SMTP) applies to
+ * every email the platform sends. Returns null on failure so callers never
+ * block a notification on email delivery.
+ */
 async function sendEmailNotification({ to, subject, html, text }) {
     if (!to) {
         logger.warn('[EmailService] sendEmailNotification called without recipient');
         return null;
     }
-
     try {
-        const transporter = await getTransporter();
-        const from = process.env.SMTP_FROM || '"Chttrix" <no-reply@chttrix.app>';
-
-        const info = await transporter.sendMail({
-            from,
+        const info = await sendEmail({
             to,
             subject,
             html,
-            text: text || html.replace(/<[^>]*>/g, ''), 
+            text: text || (html ? html.replace(/<[^>]*>/g, '') : ''),
         });
-
-        logger.info(`[EmailService] Email sent to ${to} | id: ${info.messageId}`);
-
-        
-        const previewUrl = nodemailer.getTestMessageUrl(info);
-        if (previewUrl) {
-            logger.info(`[EmailService] Preview: ${previewUrl}`);
-        }
-
+        logger.info(`[EmailService] Notification email sent to ${to} via ${info.provider}`);
         return info;
     } catch (err) {
-        logger.error(`[EmailService] Failed to send email to ${to}:`, err.message);
+        logger.error(`[EmailService] Failed to send notification email to ${to}: ${err.message}`);
         return null;
     }
 }

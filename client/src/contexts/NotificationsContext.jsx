@@ -1,9 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import api from '@services/api';
 import { useSocket } from './SocketContext';
 import { useWorkspace } from './WorkspaceContext';
 import { useAuth } from './AuthContext';
 import { useDesktopNotification } from '../hooks/useDesktopNotification';
+import logger from '../utils/logger';
 
 const NotificationsContext = createContext(null);
 
@@ -19,11 +20,24 @@ export function NotificationsProvider({ children }) {
 
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+
+    // Keep the desktop dock/tray badge in sync when running inside Electron.
+    useEffect(() => {
+        window.chttrixDesktop?.setUnreadCount(unreadCount);
+    }, [unreadCount]);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(false);
     const [page, setPage] = useState(1);
 
     const workspaceId = activeWorkspace?.id;
+    // Always reflects the workspace currently shown; in-flight fetches for a
+    // previous workspace are discarded when they resolve.
+    const currentWorkspaceRef = useRef(workspaceId);
+    currentWorkspaceRef.current = workspaceId;
+    const seenNotificationIdsRef = useRef(new Set());
+    useEffect(() => {
+        seenNotificationIdsRef.current = new Set(notifications.map(n => n._id).filter(Boolean));
+    }, [notifications]);
 
     
     const fetchNotifications = useCallback(async (pg = 1, append = false) => {
@@ -33,14 +47,21 @@ export function NotificationsProvider({ children }) {
             const { data } = await api.get('/api/notifications', {
                 params: { workspaceId, page: pg, limit: 30 },
             });
-            setNotifications(prev => append ? [...prev, ...(data.notifications || [])] : (data.notifications || []));
+            if (currentWorkspaceRef.current !== workspaceId) return;
+            const incoming = data.notifications || [];
+            setNotifications(prev => {
+                if (!append) return incoming;
+                const seen = new Set(prev.map(n => n._id));
+                return [...prev, ...incoming.filter(n => !seen.has(n._id))];
+            });
             setUnreadCount(data.unreadCount || 0);
             setHasMore(pg < data.pages);
             setPage(pg);
         } catch (err) {
-            console.error('[NotificationsContext] fetch error:', err);
+            if (currentWorkspaceRef.current !== workspaceId) return;
+            logger.error('[NotificationsContext] fetch error:', err);
         } finally {
-            setLoading(false);
+            if (currentWorkspaceRef.current === workspaceId) setLoading(false);
         }
     }, [workspaceId, accessToken]);
 
@@ -65,13 +86,31 @@ export function NotificationsProvider({ children }) {
             if (!notification) return;
             
             if (String(notification.workspaceId) !== String(workspaceId)) return;
-            setNotifications(prev => [notification, ...prev]);
+            const nid = notification._id;
+            if (nid) {
+                if (seenNotificationIdsRef.current.has(nid)) return;
+                seenNotificationIdsRef.current.add(nid);
+            }
+            setNotifications(prev => (nid && prev.some(n => n._id === nid)) ? prev : [notification, ...prev]);
             setUnreadCount(c => c + 1);
-            
-            triggerDesktopNotification(
-                notification.title,
-                notification.body || 'Chttrix'
-            );
+
+            // Inside the Electron app, hand the notification to the native bridge
+            // (which also handles click-to-navigate); otherwise use the browser API.
+            if (window.chttrixDesktop) {
+                window.chttrixDesktop.notify({
+                    type: 'system',
+                    title: notification.title,
+                    body: notification.body || 'Chttrix',
+                    workspaceId: notification.workspaceId,
+                    channelId: notification.channelId,
+                    dmSessionId: notification.dmSessionId,
+                });
+            } else {
+                triggerDesktopNotification(
+                    notification.title,
+                    notification.body || 'Chttrix'
+                );
+            }
         });
 
         return unsubscribe;
@@ -85,7 +124,7 @@ export function NotificationsProvider({ children }) {
             setNotifications(prev => prev.map(n => n._id === notifId ? { ...n, read: true } : n));
             setUnreadCount(c => Math.max(0, c - 1));
         } catch (err) {
-            console.error('[NotificationsContext] markRead error:', err);
+            logger.error('[NotificationsContext] markRead error:', err);
         }
     }, []);
 
@@ -96,7 +135,7 @@ export function NotificationsProvider({ children }) {
             setNotifications(prev => prev.map(n => ({ ...n, read: true })));
             setUnreadCount(0);
         } catch (err) {
-            console.error('[NotificationsContext] markAllRead error:', err);
+            logger.error('[NotificationsContext] markAllRead error:', err);
         }
     }, [workspaceId]);
 
@@ -108,7 +147,7 @@ export function NotificationsProvider({ children }) {
             setNotifications(prev => prev.filter(n => n._id !== notifId));
             if (wasUnread) setUnreadCount(c => Math.max(0, c - 1));
         } catch (err) {
-            console.error('[NotificationsContext] dismiss error:', err);
+            logger.error('[NotificationsContext] dismiss error:', err);
         }
     }, [notifications]);
 
@@ -119,7 +158,7 @@ export function NotificationsProvider({ children }) {
             setNotifications([]);
             setUnreadCount(0);
         } catch (err) {
-            console.error('[NotificationsContext] clearAll error:', err);
+            logger.error('[NotificationsContext] clearAll error:', err);
         }
     }, [workspaceId]);
 

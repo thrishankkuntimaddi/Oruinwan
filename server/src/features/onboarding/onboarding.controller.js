@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const { body, validationResult } = require('express-validator');
 const { onboardIndividual } = require('./onboarding.service');
 const { startBulkJob, getJobStatus } = require('./bulkImport.service');
@@ -29,7 +30,7 @@ exports.validateAcceptInvite = [
 ];
 
 function handleError(res, err) {
-    console.error('[ONBOARDING CTRL]', err.message);
+    logger.error('[ONBOARDING CTRL]', err.message);
     return res.status(err.status || 500).json({
         success: false,
         error: err.message,

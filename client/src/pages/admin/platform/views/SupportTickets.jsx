@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { MessageCircle, X } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
+import logger from '../../../../utils/logger';
 
 const statusStyle = (status) => {
     const map = {
@@ -27,7 +28,7 @@ const SupportTickets = () => {
             const res = await api.get('/api/admin/tickets');
             setTickets(res.data);
         } catch (err) {
-            console.error(err);
+            logger.error(err);
         } finally {
             setLoading(false);
         }

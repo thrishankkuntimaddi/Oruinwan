@@ -3,6 +3,7 @@ import { Search, X, User, Hash } from "lucide-react";
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
 import api from '@services/api';
+import logger from '../../../../utils/logger';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
@@ -26,7 +27,7 @@ export default function ForwardMessageModal({ onClose, onForward, currentChatId,
             const response = await api.get(`/api/workspaces/${activeWorkspace.id}/members`);
             setWorkspaceMembers(response.data.members || []);
         } catch (err) {
-            console.error("Failed to load workspace members:", err);
+            logger.error("Failed to load workspace members:", err);
         } finally {
             setLoading(false);
         }

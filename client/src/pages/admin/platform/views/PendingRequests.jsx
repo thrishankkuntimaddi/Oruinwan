@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { Check, X, Globe, ExternalLink } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
+import logger from '../../../../utils/logger';
 
 const PendingRequests = () => {
     const [companies, setCompanies] = useState([]);
@@ -16,7 +17,7 @@ const PendingRequests = () => {
             const res = await api.get('/api/admin/pending-companies');
             setCompanies(res.data);
         } catch (err) {
-            console.error('❌ Error fetching pending companies:', err);
+            logger.error('❌ Error fetching pending companies:', err);
         }
     };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import api from '@services/api';
 import { Plus, CheckCircle2, Clock, AlertCircle, User, X, CheckSquare } from 'lucide-react';
+import logger from '../../utils/logger';
 
 const inpSt = { background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px', width: '100%', boxSizing: 'border-box' };
 const priorityColor = { highest: 'var(--state-danger)', high: '#e07852', medium: 'var(--accent)', low: 'var(--text-muted)', lowest: 'var(--text-muted)' };
@@ -25,7 +26,7 @@ export default function ManagerTasks() {
             setLoading(true);
             const r = await api.get(`/api/manager/tasks/${selectedDepartment._id}`);
             setTasks(r.data.tasks);
-        } catch (e) { console.error(e); }
+        } catch (e) { logger.error(e); }
         finally { setLoading(false); }
     }, [selectedDepartment]);
 
@@ -38,12 +39,12 @@ export default function ManagerTasks() {
             setModalOpen(false);
             setNewTask({ title: '', description: '', priority: 'medium', dueDate: '' });
             fetchTasks();
-        } catch (err) { console.error(err); }
+        } catch (err) { logger.error(err); }
     };
 
     const handleStatusChange = async (taskId, status) => {
         try { await api.patch(`/api/manager/tasks/${taskId}/status`, { status }); fetchTasks(); }
-        catch (e) { console.error(e); }
+        catch (e) { logger.error(e); }
     };
 
     if (loading) return (

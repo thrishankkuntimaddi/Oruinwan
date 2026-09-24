@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Link as LinkIcon, Mail, Copy, Check, Send, AlertCircle } from "lucide-react";
 import { useToast } from "../contexts/ToastContext";
+import logger from '../utils/logger';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -44,7 +45,7 @@ const InvitePeopleModal = ({ isOpen, onClose, workspaceId, workspaceName }) => {
                     const data = await response.json();
                     setPendingInvites(data.pending || []);
                 }
-            } catch (err) { console.error('Failed to fetch invites:', err); }
+            } catch (err) { logger.error('Failed to fetch invites:', err); }
         };
         fetchPendingInvites();
     }, [isOpen, workspaceId]);

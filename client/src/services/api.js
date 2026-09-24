@@ -1,5 +1,6 @@
 import axios from 'axios';
 import sdkApiClient from '@platform/sdk/api/apiClient.js';
+import logger from '../utils/logger';
 
 export const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
 
@@ -12,23 +13,99 @@ const api = axios.create({
     withCredentials: true 
 });
 
-let isRefreshing = false;
-let refreshQueue = [];
 let onTokenRefreshed = null;
 
 export const setOnTokenRefreshed = (callback) => {
     onTokenRefreshed = callback;
 };
 
-const processQueue = (error, token = null) => {
-    refreshQueue.forEach(promise => {
-        if (error) {
-            promise.reject(error);
-        } else {
-            promise.resolve(token);
+const REFRESH_TIMEOUT_MS = 10000;
+
+// Single in-flight refresh shared by the axios interceptor, AuthContext and
+// SocketContext. Web refresh relies solely on the httpOnly `jwt` cookie.
+let refreshPromise = null;
+
+export function refreshAccessToken() {
+    if (refreshPromise) return refreshPromise;
+    refreshPromise = (async () => {
+        const response = await axios.post(
+            `${API_BASE}/api/auth/refresh`,
+            {},
+            { withCredentials: true, timeout: REFRESH_TIMEOUT_MS }
+        );
+        const accessToken = response?.data?.accessToken;
+        if (!accessToken) {
+            throw new Error('Refresh response did not include an access token');
         }
-    });
-    refreshQueue = [];
+        localStorage.setItem('accessToken', accessToken);
+        if (onTokenRefreshed) onTokenRefreshed(accessToken);
+        return accessToken;
+    })();
+    refreshPromise.then(
+        () => { refreshPromise = null; },
+        () => { refreshPromise = null; }
+    );
+    return refreshPromise;
+}
+
+// Auth endpoints whose 401s must never trigger a refresh (would loop or mask
+// credential errors).
+const NO_REFRESH_AUTH_PATHS = [
+    '/api/auth/refresh',
+    '/api/auth/login',
+    '/api/auth/logout',
+    '/api/auth/register',
+    '/api/auth/signup',
+];
+
+// 401 bodies emitted by server/src/shared/middleware/auth.js (requireAuth).
+const AUTH_MIDDLEWARE_401_MESSAGES = new Set([
+    'No token',
+    'Invalid access token',
+    'Invalid refresh token',
+    'Refresh token expired',
+]);
+const AUTH_MIDDLEWARE_401_CODES = new Set([
+    'TOKEN_EXPIRED',
+    'ACCESS_TOKEN_EXPIRED',
+    'TOKEN_INVALID',
+    'INVALID_TOKEN',
+    'NO_TOKEN',
+]);
+
+const getRequestPath = (config) => {
+    const url = config?.url || '';
+    try {
+        return new URL(url, API_BASE).pathname;
+    } catch {
+        return url.split('?')[0];
+    }
+};
+
+export const isTokenExpiredResponse = (response) => {
+    const data = response?.data;
+    if (!data || typeof data !== 'object') return false;
+    if (data.code && AUTH_MIDDLEWARE_401_CODES.has(data.code)) return true;
+    return AUTH_MIDDLEWARE_401_MESSAGES.has(data.message);
+};
+
+export const shouldAttemptRefresh = (config, response) => {
+    if (!config || response?.status !== 401) return false;
+    const path = getRequestPath(config);
+    if (NO_REFRESH_AUTH_PATHS.some(p => path.startsWith(p))) return false;
+    // /api/auth/* routes return business-logic 401s (e.g. "Invalid password");
+    // only refresh when the body is the auth middleware's token signal.
+    if (path.startsWith('/api/auth/')) return isTokenExpiredResponse(response);
+    return true;
+};
+
+const dispatchForceLogout = (err) => {
+    if (err && typeof err === 'object') {
+        if (err.__forceLogoutDispatched) return;
+        err.__forceLogoutDispatched = true;
+    }
+    localStorage.removeItem('accessToken');
+    window.dispatchEvent(new CustomEvent('auth:force-logout'));
 };
 
 api.interceptors.request.use((config) => {
@@ -36,9 +113,6 @@ api.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    
-    
     if (config.data instanceof FormData) {
         delete config.headers['Content-Type'];
     }
@@ -49,11 +123,7 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
     (response) => {
-        
-        
-        
-        
-        const newToken = response.headers['x-access-token'];
+        const newToken = response.headers?.['x-access-token'];
         if (newToken) {
             localStorage.setItem('accessToken', newToken);
             if (onTokenRefreshed) onTokenRefreshed(newToken);
@@ -63,94 +133,29 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        
-        if (error.response?.status !== 401) {
+        if (!shouldAttemptRefresh(originalRequest, error.response)) {
             return Promise.reject(error);
         }
 
-        
         if (originalRequest._retry) {
-            console.error('🔴 [API] Token still invalid after refresh — dispatching force-logout');
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            window.dispatchEvent(new CustomEvent('auth:force-logout'));
+            logger.error('🔴 [API] Token still invalid after refresh — dispatching force-logout');
+            dispatchForceLogout(error);
             return Promise.reject(error);
         }
-
-        
         originalRequest._retry = true;
 
-        
-        if (isRefreshing) {
-            return new Promise((resolve, reject) => {
-                refreshQueue.push({ resolve, reject });
-            })
-                .then(token => {
-                    originalRequest.headers.Authorization = `Bearer ${token}`;
-                    return api(originalRequest);
-                })
-                .catch(err => {
-                    return Promise.reject(err);
-                });
-        }
-
-        
-        isRefreshing = true;
-
-        
-        
-        
-        
-        const refreshTimeout = setTimeout(() => {
-            if (isRefreshing) {
-                console.warn('⚠️ [API] Refresh timeout (10s) — resetting isRefreshing and draining queue');
-                isRefreshing = false;
-                processQueue(new Error('Refresh timeout — server did not respond in 10s'), null);
-            }
-        }, 10000);
-
+        let accessToken;
         try {
-
-            
-            const storedRefreshToken = localStorage.getItem('refreshToken');
-            const response = await axios.post(`${API_BASE}/api/auth/refresh`,
-                storedRefreshToken ? { refreshToken: storedRefreshToken } : {},
-                { withCredentials: true }
-            );
-
-            const { accessToken, refreshToken: newRefreshToken } = response.data;
-            localStorage.setItem('accessToken', accessToken);
-            if (newRefreshToken) {
-                localStorage.setItem('refreshToken', newRefreshToken);
-            }
-
-            
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-
-            
-            clearTimeout(refreshTimeout);
-            processQueue(null, accessToken);
-            if (onTokenRefreshed) {
-                onTokenRefreshed(accessToken);
-            }
-            isRefreshing = false;
-
-            
-            return api(originalRequest);
-
+            accessToken = await refreshAccessToken();
         } catch (refreshError) {
-            
-            console.error('🔴 [API] Refresh token expired or invalid — dispatching force-logout');
-            clearTimeout(refreshTimeout);
-            processQueue(refreshError, null);
-            isRefreshing = false;
-
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            window.dispatchEvent(new CustomEvent('auth:force-logout'));
-
+            logger.error('🔴 [API] Refresh token expired or invalid — dispatching force-logout');
+            dispatchForceLogout(refreshError);
             return Promise.reject(refreshError);
         }
+
+        originalRequest.headers = originalRequest.headers || {};
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return api(originalRequest);
     }
 );
 

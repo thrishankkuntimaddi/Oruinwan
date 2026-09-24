@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const UserIdentityKey = require('../../../models/UserIdentityKey');
 
@@ -16,10 +17,10 @@ function unwrapConversationKeyWithWorkspaceKey(encryptedKey, iv, authTag, worksp
         let decrypted = decipher.update(ciphertext);
         decrypted = Buffer.concat([decrypted, decipher.final()]);
 
-        console.log('✅ Unwrapped conversation key with workspace key');
+        logger.info('✅ Unwrapped conversation key with workspace key');
         return decrypted;
     } catch (error) {
-        console.error('Failed to unwrap conversation key:', error);
+        logger.error('Failed to unwrap conversation key:', error);
         throw new Error('Conversation key decryption failed');
     }
 }
@@ -34,7 +35,7 @@ async function wrapConversationKeyForUser(conversationKeyBytes, userPublicKey, a
             throw new Error(`Unsupported algorithm: ${algorithm}`);
         }
     } catch (error) {
-        console.error('Failed to wrap conversation key for user:', error);
+        logger.error('Failed to wrap conversation key for user:', error);
         throw error;
     }
 }
@@ -56,7 +57,7 @@ async function wrapWithRSA(keyBytes, publicKeyPem) {
             encryptedKey: encrypted.toString('base64')
         };
     } catch (error) {
-        console.error('RSA encryption failed:', error);
+        logger.error('RSA encryption failed:', error);
         throw error;
     }
 }
@@ -107,7 +108,7 @@ async function wrapWithX25519(keyBytes, publicKeyBase64) {
             ephemeralPublicKey: ephemeralPublicExport.toString('base64')
         };
     } catch (error) {
-        console.error('X25519 encryption failed:', error);
+        logger.error('X25519 encryption failed:', error);
         throw error;
     }
 }
@@ -125,7 +126,7 @@ async function getUserPublicKey(userId) {
             algorithm: identityKey.algorithm
         };
     } catch (error) {
-        console.error('Failed to fetch user public key:', error);
+        logger.error('Failed to fetch user public key:', error);
         throw error;
     }
 }

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Department = require('../../../models/Department');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
@@ -123,7 +124,7 @@ async function createDepartment({ companyId, name, description, head, parentDepa
                 members: memberIds,
             });
         } catch (keyError) {
-            console.error(`[DEPT SERVICE] Failed to bootstrap key for channel ${chanId}:`, keyError.message);
+            logger.error(`[DEPT SERVICE] Failed to bootstrap key for channel ${chanId}:`, keyError.message);
             throw new Error('Failed to initialize channel encryption.');
         }
     }

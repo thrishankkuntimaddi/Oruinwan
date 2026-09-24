@@ -1,11 +1,12 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const aiController = require('./ai.controller');
 const auth = require('../../shared/middleware/auth');
 
 router.use((req, res, next) => {
-    console.log(`🤖 AI Request: ${req.method} ${req.originalUrl}`);
-    console.log('Payload:', JSON.stringify(req.body).substring(0, 100)); 
+    logger.info(`🤖 AI Request: ${req.method} ${req.originalUrl}`);
+    logger.info('Payload:', JSON.stringify(req.body).substring(0, 100)); 
     next();
 });
 

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Message = require("../../features/messages/message.model.js");
 const Channel = require("../../features/channels/channel.model.js");
 const { followThread, unfollowThread, getFollowStatus, getFollowerIds } = require('./threads.service');
@@ -46,7 +47,7 @@ exports.getChannelThreads = async (req, res) => {
             userJoinedAt: userJoinedAt || null
         });
     } catch (err) {
-        console.error("[THREADS][GET_CHANNEL_THREADS] Error:", err);
+        logger.error("[THREADS][GET_CHANNEL_THREADS] Error:", err);
         return res.status(500).json({ message: "Server error fetching threads" });
     }
 };
@@ -103,7 +104,7 @@ exports.getThread = async (req, res) => {
             },
         });
     } catch (err) {
-        console.error("GET THREAD ERROR:", err);
+        logger.error("GET THREAD ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -253,15 +254,15 @@ exports.postThreadReply = async (req, res) => {
                     parentMessageId: String(messageId),
                 });
 
-                console.log(`[THREADS] 🔔 thread_reply notifications → ${recipientIds.length} follower(s)`);
+                logger.info(`[THREADS] 🔔 thread_reply notifications → ${recipientIds.length} follower(s)`);
             } catch (followErr) {
-                console.error('[THREADS] Follow/notify error (non-fatal):', followErr.message);
+                logger.error('[THREADS] Follow/notify error (non-fatal):', followErr.message);
             }
         })();
 
         return res.status(201).json({ reply });
     } catch (err) {
-        console.error("POST THREAD REPLY ERROR:", err);
+        logger.error("POST THREAD REPLY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -272,7 +273,7 @@ exports.getThreadCount = async (req, res) => {
         const count = await Message.countDocuments({ parentId: messageId });
         return res.json({ count });
     } catch (err) {
-        console.error("GET THREAD COUNT ERROR:", err);
+        logger.error("GET THREAD COUNT ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -372,7 +373,7 @@ exports.summarizeThread = async (req, res) => {
 
         return res.json({ summary, replyCount: replies.length });
     } catch (err) {
-        console.error('[THREADS] summarizeThread error:', err);
+        logger.error('[THREADS] summarizeThread error:', err);
         return res.status(500).json({ message: 'Thread summary failed', error: err.message });
     }
 };

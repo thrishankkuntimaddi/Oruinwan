@@ -1,8 +1,9 @@
+const logger = require('../../../utils/logger');
 const teamService = require('./team.service');
 
 function handleErr(res, err) {
   const status = err.status || 500;
-  console.error('[TEAM CTRL]', err.message);
+  logger.error('[TEAM CTRL]', err.message);
   return res.status(status).json({ success: false, error: err.message });
 }
 

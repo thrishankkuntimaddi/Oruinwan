@@ -5,6 +5,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { CheckSquare, FileText, Activity, ArrowLeft, Plus } from 'lucide-react';
 import { DashboardCard, StatsWidget } from '../../components/company';
 import { getEmployeePersonalData } from '../../services/dashboardService';
+import logger from '../../utils/logger';
 
 const EmployeeDashboard = () => {
     const { user } = useAuth();
@@ -32,7 +33,7 @@ const EmployeeDashboard = () => {
                 const data = await getEmployeePersonalData(user._id);
                 setPersonalData(data);
             } catch (error) {
-                console.error('Error fetching personal data:', error);
+                logger.error('Error fetching personal data:', error);
                 showToast('Failed to load dashboard', 'error');
             } finally {
                 setLoading(false);

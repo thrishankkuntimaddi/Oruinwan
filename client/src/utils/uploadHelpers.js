@@ -1,4 +1,5 @@
 import api from '@services/api';
+import logger from './logger';
 
 export const uploadNoteAttachment = async (file, workspaceId, noteId = null, onProgress = null) => {
     try {
@@ -23,7 +24,7 @@ export const uploadNoteAttachment = async (file, workspaceId, noteId = null, onP
 
         return response.data;
     } catch (error) {
-        console.error('Upload error:', error);
+        logger.error('Upload error:', error);
         throw error;
     }
 };
@@ -45,7 +46,7 @@ export const downloadNoteAttachment = async (noteId, attachmentId, filename) => 
         link.remove();
         window.URL.revokeObjectURL(url);
     } catch (error) {
-        console.error('Download error:', error);
+        logger.error('Download error:', error);
         throw error;
     }
 };
@@ -54,7 +55,7 @@ export const deleteNoteAttachment = async (noteId, attachmentId) => {
     try {
         await api.delete(`/api/v2/notes/${noteId}/attachments/${attachmentId}`);
     } catch (error) {
-        console.error('Delete error:', error);
+        logger.error('Delete error:', error);
         throw error;
     }
 };

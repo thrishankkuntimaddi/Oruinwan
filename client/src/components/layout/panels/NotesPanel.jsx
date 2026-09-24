@@ -12,6 +12,7 @@ import {
 import api from '@services/api';
 import { useNotes } from "../../../contexts/NotesContext";
 import NoteTemplateModal from "../../../pages/SidebarComp/notesComponents/ui/NoteTemplateModal";
+import logger from '../../../utils/logger';
 
 const NOTE_TYPES = [
     { id: "note", Icon: FileText, color: "text-sky-400", label: "Document" },
@@ -44,7 +45,7 @@ function useCanvasByChannel(workspaceId) {
             
             setChannels(withTabs.filter(ch => ch.canvasTabs.length > 0));
         } catch (e) {
-            console.warn('[NotesPanel] useCanvasByChannel fetch failed:', e?.message);
+            logger.warn('[NotesPanel] useCanvasByChannel fetch failed:', e?.message);
         }
     }, [workspaceId]);
     useEffect(() => { load(); }, [load]);

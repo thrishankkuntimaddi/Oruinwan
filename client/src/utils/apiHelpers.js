@@ -1,3 +1,4 @@
+import logger from './logger';
 export const getErrorMessage = (error) => {
     
     if (error.response?.data?.message) {
@@ -28,7 +29,7 @@ export const handleApiError = (error, options = {}) => {
     const message = getErrorMessage(error);
 
     
-    console.error(`${context}:`, error);
+    logger.error(`${context}:`, error);
 
     
     if (showAlert) {

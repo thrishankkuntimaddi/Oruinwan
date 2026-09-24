@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useToast } from "../../../../contexts/ToastContext";
 import api from '@services/api';
 import { AlertTriangle, Loader, X } from 'lucide-react';
+import logger from '../../../../utils/logger';
 
 const DeleteWorkspaceModal = ({
     showDeleteConfirm, setShowDeleteConfirm,
@@ -26,7 +27,7 @@ const DeleteWorkspaceModal = ({
             setDeleteVerification('');
             window.location.href = '/workspaces';
         } catch (err) {
-            console.error('Delete workspace error:', err);
+            logger.error('Delete workspace error:', err);
             showToast(err.response?.data?.message || err.message || 'Failed to delete workspace', 'error');
         } finally {
             setDeleting(false);

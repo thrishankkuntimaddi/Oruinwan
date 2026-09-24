@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const express = require('express');
 const router = express.Router();
@@ -47,7 +48,7 @@ router.post('/setup', requireAuth, async (req, res) => {
       message: 'Scan the QR code with your authenticator app, then call /2fa/verify-setup with the OTP to complete setup.'
     });
   } catch (err) {
-    console.error('[2FA] setup error:', err);
+    logger.error('[2FA] setup error:', err);
     return res.status(500).json({ message: 'Failed to setup 2FA' });
   }
 });
@@ -83,7 +84,7 @@ router.post('/verify-setup', requireAuth, async (req, res) => {
 
     return res.json({ message: '2FA enabled successfully', twoFactorEnabled: true });
   } catch (err) {
-    console.error('[2FA] verify-setup error:', err);
+    logger.error('[2FA] verify-setup error:', err);
     return res.status(500).json({ message: 'Failed to verify OTP' });
   }
 });
@@ -120,7 +121,7 @@ router.post('/disable', requireAuth, async (req, res) => {
 
     return res.json({ message: '2FA disabled successfully', twoFactorEnabled: false });
   } catch (err) {
-    console.error('[2FA] disable error:', err);
+    logger.error('[2FA] disable error:', err);
     return res.status(500).json({ message: 'Failed to disable 2FA' });
   }
 });
@@ -140,7 +141,7 @@ router.post('/verify', requireAuth, async (req, res) => {
 
     return res.json({ valid: true, message: 'OTP verified' });
   } catch (err) {
-    console.error('[2FA] verify error:', err);
+    logger.error('[2FA] verify error:', err);
     return res.status(500).json({ message: 'Failed to verify OTP' });
   }
 });
@@ -151,7 +152,7 @@ router.get('/status', requireAuth, async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     return res.json({ twoFactorEnabled: user.twoFactorEnabled || false });
   } catch (err) {
-    console.error('[2FA] status error:', err);
+    logger.error('[2FA] status error:', err);
     return res.status(500).json({ message: 'Failed to fetch 2FA status' });
   }
 });

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext'; 
 import api from '@services/api';
 import { batchDecryptMessages } from '../services/messageEncryptionService';
+import logger from '../utils/logger';
+import { normalizeMessage, mergeUniqueEvents, newestPersistedEvent } from './conversationUtils';
 
 export function useConversation(conversationId, conversationType, workspaceId) {
     
@@ -17,11 +19,22 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
     const loadedRef = useRef(false);
     const eventsMapRef = useRef(new Map()); 
+    // Incremented on every reset (conversation switch); async loads capture it
+    // and drop their results if it changed while they were in flight.
+    const generationRef = useRef(0);
+    const abortRef = useRef(null);
+
+    const isCancelled = (err) => err?.name === 'CanceledError' || err?.code === 'ERR_CANCELED';
 
     
     const loadMessages = useCallback(async (opts = {}) => {
         if (!conversationId) return;
         if (loadedRef.current && !opts.around) return;
+
+        const generation = generationRef.current;
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const isStale = () => generation !== generationRef.current || controller.signal.aborted;
 
         setLoading(true);
         loadedRef.current = true; 
@@ -36,12 +49,15 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
             if (conversationType === 'channel') {
                 response = await api.get(`/api/v2/messages/channel/${conversationId}`, {
-                    params
+                    params,
+                    signal: controller.signal
                 });
             } else if (conversationType === 'dm') {
                 response = await api.get(`/api/v2/messages/workspace/${workspaceId}/dm/${conversationId}`, {
-                    params
+                    params,
+                    signal: controller.signal
                 });
+                if (isStale()) return;
 
                 
                 
@@ -78,58 +94,18 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 }
             }
 
+            if (isStale()) return;
             const messages = response?.data?.messages || [];
             const hasMore = response?.data?.hasMore || false; 
             const hasMoreNewer = response?.data?.hasMoreNewer || false;
 
-            
-            const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
-            const normalized = messages.map(msg => ({
-                id: msg._id,
-                
-                
-                
-                type: msg.type === 'system' ? 'system'
-                    : msg.type === 'poll' ? 'poll'
-                        : msg.pollId ? 'poll'
-                            : msg.type === 'contact' ? 'contact'
-                                : msg.type === 'meeting' ? 'meeting'
-                                    : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
-                                        : 'message',
-                payload: {
-                    ...msg,
-                    replyCount: msg.replyCount || 0,
-                    reactions: msg.reactions || [],
-                    isPinned: msg.isPinned || false,
-                    attachments: msg.attachments || [],
-                    
-                    attachment: ATTACHMENT_TYPES.includes(msg.type) ? (msg.attachments?.[0] || null) : undefined,
-                    isDeleted: msg.isDeleted || msg.deletedAt != null,
-                    deletedBy: msg.deletedBy || null,
-                    deletedByName: msg.deletedByName || null
-                },
-                
-                ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
-                
-                ...(msg.type === 'contact' && { contact: msg.contact }),
-                
-                ...(msg.type === 'system' && {
-                    systemEvent: msg.systemEvent,
-                    systemData: msg.systemData,
-                }),
-                sender: msg.sender,
-                createdAt: msg.createdAt,
-                parentId: msg.parentId
-            }));
+            const normalized = messages.map(normalizeMessage);
 
-            
-            
             let decrypted = normalized;
             if (normalized.length > 0) {
                 decrypted = await batchDecryptMessages(normalized, conversationId, conversationType, null);
-            } else {
-
             }
+            if (isStale()) return;
 
             
             if (opts.around) {
@@ -145,11 +121,13 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             setHasMoreNewer(hasMoreNewer);
             setHistoryLoaded(true); 
         } catch (err) {
-            console.error('Error loading messages:', err);
+            if (isStale() || isCancelled(err)) return;
+            logger.error('Error loading messages:', err);
             setError(err.response?.data?.message || 'Failed to load messages');
             setHistoryLoaded(true); 
         } finally {
-            setLoading(false);
+            if (!isStale()) setLoading(false);
+            if (abortRef.current === controller) abortRef.current = null;
         }
     }, [conversationId, conversationType, workspaceId, navigate]);
 
@@ -157,12 +135,14 @@ export function useConversation(conversationId, conversationType, workspaceId) {
     const loadMore = useCallback(async () => {
         if (!conversationId || loading || !hasMore) return;
 
+        const oldestEvent = events[0];
+        if (!oldestEvent) return;
+
+        const generation = generationRef.current;
+        const isStale = () => generation !== generationRef.current;
         setLoading(true);
 
         try {
-            const oldestEvent = events[0];
-            if (!oldestEvent) return;
-
             let response;
 
             if (conversationType === 'channel') {
@@ -174,58 +154,29 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                     params: { limit: 50, before: oldestEvent.id }
                 });
             }
+            if (isStale()) return;
 
-            const { messages = [], hasMore: more = false } = response.data;
+            const { messages = [], hasMore: more = false } = response?.data || {};
+            const normalized = messages.map(normalizeMessage);
 
-            const normalized = messages.map(msg => ({
-                id: msg._id,
-                type: msg.type === 'system' ? 'system'
-                    : msg.type === 'poll' ? 'poll'
-                        : msg.pollId ? 'poll'
-                            : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
-                                : 'message',
-                payload: {
-                    ...msg,
-                    replyCount: msg.replyCount || 0,
-                    reactions: msg.reactions || [],
-                    isPinned: msg.isPinned || false,
-                    attachments: msg.attachments || [],
-                    attachment: ATTACHMENT_TYPES.includes(msg.type) ? (msg.attachments?.[0] || null) : undefined,
-                    isDeleted: msg.isDeleted || msg.deletedAt != null,
-                    deletedBy: msg.deletedBy || null,
-                    deletedByName: msg.deletedByName || null
-                },
-                ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
-                ...(msg.type === 'system' && {
-                    systemEvent: msg.systemEvent,
-                    systemData: msg.systemData,
-                }),
-                sender: msg.sender,
-                createdAt: msg.createdAt,
-                parentId: msg.parentId
-            }));
-
-            
-            
             let decrypted = normalized;
             if (normalized.length > 0) {
                 decrypted = await batchDecryptMessages(normalized, conversationId, conversationType, null);
             }
+            if (isStale()) return;
 
-            
             decrypted.forEach(event => {
                 if (!eventsMapRef.current.has(event.id)) {
                     eventsMapRef.current.set(event.id, event);
                 }
             });
 
-            
-            setEvents(prev => [...decrypted, ...prev]);
+            setEvents(prev => mergeUniqueEvents(prev, decrypted, 'prepend'));
             setHasMore(more);
         } catch (err) {
-            console.error('Error loading more messages:', err);
+            if (!isStale()) logger.error('Error loading more messages:', err);
         } finally {
-            setLoading(false);
+            if (!isStale()) setLoading(false);
         }
     }, [conversationId, conversationType, workspaceId, events, loading, hasMore]);
 
@@ -333,7 +284,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 
                 
             } catch (err) {
-                console.error('[THREAD][REALTIME][DECRYPT] Failed to decrypt thread reply:', err);
+                logger.error('[THREAD][REALTIME][DECRYPT] Failed to decrypt thread reply:', err);
             }
 
             return; 
@@ -360,7 +311,9 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
             
             
+            const generation = generationRef.current;
             const decrypted = await batchDecryptMessages([event], messageChannelId, conversationType, null);
+            if (generation !== generationRef.current) return; // conversation switched meanwhile
             processedEvent = decrypted[0] || event;
 
         }
@@ -400,7 +353,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 setEvents(prev => prev.map(e => e.id === optimisticMessage.id ? processedEvent : e));
                 return;
             } else {
-                console.warn(`⚠️ [useConversation] No optimistic message found for clientTempId or status`);
+                logger.warn(`⚠️ [useConversation] No optimistic message found for clientTempId or status`);
             }
         }
 
@@ -417,6 +370,12 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
     
     const reset = useCallback(() => {
+        generationRef.current += 1;
+        if (abortRef.current) {
+            abortRef.current.abort();
+            abortRef.current = null;
+        }
+        setLoading(false);
         setEvents([]);
         setError(null);
         setHistoryLoaded(false); 
@@ -426,15 +385,20 @@ export function useConversation(conversationId, conversationType, workspaceId) {
     }, []);
 
     
-    const loadNewer = useCallback(async () => {
-        if (!conversationId || loading || !hasMoreNewer) return;
+    // `force` bypasses hasMoreNewer — used after a socket reconnect to fetch
+    // messages that arrived while disconnected.
+    const loadNewer = useCallback(async ({ force = false } = {}) => {
+        if (!conversationId || loading) return;
+        if (!force && !hasMoreNewer) return;
 
+        const newestEvent = newestPersistedEvent(events);
+        if (!newestEvent) return;
+
+        const generation = generationRef.current;
+        const isStale = () => generation !== generationRef.current;
         setLoading(true);
 
         try {
-            const newestEvent = events[events.length - 1];
-            if (!newestEvent) return;
-
             let response;
             const params = { limit: 50, after: newestEvent.id };
 
@@ -447,42 +411,16 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                     params
                 });
             }
+            if (isStale()) return;
 
-            const { messages = [], hasMoreNewer: moreNewer = false } = response.data;
-            const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
-
-            const normalized = messages.map(msg => ({
-                id: msg._id,
-                type: msg.type === 'system' ? 'system'
-                    : msg.type === 'poll' ? 'poll'
-                        : msg.pollId ? 'poll'
-                            : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
-                                : 'message',
-                payload: {
-                    ...msg,
-                    replyCount: msg.replyCount || 0,
-                    reactions: msg.reactions || [],
-                    isPinned: msg.isPinned || false,
-                    attachments: msg.attachments || [],
-                    attachment: ATTACHMENT_TYPES.includes(msg.type) ? (msg.attachments?.[0] || null) : undefined,
-                    isDeleted: msg.isDeleted || msg.deletedAt != null,
-                    deletedBy: msg.deletedBy || null,
-                    deletedByName: msg.deletedByName || null
-                },
-                ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
-                ...(msg.type === 'system' && {
-                    systemEvent: msg.systemEvent,
-                    systemData: msg.systemData,
-                }),
-                sender: msg.sender,
-                createdAt: msg.createdAt,
-                parentId: msg.parentId
-            }));
+            const { messages = [], hasMoreNewer: moreNewer = false } = response?.data || {};
+            const normalized = messages.map(normalizeMessage);
 
             let decrypted = normalized;
             if (normalized.length > 0) {
                 decrypted = await batchDecryptMessages(normalized, conversationId, conversationType, null);
             }
+            if (isStale()) return;
 
             decrypted.forEach(event => {
                 if (!eventsMapRef.current.has(event.id)) {
@@ -490,15 +428,16 @@ export function useConversation(conversationId, conversationType, workspaceId) {
                 }
             });
 
-            setEvents(prev => [...prev, ...decrypted]);
+            setEvents(prev => mergeUniqueEvents(prev, decrypted, 'append'));
             setHasMoreNewer(moreNewer);
         } catch (err) {
-            console.error('Error loading newer messages:', err);
+            if (!isStale()) logger.error('Error loading newer messages:', err);
         } finally {
-            setLoading(false);
+            if (!isStale()) setLoading(false);
         }
     }, [conversationId, conversationType, workspaceId, events, loading, hasMoreNewer]);
 
+    
     const jumpToDate = useCallback(async (dayStart, dayEnd) => {
         if (!conversationId) return null;
 
@@ -520,7 +459,7 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
             return { anchorMessageId, isFallback };
         } catch (err) {
-            console.error('Error jumping to date:', err);
+            logger.error('Error jumping to date:', err);
             setError(err.response?.data?.message || 'Failed to jump to date');
             return null;
         } finally {
@@ -534,6 +473,11 @@ export function useConversation(conversationId, conversationType, workspaceId) {
             loadMessages();
         }
     }, [conversationId, conversationType, workspaceId, reset, loadMessages]); 
+
+    useEffect(() => () => {
+        generationRef.current += 1;
+        if (abortRef.current) abortRef.current.abort();
+    }, []);
 
     return {
         events,

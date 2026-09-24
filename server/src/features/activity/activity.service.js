@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const ActivityEvent = require('../../models/ActivityEvent');
 
@@ -23,7 +24,7 @@ async function emit(req, { type, subtype, actor, workspaceId, payload = {} }) {
       io.to(`workspace:${workspaceId}`).emit('activity:new', populated);
     }
   } catch (broadcastErr) {
-    console.error('[ActivityService] Socket broadcast failed:', broadcastErr.message);
+    logger.error('[ActivityService] Socket broadcast failed:', broadcastErr.message);
   }
 
   return event;
@@ -47,7 +48,7 @@ async function emitWithIo(io, { type, subtype, actor, workspaceId, payload = {} 
       io.to(`workspace:${workspaceId}`).emit('activity:new', populated);
     }
   } catch (broadcastErr) {
-    console.error('[ActivityService] Socket broadcast failed:', broadcastErr.message);
+    logger.error('[ActivityService] Socket broadcast failed:', broadcastErr.message);
   }
 
   return event;

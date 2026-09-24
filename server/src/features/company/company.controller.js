@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const companyService = require("./company.service");
 const Company = require("../../../models/Company");
 const multer = require('multer');
@@ -30,7 +31,7 @@ exports.getCompany = async (req, res) => {
         return res.json({ company });
 
     } catch (err) {
-        console.error("GET COMPANY ERROR:", err);
+        logger.error("GET COMPANY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -56,7 +57,7 @@ exports.updateCompany = async (req, res) => {
         return res.json({ company });
 
     } catch (err) {
-        console.error("UPDATE COMPANY ERROR:", err);
+        logger.error("UPDATE COMPANY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -79,13 +80,13 @@ exports.getCompanyMembers = async (req, res) => {
         }
 
         
-        console.log(`[COMPANY] Fetching members for company ${companyId}`);
+        logger.info(`[COMPANY] Fetching members for company ${companyId}`);
         const members = await companyService.getCompanyMembers(companyId);
-        console.log(`[COMPANY] Found ${members.length} members`);
+        logger.info(`[COMPANY] Found ${members.length} members`);
 
         return res.json({ members });
     } catch (err) {
-        console.error("GET COMPANY MEMBERS ERROR:", err);
+        logger.error("GET COMPANY MEMBERS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -108,7 +109,7 @@ exports.updateMemberRole = async (req, res) => {
         return res.json(result);
 
     } catch (err) {
-        console.error("UPDATE MEMBER ROLE ERROR:", err);
+        logger.error("UPDATE MEMBER ROLE ERROR:", err);
 
         if (err.message.includes('not found') || err.message.includes('Invalid')) {
             return res.status(400).json({ message: err.message });
@@ -135,7 +136,7 @@ exports.checkCompanyName = async (req, res) => {
             message: existingCompany ? "Company name already taken" : "Company name is available"
         });
     } catch (err) {
-        console.error("CHECK COMPANY NAME ERROR:", err);
+        logger.error("CHECK COMPANY NAME ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -154,7 +155,7 @@ exports.checkCompanyDomain = async (req, res) => {
             message: existingCompany ? "Domain already registered" : "Domain is available"
         });
     } catch (err) {
-        console.error("CHECK COMPANY DOMAIN ERROR:", err);
+        logger.error("CHECK COMPANY DOMAIN ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -174,7 +175,7 @@ exports.checkEmail = async (req, res) => {
             message: existingUser ? "Email already in use" : "Email is available"
         });
     } catch (err) {
-        console.error("CHECK EMAIL ERROR:", err);
+        logger.error("CHECK EMAIL ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -195,7 +196,7 @@ exports.checkPhone = async (req, res) => {
             message: (existingUser || existingCompany) ? "Phone already registered" : "Phone is available"
         });
     } catch (err) {
-        console.error("CHECK PHONE ERROR:", err);
+        logger.error("CHECK PHONE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -226,7 +227,7 @@ exports.startSetup = async (req, res) => {
 
         return res.json({ message: 'Setup started', company });
     } catch (err) {
-        console.error('START SETUP ERROR:', err);
+        logger.error('START SETUP ERROR:', err);
         return res.status(500).json({ message: 'Server error' });
     }
 };
@@ -271,7 +272,7 @@ exports.handleSetup = (req, res) => {
 
             return res.json(result);
         } catch (err2) {
-            console.error('HANDLE SETUP ERROR:', err2);
+            logger.error('HANDLE SETUP ERROR:', err2);
             return res.status(500).json({ message: err2.message || 'Server error' });
         }
     });
@@ -314,7 +315,7 @@ exports.downloadTemplate = async (req, res) => {
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         return res.send(buffer);
     } catch (err) {
-        console.error('DOWNLOAD TEMPLATE ERROR:', err);
+        logger.error('DOWNLOAD TEMPLATE ERROR:', err);
         return res.status(500).json({ message: 'Server error' });
     }
 };

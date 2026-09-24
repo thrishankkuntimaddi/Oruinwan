@@ -1,9 +1,32 @@
+const logger = require('../../../utils/logger');
 const _mongoose = require('mongoose');
 
 const SupportMessage = require('../../../models/SupportMessage');
 const SupportTicket = require('../../../models/SupportTicket');
-const _User = require('../../../models/User');
+const User = require('../../../models/User');
 const _Company = require('../../../models/Company');
+
+const PLATFORM_ADMIN_ROLES = ['chttrix_admin', 'platform-admin'];
+
+// Resolve the caller from the DB (JWT claims are not trusted for roles/company).
+async function getCaller(req) {
+    const userId = req.user && (req.user.sub || req.user._id);
+    if (!userId) return null;
+    const user = await User.findById(userId).select('roles companyId').lean();
+    if (!user) return null;
+    return {
+        id: String(userId),
+        companyId: user.companyId ? String(user.companyId) : null,
+        isPlatformAdmin: Array.isArray(user.roles) && user.roles.some(r => PLATFORM_ADMIN_ROLES.includes(r)),
+    };
+}
+
+function canAccessCompany(caller, companyId) {
+    if (!caller) return false;
+    if (caller.isPlatformAdmin) return true;
+    const cid = companyId && (companyId._id || companyId);
+    return !!cid && !!caller.companyId && String(cid) === caller.companyId;
+}
 
 exports.getTicketMessages = async (req, res) => {
     try {
@@ -12,7 +35,8 @@ exports.getTicketMessages = async (req, res) => {
 
         
         const ticket = await SupportTicket.findById(ticketId);
-        if (!ticket) {
+        const caller = await getCaller(req);
+        if (!ticket || !canAccessCompany(caller, ticket.companyId)) {
             return res.status(404).json({ message: 'Ticket not found' });
         }
 
@@ -28,7 +52,7 @@ exports.getTicketMessages = async (req, res) => {
             hasMore: messages.length === parseInt(limit)
         });
     } catch (error) {
-        console.error('GET TICKET MESSAGES ERROR:', error);
+        logger.error('GET TICKET MESSAGES ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 };
@@ -37,6 +61,10 @@ exports.getMessages = async (req, res) => {
     try {
         const { companyId } = req.params;
         const { limit = 100 } = req.query;
+
+        if (!canAccessCompany(await getCaller(req), companyId)) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
 
         const messages = await SupportMessage.find({
             company: companyId,
@@ -49,7 +77,7 @@ exports.getMessages = async (req, res) => {
 
         return res.json({ messages });
     } catch (error) {
-        console.error('GET MESSAGES ERROR:', error);
+        logger.error('GET MESSAGES ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 };
@@ -61,7 +89,7 @@ exports.sendTicketMessage = async (req, res) => {
 
         
         if (!req.user || !req.user.sub) {
-            console.error('SEND MESSAGE ERROR: User not authenticated', { user: req.user });
+            logger.error('SEND MESSAGE ERROR: User not authenticated', { user: req.user });
             return res.status(401).json({ message: 'Authentication required' });
         }
 
@@ -72,18 +100,19 @@ exports.sendTicketMessage = async (req, res) => {
 
         
         const ticket = await SupportTicket.findById(ticketId).populate('companyId');
-        if (!ticket) {
+        const caller = await getCaller(req);
+        if (!ticket || !canAccessCompany(caller, ticket.companyId)) {
             return res.status(404).json({ message: 'Ticket not found' });
         }
 
-        console.log('[PLATFORM SUPPORT] Sending message to ticket:', {
+        logger.info('[PLATFORM SUPPORT] Sending message to ticket:', {
             ticketId,
             userId: req.user.sub,
             userRoles: req.user.roles
         });
 
         
-        const isPlatformAdmin = req.user.roles && req.user.roles.includes('platform-admin');
+        const isPlatformAdmin = caller.isPlatformAdmin;
         const senderRole = isPlatformAdmin ? 'platform' : 'company';
 
         const message = await SupportMessage.create({
@@ -97,7 +126,7 @@ exports.sendTicketMessage = async (req, res) => {
 
         await message.populate('sender', 'username email profilePicture');
 
-        console.log('[PLATFORM SUPPORT] Message created successfully:', message._id);
+        logger.info('[PLATFORM SUPPORT] Message created successfully:', message._id);
 
         
         if (ticket.status === 'open' && isPlatformAdmin) {
@@ -126,7 +155,7 @@ exports.sendTicketMessage = async (req, res) => {
 
         return res.status(201).json({ message });
     } catch (error) {
-        console.error('SEND TICKET MESSAGE ERROR:', error);
+        logger.error('SEND TICKET MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -140,7 +169,7 @@ exports.sendMessage = async (req, res) => {
 
         
         if (!req.user || !req.user.sub) {
-            console.error('SEND MESSAGE ERROR: User not authenticated', { user: req.user });
+            logger.error('SEND MESSAGE ERROR: User not authenticated', { user: req.user });
             return res.status(401).json({ message: 'Authentication required' });
         }
 
@@ -154,7 +183,11 @@ exports.sendMessage = async (req, res) => {
             return res.status(400).json({ message: 'Company ID is required' });
         }
 
-        console.log('[PLATFORM SUPPORT] Sending message (legacy):', {
+        if (!canAccessCompany(await getCaller(req), companyId)) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        logger.info('[PLATFORM SUPPORT] Sending message (legacy):', {
             companyId,
             userId: req.user.sub,
             userRoles: req.user.roles
@@ -190,7 +223,7 @@ exports.sendMessage = async (req, res) => {
 
         await message.populate('sender', 'username email profilePicture');
 
-        console.log('[PLATFORM SUPPORT] Message created successfully:', message._id);
+        logger.info('[PLATFORM SUPPORT] Message created successfully:', message._id);
 
         
         if (req.app.get('io')) {
@@ -203,7 +236,7 @@ exports.sendMessage = async (req, res) => {
 
         return res.status(201).json({ message });
     } catch (error) {
-        console.error('SEND MESSAGE ERROR:', error);
+        logger.error('SEND MESSAGE ERROR:', error);
         return res.status(500).json({
             message: 'Failed to send message',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
@@ -219,6 +252,11 @@ exports.markMessageAsRead = async (req, res) => {
             return res.status(401).json({ message: 'Authentication required' });
         }
 
+        const existing = await SupportMessage.findById(messageId).select('company').lean();
+        if (!existing || !canAccessCompany(await getCaller(req), existing.company)) {
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
         const _message = await SupportMessage.markAsRead(messageId, req.user.sub);
 
         return res.json({
@@ -226,7 +264,7 @@ exports.markMessageAsRead = async (req, res) => {
             message: 'Message marked as read'
         });
     } catch (error) {
-        console.error('MARK MESSAGE AS READ ERROR:', error);
+        logger.error('MARK MESSAGE AS READ ERROR:', error);
         if (error.message === 'Message not found') {
             return res.status(404).json({ message: error.message });
         }
@@ -239,7 +277,18 @@ exports.getTickets = async (req, res) => {
         const { companyId } = req.params;
         const { status, priority, limit = 50, skip = 0 } = req.query;
 
+        const caller = await getCaller(req);
+        if (!canAccessCompany(caller, companyId)) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
         const query = { companyId };
+        if (typeof status !== 'undefined' && typeof status !== 'string') {
+            return res.status(400).json({ message: 'Invalid status filter' });
+        }
+        if (typeof priority !== 'undefined' && typeof priority !== 'string') {
+            return res.status(400).json({ message: 'Invalid priority filter' });
+        }
 
         if (status) {
             query.status = status;
@@ -250,6 +299,7 @@ exports.getTickets = async (req, res) => {
         }
 
         const tickets = await SupportTicket.find(query)
+            .select(caller.isPlatformAdmin ? '' : '-internalNotes')
             .populate('creatorId', 'username email profilePicture')
             .sort({ createdAt: -1 })
             .limit(parseInt(limit))
@@ -263,7 +313,7 @@ exports.getTickets = async (req, res) => {
             hasMore: (parseInt(skip) + tickets.length) < total
         });
     } catch (error) {
-        console.error('GET TICKETS ERROR:', error);
+        logger.error('GET TICKETS ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 };
@@ -278,6 +328,10 @@ exports.createTicket = async (req, res) => {
 
         if (!companyId) {
             return res.status(400).json({ message: 'Company ID is required' });
+        }
+
+        if (!canAccessCompany(await getCaller(req), companyId)) {
+            return res.status(403).json({ message: 'Access denied' });
         }
 
         const ticket = await SupportTicket.create({
@@ -310,7 +364,7 @@ exports.createTicket = async (req, res) => {
 
         return res.status(201).json({ ticket });
     } catch (error) {
-        console.error('CREATE TICKET ERROR:', error);
+        logger.error('CREATE TICKET ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 };
@@ -321,9 +375,15 @@ exports.updateTicket = async (req, res) => {
         const { status, priority, internalNotes } = req.body;
 
         const ticket = await SupportTicket.findById(ticketId);
+        const caller = await getCaller(req);
 
-        if (!ticket) {
+        if (!ticket || !canAccessCompany(caller, ticket.companyId)) {
             return res.status(404).json({ message: 'Ticket not found' });
+        }
+
+        // Internal notes and priority are platform-staff fields.
+        if (!caller.isPlatformAdmin && (internalNotes !== undefined || priority)) {
+            return res.status(403).json({ message: 'Only platform admins can change priority or internal notes' });
         }
 
         
@@ -349,7 +409,7 @@ exports.updateTicket = async (req, res) => {
 
         return res.json({ ticket });
     } catch (error) {
-        console.error('UPDATE TICKET ERROR:', error);
+        logger.error('UPDATE TICKET ERROR:', error);
         return res.status(500).json({ message: 'Server error' });
     }
 };

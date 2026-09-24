@@ -4,6 +4,7 @@ import { AuthContext } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
 import { Search, X, Send, Users, Check } from "lucide-react";
 import { API_BASE } from '@services/api';
+import logger from '../../utils/logger';
 
 export default function BroadcastView() {
     const [users, setUsers] = useState([]);
@@ -24,7 +25,7 @@ export default function BroadcastView() {
                 setUsers(res.data.contacts || []);
                 setLoading(false);
             } catch (err) {
-                console.error("Failed to load contacts", err);
+                logger.error("Failed to load contacts", err);
                 setLoading(false);
             }
         }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, Check, Shield, ArrowRight } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import api from '@services/api';
+import logger from '../../utils/logger';
 
 const OAuthPasswordSetup = () => {
     const { showToast } = useToast();
@@ -60,7 +61,7 @@ const OAuthPasswordSetup = () => {
             }, 1500);
 
         } catch (error) {
-            console.error('Password setup error:', error);
+            logger.error('Password setup error:', error);
             showToast(
                 error.response?.data?.message || 'Failed to set password',
                 'error'

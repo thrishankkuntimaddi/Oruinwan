@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { BarChart3, CheckCircle, Circle, Users } from "lucide-react";
 import api from '@services/api';
+import logger from '../../../../utils/logger';
 
 export default function PollBubble({ poll, messageId, currentUserId }) {
     const [localPoll, setLocalPoll] = useState(poll);
@@ -24,7 +25,7 @@ export default function PollBubble({ poll, messageId, currentUserId }) {
             });
             if (res.data.poll) setLocalPoll(res.data.poll);
         } catch (err) {
-            console.error("Vote failed:", err);
+            logger.error("Vote failed:", err);
         } finally {
             setVoting(false);
         }

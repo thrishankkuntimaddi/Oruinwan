@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const crypto = require('crypto');
 
@@ -9,14 +10,14 @@ function getGenAI() {
         const { GoogleGenerativeAI } = require('@google/generative-ai');
         const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || '';
         if (!apiKey) {
-            console.warn('[AISummarizer] ⚠️  No Gemini API key found — AI calls will use fallback.');
+            logger.warn('[AISummarizer] ⚠️  No Gemini API key found — AI calls will use fallback.');
         }
         _genAI = new GoogleGenerativeAI(apiKey);
     }
     return _genAI;
 }
 
-function getModel(modelName = 'gemini-2.0-flash') {
+function getModel(modelName = (process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash')) {
     return getGenAI().getGenerativeModel({ model: modelName });
 }
 
@@ -105,7 +106,7 @@ async function summarizeDocument(text, opts = {}) {
             `\n---\n${truncated}`,
         ].join('');
 
-        const model = getModel('gemini-2.0-flash');
+        const model = getModel((process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash'));
         const result = await model.generateContent(prompt);
         const summary = result.response.text().trim();
 
@@ -113,7 +114,7 @@ async function summarizeDocument(text, opts = {}) {
         return { summary, cached: false, fallback: false };
 
     } catch (err) {
-        console.error('[AISummarizer] summarizeDocument error:', err.message);
+        logger.error('[AISummarizer] summarizeDocument error:', err.message);
 
         // Graceful degradation: extract first 300 chars as summary.
         const fallbackText = truncated
@@ -174,7 +175,7 @@ async function semanticSearch(query, docs, opts = {}) {
             docList,
         ].join('\n');
 
-        const model = getModel('gemini-2.0-flash');
+        const model = getModel((process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash'));
         const result = await model.generateContent(prompt);
         let rawJson = result.response.text().trim();
 
@@ -193,7 +194,7 @@ async function semanticSearch(query, docs, opts = {}) {
         return { results, cached: false };
 
     } catch (err) {
-        console.error('[AISummarizer] semanticSearch error:', err.message);
+        logger.error('[AISummarizer] semanticSearch error:', err.message);
 
         
         const results = docs.slice(0, topK).map((d, i) => ({ ...d, score: 1 - i * 0.05 }));

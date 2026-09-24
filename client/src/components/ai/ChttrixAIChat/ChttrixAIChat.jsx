@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useAuth } from "../../../contexts/AuthContext";
+import { aiHistoryKey, readAiHistory, writeAiHistory } from "../../../utils/aiChatHistoryStorage";
 import { aiService } from "../../../services/aiService";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { Rnd } from "react-rnd";
@@ -28,10 +30,19 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
   const { activeWorkspace } = useWorkspace();
 
   const [messages, setMessages]           = useState([WELCOME()]);
-  const [chatHistory, setChatHistory]     = useState(() => {
-    try { return JSON.parse(localStorage.getItem("chttrixai_chat_history") ?? "[]"); }
-    catch { return []; }
-  });
+  const { user } = useAuth() || {};
+  const historyKey = aiHistoryKey(user?._id || user?.id || null);
+  // History is stored with the key it belongs to so a user switch never
+  // writes one user's history under another user's key.
+  const [historyState, setHistoryState]   = useState(() => ({ key: historyKey, items: readAiHistory(historyKey) }));
+  const chatHistory = historyState.key === historyKey ? historyState.items : [];
+  const setChatHistory = useCallback((updater) => {
+    setHistoryState(prev => {
+      const base = prev.key === historyKey ? prev.items : [];
+      const items = typeof updater === 'function' ? updater(base) : updater;
+      return { key: historyKey, items };
+    });
+  }, [historyKey]);
   const [input, setInput]                 = useState("");
   const [isTyping, setIsTyping]           = useState(false);
   const [showHistory, setShowHistory]     = useState(false);
@@ -48,9 +59,14 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
   const attachBtnRef = useRef(null);
 
   useEffect(() => {
-    try { localStorage.setItem("chttrixai_chat_history", JSON.stringify(chatHistory)); }
-    catch {}
-  }, [chatHistory]);
+    if (historyState.key !== historyKey) {
+      setHistoryState({ key: historyKey, items: readAiHistory(historyKey) });
+    }
+  }, [historyKey, historyState.key]);
+
+  useEffect(() => {
+    writeAiHistory(historyState.key, historyState.items);
+  }, [historyState]);
 
   useEffect(() => { setTimeout(() => setVisible(true), 10); }, []);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, isTyping]);
@@ -172,7 +188,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
               <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>History</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {chatHistory.length > 0 && (
-                  <button onClick={() => { if (window.confirm('Clear all history?')) { setChatHistory([]); localStorage.removeItem('chttrixai_chat_history'); } }}
+                  <button onClick={() => { if (window.confirm('Clear all history?')) { setChatHistory([]); if (historyKey) localStorage.removeItem(historyKey); } }}
                     style={{ fontSize: '10px', color: 'var(--state-danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'var(--font)' }}>Clear</button>
                 )}
                 <button onClick={() => setShowHistory(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}><X size={14} /></button>

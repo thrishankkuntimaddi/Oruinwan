@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { Search, Download, User, Activity, AlertCircle, RefreshCw } from 'lucide-react';
+import logger from '../../../../utils/logger';
 
 const actionColor = (action) => {
     if (action.includes('create') || action.includes('register')) return { color: 'var(--state-success)', border: 'var(--state-success)' };
@@ -34,7 +35,7 @@ const AuditLogs = () => {
         try {
             const res = await api.get('/api/admin/audit-logs');
             setLogs(res.data);
-        } catch (err) { console.error('Failed to fetch audit logs:', err); }
+        } catch (err) { logger.error('Failed to fetch audit logs:', err); }
         finally { setLoading(false); }
     };
 

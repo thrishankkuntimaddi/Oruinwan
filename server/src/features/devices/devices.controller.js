@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const deviceSessionService = require('../../services/deviceSession.service');
 
 exports.getDevices = async (req, res) => {
@@ -24,7 +25,7 @@ exports.getDevices = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ [getDevices] Error:', error);
+        logger.error('❌ [getDevices] Error:', error);
         return res.status(500).json({
             message: 'Failed to fetch devices'
         });
@@ -48,9 +49,9 @@ exports.revokeDevice = async (req, res) => {
 
         const isCurrentDevice = targetDeviceId === currentDeviceId;
 
-        console.log(`✅ [revokeDevice] Device ${targetDeviceId.substring(0, 8)}... revoked`);
-        console.log(`   - Is current device: ${isCurrentDevice}`);
-        console.log(`   - Refresh tokens revoked: ${result.tokensRevoked}`);
+        logger.info(`✅ [revokeDevice] Device ${targetDeviceId.substring(0, 8)}... revoked`);
+        logger.info(`   - Is current device: ${isCurrentDevice}`);
+        logger.info(`   - Refresh tokens revoked: ${result.tokensRevoked}`);
 
         
         try {
@@ -77,7 +78,7 @@ exports.revokeDevice = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ [revokeDevice] Error:', error);
+        logger.error('❌ [revokeDevice] Error:', error);
 
         if (error.message === 'Device session not found') {
             return res.status(404).json({ message: error.message });
@@ -106,7 +107,7 @@ exports.revokeOtherDevices = async (req, res) => {
 
         const revokedCount = await deviceSessionService.revokeAllOtherSessions(userId, currentDeviceId);
 
-        console.log(`✅ [revokeOtherDevices] Revoked ${revokedCount} other device(s) for user ${userId}`);
+        logger.info(`✅ [revokeOtherDevices] Revoked ${revokedCount} other device(s) for user ${userId}`);
 
         
         try {
@@ -126,7 +127,7 @@ exports.revokeOtherDevices = async (req, res) => {
 
         
         try {
-            const User = require('../../models/User');
+            const User = require('../../../models/User');
             const securityNotification = require('../../services/securityNotification.service');
 
             
@@ -155,7 +156,7 @@ exports.revokeOtherDevices = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ [revokeOtherDevices] Error:', error);
+        logger.error('❌ [revokeOtherDevices] Error:', error);
         return res.status(500).json({
             message: 'Failed to revoke other devices'
         });

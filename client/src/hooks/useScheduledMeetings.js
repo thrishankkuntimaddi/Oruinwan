@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '@services/api';
 import { useSocket } from '../contexts/SocketContext';
+import logger from '../utils/logger';
 
 export function useScheduledMeetings(workspaceId) {
     const { socket } = useSocket();
@@ -19,7 +20,7 @@ export function useScheduledMeetings(workspaceId) {
             setMeetings(data.meetings || []);
             setError(null);
         } catch (err) {
-            console.error('[useScheduledMeetings] fetch error:', err);
+            logger.error('[useScheduledMeetings] fetch error:', err);
             setError('Failed to load scheduled meetings');
         } finally {
             setLoading(false);

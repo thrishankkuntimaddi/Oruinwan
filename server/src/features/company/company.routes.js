@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const companyController = require("./company.controller");
 const otpController = require("../../shared/controllers/otp.controller");
+const { otpSendLimiter, otpVerifyLimiter } = require("../../shared/routes/otp.routes");
 const requireAuth = require("../../shared/middleware/auth");
 
 const requireCompanyMember = require("../../shared/middleware/requireCompanyMember");
@@ -15,9 +16,9 @@ router.post("/check-email", companyController.checkEmail);
 
 router.post("/check-phone", companyController.checkPhone);
 
-router.post("/otp/send", otpController.sendOtp);
+router.post("/otp/send", otpSendLimiter, otpController.sendOtp);
 
-router.post("/otp/verify", otpController.verifyOtp);
+router.post("/otp/verify", otpVerifyLimiter, otpController.verifyOtp);
 
 router.get(
     "/:id",

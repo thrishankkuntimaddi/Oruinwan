@@ -3,41 +3,40 @@ import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
-import { fetchMyWorkspaces } from '../services/api';
-import { connectSocket, joinWorkspace as socketJoinWorkspace } from '../services/socket';
-import { useApp } from '../context/AppContext';
+import { fetchMyWorkspaces } from '../services/api/workspaces';
+import { errorMessage } from '../services/http';
+import { useApp, normalizeWorkspace } from '../context/AppContext';
+import ScreenHeader from '../components/ScreenHeader';
 
 export default function WorkspaceSelectScreen({ navigation }) {
   const [workspaces, setWorkspaces] = useState([]);
   const [loading, setLoading] = useState(true);
-  const { setWorkspace } = useApp();
+  const { setWorkspace, workspace: current } = useApp();
 
   useEffect(() => {
+    let cancelled = false;
     (async () => {
       try {
         const { data } = await fetchMyWorkspaces();
-        
-        setWorkspaces(data.workspaces || data || []);
+        if (!cancelled) setWorkspaces((data.workspaces || []).map(normalizeWorkspace));
       } catch (err) {
-        Alert.alert('Error', 'Could not load workspaces. Check your connection.');
-        console.warn('[WorkspaceSelect]', err.message);
+        if (!cancelled) Alert.alert('Error', errorMessage(err, 'Could not load workspaces.'));
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
+    return () => { cancelled = true; };
   }, []);
 
   async function handleSelect(ws) {
     await setWorkspace(ws);
-    try {
-      await connectSocket();
-      socketJoinWorkspace(ws._id);
-    } catch (_) {}
-    navigation.replace('Main');
+    if (navigation.canGoBack()) navigation.goBack();
+    else navigation.reset({ index: 0, routes: [{ name: 'Main' }] });
   }
 
   return (
     <View style={styles.container}>
+      {navigation.canGoBack() ? <ScreenHeader title="Switch workspace" onBack={() => navigation.goBack()} /> : null}
       <View style={styles.header}>
         <View style={styles.logoCircle}>
           <Text style={styles.logoText}>C</Text>
@@ -47,14 +46,14 @@ export default function WorkspaceSelectScreen({ navigation }) {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#6366f1" size="large" style={{ marginTop: 60 }} />
+        <ActivityIndicator color="#b8956a" size="large" style={{ marginTop: 60 }} />
       ) : (
         <FlatList
           data={workspaces}
-          keyExtractor={(item) => item._id}
+          keyExtractor={(item) => String(item._id)}
           contentContainerStyle={{ padding: 16 }}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.card} onPress={() => handleSelect(item)}>
+            <TouchableOpacity style={[styles.card, current?._id === item._id && styles.cardActive]} onPress={() => handleSelect(item)}>
               <View style={styles.cardIcon}>
                 <Text style={styles.cardIconText}>{(item.name || 'W')[0].toUpperCase()}</Text>
               </View>
@@ -99,6 +98,7 @@ const styles = StyleSheet.create({
     padding: 14, marginBottom: 8,
     borderWidth: 1, borderColor: '#222222',
   },
+  cardActive: { borderColor: '#b8956a' },
   cardIcon: {
     width: 42, height: 42, borderRadius: 6,
     backgroundColor: '#1c1c1c',

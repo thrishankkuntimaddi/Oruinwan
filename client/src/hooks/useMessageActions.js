@@ -3,6 +3,7 @@ import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext'; 
 import api from '@services/api';
 import { encryptMessageForSending } from '../services/messageEncryptionService';
+import logger from '../utils/logger';
 
 export function useMessageActions(conversationId, conversationType, workspaceId = null, channelMembers = []) {
     const { socket } = useSocket();
@@ -26,7 +27,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
         
         if (!encryptionReady) {
-            console.error('🛑 [E2EE] Message send BLOCKED - Encryption not ready yet');
+            logger.error('🛑 [E2EE] Message send BLOCKED - Encryption not ready yet');
             return {
                 success: false,
                 error: 'ENCRYPTION_NOT_READY',
@@ -40,7 +41,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         const isContactMessage = type === 'contact' && contact;
 
         if (!conversationId || (!text?.trim() && attachments.length === 0 && !isAttachmentMessage && !isContactMessage)) {
-            console.error('❌ [sendMessage] Validation failed:', { conversationId, text: text?.trim(), attachments, type });
+            logger.error('❌ [sendMessage] Validation failed:', { conversationId, text: text?.trim(), attachments, type });
             return { success: false, error: 'Message content required' };
         }
 
@@ -73,7 +74,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     message: { ...response.data.message, contact, type: 'contact' },
                 };
             } catch (err) {
-                console.error('❌ [sendMessage] Contact send error:', err);
+                logger.error('❌ [sendMessage] Contact send error:', err);
                 return { success: false, error: err.response?.data?.message || 'Failed to share contact' };
             }
         }
@@ -114,7 +115,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     message: { ...response.data.message, attachment, type },
                 };
             } catch (err) {
-                console.error('❌ [sendMessage] Attachment send error:', err);
+                logger.error('❌ [sendMessage] Attachment send error:', err);
                 return { success: false, error: err.response?.data?.message || 'Failed to send attachment' };
             }
         }
@@ -178,7 +179,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             messageIv = encrypted.messageIv;
 
         } catch (encError) {
-            console.error('❌ [E2EE] Encryption failed:', encError);
+            logger.error('❌ [E2EE] Encryption failed:', encError);
             return {
                 success: false,
                 error: 'ENCRYPTION_FAILED',
@@ -225,7 +226,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     clientTempId: tempId
                 });
             } else {
-                console.warn('⚠️ [sendMessage] Socket not connected');
+                logger.warn('⚠️ [sendMessage] Socket not connected');
             }
 
             return {
@@ -235,8 +236,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 optimisticMessage
             };
         } catch (err) {
-            console.error('❌ [sendMessage] Error:', err);
-            console.error('❌ [sendMessage] Error response:', err.response?.data);
+            logger.error('❌ [sendMessage] Error:', err);
+            logger.error('❌ [sendMessage] Error response:', err.response?.data);
             return {
                 success: false,
                 tempId,
@@ -268,7 +269,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             return { success: true, message: response.data.message };
         } catch (err) {
-            console.error('Error adding reaction:', err);
+            logger.error('Error adding reaction:', err);
             return { success: false, error: err.response?.data?.message };
         }
     }, [conversationId, user, socket]);
@@ -294,7 +295,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             return { success: true, message: response.data.message };
         } catch (err) {
-            console.error('Error removing reaction:', err);
+            logger.error('Error removing reaction:', err);
             return { success: false, error: err.response?.data?.message };
         }
     }, [conversationId, user, socket]);
@@ -318,7 +319,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             return { success: true, messageId, scope };
         } catch (err) {
-            console.error('Error deleting message:', err);
+            logger.error('Error deleting message:', err);
             return { success: false, error: err.response?.data?.message };
         }
     }, [conversationId, socket]);
@@ -340,7 +341,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             return { success: true, message: response.data.message };
         } catch (err) {
-            console.error('Error pinning message:', err);
+            logger.error('Error pinning message:', err);
             return { success: false, error: err.response?.data?.message };
         }
     }, [conversationId, socket]);
@@ -362,7 +363,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             return { success: true, message: response.data.message };
         } catch (err) {
-            console.error('Error unpinning message:', err);
+            logger.error('Error unpinning message:', err);
             return { success: false, error: err.response?.data?.message };
         }
     }, [conversationId, socket]);
@@ -379,7 +380,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             return { success: true, forwardedCount: response.data.forwardedCount };
         } catch (err) {
-            console.error('Error forwarding message:', err);
+            logger.error('Error forwarding message:', err);
             return { success: false, error: err.response?.data?.message };
         }
     }, []);
@@ -404,7 +405,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
             return { success: true, message: response.data.message };
         } catch (err) {
-            console.error('Error editing message:', err);
+            logger.error('Error editing message:', err);
             return { success: false, error: err.response?.data?.message };
         }
     }, [conversationId, socket]);

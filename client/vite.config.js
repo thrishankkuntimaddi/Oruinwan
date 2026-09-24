@@ -57,5 +57,18 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, '../dist'),
     emptyOutDir: true,
+    chunkSizeWarningLimit: 1200,
+    rollupOptions: {
+      output: {
+        // Split heavy vendors out of the app chunk so they cache independently.
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-realtime': ['socket.io-client', 'axios'],
+          'vendor-charts': ['recharts'],
+          'vendor-markdown': ['react-markdown', 'remark-breaks', 'react-syntax-highlighter'],
+          'vendor-emoji': ['emoji-picker-react'],
+        },
+      },
+    },
   },
 });

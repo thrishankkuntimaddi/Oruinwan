@@ -1,178 +1,183 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  Alert,
+  ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import { registerDeviceToken } from '../services/api';
-import { cacheGet, cacheSet } from '../services/storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { useApp } from '../context/AppContext';
+import {
+  fetchNotifications, markNotificationRead, markAllNotificationsRead,
+} from '../services/api/notifications';
+import { errorMessage } from '../services/http';
+import { emit, toast } from '../services/events';
+import { useSocketEvent } from '../hooks/useSocketEvent';
+import ScreenHeader from '../components/ScreenHeader';
+import EmptyState from '../components/EmptyState';
+import { T } from '../theme';
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
+const TYPE_ICON = {
+  mention: '@', dm: '💬', task_assigned: '📋', task_comment: '📝', task_due_soon: '⏰',
+  member_joined: '👋', channel_pinned: '📌', huddle_started: '🎧', schedule_created: '📅',
+  meeting_reminder: '📅', reaction: '😊', thread_reply: '↩️', integration_alert: '🔌',
+  ai_suggestion: '✨', digest: '📰',
+};
+
+function ago(iso) {
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (diff < 60) return 'now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  return new Date(iso).toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
+const Row = memo(function Row({ item, onPress }) {
+  return (
+    <TouchableOpacity style={[s.item, !item.read && s.unread]} onPress={() => onPress(item)}>
+      <View style={s.icon}><Text style={s.iconText}>{TYPE_ICON[item.type] || '🔔'}</Text></View>
+      <View style={s.body}>
+        <Text style={[s.title, !item.read && s.bold]} numberOfLines={1}>{item.title || 'Notification'}</Text>
+        {item.body ? <Text style={s.text} numberOfLines={2}>{item.body}</Text> : null}
+      </View>
+      <Text style={s.time}>{item.createdAt ? ago(item.createdAt) : ''}</Text>
+    </TouchableOpacity>
+  );
 });
 
-export default function NotificationsScreen() {
-  const [notifications, setNotifications] = useState([]);
-  const [pushEnabled, setPushEnabled] = useState(false);
-  const notificationListener = useRef();
-  const responseListener = useRef();
+export default function NotificationsScreen({ navigation }) {
+  const { workspace } = useApp();
+  const wsId = workspace?._id;
+  const [items, setItems] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const moreInFlight = useRef(false);
 
-  useEffect(() => {
-    loadCached();
-    registerForPushNotifications();
-
-    
-    notificationListener.current = Notifications.addNotificationReceivedListener((n) => {
-      const item = {
-        id: n.request.identifier,
-        title: n.request.content.title || 'Chttrix',
-        body: n.request.content.body || '',
-        receivedAt: new Date().toISOString(),
-      };
-      setNotifications((prev) => [item, ...prev]);
-      persistNotification(item);
-    });
-
-    
-    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('[Notifications] User tapped notification:', response.notification.request.identifier);
-    });
-
-    return () => {
-      if (notificationListener.current)
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      if (responseListener.current)
-        Notifications.removeNotificationSubscription(responseListener.current);
-    };
-  }, []);
-
-  async function loadCached() {
-    const cached = await cacheGet('notifications_history');
-    if (cached) setNotifications(cached);
-  }
-
-  async function persistNotification(item) {
-    const existing = (await cacheGet('notifications_history')) || [];
-    const updated = [item, ...existing].slice(0, 100); 
-    await cacheSet('notifications_history', updated);
-  }
-
-  async function registerForPushNotifications() {
-    if (!Device.isDevice) {
-      console.warn('[Push] Not a physical device — push tokens not available on simulator');
-      return;
-    }
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      Alert.alert('Notifications', 'Push notification permission was denied.');
-      return;
-    }
-
+  const load = useCallback(async (p = 1) => {
+    if (!wsId) return;
     try {
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-      const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-      const token = tokenData.data;
-
-      if (Platform.OS === 'android') {
-        Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#b8956a',
-        });
-      }
-
-      await registerDeviceToken(token, Platform.OS);
-      setPushEnabled(true);
-      console.log('[Push] Registered token:', token);
+      const { data } = await fetchNotifications(wsId, { page: p, limit: 30, unreadOnly });
+      const list = data?.notifications || [];
+      setItems((prev) => {
+        if (p === 1) return list;
+        const seen = new Set(prev.map((n) => n._id));
+        return [...prev, ...list.filter((n) => !seen.has(n._id))];
+      });
+      setPage(data?.page || p);
+      setPages(data?.pages || 1);
+      emit('notifications:count', data?.unreadCount);
     } catch (err) {
-      console.warn('[Push] Token registration failed:', err.message);
+      toast(errorMessage(err, 'Could not load notifications'), 'error');
+    } finally {
+      setLoading(false);
     }
-  }
+  }, [wsId, unreadOnly]);
 
-  async function clearAll() {
-    setNotifications([]);
-    await cacheSet('notifications_history', []);
-    await Notifications.dismissAllNotificationsAsync();
-  }
+  useEffect(() => { setLoading(true); setItems([]); }, [wsId, unreadOnly]);
+  useFocusEffect(useCallback(() => { load(1); }, [load]));
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.cardDot} />
-      <View style={styles.cardContent}>
-        <Text style={styles.cardTitle}>{item.title}</Text>
-        {!!item.body && <Text style={styles.cardBody}>{item.body}</Text>}
-        <Text style={styles.cardTime}>
-          {new Date(item.receivedAt).toLocaleTimeString()} · {new Date(item.receivedAt).toLocaleDateString()}
-        </Text>
-      </View>
-    </View>
-  );
+  useSocketEvent('notification:new', ({ notification } = {}) => {
+    if (!notification || (notification.workspaceId && String(notification.workspaceId) !== String(wsId))) return;
+    setItems((prev) => (prev.some((n) => n._id === notification._id) ? prev : [notification, ...prev]));
+  });
+
+  // Foreground push → refresh the list (subscription.remove() is the 0.32 API).
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener(() => load(1));
+    return () => sub.remove();
+  }, [load]);
+
+  const loadMore = useCallback(async () => {
+    if (moreInFlight.current || page >= pages) return;
+    moreInFlight.current = true;
+    await load(page + 1);
+    moreInFlight.current = false;
+  }, [page, pages, load]);
+
+  const open = useCallback(async (item) => {
+    if (!item.read) {
+      setItems((prev) => prev.map((n) => (n._id === item._id ? { ...n, read: true } : n)));
+      markNotificationRead(item._id).then(() => emit('notifications:changed')).catch(() => {});
+    }
+    const link = item.link || '';
+    const ch = link.match(/\/channels?\/([a-f0-9]{24})/i);
+    if (ch) navigation.navigate('ChannelChat', { channel: { _id: ch[1], name: item.meta?.channelName || 'channel' } });
+    else if (item.type === 'dm' || /\/dm|\/messages/.test(link)) navigation.navigate('DMs');
+    else if (/^task/.test(item.type || '') || /\/tasks/.test(link)) navigation.navigate('Tasks');
+  }, [navigation]);
+
+  const markAll = useCallback(async () => {
+    try {
+      await markAllNotificationsRead(wsId);
+      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      emit('notifications:changed');
+    } catch (err) {
+      toast(errorMessage(err, 'Could not mark as read'), 'error');
+    }
+  }, [wsId]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await load(1);
+    setRefreshing(false);
+  }, [load]);
+
+  const renderItem = useCallback(({ item }) => <Row item={item} onPress={open} />, [open]);
+
+  if (!workspace) {
+    return <View style={s.root}><EmptyState icon="🏢" title="No workspace selected" body="Go to Home to select a workspace." /></View>;
+  }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <Text style={styles.heading}>Notifications</Text>
-        {notifications.length > 0 && (
-          <TouchableOpacity onPress={clearAll}>
-            <Text style={styles.clearBtn}>Clear all</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <View style={styles.statusBar}>
-        <View style={[styles.statusDot, { backgroundColor: pushEnabled ? '#10b981' : '#ef4444' }]} />
-        <Text style={styles.statusText}>
-          {pushEnabled ? 'Push notifications active' : 'Push notifications not registered'}
-        </Text>
-      </View>
-
-      <FlatList
-        data={notifications}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <Text style={styles.empty}>No notifications yet</Text>
-        }
-        contentContainerStyle={{ paddingHorizontal: 12, paddingTop: 8 }}
+    <View style={s.root}>
+      <ScreenHeader
+        title="Notifications"
+        subtitle={workspace.name}
+        right={<TouchableOpacity onPress={markAll}><Text style={s.action}>Mark all read</Text></TouchableOpacity>}
       />
+      <View style={s.tabs}>
+        {[[false, 'All'], [true, 'Unread']].map(([k, label]) => (
+          <TouchableOpacity key={label} style={[s.tab, unreadOnly === k && s.tabOn]} onPress={() => setUnreadOnly(k)}>
+            <Text style={[s.tabText, unreadOnly === k && s.tabTextOn]}>{label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      {loading && !items.length ? (
+        <ActivityIndicator color={T.accent} size="large" style={{ marginTop: 48 }} />
+      ) : (
+        <FlatList
+          data={items}
+          keyExtractor={(n) => String(n._id)}
+          renderItem={renderItem}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.4}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={T.accent} />}
+          ListEmptyComponent={<EmptyState icon="🔔" title="You're all caught up" body="Mentions, DMs and task updates will appear here." />}
+        />
+      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0c0c0c' },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 },
-  heading: { color: '#e4e4e4', fontSize: 18, fontWeight: '700' },
-  clearBtn: { color: '#b8956a', fontSize: 12, fontWeight: '600' },
-  statusBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 },
-  statusDot: { width: 6, height: 6, borderRadius: 3, marginRight: 6 },
-  statusText: { color: '#7a7a7a', fontSize: 11 },
-  card: { flexDirection: 'row', backgroundColor: '#111111', borderRadius: 6, marginBottom: 6, padding: 14, borderWidth: 1, borderColor: '#191919' },
-  cardDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#b8956a', marginTop: 5, marginRight: 10 },
-  cardContent: { flex: 1 },
-  cardTitle: { color: '#e4e4e4', fontWeight: '600', fontSize: 13 },
-  cardBody: { color: '#7a7a7a', fontSize: 12, marginTop: 2 },
-  cardTime: { color: '#404040', fontSize: 10, marginTop: 4 },
-  empty: { color: '#404040', textAlign: 'center', marginTop: 60, fontSize: 14 },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: T.bgBase },
+  tabs: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  tab: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4, borderWidth: 1, borderColor: T.borderDefault },
+  tabOn: { borderColor: T.accent, backgroundColor: T.accentDim },
+  tabText: { color: T.textSecondary, fontSize: 12, fontWeight: '600' },
+  tabTextOn: { color: T.accent },
+  action: { color: T.accent, fontSize: 12, fontWeight: '700' },
+  item: { flexDirection: 'row', alignItems: 'flex-start', padding: 14, borderBottomWidth: 1, borderBottomColor: T.borderSubtle },
+  unread: { backgroundColor: T.bgSurface, borderLeftWidth: 2, borderLeftColor: T.accent },
+  icon: {
+    width: 32, height: 32, borderRadius: 6, backgroundColor: T.bgActive, alignItems: 'center',
+    justifyContent: 'center', marginRight: 12, borderWidth: 1, borderColor: T.borderDefault,
+  },
+  iconText: { fontSize: 14, color: T.accent, fontWeight: '800' },
+  body: { flex: 1 },
+  title: { color: T.textPrimary, fontSize: 14 },
+  bold: { fontWeight: '700' },
+  text: { color: T.textSecondary, fontSize: 12, marginTop: 3, lineHeight: 17 },
+  time: { color: T.textMuted, fontSize: 11, marginLeft: 8 },
 });
-

@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const axios = require('axios');
 const User = require('../../../models/User');
@@ -22,9 +23,9 @@ async function sendRaw(token, title, body, data = {}) {
       },
       { headers: { 'Content-Type': 'application/json' } }
     );
-    console.log(`[Push] Sent to ${token.slice(0, 30)}…`);
+    logger.info(`[Push] Sent to ${token.slice(0, 30)}…`);
   } catch (err) {
-    console.error(`[Push] Failed to send to ${token}:`, err.message);
+    logger.error(`[Push] Failed to send to ${token}:`, err.message);
   }
 }
 
@@ -36,7 +37,7 @@ async function sendToUser(userId, title, body, data = {}) {
     const sends = user.deviceTokens.map(({ token }) => sendRaw(token, title, body, data));
     await Promise.allSettled(sends);
   } catch (err) {
-    console.error(`[Push] sendToUser error for ${userId}:`, err.message);
+    logger.error(`[Push] sendToUser error for ${userId}:`, err.message);
   }
 }
 

@@ -7,6 +7,7 @@ import api from '@services/api';
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import { useSocket } from "../../../contexts/SocketContext"; 
 import CreateChannelModal from "../../messagesComp/CreateChannelModal";
+import logger from '../../../utils/logger';
 
 const ChannelsPanel = ({ title, isMobile = false }) => {
     const navigate = useNavigate();
@@ -56,7 +57,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 setChannels(mappedChannels);
                 setIsLoadingChannels(false);
             } catch (err) {
-                console.error('❌ Error fetching channels:', err);
+                logger.error('❌ Error fetching channels:', err);
                 setIsLoadingChannels(false);
             }
         };
@@ -86,7 +87,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         }));
                         setChannels(mappedChannels);
                     } catch (err) {
-                        console.error('Error refreshing channels:', err);
+                        logger.error('Error refreshing channels:', err);
                     }
                 };
                 refetch();
@@ -154,7 +155,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                             });
                             showToast(`You've been added to #${data.channelName}!`, 'success');
                         })
-                        .catch(err => console.error('Error fetching invited channel:', err));
+                        .catch(err => logger.error('Error fetching invited channel:', err));
                     break;
 
                 case 'removed-from-channel':
@@ -240,7 +241,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                 'success'
             );
         } catch (err) {
-            console.error('Error deleting channels:', err);
+            logger.error('Error deleting channels:', err);
             showToast(
                 err.response?.data?.message || 'Failed to delete channels',
                 'error'

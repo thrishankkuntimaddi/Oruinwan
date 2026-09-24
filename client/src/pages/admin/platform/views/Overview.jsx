@@ -5,6 +5,7 @@ import {
     Building2, Users, Ticket, DollarSign, TrendingUp, TrendingDown,
     Activity, CheckCircle, AlertCircle, Megaphone, ArrowRight
 } from 'lucide-react';
+import logger from '../../../../utils/logger';
 
 const T = {
     label: { fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.13em', textTransform: 'uppercase', margin: '0 0 4px' },
@@ -29,7 +30,7 @@ const Overview = () => {
             setStats(statsRes.data);
             setActivities(activitiesRes.data);
         } catch (err) {
-            console.error('Failed to fetch overview data:', err);
+            logger.error('Failed to fetch overview data:', err);
         } finally {
             setLoading(false);
         }

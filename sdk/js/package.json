@@ -1,0 +1,13 @@
+{
+  "name": "@chttrix/sdk",
+  "version": "1.0.0",
+  "description": "JavaScript SDK for the Chttrix collaboration platform API (Node 18+ and browsers).",
+  "main": "chttrix-sdk.js",
+  "types": "index.d.ts",
+  "files": ["chttrix-sdk.js", "index.d.ts", "README.md"],
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "peerDependencies": { "socket.io-client": "^4.7.0" },
+  "peerDependenciesMeta": { "socket.io-client": { "optional": true } },
+  "keywords": ["chttrix", "sdk", "api", "collaboration"]
+}

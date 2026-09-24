@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import api from '@services/api';
+import logger from '../../../../utils/logger';
 
 export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setActiveTab, showToast }) {
     const fetchTabs = useCallback(async () => {
@@ -8,7 +9,7 @@ export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setAc
             const res = await api.get(`/api/channels/${chat.id}/tabs`);
             setTabs(res.data.tabs || []);
         } catch (err) {
-            console.error('Fetch tabs error:', err);
+            logger.error('Fetch tabs error:', err);
         }
     }, [chat, setTabs]);
 
@@ -35,7 +36,7 @@ export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setAc
             }
             showToast(`Canvas "${name}" created`, 'success');
         } catch (err) {
-            console.error('Add tab error:', err);
+            logger.error('Add tab error:', err);
             showToast(err.response?.data?.message || 'Failed to create canvas', 'error');
             setTabs(prev => prev.filter(t => !t._id.startsWith('temp-')));
             setActiveTab('chat');
@@ -49,7 +50,7 @@ export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setAc
             if (activeTab === tabId) setActiveTab('chat');
             showToast('Canvas deleted', 'success');
         } catch (err) {
-            console.error('Delete tab error:', err);
+            logger.error('Delete tab error:', err);
             showToast('Failed to delete canvas', 'error');
         }
     }, [chat, activeTab, setTabs, setActiveTab, showToast]);
@@ -62,7 +63,7 @@ export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setAc
                 : t
             ));
         } catch (err) {
-            console.error('Rename tab error:', err);
+            logger.error('Rename tab error:', err);
             showToast('Failed to rename canvas', 'error');
         }
     }, [chat, setTabs, showToast]);
@@ -75,7 +76,7 @@ export default function useCanvasActions({ chat, tabs, setTabs, activeTab, setAc
                 setTabs(prev => prev.map(t => t._id === tabId ? { ...t, ...res.data.tab } : t));
             }
         } catch (err) {
-            console.error('Save canvas error:', err);
+            logger.error('Save canvas error:', err);
         }
     }, [chat, setTabs]);
 

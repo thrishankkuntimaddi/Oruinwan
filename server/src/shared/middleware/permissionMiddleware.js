@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Company = require('../../../models/Company');
 const User = require('../../../models/User');
 
@@ -27,7 +28,7 @@ const requireOwner = async (req, res, next) => {
             const fullUser = await User.findById(userId);
 
             if (!fullUser) {
-                console.error('[REQUIRE_OWNER] User not found:', userId);
+                logger.error('[REQUIRE_OWNER] User not found:', userId);
                 return res.status(401).json({ message: "User not found" });
             }
             req.user = fullUser;
@@ -35,7 +36,7 @@ const requireOwner = async (req, res, next) => {
 
         
         
-        console.log('[REQUIRE_OWNER] Checking owner role for user:', req.user._id || req.user.sub, 'Role:', req.user.companyRole);
+        logger.info('[REQUIRE_OWNER] Checking owner role for user:', req.user._id || req.user.sub, 'Role:', req.user.companyRole);
 
         
         
@@ -43,17 +44,17 @@ const requireOwner = async (req, res, next) => {
         const isCoOwnerHere = req.user.coOwnerOf && req.user.companyId &&
             req.user.coOwnerOf.toString() === req.user.companyId.toString();
         if (req.user.companyRole === 'owner' || isCoOwnerHere) {
-            console.log('[REQUIRE_OWNER] Access granted');
+            logger.info('[REQUIRE_OWNER] Access granted');
             next();
         } else {
-            console.error('[REQUIRE_OWNER] Access denied. Current role:', req.user.companyRole);
+            logger.error('[REQUIRE_OWNER] Access denied. Current role:', req.user.companyRole);
             res.status(403).json({
                 message: "Access denied: Owner privileges required",
                 currentRole: req.user.companyRole
             });
         }
     } catch (error) {
-        console.error("RequireOwner Middleware Error:", error);
+        logger.error("RequireOwner Middleware Error:", error);
         res.status(500).json({ message: "Server error during permission check" });
     }
 };
@@ -80,7 +81,7 @@ const requireAdmin = async (req, res, next) => {
             res.status(403).json({ message: "Access denied: Admin privileges required" });
         }
     } catch (error) {
-        console.error("RequireAdmin Middleware Error:", error);
+        logger.error("RequireAdmin Middleware Error:", error);
         res.status(500).json({ message: "Server error during permission check" });
     }
 };
@@ -110,7 +111,7 @@ const requireDepartmentManager = async (req, res, next) => {
             res.status(403).json({ message: "Access denied: You do not manage this department" });
         }
     } catch (error) {
-        console.error("Permission Check Error:", error);
+        logger.error("Permission Check Error:", error);
         res.status(500).json({ message: "Permission check failed" });
     }
 };
@@ -138,7 +139,7 @@ const canCreateWorkspace = async (req, res, next) => {
         });
 
     } catch (error) {
-        console.error("Permission Check Error:", error);
+        logger.error("Permission Check Error:", error);
         res.status(500).json({ message: "Permission check failed" });
     }
 };
@@ -165,7 +166,7 @@ const requireManager = async (req, res, next) => {
             res.status(403).json({ message: "Access denied: Manager privileges required" });
         }
     } catch (error) {
-        console.error("RequireManager Middleware Error:", error);
+        logger.error("RequireManager Middleware Error:", error);
         res.status(500).json({ message: "Server error during permission check" });
     }
 };

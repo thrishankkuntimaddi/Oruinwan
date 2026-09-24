@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const jwt = require('jsonwebtoken');
 
 function registerSocketAuth(io) {
@@ -5,21 +6,26 @@ function registerSocketAuth(io) {
     try {
       const token = socket.handshake.auth?.token;
       if (!token) {
-        console.log('❌ Socket auth: No token provided');
+        logger.info('❌ Socket auth: No token provided');
         return next(new Error('No token'));
       }
 
-      console.log('🔐 Socket auth: Verifying token...');
+      logger.info('🔐 Socket auth: Verifying token...');
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
-      console.log('✅ Socket auth: Token valid for user:', decoded.sub);
+      logger.info('✅ Socket auth: Token valid for user:', decoded.sub);
       socket.user = { id: decoded.sub };
       next();
     } catch (err) {
-      console.error('❌ Socket auth error:', err.name, '-', err.message);
+      logger.error('❌ Socket auth error:', err.name, '-', err.message);
       if (err.name === 'TokenExpiredError') {
-        console.log('⏰ Token expired at:', err.expiredAt);
+        logger.info('⏰ Token expired at:', err.expiredAt);
+        const expired = new Error('Token expired');
+        expired.data = { code: 'TOKEN_EXPIRED' };
+        return next(expired);
       }
-      next(new Error('Authentication failed'));
+      const failed = new Error('Authentication failed');
+      failed.data = { code: 'TOKEN_INVALID' };
+      next(failed);
     }
   });
 }

@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const express = require('express');
 const router = express.Router();
@@ -23,7 +24,7 @@ router.post('/backup', requireAuth, async (req, res) => {
       encryptedPayload: backup.encryptedPayload,
     });
   } catch (err) {
-    console.error('[Backup] create error:', err);
+    logger.error('[Backup] create error:', err);
     return res.status(500).json({ message: 'Failed to create backup' });
   }
 });

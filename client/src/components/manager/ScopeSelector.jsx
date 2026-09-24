@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Briefcase, Building, ChevronDown, Check } from 'lucide-react';
 import { API_BASE } from '@services/api';
+import logger from '../../utils/logger';
 
 const ScopeSelector = ({ onScopeChange, onLoad }) => {
     const [scope, setScope] = useState(null); 
@@ -26,10 +27,10 @@ const ScopeSelector = ({ onScopeChange, onLoad }) => {
                 } else if (data.workspaces && data.workspaces.length > 0) {
                     handleSelect('workspace', data.workspaces[0]);
                 } else {
-                    console.warn("No managed scope available for this user.");
+                    logger.warn("No managed scope available for this user.");
                 }
             } catch (err) {
-                console.error("Failed to fetch manager scope", err);
+                logger.error("Failed to fetch manager scope", err);
             } finally {
                 setLoading(false);
             }

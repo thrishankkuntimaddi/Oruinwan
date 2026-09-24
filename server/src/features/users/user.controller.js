@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const User = require("../../../models/User");
 const DMSession = require("../../../models/DMSession");
 
@@ -24,7 +25,7 @@ exports.blockUser = async (req, res) => {
             blockedUser: { _id: blockedUser._id, username: blockedUser.username, email: blockedUser.email, profilePicture: blockedUser.profilePicture }
         });
     } catch (err) {
-        console.error("BLOCK USER ERROR:", err);
+        logger.error("BLOCK USER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -44,7 +45,7 @@ exports.unblockUser = async (req, res) => {
 
         return res.json({ message: "User unblocked successfully" });
     } catch (err) {
-        console.error("UNBLOCK USER ERROR:", err);
+        logger.error("UNBLOCK USER ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -63,7 +64,7 @@ exports.getBlockedUsers = async (req, res) => {
             }))
         });
     } catch (err) {
-        console.error("GET BLOCKED USERS ERROR:", err);
+        logger.error("GET BLOCKED USERS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -89,7 +90,7 @@ exports.muteDM = async (req, res) => {
         await user.save();
         return res.json({ message: muted ? "DM muted successfully" : "DM unmuted successfully", muted });
     } catch (err) {
-        console.error("MUTE DM ERROR:", err);
+        logger.error("MUTE DM ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -113,7 +114,7 @@ exports.deleteDM = async (req, res) => {
 
         return res.json({ message: "DM deleted successfully" });
     } catch (err) {
-        console.error("DELETE DM ERROR:", err);
+        logger.error("DELETE DM ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -154,7 +155,7 @@ exports.updateStatus = async (req, res) => {
             status: user.userStatus
         });
     } catch (err) {
-        console.error("UPDATE STATUS ERROR:", err);
+        logger.error("UPDATE STATUS ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -176,7 +177,7 @@ exports.checkUsername = async (req, res) => {
             available: !exists
         });
     } catch (err) {
-        console.error("CHECK USERNAME ERROR:", err);
+        logger.error("CHECK USERNAME ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -198,7 +199,7 @@ exports.checkEmail = async (req, res) => {
             available: !exists
         });
     } catch (err) {
-        console.error("CHECK EMAIL ERROR:", err);
+        logger.error("CHECK EMAIL ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -225,7 +226,7 @@ exports.checkPhone = async (req, res) => {
             available: !exists
         });
     } catch (err) {
-        console.error("CHECK PHONE ERROR:", err);
+        logger.error("CHECK PHONE ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -257,11 +258,11 @@ exports.deleteAccount = async (req, res) => {
         const Task = require('../../../models/Task');
         const Note = require('../../../models/Note');
 
-        console.log(`🗑️ Deleting account for user: ${user.username} (${userId})`);
+        logger.info(`🗑️ Deleting account for user: ${user.username} (${userId})`);
 
         
         const deletedMessages = await Message.deleteMany({ sender: userId });
-        console.log(`  Deleted ${deletedMessages.deletedCount} messages`);
+        logger.info(`  Deleted ${deletedMessages.deletedCount} messages`);
 
         
         const updatedChannels = await Channel.updateMany(
@@ -273,18 +274,18 @@ exports.deleteAccount = async (req, res) => {
                 }
             }
         );
-        console.log(`  Removed from ${updatedChannels.modifiedCount} channels`);
+        logger.info(`  Removed from ${updatedChannels.modifiedCount} channels`);
 
         
         if (user.personalWorkspace) {
             await Workspace.findByIdAndDelete(user.personalWorkspace);
-            console.log(`  Deleted personal workspace`);
+            logger.info(`  Deleted personal workspace`);
         }
 
         
         const DMSession = require('../../../models/DMSession');
         const deletedDMs = await DMSession.deleteMany({ participants: userId });
-        console.log(`  Deleted ${deletedDMs.deletedCount} DM sessions`);
+        logger.info(`  Deleted ${deletedDMs.deletedCount} DM sessions`);
 
         
         const deletedTasks = await Task.deleteMany({
@@ -293,22 +294,22 @@ exports.deleteAccount = async (req, res) => {
                 { createdBy: userId }
             ]
         });
-        console.log(`  Deleted ${deletedTasks.deletedCount} tasks`);
+        logger.info(`  Deleted ${deletedTasks.deletedCount} tasks`);
 
         
         const deletedNotes = await Note.deleteMany({ createdBy: userId });
-        console.log(`  Deleted ${deletedNotes.deletedCount} notes`);
+        logger.info(`  Deleted ${deletedNotes.deletedCount} notes`);
 
         
         await user.deleteOne();
-        console.log(`✅ Account deleted successfully`);
+        logger.info(`✅ Account deleted successfully`);
 
         return res.json({
             message: "Account deleted successfully",
             deleted: true
         });
     } catch (err) {
-        console.error("DELETE ACCOUNT ERROR:", err);
+        logger.error("DELETE ACCOUNT ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

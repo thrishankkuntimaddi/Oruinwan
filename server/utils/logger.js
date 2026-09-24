@@ -1,57 +1,66 @@
-const isDevelopment = process.env.NODE_ENV !== 'production';
+'use strict';
+
+/**
+ * Server logger.
+ *
+ * Thin console-compatible facade over the pino instance in
+ * src/shared/utils/logger.js so that every call site in the codebase writes
+ * structured logs (JSON in production, pretty-printed in development).
+ *
+ * Call sites may keep using console-style arguments:
+ *   logger.info('Server started on port', 8080)
+ *   logger.error('Save failed', err)
+ *   logger.debug('Payload', { id, count })
+ *
+ * Strings and primitives are joined into the message. Errors are attached as
+ * `err` and other objects as `data`, so they render as structured fields.
+ */
+
+const pino = require('../src/shared/utils/logger');
+
+function toPinoArgs(args) {
+  const parts = [];
+  const merge = {};
+  let extras = 0;
+
+  for (const arg of args) {
+    if (arg instanceof Error) {
+      merge.err = arg;
+    } else if (arg !== null && typeof arg === 'object') {
+      if (extras === 0) merge.data = arg;
+      else merge[`data${extras}`] = arg;
+      extras += 1;
+    } else if (arg !== undefined) {
+      parts.push(String(arg));
+    }
+  }
+
+  return [merge, parts.join(' ')];
+}
+
+function level(name) {
+  return (...args) => {
+    const [merge, msg] = toPinoArgs(args);
+    pino[name](merge, msg);
+  };
+}
 
 const logger = {
-    
-    error: (...args) => {
-        console.error(...args);
-    },
+  error: level('error'),
+  warn: level('warn'),
+  info: level('info'),
+  debug: level('debug'),
+  success: level('info'),
 
-    
-    warn: (...args) => {
-        console.warn(...args);
-    },
+  // Domain-tagged debug channels kept for backwards compatibility.
+  socket: level('debug'),
+  db: level('debug'),
+  auth: level('debug'),
+  encryption: level('debug'),
 
-    
-    info: (...args) => {
-        console.log(...args);
-    },
-
-    
-    debug: (...args) => {
-        if (isDevelopment) {
-            console.log(...args);
-        }
-    },
-
-    
-    success: (...args) => {
-        console.log(...args);
-    },
-
-    
-    socket: (...args) => {
-        if (isDevelopment) {
-            console.log(...args);
-        }
-    },
-
-    db: (...args) => {
-        if (isDevelopment) {
-            console.log(...args);
-        }
-    },
-
-    auth: (...args) => {
-        if (isDevelopment) {
-            console.log(...args);
-        }
-    },
-
-    encryption: (...args) => {
-        if (isDevelopment) {
-            console.log(...args);
-        }
-    }
+  /** Underlying pino instance for callers that want native pino calls. */
+  pino,
+  child: (bindings) => pino.child(bindings),
 };
 
 module.exports = logger;

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const { UserWorkspaceKey, WorkspaceKey } = require('../../../models/encryption');
 
@@ -44,10 +45,10 @@ async function enrollUserInWorkspace(userId, workspaceId, workspaceKey, userKEK,
             pbkdf2Iterations: 100000
         });
 
-        console.log(`🔐 Enrolled user ${userId} in workspace ${workspaceId}`);
+        logger.info(`🔐 Enrolled user ${userId} in workspace ${workspaceId}`);
         return userKey;
     } catch (err) {
-        console.error('User enrollment failed:', err);
+        logger.error('User enrollment failed:', err);
         throw err;
     }
 }
@@ -68,10 +69,10 @@ async function bulkEnrollUsers(workspaceId, userEnrollments, workspaceKey) {
         });
 
         const result = await UserWorkspaceKey.insertMany(enrollments);
-        console.log(`🔐 Bulk enrolled ${result.length} users in workspace ${workspaceId}`);
+        logger.info(`🔐 Bulk enrolled ${result.length} users in workspace ${workspaceId}`);
         return result.length;
     } catch (err) {
-        console.error('Bulk enrollment failed:', err);
+        logger.error('Bulk enrollment failed:', err);
         throw err;
     }
 }
@@ -79,10 +80,10 @@ async function bulkEnrollUsers(workspaceId, userEnrollments, workspaceKey) {
 async function revokeUserAccess(userId, workspaceId) {
     try {
         const result = await UserWorkspaceKey.deleteOne({ userId, workspaceId });
-        console.log(`🔐 Revoked access for user ${userId} in workspace ${workspaceId}`);
+        logger.info(`🔐 Revoked access for user ${userId} in workspace ${workspaceId}`);
         return result.deletedCount > 0;
     } catch (err) {
-        console.error('Access revocation failed:', err);
+        logger.error('Access revocation failed:', err);
         throw err;
     }
 }
@@ -95,7 +96,7 @@ async function bulkRevokeAccess(userIds, workspaceId) {
         });
         return result.deletedCount;
     } catch (err) {
-        console.error('Bulk revocation failed:', err);
+        logger.error('Bulk revocation failed:', err);
         throw err;
     }
 }
@@ -107,7 +108,7 @@ async function getUserWorkspaceKeys(userId) {
             .lean();
         return keys;
     } catch (err) {
-        console.error('Failed to fetch user keys:', err);
+        logger.error('Failed to fetch user keys:', err);
         throw err;
     }
 }
@@ -117,7 +118,7 @@ async function getWorkspaceMasterKey(workspaceId) {
         const key = await WorkspaceKey.findOne({ workspaceId, isActive: true }).lean();
         return key;
     } catch (err) {
-        console.error('Failed to fetch workspace master key:', err);
+        logger.error('Failed to fetch workspace master key:', err);
         throw err;
     }
 }
@@ -139,10 +140,10 @@ async function createWorkspaceKey(workspaceId, creatorId, creatorKEK) {
             isActive: true
         });
 
-        console.log(`🔐 Created workspace key for ${workspaceId}`);
+        logger.info(`🔐 Created workspace key for ${workspaceId}`);
         return { workspaceKey, workspaceKeyDoc };
     } catch (err) {
-        console.error('Workspace key creation failed:', err);
+        logger.error('Workspace key creation failed:', err);
         throw err;
     }
 }
@@ -152,7 +153,7 @@ async function userHasWorkspaceAccess(userId, workspaceId) {
         const key = await UserWorkspaceKey.findOne({ userId, workspaceId });
         return key !== null;
     } catch (err) {
-        console.error('Access check failed:', err);
+        logger.error('Access check failed:', err);
         return false;
     }
 }

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const App = require('./app.model');
 
 const DEMO_APPS = [
@@ -60,9 +61,9 @@ async function seedApps() {
         { upsert: true, new: true }
       );
     }
-    console.log('✅ [Developer] Marketplace apps seeded');
+    logger.info('✅ [Developer] Marketplace apps seeded');
   } catch (err) {
-    console.error('❌ [Developer] App seed error:', err.message);
+    logger.error('❌ [Developer] App seed error:', err.message);
   }
 }
 

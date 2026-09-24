@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { blockUser, unblockUser, muteDM, deleteDM } from "../../../../services/contactService";
+import logger from '../../../../utils/logger';
 
 export const useContactOptions = (chat, showToast, onClose) => {
     const [showBlockDialog, setShowBlockDialog] = useState(false);
@@ -13,7 +14,7 @@ export const useContactOptions = (chat, showToast, onClose) => {
             setIsMuted(muted);
             showToast?.(muted ? "Notifications muted" : "Notifications unmuted", "success");
         } catch (err) {
-            console.error("Mute error:", err);
+            logger.error("Mute error:", err);
             showToast?.("Failed to update notification settings", "error");
         }
     };
@@ -33,7 +34,7 @@ export const useContactOptions = (chat, showToast, onClose) => {
             }
             setShowBlockDialog(false);
         } catch (err) {
-            console.error("Block error:", err);
+            logger.error("Block error:", err);
             showToast?.("Failed to update block status", "error");
         }
     };
@@ -47,7 +48,7 @@ export const useContactOptions = (chat, showToast, onClose) => {
             setShowDeleteChatDialog(false);
             onClose?.();
         } catch (err) {
-            console.error("Delete chat error:", err);
+            logger.error("Delete chat error:", err);
             showToast?.("Failed to delete chat", "error");
         }
     };

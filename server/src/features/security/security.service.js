@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const SecurityEvent = require('../../../models/SecurityEvent');
 
 const SEVERITY_MAP = {
@@ -35,7 +36,7 @@ async function logSecurityEvent({ companyId, actorId, eventType, outcome, metada
             metadata: metadata || {},
         });
     } catch (err) {
-        console.warn('[SECURITY] Failed to log event:', eventType, err.message);
+        logger.warn('[SECURITY] Failed to log event:', eventType, err.message);
     }
 }
 

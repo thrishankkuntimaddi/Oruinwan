@@ -2,8 +2,8 @@ const Notification = require('../../models/Notification');
 const logger = require('../../../utils/logger');
 const notifEmitter = require('./notificationEventEmitter');
 
-const getTask = () => require('../../models/Task');
-const getUser = () => require('../../models/User');
+const getTask = () => require('../../../models/Task');
+const getUser = () => require('../../../models/User');
 
 async function generateDigest(io) {
     try {
@@ -54,26 +54,45 @@ async function generateDigest(io) {
     }
 }
 
+const DUE_SOON_WINDOW_MS = 24 * 60 * 60 * 1000;
+
 async function checkDueSoonTasks(io) {
     try {
         const Task = getTask();
         const now = new Date();
-        const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const in24h = new Date(now.getTime() + DUE_SOON_WINDOW_MS);
+
+        // "Not yet notified for the current due window": never notified, or notified before the
+        // 24h window of the (possibly rescheduled) current dueDate started.
+        const notNotifiedForCurrentDueDate = {
+            $or: [
+                { dueSoonNotifiedAt: null },
+                { $expr: { $lt: ['$dueSoonNotifiedAt', { $subtract: ['$dueDate', DUE_SOON_WINDOW_MS] }] } },
+            ],
+        };
 
         const tasks = await Task.find({
             deleted: { $ne: true },
             status: { $nin: ['done', 'cancelled'] },
             dueDate: { $gte: now, $lte: in24h },
-        }).lean();
+            ...notNotifiedForCurrentDueDate,
+        }).select('_id title dueDate assignedTo workspace').lean();
 
         if (tasks.length === 0) return;
 
         logger.info(`[NotifCron] ${tasks.length} due-soon task(s) found`);
 
         for (const task of tasks) {
+            // Atomically claim the reminder so concurrent instances/runs cannot double-send.
+            const claim = await Task.updateOne(
+                { _id: task._id, dueDate: task.dueDate, ...notNotifiedForCurrentDueDate },
+                { $set: { dueSoonNotifiedAt: now } }
+            );
+            if (!claim.modifiedCount) continue;
+
             const assignees = task.assignedTo || [];
+            const hoursUntilDue = Math.ceil((new Date(task.dueDate) - now) / (60 * 60 * 1000));
             for (const assigneeId of assignees) {
-                const hoursUntilDue = Math.ceil((new Date(task.dueDate) - now) / (60 * 60 * 1000));
                 notifEmitter.emit('task.due_soon', {
                     io,
                     assigneeId: assigneeId.toString(),

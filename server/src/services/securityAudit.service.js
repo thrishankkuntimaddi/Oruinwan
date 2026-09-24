@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const SecurityAuditEvent = require('../models/SecurityAuditEvent');
 
 exports.logSecurityEvent = async ({
@@ -10,7 +11,7 @@ exports.logSecurityEvent = async ({
     try {
         
         if (!userId || !eventType) {
-            console.warn('⚠️ [AUDIT] Missing required fields (userId or eventType), skipping log');
+            logger.warn('⚠️ [AUDIT] Missing required fields (userId or eventType), skipping log');
             return;
         }
 
@@ -54,11 +55,11 @@ exports.logSecurityEvent = async ({
         
         await auditEvent.save();
 
-        console.log(`✅ [AUDIT] ${eventType} logged for user ${userId.substring(0, 8)}...`);
+        logger.info(`✅ [AUDIT] ${eventType} logged for user ${userId.substring(0, 8)}...`);
 
     } catch (error) {
         
-        console.warn('⚠️ [AUDIT] Failed to log security event (non-critical):', error.message);
+        logger.warn('⚠️ [AUDIT] Failed to log security event (non-critical):', error.message);
         
     }
 };
@@ -83,7 +84,7 @@ exports.getSecurityEvents = async (userId, options = {}) => {
         return events;
 
     } catch (error) {
-        console.error('❌ [AUDIT] Failed to fetch security events:', error);
+        logger.error('❌ [AUDIT] Failed to fetch security events:', error);
         throw error;
     }
 };

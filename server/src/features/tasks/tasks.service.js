@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const mongoose = require('mongoose');
 
 const Task = require('../../../models/Task');
@@ -194,7 +195,7 @@ async function createTask(userId, taskData, io, req) {
             const ws = await Workspace.findById(workspaceId).lean();
             issueKey = await IssueKeyCounter.nextKey(workspaceId, ws?.name || 'TSK');
         } catch (keyErr) {
-            console.warn('[ISSUE_KEY] Failed to generate key:', keyErr.message);
+            logger.warn('[ISSUE_KEY] Failed to generate key:', keyErr.message);
         }
 
         const task = new Task({
@@ -283,7 +284,7 @@ async function createTask(userId, taskData, io, req) {
                 }
             }
         } catch (noteErr) {
-            console.error("Notification Error:", noteErr);
+            logger.error("Notification Error:", noteErr);
         }
     }
 
@@ -432,7 +433,7 @@ async function updateTask(userId, taskId, updates, io, req) {
                         io.to(`channel:${task.channel}`).emit("new-message", msg);
                     }
                 } catch (msgErr) {
-                    console.error("Failed to send completion message:", msgErr);
+                    logger.error("Failed to send completion message:", msgErr);
                 }
             }
         }
@@ -643,7 +644,7 @@ async function deleteTask(userId, taskId, io, req) {
                     io.to(`channel:${task.channel}`).emit("new-message", msg);
                 }
             } catch (msgErr) {
-                console.error("Failed to send deletion message:", msgErr);
+                logger.error("Failed to send deletion message:", msgErr);
             }
         }
 

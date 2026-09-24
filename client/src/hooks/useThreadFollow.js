@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import api from '@services/api';
+import logger from '../utils/logger';
 
 export function useThreadFollow(messageId, initialStatus = { following: false, followerCount: 0 }) {
     const [following, setFollowing] = useState(initialStatus.following);
@@ -24,7 +25,7 @@ export function useThreadFollow(messageId, initialStatus = { following: false, f
             }
         } catch (err) {
             
-            console.error('[useThreadFollow] Toggle failed:', err.message);
+            logger.error('[useThreadFollow] Toggle failed:', err.message);
             setFollowing(wasFollowing);
             setFollowerCount(c => wasFollowing ? c + 1 : Math.max(0, c - 1));
         } finally {

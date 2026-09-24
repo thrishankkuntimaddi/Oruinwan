@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -74,7 +75,7 @@ router.get('/overview', requireAuth, requireOwner, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Owner Dashboard Overview Error:', error);
+        logger.error('Owner Dashboard Overview Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -125,7 +126,7 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
             engagementScore
         });
     } catch (error) {
-        console.error('Owner Dashboard Activity Health Error:', error);
+        logger.error('Owner Dashboard Activity Health Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -159,7 +160,7 @@ router.get('/billing-summary', requireAuth, requireOwner, async (req, res) => {
             },
         });
     } catch (error) {
-        console.error('Owner Dashboard Billing Summary Error:', error);
+        logger.error('Owner Dashboard Billing Summary Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -208,7 +209,7 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
             emailDomain,
         });
     } catch (error) {
-        console.error('Owner Dashboard Security Risk Error:', error);
+        logger.error('Owner Dashboard Security Risk Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -250,7 +251,7 @@ router.get('/active-sessions', requireAuth, requireOwner, async (req, res) => {
 
         res.json({ sessions: formattedSessions });
     } catch (error) {
-        console.error('Active Sessions Error:', error);
+        logger.error('Active Sessions Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -333,7 +334,7 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
 
         res.json({ events: formattedEvents });
     } catch (error) {
-        console.error('Security Events Error:', error);
+        logger.error('Security Events Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -358,7 +359,7 @@ router.get('/invoices', requireAuth, requireOwner, async (req, res) => {
 
         res.json({ invoices });
     } catch (error) {
-        console.error('Invoices Error:', error);
+        logger.error('Invoices Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -389,7 +390,7 @@ router.get('/payment-methods', requireAuth, requireOwner, async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Payment Methods Error:', error);
+        logger.error('Payment Methods Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -496,7 +497,7 @@ router.get('/analytics', requireAuth, requireOwner, async (req, res) => {
             departmentDistribution,
         });
     } catch (error) {
-        console.error('Owner Dashboard Analytics Error:', error);
+        logger.error('Owner Dashboard Analytics Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });

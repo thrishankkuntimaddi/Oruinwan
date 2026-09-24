@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const Channel = require('../src/features/channels/channel.model');
 const Message = require('../src/features/messages/message.model');
 const Task = require('../models/Task');
@@ -45,7 +46,7 @@ async function sendMessageToChannel(channelId, content, userId, req) {
             content: content
         };
     } catch (error) {
-        console.error('Error in sendMessageToChannel:', error);
+        logger.error('Error in sendMessageToChannel:', error);
         return { success: false, error: error.message };
     }
 }
@@ -99,7 +100,7 @@ async function sendToAllGeneralChannels(content, userId, req) {
             details: results
         };
     } catch (error) {
-        console.error('Error in sendToAllGeneralChannels:', error);
+        logger.error('Error in sendToAllGeneralChannels:', error);
         return { success: false, error: error.message };
     }
 }
@@ -141,7 +142,7 @@ async function getUserChannels(workspaceId, userId) {
             }))
         };
     } catch (error) {
-        console.error('Error in getUserChannels:', error);
+        logger.error('Error in getUserChannels:', error);
         return { success: false, error: error.message };
     }
 }
@@ -176,7 +177,7 @@ async function createTaskForUser(taskData) {
             priority: task.priority
         };
     } catch (error) {
-        console.error('Error in createTaskForUser:', error);
+        logger.error('Error in createTaskForUser:', error);
         return { success: false, error: error.message };
     }
 }
@@ -201,7 +202,7 @@ async function getCurrentWorkspace(userId) {
             }
         };
     } catch (error) {
-        console.error('Error in getCurrentWorkspace:', error);
+        logger.error('Error in getCurrentWorkspace:', error);
         return { success: false, error: error.message };
     }
 }

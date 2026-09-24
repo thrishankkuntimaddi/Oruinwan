@@ -8,21 +8,20 @@
   ],
   "scripts": {
     "start": "npm run dev",
-    "dev": "npm run server & npm run client",
+    "dev": "concurrently -k -n server,client -c blue,magenta \"npm run server\" \"npm run client\"",
     "client": "cd client && npm start",
     "server": "cd server && npm run dev",
-    "install-all": "npm install && cd client && npm install && cd ../server && npm install"
+    "install-all": "npm install && cd client && npm install && cd ../server && npm install",
+    "lint": "npm run lint --workspace=server && npm run lint --workspace=client && npm run lint:ai && npm run lint:sdk",
+    "test": "npm test --workspace=server && npm test --workspace=client",
+    "build": "npm run build --workspace=client",
+    "lint:ai": "cd ai && eslint .",
+    "lint:sdk": "cd sdk && eslint ."
   },
-  "dependencies": {
-    "dotenv": "^17.2.3",
-    "mongoose": "^9.1.1"
+  "engines": {
+    "node": ">=20"
   },
   "devDependencies": {
-    "@babel/generator": "^7.29.1",
-    "@babel/parser": "^7.29.2",
-    "@babel/traverse": "^7.29.0",
-    "@babel/types": "^7.29.0",
-    "fs-extra": "^11.3.4",
-    "glob": "^13.0.6"
+    "concurrently": "^10.0.5"
   }
 }

@@ -7,6 +7,7 @@ import api from '@services/api';
 import { MessageSquarePlus } from "lucide-react";
 import NewDMModal from "../../components/messagesComp/NewDMModal";
 import { useParams } from "react-router-dom";
+import logger from '../../utils/logger';
 
 export default function Messages() {
   const [selectedChat, setSelectedChat] = useState(null);
@@ -54,7 +55,7 @@ export default function Messages() {
           });
           setCurrentBroadcast(null);
         } catch (error) {
-          console.error('❌ [Messages] Failed to fetch channel:', error);
+          logger.error('❌ [Messages] Failed to fetch channel:', error);
           
           setSelectedChat({
             id: channelParam,
@@ -99,7 +100,7 @@ export default function Messages() {
 
           }
         } catch (error) {
-          console.error('❌ [Messages] Failed to fetch DM:', error);
+          logger.error('❌ [Messages] Failed to fetch DM:', error);
         }
       };
       fetchDMDetails();
@@ -134,7 +135,7 @@ export default function Messages() {
             setCurrentBroadcast(null);
           }
         } catch (error) {
-          console.error('❌ [Messages] Failed to fetch user for new DM:', error);
+          logger.error('❌ [Messages] Failed to fetch user for new DM:', error);
         }
       };
       fetchUserDetails();
@@ -176,7 +177,7 @@ export default function Messages() {
       const workspaceId = workspaceMatch ? workspaceMatch[1] : null;
 
       if (!workspaceId) {
-        console.error('❌ No workspaceId found!');
+        logger.error('❌ No workspaceId found!');
         setSelectedChat(null);
         return;
       }
@@ -272,8 +273,8 @@ export default function Messages() {
             }
           }
         } catch (error) {
-          console.error("❌ [DM Fetch] Failed to fetch DM details:", error);
-          console.error("❌ [DM Fetch] Error details:", error.response?.data || error.message);
+          logger.error("❌ [DM Fetch] Failed to fetch DM details:", error);
+          logger.error("❌ [DM Fetch] Error details:", error.response?.data || error.message);
 
           
           setSelectedChat({
@@ -319,6 +320,7 @@ export default function Messages() {
             <BroadcastChatWindow broadcast={currentBroadcast} />
           ) : selectedChat ? (
             <ChatWindowV2
+              key={selectedChat.id || selectedChat._id}
               chat={selectedChat}
               contacts={contacts}
               onClose={() => setSelectedChat(null)}

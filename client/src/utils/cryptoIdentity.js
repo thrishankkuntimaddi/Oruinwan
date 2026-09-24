@@ -1,3 +1,4 @@
+import logger from './logger';
 const IDENTITY_KEY_CONFIG = {
     
     x25519: {
@@ -62,7 +63,7 @@ export async function generateX25519KeyPair() {
 
         return keyPair;
     } catch (error) {
-        console.error('X25519 key generation failed:', error);
+        logger.error('X25519 key generation failed:', error);
         throw new Error('Failed to generate X25519 keypair');
     }
 }
@@ -82,7 +83,7 @@ export async function generateRSAKeyPair() {
 
         return keyPair;
     } catch (error) {
-        console.error('RSA key generation failed:', error);
+        logger.error('RSA key generation failed:', error);
         throw new Error('Failed to generate RSA keypair');
     }
 }
@@ -103,7 +104,7 @@ export async function generateIdentityKeyPair() {
             keyPair = await generateX25519KeyPair();
             algorithm = 'X25519';
         } catch (error) {
-            console.warn('X25519 generation failed, falling back to RSA:', error);
+            logger.warn('X25519 generation failed, falling back to RSA:', error);
         }
     }
 
@@ -139,7 +140,7 @@ export async function exportPublicKeyPEM(publicKey, algorithm) {
 
         return pem;
     } catch (error) {
-        console.error('Public key export failed:', error);
+        logger.error('Public key export failed:', error);
         throw new Error('Failed to export public key');
     }
 }
@@ -181,7 +182,7 @@ export async function importPublicKeyPEM(pemKey, algorithm) {
 
         return publicKey;
     } catch (error) {
-        console.error('Public key import failed:', error);
+        logger.error('Public key import failed:', error);
         throw new Error('Failed to import public key');
     }
 }
@@ -191,12 +192,12 @@ export async function exportPrivateKeyJWK(privateKey) {
         const jwk = await crypto.subtle.exportKey('jwk', privateKey);
         return jwk;
     } catch (error) {
-        console.error('Private key export failed:', error);
+        logger.error('Private key export failed:', error);
         throw new Error('Failed to export private key');
     }
 }
 
-export async function importPrivateKeyJWK(jwk, algorithm) {
+export async function importPrivateKeyJWK(jwk, algorithm, extractable = true) {
     try {
         let keyConfig;
         let usages;
@@ -219,13 +220,13 @@ export async function importPrivateKeyJWK(jwk, algorithm) {
             'jwk',
             jwk,
             keyConfig,
-            true,
+            extractable,
             usages
         );
 
         return privateKey;
     } catch (error) {
-        console.error('Private key import failed:', error);
+        logger.error('Private key import failed:', error);
         throw new Error('Failed to import private key');
     }
 }
@@ -242,7 +243,7 @@ export async function wrapKeyWithRSA(conversationKeyBytes, recipientPublicKey) {
 
         return btoa(String.fromCharCode(...new Uint8Array(encrypted)));
     } catch (error) {
-        console.error('RSA key wrapping failed:', error);
+        logger.error('RSA key wrapping failed:', error);
         throw new Error('Failed to wrap key with RSA');
     }
 }
@@ -261,7 +262,7 @@ export async function unwrapKeyWithRSA(encryptedKeyBase64, privateKey) {
 
         return decrypted;
     } catch (error) {
-        console.error('RSA key unwrapping failed:', error);
+        logger.error('RSA key unwrapping failed:', error);
         throw new Error('Failed to unwrap key with RSA');
     }
 }
@@ -310,7 +311,7 @@ export async function wrapKeyWithX25519(conversationKeyBytes, recipientPublicKey
             ephemeralPublicKey: btoa(String.fromCharCode(...new Uint8Array(ephemeralPublicKeyRaw)))
         };
     } catch (error) {
-        console.error('X25519 key wrapping failed:', error);
+        logger.error('X25519 key wrapping failed:', error);
         throw new Error('Failed to wrap key with X25519');
     }
 }
@@ -362,7 +363,7 @@ export async function unwrapKeyWithX25519(encryptedKeyBase64, ephemeralPublicKey
 
         return decrypted;
     } catch (error) {
-        console.error('X25519 key unwrapping failed:', error);
+        logger.error('X25519 key unwrapping failed:', error);
         throw new Error('Failed to unwrap key with X25519');
     }
 }

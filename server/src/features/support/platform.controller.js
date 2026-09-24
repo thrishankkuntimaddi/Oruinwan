@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const AuditLog = require('../../../models/AuditLog');
 const SupportTicket = require('../../../models/SupportTicket');
 const PlatformSession = require('../../../models/PlatformSession');
@@ -66,7 +67,7 @@ exports.getAuditLogs = async (req, res) => {
             total
         });
     } catch (err) {
-        console.error("AUDIT LOG ERROR:", err);
+        logger.error("AUDIT LOG ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -80,7 +81,7 @@ exports.getActiveCompanies = async (req, res) => {
 
         res.json(companies);
     } catch (err) {
-        console.error("ACTIVE COMPANIES ERROR:", err);
+        logger.error("ACTIVE COMPANIES ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -94,7 +95,7 @@ exports.getAllTickets = async (req, res) => {
 
         res.json(tickets);
     } catch (err) {
-        console.error("GET TICKETS ERROR:", err);
+        logger.error("GET TICKETS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -125,7 +126,7 @@ exports.createTicket = async (req, res) => {
 
         res.status(201).json(ticket);
     } catch (err) {
-        console.error("CREATE TICKET ERROR:", err);
+        logger.error("CREATE TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -163,7 +164,7 @@ exports.updateTicket = async (req, res) => {
 
         res.json(updatedTicket);
     } catch (err) {
-        console.error("UPDATE TICKET ERROR:", err);
+        logger.error("UPDATE TICKET ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -212,7 +213,7 @@ exports.getPlatformSession = async (req, res) => {
         res.json(session);
 
     } catch (err) {
-        console.error("GET SESSION ERROR:", err);
+        logger.error("GET SESSION ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -226,7 +227,7 @@ exports.getSessionMessages = async (req, res) => {
 
         res.json(messages);
     } catch (err) {
-        console.error("GET MESSAGES ERROR:", err);
+        logger.error("GET MESSAGES ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };
@@ -257,7 +258,7 @@ exports.sendSessionMessage = async (req, res) => {
 
         res.json(fullMessage);
     } catch (err) {
-        console.error("SEND MESSAGE ERROR:", err);
+        logger.error("SEND MESSAGE ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 };

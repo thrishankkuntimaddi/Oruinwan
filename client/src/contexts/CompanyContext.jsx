@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api, { API_BASE } from '@services/api';
+import logger from '../utils/logger';
 
 const CompanyContext = createContext();
 
@@ -39,7 +40,7 @@ export const CompanyProvider = ({ children }) => {
             setCompany(response.data.company);
             setError(null);
         } catch (err) {
-            console.error('Error fetching company:', err);
+            logger.error('Error fetching company:', err);
             setError(err.response?.data?.message || 'Failed to load company');
             setCompany(null);
         } finally {
@@ -73,7 +74,7 @@ export const CompanyProvider = ({ children }) => {
             setCompany(response.data.company);
             return response.data.company;
         } catch (err) {
-            console.error('Error updating company:', err);
+            logger.error('Error updating company:', err);
             throw err;
         }
     };

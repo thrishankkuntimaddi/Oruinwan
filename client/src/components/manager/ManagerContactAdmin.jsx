@@ -4,7 +4,8 @@ import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Send, Paperclip, User, MessageSquare } from 'lucide-react';
 import api from '@services/api';
-import io from 'socket.io-client';
+import { useSocket } from '../../contexts/SocketContext';
+import logger from '../../utils/logger';
 
 const ManagerContactAdmin = () => {
     const { user } = useAuth();
@@ -16,7 +17,7 @@ const ManagerContactAdmin = () => {
     const [loading, setLoading] = useState(false);
     const [admin, setAdmin] = useState(null);
     const messagesEndRef = useRef(null);
-    const socketRef = useRef(null);
+    const { socket } = useSocket();
 
     
     useEffect(() => {
@@ -28,7 +29,7 @@ const ManagerContactAdmin = () => {
                 const companyAdmin = members.find(m => ['owner', 'admin'].includes(m.companyRole));
                 setAdmin(companyAdmin);
             } catch (error) {
-                console.error('Error fetching admin:', error);
+                logger.error('Error fetching admin:', error);
             }
         };
 
@@ -47,7 +48,7 @@ const ManagerContactAdmin = () => {
                 const response = await api.get(`/api/internal/messages/conversation/${admin._id}`);
                 setMessages(response.data.messages || []);
             } catch (error) {
-                console.error('Error fetching messages:', error);
+                logger.error('Error fetching messages:', error);
                 showToast('Failed to load messages', 'error');
             } finally {
                 setLoading(false);
@@ -60,30 +61,25 @@ const ManagerContactAdmin = () => {
     }, [admin, showToast]);
 
     
+    // Uses the shared authenticated socket; the server delivers
+    // 'internal-message' to the recipient's personal room.
     useEffect(() => {
-        if (!user?._id) return;
+        if (!socket || !user?._id) return;
+        const adminId = admin?._id;
 
-        socketRef.current = io(import.meta.env.VITE_BACKEND_URL, {
-            withCredentials: true
-        });
-
-        
-        socketRef.current.emit('join-room', `user-${user._id}`);
-
-        
-        socketRef.current.on('internal-message', (message) => {
-            if (message.sender._id === admin?._id || message.recipient._id === admin?._id) {
-                setMessages(prev => [...prev, message]);
-                scrollToBottom();
-            }
-        });
-
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.disconnect();
+        const handleInternalMessage = (message) => {
+            const senderId = message?.sender?._id || message?.sender;
+            const recipientId = message?.recipient?._id || message?.recipient;
+            if (adminId && (senderId === adminId || recipientId === adminId)) {
+                setMessages(prev => prev.some(m => m._id && m._id === message._id) ? prev : [...prev, message]);
             }
         };
-    }, [user, admin]);
+        socket.on('internal-message', handleInternalMessage);
+
+        return () => {
+            socket.off('internal-message', handleInternalMessage);
+        };
+    }, [socket, user?._id, admin?._id]);
 
     
     useEffect(() => {
@@ -108,7 +104,7 @@ const ManagerContactAdmin = () => {
             setNewMessage('');
             showToast('Message sent successfully', 'success');
         } catch (error) {
-            console.error('Error sending message:', error);
+            logger.error('Error sending message:', error);
             showToast('Failed to send message', 'error');
         }
     };

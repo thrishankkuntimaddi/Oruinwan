@@ -50,18 +50,9 @@ const AcceptInvite = () => {
 
             setSuccess(true);
 
-            
-            if (data.accessToken && data.user) {
-                
-                
-                
-                
-                setTimeout(() => {
-                    navigate("/login");
-                }, 2000);
-            } else {
-                setTimeout(() => navigate("/login"), 2000);
-            }
+            setTimeout(() => {
+                navigate("/login");
+            }, 2000);
 
         } catch (err) {
             setError(err.message);
@@ -70,14 +61,142 @@ const AcceptInvite = () => {
         }
     };
 
+    const styles = {
+        root: {
+            minHeight: '100vh',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'var(--bg-base, #0c0c0c)',
+            fontFamily: 'var(--font, Inter, system-ui, sans-serif)',
+            position: 'relative',
+            color: 'var(--text-primary, #e4e4e4)',
+            padding: '24px',
+            boxSizing: 'border-box',
+            overflow: 'hidden'
+        },
+        bgGlow: {
+            position: 'absolute',
+            top: '30%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '500px',
+            height: '500px',
+            background: 'radial-gradient(circle, var(--accent-dim, rgba(184,149,106,0.07)) 0%, transparent 70%)',
+            pointerEvents: 'none',
+            zIndex: 0
+        },
+        topBrand: {
+            position: 'absolute',
+            top: '24px',
+            left: '28px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            cursor: 'pointer',
+            zIndex: 10
+        },
+        card: {
+            position: 'relative',
+            zIndex: 1,
+            width: '100%',
+            maxWidth: '420px',
+            background: 'var(--bg-surface, #111111)',
+            border: '1px solid var(--border-default, #222222)',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.2)',
+            padding: '36px 32px',
+            boxSizing: 'border-box'
+        },
+        title: {
+            fontSize: '22px',
+            fontWeight: 700,
+            color: 'var(--text-primary, #e4e4e4)',
+            letterSpacing: '-0.02em',
+            margin: '0 0 8px 0',
+            textAlign: 'center'
+        },
+        subtitle: {
+            fontSize: '13px',
+            color: 'var(--text-secondary, #7a7a7a)',
+            textAlign: 'center',
+            margin: '0 0 24px 0'
+        },
+        inputGroup: {
+            marginBottom: '18px'
+        },
+        label: {
+            display: 'block',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--text-secondary, #7a7a7a)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em',
+            marginBottom: '6px'
+        },
+        input: {
+            width: '100%',
+            padding: '11px 14px',
+            background: 'var(--bg-input, #141414)',
+            border: '1px solid var(--border-default, #222222)',
+            color: 'var(--text-primary, #e4e4e4)',
+            fontSize: '13px',
+            outline: 'none',
+            fontFamily: 'inherit',
+            boxSizing: 'border-box',
+            transition: 'border-color 150ms ease'
+        },
+        primaryBtn: {
+            width: '100%',
+            padding: '12px 16px',
+            background: 'var(--accent, #b8956a)',
+            color: '#0c0c0c',
+            border: 'none',
+            fontSize: '13px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            transition: 'all 150ms ease',
+            fontFamily: 'inherit',
+            marginTop: '24px'
+        },
+        errorAlert: {
+            background: 'rgba(224,82,82,0.1)',
+            border: '1px solid rgba(224,82,82,0.3)',
+            color: 'var(--state-danger, #e05252)',
+            padding: '10px 14px',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '20px'
+        }
+    };
+
     if (!token) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
-                    <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Invalid Invite</h2>
-                    <p className="text-gray-600 mb-6">Missing invitation token.</p>
-                    <button onClick={() => navigate("/")} className="text-indigo-600 hover:text-indigo-800 font-medium">Return Home</button>
+            <div style={styles.root}>
+                <div style={styles.bgGlow} />
+                <div style={styles.card}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ width: '48px', height: '48px', background: 'rgba(224,82,82,0.1)', border: '1px solid rgba(224,82,82,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                            <AlertCircle size={22} style={{ color: '#e05252' }} />
+                        </div>
+                        <h2 style={styles.title}>Invalid Invite</h2>
+                        <p style={styles.subtitle}>Missing or expired invitation token.</p>
+                        <button
+                            onClick={() => navigate("/")}
+                            style={styles.primaryBtn}
+                            onMouseEnter={e => e.currentTarget.style.background = '#c9a87c'}
+                            onMouseLeave={e => e.currentTarget.style.background = '#b8956a'}
+                        >
+                            Return Home
+                        </button>
+                    </div>
                 </div>
             </div>
         );
@@ -85,65 +204,87 @@ const AcceptInvite = () => {
 
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center animate-fade-in">
-                    <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-6" />
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">Welcome Aboard!</h2>
-                    <p className="text-gray-600 mb-8">Your account has been created and you've joined the team.</p>
-                    <p className="text-sm text-gray-400">Redirecting to login...</p>
+            <div style={styles.root}>
+                <div style={styles.bgGlow} />
+                <div style={styles.card}>
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ width: '48px', height: '48px', background: 'rgba(90,186,138,0.1)', border: '1px solid rgba(90,186,138,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                            <CheckCircle size={24} style={{ color: '#5aba8a' }} />
+                        </div>
+                        <h2 style={styles.title}>Welcome Aboard!</h2>
+                        <p style={styles.subtitle}>Your account has been created and you've joined the team.</p>
+                        <p style={{ fontSize: '11px', color: 'rgba(228,228,228,0.3)', margin: 0 }}>Redirecting to login...</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 px-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full">
-                <div className="text-center mb-8">
-                    <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Accept Invitation</h2>
-                    <p className="text-gray-500 mt-2">Set up your account to join <span className="font-semibold text-gray-800">{emailParam}</span></p>
+        <div style={styles.root}>
+            <div style={styles.bgGlow} />
+
+            <div style={styles.topBrand} onClick={() => navigate('/')}>
+                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px' }} />
+                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Chttrix</span>
+            </div>
+
+            <div style={styles.card}>
+                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                    <h2 style={styles.title}>Accept Invitation</h2>
+                    {emailParam && (
+                        <p style={styles.subtitle}>
+                            Set up your account to join <span style={{ color: '#b8956a', fontWeight: 600 }}>{emailParam}</span>
+                        </p>
+                    )}
                 </div>
 
                 {error && (
-                    <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-lg text-sm flex items-center gap-2 mb-6">
-                        <AlertCircle size={16} />
-                        {error}
+                    <div style={styles.errorAlert}>
+                        <AlertCircle size={15} />
+                        <span>{error}</span>
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                <form onSubmit={handleSubmit}>
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Full Name</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
-                            placeholder="Thrishank"
+                            style={styles.input}
+                            placeholder="Full Name"
+                            onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.5)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                             required
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Password</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                            style={styles.input}
                             placeholder="••••••••"
+                            onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.5)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                             required
                         />
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
+                    <div style={styles.inputGroup}>
+                        <label style={styles.label}>Confirm Password</label>
                         <input
                             type="password"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                            style={styles.input}
                             placeholder="••••••••"
+                            onFocus={e => e.currentTarget.style.borderColor = 'rgba(184,149,106,0.5)'}
+                            onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'}
                             required
                         />
                     </div>
@@ -151,12 +292,18 @@ const AcceptInvite = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2"
+                        style={{
+                            ...styles.primaryBtn,
+                            opacity: loading ? 0.7 : 1,
+                            cursor: loading ? 'not-allowed' : 'pointer'
+                        }}
+                        onMouseEnter={e => { if (!loading) e.currentTarget.style.background = '#c9a87c'; }}
+                        onMouseLeave={e => { if (!loading) e.currentTarget.style.background = '#b8956a'; }}
                     >
-                        {loading ? <Loader className="animate-spin" size={20} /> : (
+                        {loading ? <Loader className="animate-spin" size={18} /> : (
                             <>
                                 <span>Complete Setup</span>
-                                <ArrowRight size={18} />
+                                <ArrowRight size={15} />
                             </>
                         )}
                     </button>
@@ -167,3 +314,4 @@ const AcceptInvite = () => {
 };
 
 export default AcceptInvite;
+

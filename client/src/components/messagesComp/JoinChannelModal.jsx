@@ -6,6 +6,7 @@ import { useChannels } from "../../hooks/useChannels";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
 import api from '@services/api';
 import { Hash, Loader2, X } from 'lucide-react';
+import logger from '../../utils/logger';
 
 const FONT = 'Inter, system-ui, -apple-system, sans-serif';
 
@@ -37,7 +38,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
 
             setPublicChannels(notJoined);
         } catch (err) {
-            console.error("Load public channels failed:", err);
+            logger.error("Load public channels failed:", err);
         } finally {
             setLoadingList(false);
         }
@@ -60,7 +61,7 @@ export default function JoinChannelModal({ onClose, onJoined, currentUserId }) {
             
             navigate(joined.path || `/channels/${channelId}`);
         } catch (err) {
-            console.error("Join failed:", err);
+            logger.error("Join failed:", err);
             showToast(getErrorMessage(err), "error");
         } finally {
             setJoiningId(null);

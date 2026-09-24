@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const messagesController = require('./messages.controller');
@@ -27,7 +28,7 @@ router.get(
 router.get(
     '/workspace/:workspaceId/dm/:dmId',
     (req, res, next) => {
-        console.log('🔍 [ROUTE MATCHED] DM conversation route hit!', {
+        logger.info('🔍 [ROUTE MATCHED] DM conversation route hit!', {
             params: req.params,
             query: req.query,
             path: req.path,
@@ -124,7 +125,7 @@ router.get('/missed', async (req, res) => {
         });
 
     } catch (err) {
-        console.error('[GET /v2/messages/missed] Error:', err);
+        logger.error('[GET /v2/messages/missed] Error:', err);
         return res.status(500).json({ message: 'Failed to fetch missed messages' });
     }
 });

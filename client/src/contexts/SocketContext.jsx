@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import sdkSocketClient from '@platform/sdk/socket/socketClient.js';
 import { useAuth } from './AuthContext';
+import { refreshAccessToken } from '../services/api';
+import logger from '../utils/logger';
 
 const SocketContext = createContext(null);
 
@@ -12,15 +14,48 @@ export const useSocket = () => {
     return context;
 };
 
-export const SocketProvider = ({ children }) => {
-    const socketRef = useRef(null);
-    const [isConnected, setIsConnected] = useState(false);
-    
-    
-    const [socketId, setSocketId] = useState(null);
-    const { user } = useAuth();
+const CHANNEL_EVENTS = [
+    'channel-created', 'channel-updated', 'channel-deleted', 'invited-to-channel',
+    'removed-from-channel', 'channel-member-added', 'channel-member-joined',
+    'channel-member-removed', 'member-left', 'admin-assigned', 'admin-demoted',
+    'channel-privacy-changed', 'messages-cleared', 'tab-added', 'tab-updated', 'tab-deleted',
+];
+const MESSAGE_EVENTS = [
+    'new-message', 'new-dm-session', 'message-deleted', 'message-pinned', 'message-unpinned',
+    'read-update', 'reaction-added', 'reaction-removed', 'reconnected',
+];
+const WORKSPACE_EVENTS = ['workspace-joined', 'workspace-created', 'workspace-updated', 'workspace-deleted'];
+const TASK_EVENTS = ['task-created', 'task-updated', 'task-deleted', 'task-assigned', 'task-removed'];
+const NOTE_EVENTS = ['note-created', 'note-updated', 'note-deleted', 'note-shared'];
+const UPDATE_EVENTS = ['company:update:created', 'company:update:deleted', 'company:update:reacted'];
+const NOTIFICATION_EVENTS = ['notification:new'];
 
-    
+export const MAX_SOCKET_AUTH_RETRIES = 3;
+const AUTH_RETRY_BASE_DELAY_MS = 1000;
+
+// Attach one named handler per event that fans out to the listener registry,
+// and return a cleanup that removes ONLY those handlers (never other consumers').
+function attachFanOut(socket, events, listenersRef) {
+    const handlers = events.map((event) => {
+        const handler = (data) => {
+            listenersRef.current.forEach(cb => cb(event, data));
+        };
+        socket.on(event, handler);
+        return [event, handler];
+    });
+    return () => {
+        handlers.forEach(([event, handler]) => socket.off(event, handler));
+    };
+}
+
+export const SocketProvider = ({ children }) => {
+    const [socket, setSocket] = useState(null);
+    const [isConnected, setIsConnected] = useState(false);
+    const [connectionError, setConnectionError] = useState(null);
+    const { user, accessToken } = useAuth() || {};
+    const userId = user ? (user._id || user.id || user.sub || null) : null;
+    const hasToken = Boolean(accessToken || localStorage.getItem('accessToken'));
+
     const channelListenersRef = useRef([]);
     const messageListenersRef = useRef([]);
     const workspaceListenersRef = useRef([]);
@@ -29,403 +64,112 @@ export const SocketProvider = ({ children }) => {
     const updateListenersRef = useRef([]);
     const notificationListenersRef = useRef([]);
 
-    
+    // Socket lifecycle: keyed on the user identity (not the user object), so
+    // profile/theme/status updates don't tear down the connection.
     useEffect(() => {
         const token = localStorage.getItem('accessToken');
-        if (!token || !user) {
-            
-            socketRef.current = null;
+        if (!token || !userId) {
+            setSocket(null);
             setIsConnected(false);
-            return;
+            return undefined;
         }
 
         const API_BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080';
-
-        
         const socketInstance = sdkSocketClient.createSocket(API_BASE, token);
-        console.log('🧠 SOCKET CREATED', socketInstance);
+        let cancelled = false;
+        let authRetries = 0;
+        let retryTimer = null;
 
         socketInstance.on('connect', () => {
-            console.log('✅ SOCKET CONNECTED', socketInstance.id);
+            if (cancelled) return;
+            logger.debug('✅ SOCKET CONNECTED', socketInstance.id);
+            authRetries = 0;
+            setConnectionError(null);
             setIsConnected(true);
-
-            
-            const workspaceId = localStorage.getItem('activeWorkspaceId');
-            if (workspaceId) {
-                socketInstance.emit('join-workspace', { workspaceId });
-            }
         });
 
-        socketInstance.on('disconnect', (reason) => {
+        socketInstance.on('disconnect', () => {
+            if (cancelled) return;
             setIsConnected(false);
         });
 
         socketInstance.on('connect_error', async (error) => {
-            console.error('❌ SOCKET ERROR', error.message);
-            console.error('❌ Socket connection error (detail):', error);
+            if (cancelled) return;
+            logger.error('❌ Socket connection error:', error?.message);
             setIsConnected(false);
 
-            
-            if (error.message === 'Authentication failed') {
-                try {
-                    const storedRefreshToken = localStorage.getItem('refreshToken');
-                    const response = await fetch(`${API_BASE}/api/auth/refresh`, {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: storedRefreshToken ? JSON.stringify({ refreshToken: storedRefreshToken }) : undefined,
-                    });
+            const authCode = error?.data?.code;
+            const isAuthError = authCode === 'TOKEN_EXPIRED' || authCode === 'TOKEN_INVALID'
+                || ['Authentication failed', 'Token expired', 'No token'].includes(error?.message);
+            if (!isAuthError) {
+                return; // transport errors: socket.io's own bounded reconnection handles these
+            }
 
-                    if (response.ok) {
-                        const data = await response.json();
-                        const newAccessToken = data.accessToken;
-                        if (newAccessToken) {
-                            localStorage.setItem('accessToken', newAccessToken);
-                            if (data.refreshToken) {
-                                localStorage.setItem('refreshToken', data.refreshToken);
-                            }
-                            
-                            socketInstance.auth = { token: newAccessToken };
-                            socketInstance.connect();
-                        }
-                    } else {
-                        console.error('❌ Token refresh failed during socket connect_error');
-                        
-                        window.dispatchEvent(new CustomEvent('auth:force-logout'));
-                    }
-                } catch (refreshError) {
-                    console.error('❌ Token refresh error:', refreshError);
-                    
-                }
+            if (authRetries >= MAX_SOCKET_AUTH_RETRIES) {
+                logger.error('❌ Socket auth failed after max retries — giving up');
+                setConnectionError('Realtime connection unavailable. Please refresh the page.');
+                return;
+            }
+            authRetries += 1;
+
+            try {
+                const newToken = await refreshAccessToken();
+                if (cancelled) return;
+                socketInstance.auth = { token: newToken };
+                const delay = AUTH_RETRY_BASE_DELAY_MS * 2 ** (authRetries - 1);
+                retryTimer = setTimeout(() => {
+                    retryTimer = null;
+                    if (!cancelled && !socketInstance.connected) socketInstance.connect();
+                }, delay);
+            } catch (refreshError) {
+                if (cancelled) return;
+                logger.error('❌ Token refresh failed during socket connect_error:', refreshError?.message);
+                setConnectionError('Realtime connection unavailable. Please sign in again.');
+                // The api.js interceptor owns force-logout; don't loop here.
             }
         });
 
-        
-        socketRef.current = socketInstance;
-        
-        
-        setSocketId(socketInstance.id ?? Date.now());
-
-        socketInstance.on('connect', () => {
-            console.log('✅ SOCKET CONNECTED', socketInstance.id);
-            setIsConnected(true);
-            setSocketId(socketInstance.id); 
-
-            
-            const workspaceId = localStorage.getItem('activeWorkspaceId');
-            if (workspaceId) {
-                socketInstance.emit('join-workspace', { workspaceId });
-            }
-        });
-
-        
-        
+        setSocket(socketInstance);
+        socketInstance.connect();
 
         return () => {
-            if (socketInstance.connected) {
-                socketInstance.disconnect();
-            }
-            socketRef.current = null;
+            cancelled = true;
+            if (retryTimer) clearTimeout(retryTimer);
+            socketInstance.removeAllListeners();
+            socketInstance.disconnect();
+            setSocket(null);
             setIsConnected(false);
         };
-    }, [user]); 
+    }, [userId, hasToken]);
 
-    
-    
-    const connectSocket = useCallback(() => {
-        if (socketRef.current && !socketRef.current.connected) {
-            socketRef.current.connect();
+    // Keep the handshake token fresh for socket.io's automatic reconnects
+    // without recreating the socket on every token refresh.
+    useEffect(() => {
+        if (socket && accessToken) {
+            socket.auth = { token: accessToken };
         }
-    }, []);
+    }, [socket, accessToken]);
 
-    
+    const connectSocket = useCallback(() => {
+        if (socket && !socket.connected) {
+            socket.connect();
+        }
+    }, [socket]);
+
     useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
+        if (!socket) return undefined;
+        const cleanups = [
+            attachFanOut(socket, CHANNEL_EVENTS, channelListenersRef),
+            attachFanOut(socket, MESSAGE_EVENTS, messageListenersRef),
+            attachFanOut(socket, WORKSPACE_EVENTS, workspaceListenersRef),
+            attachFanOut(socket, TASK_EVENTS, taskListenersRef),
+            attachFanOut(socket, NOTE_EVENTS, noteListenersRef),
+            attachFanOut(socket, UPDATE_EVENTS, updateListenersRef),
+            attachFanOut(socket, NOTIFICATION_EVENTS, notificationListenersRef),
+        ];
+        return () => cleanups.forEach(fn => fn());
+    }, [socket]);
 
-        socket.on('channel-created', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('channel-created', data));
-        });
-
-        socket.on('channel-updated', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('channel-updated', data));
-        });
-
-        socket.on('channel-deleted', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('channel-deleted', data));
-        });
-
-        socket.on('invited-to-channel', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('invited-to-channel', data));
-        });
-
-        socket.on('removed-from-channel', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('removed-from-channel', data));
-        });
-
-        socket.on('channel-member-added', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('channel-member-added', data));
-        });
-
-        socket.on('channel-member-joined', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('channel-member-joined', data));
-        });
-
-        socket.on('channel-member-removed', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('channel-member-removed', data));
-        });
-
-        socket.on('member-left', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('member-left', data));
-        });
-
-        socket.on('admin-assigned', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('admin-assigned', data));
-        });
-
-        socket.on('admin-demoted', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('admin-demoted', data));
-        });
-
-        socket.on('channel-privacy-changed', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('channel-privacy-changed', data));
-        });
-
-        socket.on('messages-cleared', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('messages-cleared', data));
-        });
-
-        socket.on('tab-added', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('tab-added', data));
-        });
-
-        socket.on('tab-updated', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('tab-updated', data));
-        });
-
-        socket.on('tab-deleted', (data) => {
-
-            channelListenersRef.current.forEach(cb => cb('tab-deleted', data));
-        });
-
-        
-        
-        
-
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-
-        return () => {
-            socket.off('channel-created');
-            socket.off('channel-updated');
-            socket.off('channel-deleted');
-            socket.off('invited-to-channel');
-            socket.off('removed-from-channel');
-            socket.off('channel-member-added');
-            socket.off('channel-member-joined');
-            socket.off('channel-member-removed');
-            socket.off('member-left');
-            socket.off('admin-assigned');
-            socket.off('admin-demoted');
-            socket.off('channel-privacy-changed');
-            socket.off('messages-cleared');
-            socket.off('tab-added');
-            socket.off('tab-updated');
-            socket.off('tab-deleted');
-            
-        };
-    }, [socketId]); 
-
-    
-    useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        socket.on('new-message', (data) => {
-            messageListenersRef.current.forEach(cb => cb('new-message', data));
-        });
-
-        socket.on('new-dm-session', (data) => {
-            messageListenersRef.current.forEach(cb => cb('new-dm-session', data));
-        });
-
-        socket.on('message-deleted', (data) => {
-            messageListenersRef.current.forEach(cb => cb('message-deleted', data));
-        });
-
-        socket.on('message-pinned', (data) => {
-            messageListenersRef.current.forEach(cb => cb('message-pinned', data));
-        });
-
-        socket.on('message-unpinned', (data) => {
-            messageListenersRef.current.forEach(cb => cb('message-unpinned', data));
-        });
-
-        socket.on('read-update', (data) => {
-            messageListenersRef.current.forEach(cb => cb('read-update', data));
-        });
-
-        socket.on('reaction-added', (data) => {
-            messageListenersRef.current.forEach(cb => cb('reaction-added', data));
-        });
-
-        socket.on('reaction-removed', (data) => {
-            messageListenersRef.current.forEach(cb => cb('reaction-removed', data));
-        });
-
-        
-        
-        socket.on('reconnected', (data) => {
-            messageListenersRef.current.forEach(cb => cb('reconnected', data));
-        });
-
-        return () => {
-            socket.off('new-message');
-            socket.off('new-dm-session');
-            socket.off('message-deleted');
-            socket.off('message-pinned');
-            socket.off('message-unpinned');
-            socket.off('read-update');
-            socket.off('reaction-added');
-            socket.off('reaction-removed');
-            socket.off('reconnected');
-        };
-    }, [socketId]);
-
-    
-    useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        socket.on('workspace-joined', (data) => {
-
-            workspaceListenersRef.current.forEach(cb => cb('workspace-joined', data));
-        });
-
-        socket.on('workspace-created', (data) => {
-
-            workspaceListenersRef.current.forEach(cb => cb('workspace-created', data));
-        });
-
-        socket.on('workspace-updated', (data) => {
-
-            workspaceListenersRef.current.forEach(cb => cb('workspace-updated', data));
-        });
-
-        socket.on('workspace-deleted', (data) => {
-
-            workspaceListenersRef.current.forEach(cb => cb('workspace-deleted', data));
-        });
-
-        return () => {
-            socket.off('workspace-joined');
-            socket.off('workspace-created');
-            socket.off('workspace-updated');
-            socket.off('workspace-deleted');
-        };
-    }, [socketId]);
-
-    
-    useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        const events = ['task-created', 'task-updated', 'task-deleted', 'task-assigned', 'task-removed'];
-
-        events.forEach(event => {
-            socket.on(event, (data) => {
-
-                taskListenersRef.current.forEach(cb => cb(event, data));
-            });
-        });
-
-        return () => {
-            events.forEach(event => socket.off(event));
-        };
-    }, [socketId]);
-
-    
-    useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        const events = ['note-created', 'note-updated', 'note-deleted', 'note-shared'];
-
-        events.forEach(event => {
-            socket.on(event, (data) => {
-
-                noteListenersRef.current.forEach(cb => cb(event, data));
-            });
-        });
-
-        return () => {
-            events.forEach(event => socket.off(event));
-        };
-    }, [socketId]);
-
-    
-    useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        const events = ['company:update:created', 'company:update:deleted', 'company:update:reacted'];
-
-        events.forEach(event => {
-            socket.on(event, (data) => {
-
-                updateListenersRef.current.forEach(cb => cb(event, data));
-            });
-        });
-
-        return () => {
-            events.forEach(event => socket.off(event));
-        };
-    }, [socketId]);
-
-    
-    useEffect(() => {
-        const socket = socketRef.current;
-        if (!socket) return;
-
-        const onNotification = (data) => {
-            notificationListenersRef.current.forEach(cb => cb('notification:new', data));
-        };
-
-        socket.on('notification:new', onNotification);
-
-        return () => {
-            socket.off('notification:new', onNotification);
-        };
-    }, [socketId]);
-
-    
     const addChannelListener = useCallback((callback) => {
         channelListenersRef.current.push(callback);
         return () => {
@@ -476,8 +220,9 @@ export const SocketProvider = ({ children }) => {
     }, []);
 
     const value = {
-        socket: socketRef.current,
+        socket,
         isConnected,
+        connectionError,
         addChannelListener,
         addMessageListener,
         addWorkspaceListener,

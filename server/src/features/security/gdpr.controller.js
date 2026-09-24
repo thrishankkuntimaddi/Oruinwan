@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const User = require('../../../models/User');
 const AuditLog = require('../../../models/AuditLog');
@@ -52,7 +53,7 @@ exports.exportUser = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="chttrix-data-export-${Date.now()}.json"`);
     return res.json(exportData);
   } catch (err) {
-    console.error('[GDPR] export-user error:', err);
+    logger.error('[GDPR] export-user error:', err);
     return res.status(500).json({ message: 'Failed to export user data' });
   }
 };
@@ -105,7 +106,7 @@ exports.deleteUser = async (req, res) => {
 
     return res.json({ message: 'Account data erased successfully (GDPR Art. 17)' });
   } catch (err) {
-    console.error('[GDPR] delete-user error:', err);
+    logger.error('[GDPR] delete-user error:', err);
     return res.status(500).json({ message: 'Failed to delete user data' });
   }
 };
@@ -146,7 +147,7 @@ exports.exportWorkspace = async (req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="workspace-export-${workspaceId}-${Date.now()}.json"`);
     return res.json(exportData);
   } catch (err) {
-    console.error('[GDPR] export-workspace error:', err);
+    logger.error('[GDPR] export-workspace error:', err);
     return res.status(500).json({ message: 'Failed to export workspace data' });
   }
 };
@@ -167,7 +168,7 @@ exports.getLegalHold = async (req, res) => {
       setAt: user.legalHoldAt,
     });
   } catch (err) {
-    console.error('[GDPR] get-legal-hold error:', err);
+    logger.error('[GDPR] get-legal-hold error:', err);
     return res.status(500).json({ message: 'Failed to fetch legal hold status' });
   }
 };
@@ -204,7 +205,7 @@ exports.setLegalHold = async (req, res) => {
 
     return res.json({ message: `Legal hold ${legalHold ? 'set' : 'removed'}`, legalHold: user.legalHold });
   } catch (err) {
-    console.error('[GDPR] set-legal-hold error:', err);
+    logger.error('[GDPR] set-legal-hold error:', err);
     return res.status(500).json({ message: 'Failed to update legal hold' });
   }
 };
@@ -235,7 +236,7 @@ exports.getAuditLogs = async (req, res) => {
       pages: Math.ceil(total / cap),
     });
   } catch (err) {
-    console.error('[GDPR] audit-logs error:', err);
+    logger.error('[GDPR] audit-logs error:', err);
     return res.status(500).json({ message: 'Failed to fetch audit logs' });
   }
 };

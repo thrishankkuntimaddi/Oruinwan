@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const securityAuditService = require('../../services/securityAudit.service');
 
 exports.getAuditLog = async (req, res) => {
@@ -22,7 +23,7 @@ exports.getAuditLog = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ [getAuditLog] Error:', error);
+        logger.error('❌ [getAuditLog] Error:', error);
         return res.status(500).json({
             message: 'Failed to fetch audit log'
         });

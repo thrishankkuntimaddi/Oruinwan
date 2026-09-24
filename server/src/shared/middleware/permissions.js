@@ -1,7 +1,8 @@
-const Company = require("../models/Company");
-const Workspace = require("../models/Workspace");
+const logger = require('../../../utils/logger');
+const Company = require("../../models/Company");
+const Workspace = require("../../models/Workspace");
 const Channel = require("../../features/channels/channel.model.js");
-const User = require("../models/User");
+const User = require("../../models/User");
 
 exports.requireCompany = async (req, res, next) => {
     try {
@@ -34,7 +35,7 @@ exports.requireCompany = async (req, res, next) => {
 
         next();
     } catch (err) {
-        console.error("requireCompany error:", err);
+        logger.error("requireCompany error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -48,7 +49,7 @@ exports.requireCompanyOwner = async (req, res, next) => {
             next();
         });
     } catch (err) {
-        console.error("requireCompanyOwner error:", err);
+        logger.error("requireCompanyOwner error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -65,7 +66,7 @@ exports.requireCompanyAdmin = async (req, res, next) => {
             next();
         });
     } catch (err) {
-        console.error("requireCompanyAdmin error:", err);
+        logger.error("requireCompanyAdmin error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -100,7 +101,7 @@ exports.requireWorkspaceAccess = async (req, res, next) => {
         req.workspace = workspace;
         next();
     } catch (err) {
-        console.error("requireWorkspaceAccess error:", err);
+        logger.error("requireWorkspaceAccess error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -114,7 +115,7 @@ exports.requireWorkspaceAdmin = async (req, res, next) => {
             next();
         });
     } catch (err) {
-        console.error("requireWorkspaceAdmin error:", err);
+        logger.error("requireWorkspaceAdmin error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -148,7 +149,7 @@ exports.requireChannelAccess = async (req, res, next) => {
         req.workspace = workspace;
         next();
     } catch (err) {
-        console.error("requireChannelAccess error:", err);
+        logger.error("requireChannelAccess error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -187,7 +188,7 @@ exports.validateDMAccess = async (req, res, next) => {
         req.recipient = recipient;
         next();
     } catch (err) {
-        console.error("validateDMAccess error:", err);
+        logger.error("validateDMAccess error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -202,7 +203,7 @@ exports.tenantIsolation = async (req, res, next) => {
 
         next();
     } catch (err) {
-        console.error("tenantIsolation error:", err);
+        logger.error("tenantIsolation error:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -233,7 +234,7 @@ exports.checkPermission = (permission) => {
 
             next();
         } catch (err) {
-            console.error("checkPermission error:", err);
+            logger.error("checkPermission error:", err);
             return res.status(500).json({ message: "Server error" });
         }
     };

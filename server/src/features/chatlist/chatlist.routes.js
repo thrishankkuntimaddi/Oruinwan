@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require("express");
 const router = express.Router();
 const requireAuth = require("../../shared/middleware/auth");
@@ -36,7 +37,7 @@ router.get("/contacts", requireAuth, async (req, res) => {
 
         res.json({ contacts: users });
     } catch (err) {
-        console.error("GET CONTACTS ERROR:", err);
+        logger.error("GET CONTACTS ERROR:", err);
         res.status(500).json({ message: "Server error" });
     }
 });

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const _Department = require('../../../models/Department');
@@ -203,7 +204,7 @@ exports.getCompanyAnalytics = async (req, res) => {
         });
 
     } catch (err) {
-        console.error('GET COMPANY ANALYTICS ERROR:', err);
+        logger.error('GET COMPANY ANALYTICS ERROR:', err);
         return res.status(500).json({ message: 'Server error' });
     }
 };

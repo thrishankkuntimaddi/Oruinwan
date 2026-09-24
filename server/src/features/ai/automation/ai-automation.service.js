@@ -22,7 +22,7 @@ async function parseCommand(command, userId, workspaceId) {
     if (apiKey) {
         try {
             const { GoogleGenerativeAI } = require('@google/generative-ai');
-            const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: (process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash') });
 
             const classifyPrompt = [
                 'Classify the following workplace command into one of these intents:',
@@ -82,7 +82,7 @@ async function _handleCreateTask(command, userId, workspaceId) {
 
         if (apiKey) {
             const { GoogleGenerativeAI } = require('@google/generative-ai');
-            const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: (process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash') });
             const prompt = [
                 'Extract the task title and optional due date from this command.',
                 'Return JSON: { "title": "...", "dueDate": "YYYY-MM-DD or null" }. Nothing else.',

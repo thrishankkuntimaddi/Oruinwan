@@ -51,9 +51,9 @@ async function setOffline(io, userId, socketId, companyId) {
   
   if (entry.socketIds.size > 0) return;
 
-  entry.status = 'offline';
-  entry.lastSeen = new Date();
-  presenceMap.set(userId, entry);
+  const lastSeen = new Date();
+  // No sockets left: drop the entry so the map does not grow with every user ever seen.
+  presenceMap.delete(userId);
 
   User.findByIdAndUpdate(userId, { isOnline: false, lastActivityAt: new Date() }).catch(() => {});
 
@@ -61,7 +61,7 @@ async function setOffline(io, userId, socketId, companyId) {
     io.to(`company_${companyId}`).emit('user:offline', {
       userId,
       status: 'offline',
-      lastSeen: entry.lastSeen,
+      lastSeen,
     });
   }
 }

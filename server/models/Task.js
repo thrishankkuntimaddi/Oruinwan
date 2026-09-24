@@ -74,6 +74,8 @@ const TaskSchema = new mongoose.Schema({
 
     
     dueDate: { type: Date, default: null },
+    // Set by notifications.cron when the 'due soon' reminder was sent (one reminder per due window).
+    dueSoonNotifiedAt: { type: Date, default: null },
     startDate: { type: Date, default: null },
 
     

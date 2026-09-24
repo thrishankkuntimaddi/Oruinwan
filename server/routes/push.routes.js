@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../utils/logger');
 
 const express = require('express');
 const router = express.Router();
@@ -11,7 +12,11 @@ router.post('/register', requireAuth, async (req, res) => {
     const { token, platform } = req.body;
     if (!token) return res.status(400).json({ error: 'token is required' });
 
-    const userId = req.user._id || req.user.id;
+    const userId = req.user.sub || req.user._id || req.user.id;
+
+    // Drop any existing entry for this token first: the subdocument carries a
+    // fresh registeredAt and _id, so $addToSet alone would never deduplicate.
+    await User.updateOne({ _id: userId }, { $pull: { deviceTokens: { token } } });
 
     await User.findByIdAndUpdate(
       userId,
@@ -25,7 +30,7 @@ router.post('/register', requireAuth, async (req, res) => {
 
     res.json({ success: true, message: 'Device token registered' });
   } catch (err) {
-    console.error('[Push] Register error:', err.message);
+    logger.error('[Push] Register error:', err.message);
     res.status(500).json({ error: 'Failed to register device token' });
   }
 });
@@ -35,7 +40,7 @@ router.post('/unregister', requireAuth, async (req, res) => {
     const { token } = req.body;
     if (!token) return res.status(400).json({ error: 'token is required' });
 
-    const userId = req.user._id || req.user.id;
+    const userId = req.user.sub || req.user._id || req.user.id;
 
     await User.findByIdAndUpdate(userId, {
       $pull: { deviceTokens: { token } },
@@ -43,7 +48,7 @@ router.post('/unregister', requireAuth, async (req, res) => {
 
     res.json({ success: true, message: 'Device token removed' });
   } catch (err) {
-    console.error('[Push] Unregister error:', err.message);
+    logger.error('[Push] Unregister error:', err.message);
     res.status(500).json({ error: 'Failed to remove device token' });
   }
 });

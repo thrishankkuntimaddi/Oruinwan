@@ -1,6 +1,7 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Monitor, Square, Send, Trash2 } from "lucide-react";
 import api from '@services/api';
+import logger from '../../../../utils/logger';
 
 export default function ScreenRecorder({ onSend, disabled = false }) {
     const [state, setState] = useState("idle"); 
@@ -11,6 +12,29 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
     const chunksRef = useRef([]);
     const blobRef = useRef(null);
     const timerRef = useRef(null);
+    const streamRef = useRef(null);
+    const unmountedRef = useRef(false);
+
+    // Revoke the preview object URL whenever it is replaced/cleared or on unmount.
+    useEffect(() => {
+        if (!videoUrl) return undefined;
+        return () => URL.revokeObjectURL(videoUrl);
+    }, [videoUrl]);
+
+    // Unmount: stop the timer, the recorder and all capture tracks.
+    useEffect(() => {
+        unmountedRef.current = false;
+        return () => {
+            unmountedRef.current = true;
+            clearInterval(timerRef.current);
+            const mr = mediaRecorderRef.current;
+            if (mr && mr.state === "recording") {
+                try { mr.stop(); } catch { /* already stopped */ }
+            }
+            streamRef.current?.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        };
+    }, []);
 
     const startRecording = async () => {
         if (disabled) return;
@@ -21,17 +45,24 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
                 audio: true,
             });
 
+            if (unmountedRef.current) {
+                stream.getTracks().forEach(t => t.stop());
+                return;
+            }
+            streamRef.current = stream;
             const mr = new MediaRecorder(stream, { mimeType: "video/webm" });
             mediaRecorderRef.current = mr;
             chunksRef.current = [];
 
             mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
             mr.onstop = () => {
+                stream.getTracks().forEach(t => t.stop());
+                if (streamRef.current === stream) streamRef.current = null;
+                if (unmountedRef.current) return;
                 const blob = new Blob(chunksRef.current, { type: "video/webm" });
                 blobRef.current = blob;
                 setVideoUrl(URL.createObjectURL(blob));
                 setState("preview");
-                stream.getTracks().forEach(t => t.stop());
             };
 
             
@@ -45,7 +76,7 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
             setDuration(0);
             timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
         } catch (err) {
-            if (err.name !== "NotAllowedError") console.error("Screen record error:", err);
+            if (err.name !== "NotAllowedError") logger.error("Screen record error:", err);
             setState("idle");
         }
     };
@@ -84,7 +115,7 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
             });
             discard();
         } catch (err) {
-            console.error("Screen recording upload failed:", err);
+            logger.error("Screen recording upload failed:", err);
         } finally {
             setUploading(false);
         }

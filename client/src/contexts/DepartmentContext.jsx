@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import api, { API_BASE } from '@services/api';
+import logger from '../utils/logger';
 
 const DepartmentContext = createContext();
 
@@ -42,7 +43,7 @@ export const DepartmentProvider = ({ children }) => {
 
             setError(null);
         } catch (err) {
-            console.error('Error fetching departments:', err);
+            logger.error('Error fetching departments:', err);
             setError(err.response?.data?.message || 'Failed to load departments');
             setDepartments([]);
         } finally {
@@ -78,7 +79,7 @@ export const DepartmentProvider = ({ children }) => {
             setDepartments(prev => [...prev, response.data.department]);
             return response.data.department;
         } catch (err) {
-            console.error('Error creating department:', err);
+            logger.error('Error creating department:', err);
             throw err;
         }
     };
@@ -99,7 +100,7 @@ export const DepartmentProvider = ({ children }) => {
             );
             return response.data.department;
         } catch (err) {
-            console.error('Error updating department:', err);
+            logger.error('Error updating department:', err);
             throw err;
         }
     };
@@ -112,7 +113,7 @@ export const DepartmentProvider = ({ children }) => {
             
             setDepartments(prev => prev.filter(dept => dept._id !== departmentId));
         } catch (err) {
-            console.error('Error deleting department:', err);
+            logger.error('Error deleting department:', err);
             throw err;
         }
     };
@@ -123,7 +124,7 @@ export const DepartmentProvider = ({ children }) => {
             const response = await api.get(`${API_BASE}/api/departments/${departmentId}/members`);
             return response.data.members || [];
         } catch (err) {
-            console.error('Error fetching department members:', err);
+            logger.error('Error fetching department members:', err);
             throw err;
         }
     };
@@ -139,7 +140,7 @@ export const DepartmentProvider = ({ children }) => {
             
             await fetchDepartments();
         } catch (err) {
-            console.error('Error assigning user to department:', err);
+            logger.error('Error assigning user to department:', err);
             throw err;
         }
     };
@@ -152,7 +153,7 @@ export const DepartmentProvider = ({ children }) => {
             
             await fetchDepartments();
         } catch (err) {
-            console.error('Error removing user from department:', err);
+            logger.error('Error removing user from department:', err);
             throw err;
         }
     };

@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const gateway = require('../../../ai/api/ai.gateway');
 
@@ -57,7 +58,7 @@ async function getSmartReplies(messageText, messageId = null, contextMessages = 
       }
     }
   } catch (err) {
-    console.warn('[ai-messaging] Smart replies fallback (AI unavailable):', err.message);
+    logger.warn('[ai-messaging] Smart replies fallback (AI unavailable):', err.message);
   }
 
   _cacheSet(cacheKey, suggestions);
@@ -90,7 +91,7 @@ async function translateMessage(text, targetLang, messageId = null) {
       }
     }
   } catch (err) {
-    console.warn('[ai-messaging] Translation fallback (AI unavailable):', err.message);
+    logger.warn('[ai-messaging] Translation fallback (AI unavailable):', err.message);
   }
 
   _cacheSet(cacheKey, result);
@@ -127,7 +128,7 @@ async function summarizeThread(parentMessageId, replies, parentText = '') {
     const text = (aiResult?.text || aiResult?.message || '').trim();
     if (text) summary = text;
   } catch (err) {
-    console.warn('[ai-messaging] Thread summary fallback (AI unavailable):', err.message);
+    logger.warn('[ai-messaging] Thread summary fallback (AI unavailable):', err.message);
   }
 
   _cacheSet(cacheKey, summary);

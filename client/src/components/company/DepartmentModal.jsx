@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { createDepartment, updateDepartment } from '../../services/departmentService';
 import { useForm } from '../../hooks/useForm';
 import { getErrorMessage } from '../../utils/apiHelpers';
+import logger from '../../utils/logger';
 
 const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) => {
 
@@ -18,7 +19,7 @@ const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) 
                 onSuccess();
                 onClose();
             } catch (err) {
-                console.error("Failed to save department", err);
+                logger.error("Failed to save department", err);
                 const error = new Error(getErrorMessage(err));
                 error.fieldErrors = { submit: getErrorMessage(err) };
                 throw error;

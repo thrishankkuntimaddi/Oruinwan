@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const registrationService = require("./registration.service");
 const Company = require("../../../models/Company");
 const Department = require("../../../models/Department");
@@ -5,7 +6,7 @@ const User = require("../../../models/User");
 
 exports.registerCompany = async (req, res) => {
     try {
-        console.log("🚀 Starting company registration...");
+        logger.info("🚀 Starting company registration...");
 
         
         const { company, _adminUser } = await registrationService.registerCompany({
@@ -13,7 +14,7 @@ exports.registerCompany = async (req, res) => {
             req
         });
 
-        console.log(`✅ Company "${company.name}" registered (PENDING VERIFICATION).`);
+        logger.info(`✅ Company "${company.name}" registered (PENDING VERIFICATION).`);
 
         return res.status(201).json({
             message: "Company registration submitted successfully. Your account is pending internal verification.",
@@ -26,7 +27,7 @@ exports.registerCompany = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("❌ REGISTER COMPANY ERROR:", err.message);
+        logger.error("❌ REGISTER COMPANY ERROR:", err.message);
 
         
         const errorStatusMap = {
@@ -67,7 +68,7 @@ exports.verifyCompany = async (req, res) => {
         }
 
         if (decision === "approve") {
-            console.log(`✅ Approving company: ${company.name}...`);
+            logger.info(`✅ Approving company: ${company.name}...`);
 
             
             company.verificationStatus = "approved";
@@ -82,14 +83,14 @@ exports.verifyCompany = async (req, res) => {
                     req
                 });
 
-                console.log(`✅ Company "${company.name}" verified and provisioned successfully.`);
+                logger.info(`✅ Company "${company.name}" verified and provisioned successfully.`);
 
                 return res.json({
                     message: "Company approved and resources provisioned",
                     status: "approved"
                 });
             } catch (provisionErr) {
-                console.error("Provisioning error:", provisionErr);
+                logger.error("Provisioning error:", provisionErr);
                 
                 company.verificationStatus = "pending";
                 await company.save();
@@ -105,7 +106,7 @@ exports.verifyCompany = async (req, res) => {
             company.rejectionReason = rejectionReason || "Not specified";
             await company.save();
 
-            console.log(`❌ Company "${company.name}" rejected.`);
+            logger.info(`❌ Company "${company.name}" rejected.`);
 
             return res.json({
                 message: "Company registration rejected",
@@ -117,7 +118,7 @@ exports.verifyCompany = async (req, res) => {
         }
 
     } catch (err) {
-        console.error("VERIFY COMPANY ERROR:", err);
+        logger.error("VERIFY COMPANY ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -156,7 +157,7 @@ exports.startSetup = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("START SETUP ERROR:", err);
+        logger.error("START SETUP ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -198,7 +199,7 @@ exports.updateCompanySetup = async (req, res) => {
             }
             company.setupStep = 3;
         } else if (step === 4) { 
-            console.log("🚀 Finalizing Company Setup & Provisioning Resources...");
+            logger.info("🚀 Finalizing Company Setup & Provisioning Resources...");
 
             
             const departmentsToCreate = company.metadata?.finalDepartments || [];
@@ -227,7 +228,7 @@ exports.updateCompanySetup = async (req, res) => {
                 });
                 await dept.save();
                 createdDepartmentIds.push(dept._id);
-                console.log(`✅ Created new department: ${deptName}`);
+                logger.info(`✅ Created new department: ${deptName}`);
             }
 
             
@@ -246,19 +247,19 @@ exports.updateCompanySetup = async (req, res) => {
 
                 ownerUser.departments = uniqueDeptIds;
                 await ownerUser.save();
-                console.log(`✅ Updated owner's departments: ${uniqueDeptIds.length} total departments`);
+                logger.info(`✅ Updated owner's departments: ${uniqueDeptIds.length} total departments`);
             }
 
             
             if (existingDeptNames.length > 0) {
-                console.log(`ℹ️ Skipped ${existingDeptNames.length} existing departments:`, existingDeptNames);
+                logger.info(`ℹ️ Skipped ${existingDeptNames.length} existing departments:`, existingDeptNames);
             }
 
             company.isSetupComplete = true;
             company.setupStep = 4;
             await company.save();
 
-            console.log(`✅ Setup complete for company: ${company.name}`);
+            logger.info(`✅ Setup complete for company: ${company.name}`);
 
             return res.json({
                 message: "Setup complete",
@@ -279,7 +280,7 @@ exports.updateCompanySetup = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("SETUP ERROR:", err);
+        logger.error("SETUP ERROR:", err);
         return res.status(500).json({ message: "Server error" });
     }
 };

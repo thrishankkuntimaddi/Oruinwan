@@ -1,5 +1,8 @@
 require("dotenv").config();
 
+// Logger first: env validation below logs before anything else is loaded.
+const logger = require("./utils/logger");
+
 const requiredEnvVars = [
   'MONGO_URI',
   'ACCESS_TOKEN_SECRET',
@@ -9,27 +12,27 @@ const requiredEnvVars = [
   'SERVER_KEK'  
 ];
 
-console.log('🔍 Validating environment variables...');
+logger.info('🔍 Validating environment variables...');
 const missing = requiredEnvVars.filter(varName => !process.env[varName]);
 
 if (missing.length > 0) {
-  console.error('❌ FATAL: Missing required environment variables:');
-  missing.forEach(varName => console.error(`   - ${varName}`));
-  console.error('\n💡 Check your .env file or deployment environment settings');
-  console.error('   Required variables:', requiredEnvVars.join(', '));
+  logger.error('❌ FATAL: Missing required environment variables:');
+  missing.forEach(varName => logger.error(`   - ${varName}`));
+  logger.error('\n💡 Check your .env file or deployment environment settings');
+  logger.error('   Required variables:', requiredEnvVars.join(', '));
   process.exit(1);
 }
 
-console.log('✅ All required environment variables present');
+logger.info('✅ All required environment variables present');
 
 const serverKekHex = process.env.SERVER_KEK || '';
 if (serverKekHex.length !== 64) {
-  console.error(`❌ FATAL: SERVER_KEK must be exactly 64 hex characters / 32 bytes for AES-256 (got ${serverKekHex.length})`);
-  console.error('   Generate a valid key with: node -e "require(\'crypto\').randomBytes(32).toString(\'hex\')"');
+  logger.error(`❌ FATAL: SERVER_KEK must be exactly 64 hex characters / 32 bytes for AES-256 (got ${serverKekHex.length})`);
+  logger.error('   Generate a valid key with: node -e "require(\'crypto\').randomBytes(32).toString(\'hex\')"');
   process.exit(1);
 }
-console.log(`✅ SERVER_KEK validated (64 hex chars = 32 bytes, AES-256 ready)`);
-console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.info(`✅ SERVER_KEK validated (64 hex chars = 32 bytes, AES-256 ready)`);
+logger.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`);
 
 const express = require("express");
 const path = require("path");
@@ -40,7 +43,6 @@ const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const http = require("http");
 const { Server } = require("socket.io");
-const logger = require("./utils/logger");
 const passport = require("./config/passport");
 
 const { generateAuditDigest } = require('./src/services/auditDigestService');
@@ -58,7 +60,7 @@ if (process.env.NODE_ENV === 'production') {
   app.use((req, res, next) => {
     
     if (req.headers['x-forwarded-proto'] !== 'https') {
-      console.log('⚠️ HTTP request detected, redirecting to HTTPS');
+      logger.info('⚠️ HTTP request detected, redirecting to HTTPS');
       return res.redirect(301, `https://${req.headers.host}${req.url}`);
     }
     next();
@@ -81,7 +83,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
 ].filter(Boolean); 
 
-console.log('🌐 CORS allowed origins:', allowedOrigins);
+logger.info('🌐 CORS allowed origins:', allowedOrigins);
 
 app.use(
   cors({
@@ -92,7 +94,7 @@ app.use(
 
 const { sanitizeInput } = require('./src/shared/middleware/validate');
 app.use(sanitizeInput);
-console.log('🛡️ Input sanitization enabled');
+logger.info('🛡️ Input sanitization enabled');
 
 const limiter = rateLimit({
   windowMs: 60 * 1000, 
@@ -135,7 +137,21 @@ const requireAuth = require("./src/shared/middleware/auth");
 
 const { requireOwner, requireAdmin, requireManager } = require("./src/shared/middleware/permissionMiddleware");
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Local-disk fallback for workspace files only (used when GCS is not configured).
+// Verification documents and anything else under uploads/ are never served here.
+const INLINE_UPLOAD_TYPES = /^(image\/(?!svg)|video\/|audio\/|application\/pdf)/;
+app.use('/uploads/files', express.static(path.join(__dirname, 'uploads', 'files'), {
+  index: false,
+  dotfiles: 'deny',
+  setHeaders: (res, filePath) => {
+    const type = require('mime-types').lookup(filePath) || 'application/octet-stream';
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    if (!INLINE_UPLOAD_TYPES.test(type)) {
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', 'attachment');
+    }
+  },
+}));
 
 const httpServer = http.createServer(app);
 
@@ -196,9 +212,11 @@ app.use("/api/company/onboarding", require("./src/features/onboarding/onboarding
 
 app.use("/api/company", require("./src/features/security/security.routes")); 
 
+// Integration router serves /scim/users* (SCIM Location headers use /api/scim/users) and
+// /company/scim/tokens, /company/integrations/sync* — all reachable from the /api mount.
+// The former duplicate /api/company mount only produced /api/company/company/* aliases.
 const integrationRouter = require("./src/features/integration/integration.routes");
-app.use("/api", integrationRouter);           
-app.use("/api/company", integrationRouter);  
+app.use("/api", integrationRouter);
 
 app.use("/api/admin-dashboard", requireAuth, requireAdmin, require("./src/features/admin/admin-dashboard.routes"));
 app.use("/api/owner-dashboard", requireAuth, requireOwner, require("./src/features/admin/owner-dashboard.routes"));
@@ -286,7 +304,7 @@ app.use("/api/v2/crypto", require("./src/features/crypto/identity.routes"));
 
 app.use("/api/v2/devices", require("./src/features/devices/devices.routes"));
 
-app.use("/api/v2/security", require("./src/features/security/security.routes"));
+// security.routes is mounted once at /api/company (see above); the /api/v2/security duplicate was removed.
 
 app.use('/api/notifications', require('./src/features/notifications/notifications.routes'));
 
@@ -299,13 +317,16 @@ app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"
 app.use('/api/public', require('./src/features/developer/publicApi.routes'));
 
 app.use("/api/messages", requireAuth, require("./src/features/messages/bookmark.routes"));
-app.use("/api", requireAuth, require("./src/features/reminders/reminders.routes"));
+// No blanket requireAuth here: every reminders route applies requireAuth itself, and a
+// blanket middleware on "/api" would force auth on every later /api/* route.
+app.use("/api", require("./src/features/reminders/reminders.routes"));
 
 app.use("/api/v2/link-preview", require("./src/modules/linkPreview/linkPreview.routes"));
 
 app.use("/api/v2/status", require("./src/features/status/status.routes"));
 
-app.use("/api/v2/admin", require("./src/features/admin/admin.routes"));
+// admin.routes is mounted once at /api/admin (with requireAuth); the unauthenticated
+// /api/v2/admin duplicate was removed (no client uses it).
 
 app.use("/api/v2/audit", require("./src/features/audit/audit.routes"));
 
@@ -349,7 +370,7 @@ app.use('/api/scheduled-meetings', requireAuth, require('./src/features/meetings
 app.use(notFoundHandler);    
 app.use(globalErrorHandler); 
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
 
 mongoose
   .connect(process.env.MONGO_URI)
@@ -375,6 +396,16 @@ mongoose
     
     const { startAutomationCron } = require('./src/features/automations/automation.cron');
     startAutomationCron(io);
+
+    // A busy port is a config problem, not a crash: say so plainly and exit
+    // without the uncaught-exception dump.
+    httpServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        logger.error(`Port ${PORT} is already in use. Stop the other process (lsof -i :${PORT}) or set PORT in server/.env.`);
+        process.exit(1);
+      }
+      throw err;
+    });
 
     httpServer.listen(PORT, () => {
       logger.success(`Server (Express + Socket.IO) running on port ${PORT}`);

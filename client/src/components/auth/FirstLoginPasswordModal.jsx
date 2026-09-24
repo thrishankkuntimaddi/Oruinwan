@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lock, Eye, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import api from '@services/api';
+import logger from '../../utils/logger';
 
 const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
     const { showToast } = useToast();
@@ -42,7 +43,7 @@ const FirstLoginPasswordModal = ({ isOpen, onContinue, companyName }) => {
             }, 500);
 
         } catch (error) {
-            console.error('Password change error:', error);
+            logger.error('Password change error:', error);
             showToast(
                 error.response?.data?.message || 'Failed to change password',
                 'error'

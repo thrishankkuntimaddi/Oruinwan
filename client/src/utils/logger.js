@@ -13,12 +13,15 @@ function getTimestamp() {
 }
 
 function log(level, emoji, message, ...args) {
-    if (!isDevelopment) return;
+    // Errors are always emitted so production failures stay diagnosable;
+    // everything else is development-only.
+    if (!isDevelopment && level !== LogLevel.ERROR) return;
 
     const timestamp = getTimestamp();
     const prefix = `${emoji} [${timestamp}] [${level}]`;
 
-    console.log(`${prefix} ${message}`, ...args);
+    const sink = level === LogLevel.ERROR ? console.error : level === LogLevel.WARN ? console.warn : console.log;
+    sink(`${prefix} ${message}`, ...args);
 }
 
 const logger = {

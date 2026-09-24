@@ -1,4 +1,5 @@
-// Expo entry point — must re-export the root App component
+// Polyfills must load before anything that touches crypto (noble, socket ids).
+import './src/polyfills';
 import { registerRootComponent } from 'expo';
 import App from './src/App';
 

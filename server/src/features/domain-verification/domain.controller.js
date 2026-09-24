@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const domainService = require("./domain.service");
 
 exports.generateDomainVerification = async (req, res) => {
@@ -20,7 +21,7 @@ exports.generateDomainVerification = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("GENERATE DOMAIN VERIFICATION ERROR:", err);
+        logger.error("GENERATE DOMAIN VERIFICATION ERROR:", err);
 
         if (err.message === 'Company not found') {
             return res.status(404).json({ message: err.message });
@@ -54,7 +55,7 @@ exports.verifyDomain = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("VERIFY DOMAIN ERROR:", err);
+        logger.error("VERIFY DOMAIN ERROR:", err);
 
         if (err.message === 'Company not found') {
             return res.status(404).json({ message: err.message });
@@ -89,7 +90,7 @@ exports.setAutoJoinPolicy = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("SET AUTO-JOIN POLICY ERROR:", err);
+        logger.error("SET AUTO-JOIN POLICY ERROR:", err);
 
         if (err.message === 'Company not found') {
             return res.status(404).json({ message: err.message });

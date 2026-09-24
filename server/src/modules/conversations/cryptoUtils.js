@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 
 function unwrapWithServerKEK(encryptedKey, iv, authTag) {
@@ -57,7 +58,7 @@ function wrapForUser(conversationKeyBytes, userPublicKeyPem) {
             algorithm: 'RSA-2048'  
         };
     } catch (error) {
-        console.error('Failed to wrap key for user:', error);
+        logger.error('Failed to wrap key for user:', error);
         throw new Error('Key wrapping failed');
     }
 }

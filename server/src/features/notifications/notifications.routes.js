@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
@@ -36,7 +37,7 @@ router.get('/', async (req, res) => {
             pages: Math.ceil(total / Number(limit)),
         });
     } catch (err) {
-        console.error('[GET /notifications]', err);
+        logger.error('[GET /notifications]', err);
         res.status(500).json({ message: 'Failed to fetch notifications' });
     }
 });

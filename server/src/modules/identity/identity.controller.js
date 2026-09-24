@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const identityService = require('./identity.service');
 const { handleError } = require('../../../utils/responseHelpers');
 
@@ -6,20 +7,20 @@ exports.uploadPublicKey = async (req, res) => {
         const userId = req.user.sub;
         const { publicKey, algorithm, version } = req.body;
 
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log(`📥 [PHASE 1] Public key upload request from user ${userId}`);
-        console.log(`📥 [PHASE 1] Algorithm: ${algorithm}, Version: ${version || 1}`);
+        logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.info(`📥 [PHASE 1] Public key upload request from user ${userId}`);
+        logger.info(`📥 [PHASE 1] Algorithm: ${algorithm}, Version: ${version || 1}`);
 
         
         if (!publicKey || !algorithm) {
-            console.error('❌ [PHASE 1] Missing required fields');
+            logger.error('❌ [PHASE 1] Missing required fields');
             return res.status(400).json({
                 message: 'publicKey and algorithm are required'
             });
         }
 
         if (!['X25519', 'RSA-2048'].includes(algorithm)) {
-            console.error(`❌ [PHASE 1] Invalid algorithm: ${algorithm}`);
+            logger.error(`❌ [PHASE 1] Invalid algorithm: ${algorithm}`);
             return res.status(400).json({
                 message: 'algorithm must be X25519 or RSA-2048'
             });
@@ -33,8 +34,8 @@ exports.uploadPublicKey = async (req, res) => {
             version || 1
         );
 
-        console.log(`✅ [PHASE 1] Public ${algorithm} key stored successfully`);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.info(`✅ [PHASE 1] Public ${algorithm} key stored successfully`);
+        logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
         
         
@@ -42,7 +43,7 @@ exports.uploadPublicKey = async (req, res) => {
         
         
         try {
-            console.log('🔧 [PHASE 2] Starting auto-repair for late key upload...');
+            logger.info('🔧 [PHASE 2] Starting auto-repair for late key upload...');
 
             const Channel = require("../../features/channels/channel.model.js");
             const conversationKeysService = require('../conversations/conversationKeys.service');
@@ -53,9 +54,9 @@ exports.uploadPublicKey = async (req, res) => {
             }).select('_id name').lean();
 
             if (channels.length === 0) {
-                console.log('ℹ️ [PHASE 2] User is not a member of any channels yet');
+                logger.info('ℹ️ [PHASE 2] User is not a member of any channels yet');
             } else {
-                console.log(`🔍 [PHASE 2] Found ${channels.length} channels to check`);
+                logger.info(`🔍 [PHASE 2] Found ${channels.length} channels to check`);
 
                 let repaired = 0;
                 let alreadyOk = 0;
@@ -69,31 +70,31 @@ exports.uploadPublicKey = async (req, res) => {
                         );
 
                         if (repairResult.result === 'REPAIR_SUCCESS') {
-                            console.log(`   ✅ Repaired: ${channel.name} (${channel._id})`);
+                            logger.info(`   ✅ Repaired: ${channel.name} (${channel._id})`);
                             repaired++;
                         } else if (repairResult.result === 'NO_REPAIR_NEEDED') {
                             alreadyOk++;
                         } else {
-                            console.log(`   ⚠️ Cannot repair: ${channel.name} - ${repairResult.reason}`);
+                            logger.info(`   ⚠️ Cannot repair: ${channel.name} - ${repairResult.reason}`);
                             cannotRepair++;
                         }
                     } catch (repairError) {
-                        console.error(`   ❌ Error repairing ${channel.name}:`, repairError.message);
+                        logger.error(`   ❌ Error repairing ${channel.name}:`, repairError.message);
                         cannotRepair++;
                     }
                 }
 
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-                console.log('📊 [PHASE 2] Auto-repair summary:');
-                console.log(`   ✅ Repaired: ${repaired}`);
-                console.log(`   ℹ️  Already OK: ${alreadyOk}`);
-                console.log(`   ⚠️  Cannot repair: ${cannotRepair}`);
-                console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+                logger.info('📊 [PHASE 2] Auto-repair summary:');
+                logger.info(`   ✅ Repaired: ${repaired}`);
+                logger.info(`   ℹ️  Already OK: ${alreadyOk}`);
+                logger.info(`   ⚠️  Cannot repair: ${cannotRepair}`);
+                logger.info('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             }
         } catch (autoRepairError) {
             
-            console.error('⚠️ [PHASE 2] Auto-repair failed (non-fatal):', autoRepairError);
-            console.error('   Public key upload was successful, but auto-repair skipped');
+            logger.error('⚠️ [PHASE 2] Auto-repair failed (non-fatal):', autoRepairError);
+            logger.error('   Public key upload was successful, but auto-repair skipped');
         }
         
         
@@ -105,9 +106,9 @@ exports.uploadPublicKey = async (req, res) => {
             version: keyDoc.version
         });
     } catch (err) {
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.error('❌ [PHASE 1] Upload public key error:', err);
-        console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        logger.error('❌ [PHASE 1] Upload public key error:', err);
+        logger.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         return handleError(res, err, 'UPLOAD PUBLIC KEY ERROR');
     }
 };

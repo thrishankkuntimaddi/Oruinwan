@@ -1,4 +1,5 @@
 import { identityKeyService } from './identityKeyService';
+import logger from '../utils/logger';
 
 const RECOVERY_BUNDLE_VERSION = 1;
 const PBKDF2_ITERATIONS = 150000; 
@@ -6,7 +7,7 @@ const RECOVERY_FILENAME = 'chttrix-identity-recovery.json';
 
 export async function exportIdentityRecoveryBundle(recoveryPassphrase) {
     try {
-        console.log('🔐 [RECOVERY] Starting identity recovery export...');
+        logger.debug('🔐 [RECOVERY] Starting identity recovery export...');
 
         
         if (!recoveryPassphrase || recoveryPassphrase.length < 12) {
@@ -55,7 +56,7 @@ export async function exportIdentityRecoveryBundle(recoveryPassphrase) {
         
         downloadRecoveryBundle(recoveryBundle);
 
-        console.log('✅ [RECOVERY] Identity recovery bundle exported successfully');
+        logger.debug('✅ [RECOVERY] Identity recovery bundle exported successfully');
 
         return {
             success: true,
@@ -63,14 +64,14 @@ export async function exportIdentityRecoveryBundle(recoveryPassphrase) {
         };
 
     } catch (error) {
-        console.error('❌ [RECOVERY] Export failed:', error);
+        logger.error('❌ [RECOVERY] Export failed:', error);
         throw error;
     }
 }
 
 export async function importIdentityRecoveryBundle(file, recoveryPassphrase, currentPassword = null) {
     try {
-        console.log('🔓 [RECOVERY] Starting identity recovery import...');
+        logger.debug('🔓 [RECOVERY] Starting identity recovery import...');
 
         
         const recoveryBundle = await parseRecoveryBundle(file);
@@ -108,7 +109,7 @@ export async function importIdentityRecoveryBundle(file, recoveryPassphrase, cur
         
         await identityKeyService.ensureIdentityKeyPair();
 
-        console.log('✅ [RECOVERY] Identity successfully recovered from backup');
+        logger.debug('✅ [RECOVERY] Identity successfully recovered from backup');
 
         return {
             success: true,
@@ -117,7 +118,7 @@ export async function importIdentityRecoveryBundle(file, recoveryPassphrase, cur
         };
 
     } catch (error) {
-        console.error('❌ [RECOVERY] Import failed:', error);
+        logger.error('❌ [RECOVERY] Import failed:', error);
         throw error;
     }
 }
@@ -244,7 +245,7 @@ async function validateKeyPair(publicKey, privateKey) {
         
         
 
-        console.log('✅ [RECOVERY] Key pair validation successful');
+        logger.debug('✅ [RECOVERY] Key pair validation successful');
         return true;
     } catch (error) {
         throw new Error('Invalid key pair: private key does not match public key');
@@ -334,7 +335,7 @@ async function restoreIdentityToServer(identityPublicKey, identityPrivateKey, cu
         throw new Error('Failed to upload restored identity to server');
     }
 
-    console.log('✅ [RECOVERY] Identity uploaded to server successfully');
+    logger.debug('✅ [RECOVERY] Identity uploaded to server successfully');
 }
 
 function downloadRecoveryBundle(bundle) {
@@ -350,7 +351,7 @@ function downloadRecoveryBundle(bundle) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    console.log(`📥 [RECOVERY] Downloaded: ${RECOVERY_FILENAME}`);
+    logger.debug(`📥 [RECOVERY] Downloaded: ${RECOVERY_FILENAME}`);
 }
 
 function arrayBufferToBase64(buffer) {

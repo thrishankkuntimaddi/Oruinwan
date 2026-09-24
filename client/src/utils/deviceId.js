@@ -1,3 +1,4 @@
+import logger from './logger';
 export function getDeviceId() {
     let deviceId = localStorage.getItem('deviceId');
 
@@ -5,7 +6,7 @@ export function getDeviceId() {
         
         deviceId = crypto.randomUUID();
         localStorage.setItem('deviceId', deviceId);
-        console.log('🆔 [PHASE 3] Generated new device ID:', deviceId.substring(0, 8) + '...');
+        logger.debug('🆔 [PHASE 3] Generated new device ID:', deviceId.substring(0, 8) + '...');
     }
 
     return deviceId;
@@ -14,7 +15,7 @@ export function getDeviceId() {
 export function clearDeviceId() {
     const deviceId = localStorage.getItem('deviceId');
     if (deviceId) {
-        console.log('🗑️ [PHASE 3] Clearing device ID:', deviceId.substring(0, 8) + '...');
+        logger.debug('🗑️ [PHASE 3] Clearing device ID:', deviceId.substring(0, 8) + '...');
     }
     localStorage.removeItem('deviceId');
 }

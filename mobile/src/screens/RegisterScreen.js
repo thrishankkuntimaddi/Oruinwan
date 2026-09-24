@@ -4,8 +4,30 @@ import {
   StyleSheet, ActivityIndicator,
   KeyboardAvoidingView, Platform, ScrollView, Alert,
 } from 'react-native';
-import { register } from '../services/api';
+import { register } from '../services/api/auth';
 import { T } from '../theme';
+
+// Declared at module level: a component defined inside render is re-created on
+// every keystroke, which remounts the TextInput and dismisses the keyboard.
+function Field({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, error, onClearError }) {
+  return (
+    <View style={s.fieldWrap}>
+      <Text style={s.label}>{label}</Text>
+      <TextInput
+        style={[s.input, error && s.inputErr]}
+        placeholder={placeholder}
+        placeholderTextColor={T.textMuted}
+        value={value}
+        onChangeText={(v) => { onChangeText(v); onClearError(); }}
+        secureTextEntry={secureTextEntry}
+        keyboardType={keyboardType || 'default'}
+        autoCapitalize="none"
+        autoCorrect={false}
+      />
+      {error ? <Text style={s.errText}>{error}</Text> : null}
+    </View>
+  );
+}
 
 export default function RegisterScreen({ navigation }) {
   const [username, setUsername] = useState('');
@@ -48,28 +70,9 @@ export default function RegisterScreen({ navigation }) {
     }
   }
 
-  function Field({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, errorKey }) {
-    return (
-      <View style={s.fieldWrap}>
-        <Text style={s.label}>{label}</Text>
-        <TextInput
-          style={[s.input, errors[errorKey] && s.inputErr]}
-          placeholder={placeholder}
-          placeholderTextColor={T.textMuted}
-          value={value}
-          onChangeText={(v) => {
-            onChangeText(v);
-            if (errors[errorKey]) setErrors(p => ({ ...p, [errorKey]: null }));
-          }}
-          secureTextEntry={secureTextEntry}
-          keyboardType={keyboardType || 'default'}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-        {errors[errorKey] ? <Text style={s.errText}>{errors[errorKey]}</Text> : null}
-      </View>
-    );
-  }
+  const clearError = (key) => {
+    if (errors[key]) setErrors((p) => ({ ...p, [key]: null }));
+  };
 
   return (
     <KeyboardAvoidingView
@@ -93,13 +96,13 @@ export default function RegisterScreen({ navigation }) {
         {/* ── Card ── */}
         <View style={s.card}>
           <Field label="USERNAME" value={username} onChangeText={setUsername}
-            placeholder="e.g. johndoe" errorKey="username" />
+            placeholder="e.g. johndoe" error={errors.username} onClearError={() => clearError('username')} />
           <Field label="WORK EMAIL" value={email} onChangeText={setEmail}
-            placeholder="you@company.com" keyboardType="email-address" errorKey="email" />
+            placeholder="you@company.com" keyboardType="email-address" error={errors.email} onClearError={() => clearError('email')} />
           <Field label="PASSWORD" value={password} onChangeText={setPassword}
-            placeholder="At least 8 characters" secureTextEntry errorKey="password" />
+            placeholder="At least 8 characters" secureTextEntry error={errors.password} onClearError={() => clearError('password')} />
           <Field label="CONFIRM PASSWORD" value={confirm} onChangeText={setConfirm}
-            placeholder="Repeat your password" secureTextEntry errorKey="confirm" />
+            placeholder="Repeat your password" secureTextEntry error={errors.confirm} onClearError={() => clearError('confirm')} />
 
           {/* CTA */}
           <TouchableOpacity

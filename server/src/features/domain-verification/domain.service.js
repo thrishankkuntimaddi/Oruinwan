@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const dns = require('dns').promises;
 const crypto = require('crypto');
 const Company = require('../../../models/Company');
@@ -24,7 +25,7 @@ async function verifyDomainTXT(domain, expectedToken) {
 
         return false;
     } catch (err) {
-        console.error(`DNS lookup failed for ${domain}:`, err.message);
+        logger.error(`DNS lookup failed for ${domain}:`, err.message);
         return false;
     }
 }

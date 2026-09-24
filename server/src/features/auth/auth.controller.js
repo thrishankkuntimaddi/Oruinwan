@@ -17,8 +17,7 @@ const { OAuth2Client } = require('google-auth-library');
 const axios = require('axios');
 
 const { saveWithRetry } = require('../../../utils/mongooseRetry');
-const { setRefreshTokenCookie, clearRefreshTokenCookie } = require('../../../utils/cookieHelper');
-const { _TIME } = require('../../../constants');
+const { setRefreshTokenCookie, clearRefreshTokenCookie, isNativeClient, getRefreshTokenFromRequest } = require('../../../utils/cookieHelper');
 const { sha256 } = require('../../../utils/hashUtils');
 const { handleError } = require('../../../utils/responseHelpers');
 const logger = require('../../shared/utils/logger');
@@ -320,8 +319,13 @@ exports.signup = async (req, res) => {
       });
       logger.info({ email }, 'Verification email sent');
     } catch (_emailError) {
-      logger.warn({ err: _emailError.message }, 'SMTP error — logging verification link');
-      logger.info({ email, verifyUrl }, 'EMAIL VERIFICATION LINK (SMTP not configured)');
+      if (process.env.NODE_ENV === 'production') {
+        // Never log tokens in production; the user can request a resend.
+        logger.error({ err: _emailError.message, email }, 'Verification email could not be sent');
+      } else {
+        logger.warn({ err: _emailError.message }, 'Email delivery failed — logging verification link (development only)');
+        logger.info({ email, verifyUrl }, 'EMAIL VERIFICATION LINK');
+      }
     }
 
     return res.status(201).json({
@@ -406,7 +410,7 @@ exports.login = async (req, res) => {
 
     
     
-    const user = await User.findOne({ email }).populate("companyId");
+    const user = await User.findOne({ email }).select('+otpCodes').populate("companyId");
 
     if (!user) {
       
@@ -646,6 +650,11 @@ exports.login = async (req, res) => {
       isAdmin: isAdmin
     };
 
+    // Native mobile clients cannot read the httpOnly cookie — hand them the refresh token in the body.
+    if (isNativeClient(req)) {
+      response.refreshToken = refreshToken;
+    }
+
     
     if (user.companyId) {
       response.company = {
@@ -689,15 +698,16 @@ exports.refresh = async (req, res) => {
   while (attempts < MAX_RETRIES) {
     try {
       
-      const refreshToken = req.cookies?.jwt || req.body?.refreshToken;
+      // Web: httpOnly cookie only. Native (x-client-platform: ios|android): body.refreshToken (cookie fallback).
+      const nativeClient = isNativeClient(req);
+      const refreshToken = getRefreshTokenFromRequest(req);
 
       if (!refreshToken) {
-        logger.warn('[REFRESH] No refresh token found (cookie or body)');
+        logger.warn('[REFRESH] No refresh token found');
         return res.status(401).json({ message: 'No refresh token' });
       }
 
-      const isCookieToken = !!req.cookies?.jwt;
-      logger.debug({ source: isCookieToken ? 'cookie' : 'body' }, '[REFRESH] Token source');
+      logger.debug({ native: nativeClient }, '[REFRESH] Token source');
 
       const refreshHash = sha256(refreshToken);
 
@@ -756,7 +766,9 @@ exports.refresh = async (req, res) => {
       setRefreshTokenCookie(res, newRefresh);
 
       logger.debug('[REFRESH] Token refresh completed successfully');
-      return res.json({ accessToken: newAccess });
+      const refreshResponse = { accessToken: newAccess };
+      if (nativeClient) refreshResponse.refreshToken = newRefresh;
+      return res.json(refreshResponse);
 
     } catch (_err) {
       if (_err.name === 'VersionError' && attempts < MAX_RETRIES - 1) {
@@ -774,7 +786,7 @@ exports.refresh = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    const token = req.cookies?.jwt;
+    const token = getRefreshTokenFromRequest(req);
     if (!token) return res.json({ message: "Logged out" });
 
     const hash = sha256(token);
@@ -796,7 +808,7 @@ exports.logout = async (req, res) => {
 
 exports.logoutAll = async (req, res) => {
   try {
-    const token = req.cookies?.jwt;
+    const token = getRefreshTokenFromRequest(req);
     if (!token) return res.json({ message: "Logged out from all devices" });
 
     let decoded;
@@ -832,7 +844,7 @@ exports.logoutAll = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: forgotPassword');
+  logger.info('🔄 [MODULAR AUTH] Function invoked: forgotPassword');
   try {
     const { email } = req.body;
 
@@ -861,26 +873,24 @@ exports.forgotPassword = async (req, res) => {
         html: template.html,
         text: template.text
       });
-      console.log(`✅ Password reset email sent to ${email}`);
+      logger.info(`✅ Password reset email sent to ${email}`);
     } catch (_emailError) {
-      
-      console.log("\n" + "=".repeat(80));
-      console.log("🔐 PASSWORD RESET LINK (SMTP not configured)");
-      console.log("=".repeat(80));
-      console.log(`User: ${email}`);
-      console.log(`Reset Link: ${url}`);
-      console.log("=".repeat(80) + "\n");
+      if (process.env.NODE_ENV === 'production') {
+        logger.error({ err: _emailError.message, email }, 'Password reset email could not be sent');
+      } else {
+        logger.warn({ err: _emailError.message, email, resetUrl: url }, 'PASSWORD RESET LINK (development only)');
+      }
     }
 
     return res.json({ message: "Reset link sent if account exists" });
   } catch (_err) {
-    console.error("FORGOT ERROR:", _err);
+    logger.error("FORGOT ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.resetPassword = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: resetPassword');
+  logger.info('🔄 [MODULAR AUTH] Function invoked: resetPassword');
   try {
     const { token, email, password } = req.body;
 
@@ -903,7 +913,7 @@ exports.resetPassword = async (req, res) => {
     return res.json({ message: "Password reset successful" });
 
   } catch (_err) {
-    console.error("RESET ERROR:", _err);
+    logger.error("RESET ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -911,8 +921,12 @@ exports.resetPassword = async (req, res) => {
 exports.getMe = async (req, res) => {
   try {
     const user = await User.findById(req.user.sub)
-      .select("-passwordHash -refreshTokens")
-      .populate('companyId');
+      .select("-passwordHash -refreshTokens -twoFactorSecret -otpCodes -inviteToken -resetPasswordTokenHash -verificationTokenHash -deviceTokens")
+      .populate('companyId', 'name displayName logo domain verificationStatus isSetupComplete setupStep defaultWorkspace plan isActive');
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     
     if (!user.emails || user.emails.length === 0) {
@@ -947,6 +961,31 @@ exports.getMe = async (req, res) => {
 
     
     const userObject = user.toObject();
+
+    // Defense in depth: never return secrets from /me even if a projection changes.
+    for (const field of ['passwordHash', 'refreshTokens', 'twoFactorSecret', 'otpCodes', 'inviteToken',
+      'resetPasswordTokenHash', 'verificationTokenHash', 'deviceTokens']) {
+      delete userObject[field];
+    }
+    if (userObject.encryption) delete userObject.encryption.encryptedPrivateKey;
+
+    // Reduced company object — never expose phoneOTP, domainVerificationToken, ssoConfig, etc.
+    if (userObject.companyId && typeof userObject.companyId === 'object' && userObject.companyId._id) {
+      const c = userObject.companyId;
+      userObject.companyId = {
+        _id: c._id,
+        name: c.name,
+        displayName: c.displayName,
+        logo: c.logo,
+        domain: c.domain,
+        verificationStatus: c.verificationStatus,
+        isSetupComplete: c.isSetupComplete,
+        setupStep: c.setupStep,
+        defaultWorkspace: c.defaultWorkspace,
+        plan: c.plan,
+        isActive: c.isActive,
+      };
+    }
 
     
     if (userObject.companyId && typeof userObject.companyId === 'object') {
@@ -994,7 +1033,7 @@ exports.getMe = async (req, res) => {
         userObject.phoneCode = extractedCode;
         userObject.phone = extractedPhone;
 
-        console.log(`📞 Migrated phone for user ${user.email}: ${extractedCode} ${extractedPhone}`);
+        logger.info(`📞 Migrated phone for user ${user.email}: ${extractedCode} ${extractedPhone}`);
       }
     } else if (userObject.phone && /^\d{11,13}$/.test(userObject.phone)) {
       
@@ -1026,12 +1065,12 @@ exports.getMe = async (req, res) => {
       userObject.phoneCode = extractedCode;
       userObject.phone = extractedPhone;
 
-      console.log(`📞 Migrated phone (no prefix) for user ${user.email}: ${extractedCode} ${extractedPhone}`);
+      logger.info(`📞 Migrated phone (no prefix) for user ${user.email}: ${extractedCode} ${extractedPhone}`);
     }
 
     return res.json(userObject);
   } catch (_err) {
-    console.error("GET ME ERROR:", _err);
+    logger.error("GET ME ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1128,8 +1167,8 @@ exports.updateMe = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("UPDATE PROFILE ERROR:", _err);
-    console.error("Error details:", {
+    logger.error("UPDATE PROFILE ERROR:", _err);
+    logger.error("Error details:", {
       name: _err.name,
       code: _err.code,
       message: _err.message
@@ -1175,13 +1214,13 @@ exports.updatePassword = async (req, res) => {
     return res.json({ message: "Password updated" });
 
   } catch (_err) {
-    console.error("PASSWORD ERROR:", _err);
+    logger.error("PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.setPassword = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: setPassword (OAuth)');
+  logger.info('🔄 [MODULAR AUTH] Function invoked: setPassword (OAuth)');
   try {
     const { password } = req.body;
     const userId = req.user.sub;
@@ -1222,7 +1261,7 @@ exports.setPassword = async (req, res) => {
     user.passwordLoginEnabled = true; 
     await saveWithRetry(user);
 
-    console.log(`✅ Password set for OAuth user: ${user.email} (${user.authProvider})`);
+    logger.info(`✅ Password set for OAuth user: ${user.email} (${user.authProvider})`);
 
     
     try {
@@ -1236,11 +1275,11 @@ exports.setPassword = async (req, res) => {
         text: template.text
       });
 
-      console.log(`📧 Password set confirmation email sent to ${user.email}`);
+      logger.info(`📧 Password set confirmation email sent to ${user.email}`);
     } catch (emailErr) {
       
-      console.warn('⚠️ Failed to send password set confirmation email:', emailErr.message);
-      console.log(`💡 Password was set successfully for ${user.email}, but email notification failed (SMTP may not be configured)`);
+      logger.warn('⚠️ Failed to send password set confirmation email:', emailErr.message);
+      logger.info(`💡 Password was set successfully for ${user.email}, but email notification failed (SMTP may not be configured)`);
     }
 
     return res.json({
@@ -1248,13 +1287,13 @@ exports.setPassword = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("SET PASSWORD ERROR:", _err);
+    logger.error("SET PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.googleLogin = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: googleLogin');
+  logger.info('🔄 [MODULAR AUTH] Function invoked: googleLogin');
   try {
     const { credential, accessToken: googleAccessToken } = req.body;
 
@@ -1335,6 +1374,7 @@ exports.googleLogin = async (req, res) => {
     return res.json({
       message: "Google login success",
       accessToken,
+      ...(isNativeClient(req) ? { refreshToken } : {}),
       isFirstLogin: isNewUser,  
       requiresPasswordSetup: needsPasswordSetup,  
       user: {
@@ -1347,7 +1387,7 @@ exports.googleLogin = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("GOOGLE LOGIN ERROR:", _err);
+    logger.error("GOOGLE LOGIN ERROR:", _err);
     return res.status(500).json({ message: "Google login failed" });
   }
 };
@@ -1440,7 +1480,7 @@ exports.getSessions = async (req, res) => {
 
     res.json(sessions);
   } catch (_err) {
-    console.error("GET SESSIONS ERROR:", _err);
+    logger.error("GET SESSIONS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1459,7 +1499,7 @@ exports.revokeSession = async (req, res) => {
 
     res.json({ message: "Session revoked" });
   } catch (_err) {
-    console.error("REVOKE SESSION ERROR:", _err);
+    logger.error("REVOKE SESSION ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1490,7 +1530,7 @@ exports.revokeOtherSessions = async (req, res) => {
 
     res.json({ message: "All other sessions revoked" });
   } catch (_err) {
-    console.error("REVOKE OTHERS ERROR:", _err);
+    logger.error("REVOKE OTHERS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1554,11 +1594,10 @@ exports.addEmail = async (req, res) => {
     await saveWithRetry(user);
 
     
-    let devCode = null;
     
-    console.log("\n" + "=".repeat(80));
-    console.log(`📧 VERIFICATION CODE: ${code}`);
-    console.log("=".repeat(80) + "\n");
+    logger.info("\n" + "=".repeat(80));
+    logger.info(`📧 VERIFICATION CODE: ${code}`);
+    logger.info("=".repeat(80) + "\n");
 
     try {
       const template = emailVerificationTemplate(user.username, code);
@@ -1569,22 +1608,15 @@ exports.addEmail = async (req, res) => {
         html: template.html
       });
     } catch (emailErr) {
-      console.error("Failed to send verification email:", emailErr);
-
-      
-      console.log("\n" + "=".repeat(80));
-      console.log(`📧 EMAIL VERIFICATION CODE (SMTP not configured)`);
-      console.log("=".repeat(80));
-      console.log(`Code: ${code}`);
-      console.log("=".repeat(80) + "\n");
-
-      devCode = code;
+      logger.error("Failed to send verification email:", emailErr);
+      if (process.env.NODE_ENV !== 'production') {
+        // Development only: surface the code in the server log, never to the client.
+        logger.warn({ code }, 'EMAIL VERIFICATION CODE (development only)');
+      }
     }
 
     const response = {
-      message: devCode
-        ? `Email added. Verification code: ${devCode} (Check console in production)`
-        : "Email added. Please check your inbox for verification code.",
+      message: "Email added. Please check your inbox for verification code.",
       emails: user.emails.map(e => ({
         id: e._id,
         email: e.email,
@@ -1597,7 +1629,7 @@ exports.addEmail = async (req, res) => {
     res.json(response);
 
   } catch (_err) {
-    console.error("ADD EMAIL ERROR:", _err);
+    logger.error("ADD EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1653,7 +1685,7 @@ exports.verifyEmailCode = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("VERIFY EMAIL ERROR:", _err);
+    logger.error("VERIFY EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1685,9 +1717,9 @@ exports.resendVerification = async (req, res) => {
     await saveWithRetry(user);
 
     
-    console.log("\n" + "=".repeat(80));
-    console.log(`📧 VERIFICATION CODE: ${code}`);
-    console.log("=".repeat(80) + "\n");
+    logger.info("\n" + "=".repeat(80));
+    logger.info(`📧 VERIFICATION CODE: ${code}`);
+    logger.info("=".repeat(80) + "\n");
 
     
     try {
@@ -1701,20 +1733,17 @@ exports.resendVerification = async (req, res) => {
 
       res.json({ message: "Verification code sent. Please check your inbox." });
     } catch (emailErr) {
-      console.error("Failed to send verification email:", emailErr);
-
-      
-      console.log("\n" + "=".repeat(80));
-      console.log(`📧 EMAIL VERIFICATION CODE (SMTP not configured)`);
-      console.log("=".repeat(80));
-      console.log(`Code: ${code}`);
-      console.log("=".repeat(80) + "\n");
-
-      res.json({ message: `Verification code: ${code} (Check server console)` });
+      logger.error("Failed to send verification email:", emailErr);
+      if (process.env.NODE_ENV !== 'production') {
+        // Development only: the code goes to the server log, never to the client.
+        logger.warn({ code }, 'EMAIL VERIFICATION CODE (development only)');
+        return res.json({ message: 'Email delivery failed. Check the server console for the code (development only).' });
+      }
+      return res.status(502).json({ message: 'Could not send the verification email. Please try again later.' });
     }
 
   } catch (_err) {
-    console.error("RESEND VERIFICATION ERROR:", _err);
+    logger.error("RESEND VERIFICATION ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1760,7 +1789,7 @@ exports.setPrimaryEmail = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("SET PRIMARY EMAIL ERROR:", _err);
+    logger.error("SET PRIMARY EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1803,13 +1832,13 @@ exports.deleteEmail = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("DELETE EMAIL ERROR:", _err);
+    logger.error("DELETE EMAIL ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.skipPassword = async (req, res) => {
-  console.log('🔄 [MODULAR AUTH] Function invoked: skipPassword');
+  logger.info('🔄 [MODULAR AUTH] Function invoked: skipPassword');
   try {
     const userId = req.user.sub;
     const user = await User.findById(userId);
@@ -1841,7 +1870,7 @@ exports.skipPassword = async (req, res) => {
     });
 
   } catch (_err) {
-    console.error("SKIP PASSWORD ERROR:", _err);
+    logger.error("SKIP PASSWORD ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1849,7 +1878,7 @@ exports.skipPassword = async (req, res) => {
 exports.setOAuthPassword = exports.setPassword;
 
 exports.setupTempPassword = async (req, res) => {
-  console.log('\uD83D\uDD04 [MODULAR AUTH] Function invoked: setupTempPassword');
+  logger.info('\uD83D\uDD04 [MODULAR AUTH] Function invoked: setupTempPassword');
   try {
     const { password } = req.body;
     const userId = req.user.sub;
@@ -1893,7 +1922,7 @@ exports.setupTempPassword = async (req, res) => {
 
     await saveWithRetry(user);
 
-    console.log(`\u2705 [SETUP TEMP PW] Password initialized for user: ${user.email}`);
+    logger.info(`\u2705 [SETUP TEMP PW] Password initialized for user: ${user.email}`);
 
     return res.json({
       message: 'Password set successfully. You can now log in with your new password.',
@@ -1905,7 +1934,7 @@ exports.setupTempPassword = async (req, res) => {
   }
 };
 
-const _passport = require("../../config/passport");
+
 
 exports.generateToken = (user) => {
   return jwt.sign(
@@ -1927,7 +1956,7 @@ exports.getUsersList = async (req, res) => {
 
     res.json({ users });
   } catch (_err) {
-    console.error("GET USERS ERROR:", _err);
+    logger.error("GET USERS ERROR:", _err);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -1943,7 +1972,7 @@ exports.githubCallback = async (req, res) => {
     requiresPasswordSetup: requiresPasswordSetup.toString()
   });
 
-  res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?${params.toString()}`);
+  res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#${params.toString()}`);
 };
 
 exports.linkedinInitiate = (req, res) => {
@@ -1965,7 +1994,7 @@ exports.linkedinCallback = async (req, res) => {
     const { code, error, error_description } = req.query;
 
     if (error) {
-      console.error('LinkedIn OAuth error:', error, error_description);
+      logger.error('LinkedIn OAuth error:', error, error_description);
       return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
     }
 
@@ -1999,7 +2028,7 @@ exports.linkedinCallback = async (req, res) => {
     );
 
     const linkedinUser = userInfoRes.data;
-    console.log('LinkedIn user profile:', linkedinUser);
+    logger.info('LinkedIn user profile:', linkedinUser);
 
     
     let user = await User.findOne({ linkedinId: linkedinUser.sub });
@@ -2008,6 +2037,12 @@ exports.linkedinCallback = async (req, res) => {
       
       user = await User.findOne({ email: linkedinUser.email });
       if (user) {
+        // Only link to an existing account when that account's email is verified,
+        // it is not already linked elsewhere, and LinkedIn vouches for the email.
+        // Otherwise an attacker could take over an account by registering its email.
+        if (!user.verified || user.linkedinId || linkedinUser.email_verified === false) {
+          return res.redirect(`${process.env.FRONTEND_URL}/login?error=account_exists`);
+        }
         user.linkedinId = linkedinUser.sub;
         if (linkedinUser.picture) user.profilePicture = linkedinUser.picture;
         await user.save();
@@ -2038,9 +2073,9 @@ exports.linkedinCallback = async (req, res) => {
       requiresPasswordSetup: requiresPasswordSetup.toString()
     });
 
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success?${params.toString()}`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/oauth-success#${params.toString()}`);
   } catch (_err) {
-    console.error('LinkedIn OAuth callback error:', err.response?.data || err.message);
+    logger.error({ err: _err.response?.data || _err.message }, 'LinkedIn OAuth callback error');
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/login?error=linkedin_failed`);
   }
 };
@@ -2062,14 +2097,14 @@ exports.deactivateAccount = async (req, res) => {
 
     await user.save();
 
-    console.log(`🔒 Account deactivated for user: ${user.username} (${userId})`);
+    logger.info(`🔒 Account deactivated for user: ${user.username} (${userId})`);
 
     return res.json({
       message: "Account deactivated successfully",
       deactivated: true
     });
   } catch (_err) {
-    console.error("DEACTIVATE ACCOUNT ERROR:", _err);
+    logger.error("DEACTIVATE ACCOUNT ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -2083,7 +2118,7 @@ exports.verifyReactivationOTP = async (req, res) => {
     }
 
     
-    const user = await User.findOne({ email: email.toLowerCase() });
+    const user = await User.findOne({ email: email.toLowerCase() }).select('+otpCodes');
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -2095,17 +2130,9 @@ exports.verifyReactivationOTP = async (req, res) => {
 
     
     if (!user.otpCodes || user.otpCodes.length === 0) {
-      console.log('❌ No OTP codes found for user:', email);
+      logger.info('❌ No OTP codes found for user:', email);
       return res.status(400).json({ message: "No OTP found. Please try logging in again." });
     }
-
-    console.log(`🔍 Checking OTP codes for user ${email}:`, user.otpCodes.map(otp => ({
-      code: otp.code,
-      type: otp.type,
-      used: otp.used,
-      expiresAt: otp.expiresAt
-    })));
-    console.log(`🔍 Looking for OTP code: ${otpCode}`);
 
     const otpRecord = user.otpCodes.find(
       otp => otp.code === otpCode && otp.type === 'reactivation' && !otp.used
@@ -2129,43 +2156,27 @@ exports.verifyReactivationOTP = async (req, res) => {
     user.deactivatedAt = null;
 
     
-    const accessToken = jwt.sign(
-      { sub: user._id, username: user.username, role: user.roles?.[0] || 'user' },
-      process.env.ACCESS_TOKEN_SECRET,
-      { expiresIn: '15m' }
-    );
+    // Use the same token format/hashing/cookie as login so /refresh can rotate it.
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    const refreshToken = jwt.sign(
-      { sub: user._id },
-      process.env.REFRESH_TOKEN_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-
-    
     user.refreshTokens.push({
-      tokenHash: hashedRefreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), 
+      tokenHash: sha256(refreshToken),
+      expiresAt: new Date(Date.now() + REFRESH_DAYS * 86400000),
       deviceInfo: req.get('user-agent') || 'Unknown',
       createdAt: new Date()
     });
 
     await user.save();
 
-    
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000 
-    });
+    setRefreshTokenCookie(res, refreshToken);
 
-    console.log(`✅ Account reactivated for user: ${user.username} (${user._id})`);
+    logger.info(`✅ Account reactivated for user: ${user.username} (${user._id})`);
 
     return res.json({
       message: "Account reactivated successfully",
       accessToken,
+      ...(isNativeClient(req) ? { refreshToken } : {}),
       user: {
         _id: user._id,
         username: user.username,
@@ -2174,7 +2185,7 @@ exports.verifyReactivationOTP = async (req, res) => {
       }
     });
   } catch (_err) {
-    console.error("VERIFY REACTIVATION OTP ERROR:", _err);
+    logger.error("VERIFY REACTIVATION OTP ERROR:", _err);
     return res.status(500).json({ message: "Server error" });
   }
 };

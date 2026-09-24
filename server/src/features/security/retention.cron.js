@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const User = require('../../../models/User');
 
@@ -7,7 +8,7 @@ function tryRequire(path) {
 }
 
 async function runRetentionCleanup() {
-  console.log('[Retention] Starting message retention cleanup...');
+  logger.info('[Retention] Starting message retention cleanup...');
 
   try {
     
@@ -17,7 +18,7 @@ async function runRetentionCleanup() {
     }).select('_id retentionDays').lean();
 
     if (usersWithPolicy.length === 0) {
-      console.log('[Retention] No retention policies active. Skipping.');
+      logger.info('[Retention] No retention policies active. Skipping.');
       return { deleted: 0 };
     }
 
@@ -28,7 +29,7 @@ async function runRetentionCleanup() {
       tryRequire('../../modules/messages/message.model');
 
     if (!MessageModel) {
-      console.warn('[Retention] No message model found — skipping message deletion.');
+      logger.warn('[Retention] No message model found — skipping message deletion.');
       return { deleted: 0, skipped: true };
     }
 
@@ -49,14 +50,14 @@ async function runRetentionCleanup() {
         });
         totalDeleted += result.deletedCount || 0;
       } catch (err) {
-        console.warn(`[Retention] Error cleaning messages for user ${user._id}:`, err.message);
+        logger.warn(`[Retention] Error cleaning messages for user ${user._id}:`, err.message);
       }
     }
 
-    console.log(`[Retention] Cleanup complete. Deleted ${totalDeleted} messages across ${usersWithPolicy.length} users.`);
+    logger.info(`[Retention] Cleanup complete. Deleted ${totalDeleted} messages across ${usersWithPolicy.length} users.`);
     return { deleted: totalDeleted, usersProcessed: usersWithPolicy.length };
   } catch (err) {
-    console.error('[Retention] Cleanup failed:', err);
+    logger.error('[Retention] Cleanup failed:', err);
     return { error: err.message };
   }
 }
@@ -64,7 +65,7 @@ async function runRetentionCleanup() {
 function startRetentionCron() {
   const INTERVAL_MS = 24 * 60 * 60 * 1000; 
 
-  console.log('[Retention] Retention cron scheduled (runs every 24h).');
+  logger.info('[Retention] Retention cron scheduled (runs every 24h).');
 
   
   setTimeout(async () => {

@@ -116,6 +116,8 @@ const AdvancedTab = () => {
             document.body.appendChild(link);
             link.click();
             link.remove();
+            // Defer revocation so the download has started.
+            setTimeout(() => window.URL.revokeObjectURL(url), 0);
             showToast('Data exported successfully', 'success');
         } catch { showToast('Export not available yet — coming soon', 'info'); }
         finally { setExporting(false); }

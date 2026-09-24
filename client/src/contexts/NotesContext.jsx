@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import api from '@services/api';
 import { useToast } from "./ToastContext";
 import { useSocket } from "./SocketContext";
+import logger from '../utils/logger';
 
 const NotesContext = createContext();
 
@@ -37,7 +38,7 @@ export const NotesProvider = ({ children }) => {
             const versions = res.data.versions || [];
             setNoteVersions(prev => ({ ...prev, [noteId]: versions }));
         } catch (e) {
-            console.warn('Failed to load versions for', noteId, e?.message);
+            logger.warn('Failed to load versions for', noteId, e?.message);
         }
     }, []);
 
@@ -57,7 +58,7 @@ export const NotesProvider = ({ children }) => {
                     content: snapshot.content || '',
                 });
             } catch (e) {
-                console.warn('Failed to persist version for', noteId, e?.message);
+                logger.warn('Failed to persist version for', noteId, e?.message);
             } finally {
                 delete versionSaveTimer.current[noteId];
             }
@@ -98,7 +99,7 @@ export const NotesProvider = ({ children }) => {
 
             setNotes(response.data.notes.map(mapNote));
         } catch (error) {
-            console.error("Failed to load notes:", error);
+            logger.error("Failed to load notes:", error);
             showToast("Failed to load notes", "error");
             setNotes([]);
         } finally {
@@ -202,7 +203,7 @@ export const NotesProvider = ({ children }) => {
             showToast("Note created", "success");
             return newNote;
         } catch (error) {
-            console.error("Failed to create note:", error);
+            logger.error("Failed to create note:", error);
             showToast("Failed to create note", "error");
             return null;
         }
@@ -219,7 +220,7 @@ export const NotesProvider = ({ children }) => {
             try {
                 await api.put(`/api/v2/notes/${id}`, updates);
             } catch (error) {
-                console.error("Failed to update note:", error);
+                logger.error("Failed to update note:", error);
                 showToast("Failed to save changes", "error");
                 loadNotes();
             } finally {
@@ -237,7 +238,7 @@ export const NotesProvider = ({ children }) => {
             if (wsId) navigate(`/workspace/${wsId}/notes`);
             
         } catch (error) {
-            console.error("Failed to delete note:", error);
+            logger.error("Failed to delete note:", error);
             showToast("Failed to delete note", "error");
         }
     }, [getWorkspaceId, navigate, showToast]);
@@ -272,7 +273,7 @@ export const NotesProvider = ({ children }) => {
             await loadNotes();
             showToast("Note shared successfully", "success");
         } catch (error) {
-            console.error("Failed to share note:", error);
+            logger.error("Failed to share note:", error);
             showToast("Failed to share note", "error");
         }
     }, [loadNotes, showToast]);

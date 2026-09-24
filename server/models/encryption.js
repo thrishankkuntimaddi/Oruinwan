@@ -1,3 +1,4 @@
+const logger = require('../utils/logger');
 const mongoose = require('mongoose');
 
 const userWorkspaceKeySchema = new mongoose.Schema(
@@ -100,22 +101,22 @@ const workspaceKeySchema = new mongoose.Schema(
 const WorkspaceKey = mongoose.model('WorkspaceKey', workspaceKeySchema);
 
 async function migrateUp() {
-  console.log('🔐 Creating UserWorkspaceKey indexes...');
+  logger.info('🔐 Creating UserWorkspaceKey indexes...');
 
   await UserWorkspaceKey.createIndexes();
   await WorkspaceKey.createIndexes();
 
-  console.log('✅ UserWorkspaceKey migration complete');
+  logger.info('✅ UserWorkspaceKey migration complete');
   return { success: true };
 }
 
 async function migrateDown() {
-  console.log('⚠️ Rolling back UserWorkspaceKey migration...');
+  logger.info('⚠️ Rolling back UserWorkspaceKey migration...');
 
   await UserWorkspaceKey.collection.drop();
   await WorkspaceKey.collection.drop();
 
-  console.log('✅ Rollback complete');
+  logger.info('✅ Rollback complete');
   return { success: true };
 }
 

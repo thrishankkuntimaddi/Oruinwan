@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const messagesService = require('./messages.service');
 const Channel = require("../../features/channels/channel.model.js");
 const Message = require("../../features/messages/message.model.js");
@@ -8,7 +9,7 @@ const conversationKeysService = require('../conversations/conversationKeys.servi
 const mongoose = require('mongoose');
 
 exports.sendDirectMessage = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: sendDirectMessage');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: sendDirectMessage');
     try {
         const senderId = req.user.sub;
         const {
@@ -47,7 +48,7 @@ exports.sendDirectMessage = async (req, res) => {
 
         if (dmSessionId) {
             
-            console.log('📨 [sendDirectMessage] Using DM session ID:', dmSessionId);
+            logger.info('📨 [sendDirectMessage] Using DM session ID:', dmSessionId);
 
             dmSession = await DMSession.findById(dmSessionId);
             if (!dmSession) {
@@ -64,12 +65,12 @@ exports.sendDirectMessage = async (req, res) => {
                 });
             }
 
-            console.log('✅ [sendDirectMessage] DM session verified, participants:',
+            logger.info('✅ [sendDirectMessage] DM session verified, participants:',
                 dmSession.participants.map(p => String(p)));
 
         } else if (receiverId) {
             
-            console.log('📨 [sendDirectMessage] Using receiver ID:', receiverId);
+            logger.info('📨 [sendDirectMessage] Using receiver ID:', receiverId);
 
             
             if (!workspaceId) {
@@ -89,7 +90,7 @@ exports.sendDirectMessage = async (req, res) => {
                 workspaceId
             );
 
-            console.log('✅ [sendDirectMessage] DM session resolved:', dmSession._id);
+            logger.info('✅ [sendDirectMessage] DM session resolved:', dmSession._id);
         } else {
             return res.status(400).json({
                 message: 'Either dmSessionId or receiverId must be provided'
@@ -128,13 +129,13 @@ exports.sendDirectMessage = async (req, res) => {
 };
 
 exports.getDMs = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getDMs');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: getDMs');
     try {
         const userId = req.user.sub;
         const { workspaceId, dmSessionId, dmId } = req.params;
         const { limit, before, after, around } = req.query;
 
-        console.log('🔍 [getDMs] DEBUG:', {
+        logger.info('🔍 [getDMs] DEBUG:', {
             userId,
             workspaceId,
             dmSessionId,
@@ -147,7 +148,7 @@ exports.getDMs = async (req, res) => {
         
         const sessionId = dmSessionId || dmId;
 
-        console.log('🔍 [getDMs] Looking up DM session:', {
+        logger.info('🔍 [getDMs] Looking up DM session:', {
             sessionId,
             workspaceId
         });
@@ -160,8 +161,8 @@ exports.getDMs = async (req, res) => {
         
         
         if (!dmSession) {
-            console.log('⚠️ [getDMs] DM session not found, attempting to resolve as userId...');
-            console.log('🔄 [getDMs] Treating sessionId as otherUserId and creating DM session');
+            logger.info('⚠️ [getDMs] DM session not found, attempting to resolve as userId...');
+            logger.info('🔄 [getDMs] Treating sessionId as otherUserId and creating DM session');
 
             try {
                 
@@ -171,12 +172,12 @@ exports.getDMs = async (req, res) => {
                     workspaceId
                 );
 
-                console.log('✅ [getDMs] DM session resolved/created:', {
+                logger.info('✅ [getDMs] DM session resolved/created:', {
                     newSessionId: dmSession._id,
                     originalIdWasUserId: true
                 });
             } catch (resolveError) {
-                console.error('❌ [getDMs] Failed to resolve DM session:', resolveError.message);
+                logger.error('❌ [getDMs] Failed to resolve DM session:', resolveError.message);
                 return res.status(404).json({
                     message: 'DM Session not found and could not be created',
                     details: resolveError.message
@@ -224,7 +225,7 @@ exports.getDMs = async (req, res) => {
 };
 
 exports.getWorkspaceDMList = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getWorkspaceDMList');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: getWorkspaceDMList');
     try {
         const userId = req.user.sub;
         const { workspaceId } = req.params;
@@ -238,7 +239,7 @@ exports.getWorkspaceDMList = async (req, res) => {
 };
 
 exports.resolveDMSession = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: resolveDMSession');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: resolveDMSession');
     try {
         const { workspaceId, userId: otherUserId } = req.params;
         const currentUserId = req.user.sub;
@@ -313,14 +314,14 @@ exports.resolveDMSession = async (req, res) => {
                     workspaceId: workspaceId,
                     members: [String(currentUserId), String(otherUserId)]
                 });
-                console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Created new DM session ${dmSession._id} with keys`);
+                logger.info(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Created new DM session ${dmSession._id} with keys`);
             } catch (keyErr) {
                 
                 
-                console.error(`⚠️ [MESSAGES:MODULAR][RESOLVE_DM] Key bootstrap failed (non-fatal):`, keyErr.message);
+                logger.error(`⚠️ [MESSAGES:MODULAR][RESOLVE_DM] Key bootstrap failed (non-fatal):`, keyErr.message);
             }
         } else {
-            console.log(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Found existing DM session ${dmSession._id}`);
+            logger.info(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Found existing DM session ${dmSession._id}`);
         }
 
         return res.json({
@@ -331,13 +332,13 @@ exports.resolveDMSession = async (req, res) => {
             participants: dmSession.participants
         });
     } catch (err) {
-        console.error('[MESSAGES:MODULAR][RESOLVE_DM] ERROR:', err);
+        logger.error('[MESSAGES:MODULAR][RESOLVE_DM] ERROR:', err);
         return handleError(res, err, 'RESOLVE DM SESSION ERROR');
     }
 };
 
 exports.sendChannelMessage = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: sendChannelMessage');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: sendChannelMessage');
     try {
         const senderId = req.user.sub;
         const {
@@ -416,7 +417,7 @@ exports.sendChannelMessage = async (req, res) => {
 };
 
 exports.getChannelMessages = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getChannelMessages');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: getChannelMessages');
     try {
         const userId = req.user.sub;
         const { channelId } = req.params;
@@ -478,7 +479,7 @@ exports.getChannelMessages = async (req, res) => {
 };
 
 exports.forwardMessage = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: forwardMessage');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: forwardMessage');
     try {
         const userId = req.user.sub;
         const { messageId, targets } = req.body;
@@ -585,7 +586,7 @@ exports.forwardMessage = async (req, res) => {
                     errors.push({ target, error: 'Invalid target type (must be channel or dm)' });
                 }
             } catch (targetError) {
-                console.error(`Error forwarding to ${target.type}:${target.id}:`, targetError);
+                logger.error(`Error forwarding to ${target.type}:${target.id}:`, targetError);
                 errors.push({ target, error: targetError.message });
             }
         }
@@ -651,7 +652,7 @@ exports.addReaction = async (req, res) => {
         const userId = req.user.sub;
         const { emoji } = req.body;
 
-        console.log(`[REACT] Adding reaction: messageId=${messageId} userId=${userId} emoji=${JSON.stringify(emoji)}`);
+        logger.info(`[REACT] Adding reaction: messageId=${messageId} userId=${userId} emoji=${JSON.stringify(emoji)}`);
 
         if (!emoji) {
             return res.status(400).json({ message: 'emoji is required' });
@@ -660,7 +661,7 @@ exports.addReaction = async (req, res) => {
         
         
         if (/^[0-9a-f]{24}$/i.test(emoji)) {
-            console.error(`[REACT] ❌ Rejected invalid emoji (looks like ObjectId): ${emoji}`);
+            logger.error(`[REACT] ❌ Rejected invalid emoji (looks like ObjectId): ${emoji}`);
             return res.status(400).json({ message: 'Invalid emoji: received an ID instead of emoji character' });
         }
 
@@ -793,7 +794,7 @@ exports.pinMessage = async (req, res) => {
                 });
                 if (io) io.to(`channel:${message.channel}`).emit('new-message', systemMsg);
             } catch (sysErr) {
-                console.error('[SYSTEM MSG] pin system message failed:', sysErr);
+                logger.error('[SYSTEM MSG] pin system message failed:', sysErr);
             }
         } else if (message.dm) {
             
@@ -819,7 +820,7 @@ exports.pinMessage = async (req, res) => {
                 });
                 if (io) io.to(`dm:${message.dm}`).emit('new-message', systemMsg);
             } catch (sysErr) {
-                console.error('[SYSTEM MSG] DM pin system message failed:', sysErr);
+                logger.error('[SYSTEM MSG] DM pin system message failed:', sysErr);
             }
         }
         
@@ -997,7 +998,7 @@ exports.voteOnPoll = async (req, res) => {
                 }))
             };
         } catch (enrichErr) {
-            console.warn('[voteOnPoll] Voter name enrichment failed (vote saved OK):', enrichErr.message);
+            logger.warn('[voteOnPoll] Voter name enrichment failed (vote saved OK):', enrichErr.message);
             pollWithVoterNames = message.poll.toObject();
         }
 
@@ -1087,7 +1088,7 @@ exports.getMessageInfo = async (req, res) => {
             (message.readBy || []).map(u => String(u._id || u))
         );
 
-        console.log(`[MESSAGE INFO] msgId=${messageId} members=${channelMembers.length} readBy=${readByIds.size}`);
+        logger.info(`[MESSAGE INFO] msgId=${messageId} members=${channelMembers.length} readBy=${readByIds.size}`);
 
         return res.json({
             message: {
@@ -1243,7 +1244,7 @@ exports.getThreadSummary = async (req, res) => {
 };
 
 exports.getJumpAnchor = async (req, res) => {
-    console.log('🔄 [MESSAGES:MODULAR] Function invoked: getJumpAnchor');
+    logger.info('🔄 [MESSAGES:MODULAR] Function invoked: getJumpAnchor');
     try {
         const userId = req.user.sub;
         const { channelId } = req.params;

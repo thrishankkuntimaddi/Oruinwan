@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const statusService = require('./status.service');
 
 async function getSystemHealth(req, res) {
@@ -5,7 +6,7 @@ async function getSystemHealth(req, res) {
         const result = await statusService.getSystemHealth();
         return res.json(result);
     } catch (error) {
-        console.error('Status health check error:', error);
+        logger.error('Status health check error:', error);
         return res.status(500).json({
             status: 'outage',
             timestamp: new Date().toISOString(),

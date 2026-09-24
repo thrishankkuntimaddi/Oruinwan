@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const adminService = require('./admin.service');
 
 function handleError(res, error) {
@@ -12,7 +13,7 @@ async function getAnalyticsStats(req, res) {
         const result = await adminService.getAnalyticsStats(companyId);
         return res.json(result);
     } catch (error) {
-        console.error('STATS ERROR:', error);
+        logger.error('STATS ERROR:', error);
         return handleError(res, error);
     }
 }
@@ -23,7 +24,7 @@ async function getDepartments(req, res) {
         const result = await adminService.getDepartments(companyId);
         return res.json(result);
     } catch (error) {
-        console.error('DEPT ERROR:', error);
+        logger.error('DEPT ERROR:', error);
         return handleError(res, error);
     }
 }

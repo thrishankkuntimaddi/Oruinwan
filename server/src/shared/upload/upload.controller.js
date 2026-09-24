@@ -1,3 +1,5 @@
+const logger = require('../../../utils/logger');
+const { sendError } = require('../utils/httpError');
 const { uploadNoteAttachment, getFileCategory, validateFileSize, FILE_SIZE_LIMITS } = require('../../../config/multer.config');
 const { uploadToGCS, streamGCSFile, BUCKET_NAME } = require('../../modules/uploads/upload.service');
 const { Storage } = require('@google-cloud/storage');
@@ -8,11 +10,10 @@ exports.uploadNoteAttachment = async (req, res) => {
     try {
         
         uploadNoteAttachment.single('file')(req, res, async (err) => {
+          try {
             if (err) {
-                console.error('Upload error:', err);
-                return res.status(400).json({
-                    message: err.message || 'File upload failed'
-                });
+                // Multer/validation errors are client errors with user-safe messages.
+                return sendError(res, err, { status: 400, message: err.message || 'File upload failed' });
             }
 
             if (!req.file) {
@@ -45,7 +46,7 @@ exports.uploadNoteAttachment = async (req, res) => {
 
             
             const gcsFolder = `notes/${workspaceId}`;
-            const gcsAttachment = await uploadToGCS(req.file, gcsFolder);
+            const gcsAttachment = await uploadToGCS(req.file, gcsFolder, { userId, companyId: workspace.company || undefined });
 
             const category = getFileCategory(req.file.mimetype);
             const categoryKey = category === 'images' ? 'image' :
@@ -106,11 +107,14 @@ exports.uploadNoteAttachment = async (req, res) => {
                 category: categoryKey,
                 attachment: attachmentData
             });
+          } catch (innerErr) {
+            // Errors inside the multer callback are not caught by the outer try.
+            return sendError(res, innerErr, { status: 500 });
+          }
         });
 
     } catch (err) {
-        console.error('UPLOAD ATTACHMENT ERROR:', err);
-        return res.status(500).json({ message: 'Server error' });
+        return sendError(res, err, { status: 500 });
     }
 };
 
@@ -153,8 +157,7 @@ exports.deleteAttachment = async (req, res) => {
         return res.json({ message: 'File deleted successfully' });
 
     } catch (err) {
-        console.error('DELETE ATTACHMENT ERROR:', err);
-        return res.status(500).json({ message: 'Server error' });
+        return sendError(res, err, { status: 500 });
     }
 };
 

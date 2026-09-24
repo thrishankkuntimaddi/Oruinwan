@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const conversationKeysService = require('./conversationKeys.service');
 const { handleError } = require('../../../utils/responseHelpers');
 
@@ -90,10 +91,10 @@ exports.getConversationKey = async (req, res) => {
         if (!keyExists) {
             
             if (conversationType === 'channel') {
-                console.error(`🚨 [INVARIANT VIOLATION] Channel ${conversationId} exists but has NO conversation key`);
-                console.error(`   ⚠️ This should NEVER happen in Phase 5+`);
-                console.error(`   ⚠️ ALL channels must have keys at creation time`);
-                console.error(`   📝 User ${userId} attempted to access channel that violated Phase 5`);
+                logger.error(`🚨 [INVARIANT VIOLATION] Channel ${conversationId} exists but has NO conversation key`);
+                logger.error(`   ⚠️ This should NEVER happen in Phase 5+`);
+                logger.error(`   ⚠️ ALL channels must have keys at creation time`);
+                logger.error(`   📝 User ${userId} attempted to access channel that violated Phase 5`);
             }
 
             
@@ -118,24 +119,24 @@ exports.getConversationKey = async (req, res) => {
         
         
         
-        console.log(`🔑 [AUDIT][PHASE1][FETCH] Key fetch request`);
-        console.log(`   ├─ User ID: ${userId}`);
-        console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-        console.log(`   └─ Checking if user is in encryptedKeys[] array...`);
+        logger.info(`🔑 [AUDIT][PHASE1][FETCH] Key fetch request`);
+        logger.info(`   ├─ User ID: ${userId}`);
+        logger.info(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+        logger.info(`   └─ Checking if user is in encryptedKeys[] array...`);
 
         if (!encryptedKeyData) {
             
             
             
-            console.warn(`🚫 [AUDIT][PHASE1][FETCH] Key access DENIED`);
-            console.warn(`   ├─ User ID: ${userId}`);
-            console.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-            console.warn(`   ├─ Reason: User NOT in encryptedKeys[] array`);
-            console.warn(`   ├─ Conversation key exists: YES`);
-            console.warn(`   ├─ User has access: NO`);
-            console.warn(`   ├─ ⚠️ INVARIANT VIOLATION: User may be in channel.members but NOT in encryptedKeys[]`);
-            console.warn(`   └─ Response: 403 KEY_NOT_DISTRIBUTED`);
-            console.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+            logger.warn(`🚫 [AUDIT][PHASE1][FETCH] Key access DENIED`);
+            logger.warn(`   ├─ User ID: ${userId}`);
+            logger.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+            logger.warn(`   ├─ Reason: User NOT in encryptedKeys[] array`);
+            logger.warn(`   ├─ Conversation key exists: YES`);
+            logger.warn(`   ├─ User has access: NO`);
+            logger.warn(`   ├─ ⚠️ INVARIANT VIOLATION: User may be in channel.members but NOT in encryptedKeys[]`);
+            logger.warn(`   └─ Response: 403 KEY_NOT_DISTRIBUTED`);
+            logger.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
             
             return res.status(403).json({
@@ -151,12 +152,12 @@ exports.getConversationKey = async (req, res) => {
         
         
         
-        console.log(`✅ [AUDIT][PHASE1][FETCH] Key access GRANTED`);
-        console.log(`   ├─ User ID: ${userId}`);
-        console.log(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-        console.log(`   ├─ User is in encryptedKeys[] array: YES`);
-        console.log(`   └─ Response: 200 with encrypted key data`);
-        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        logger.info(`✅ [AUDIT][PHASE1][FETCH] Key access GRANTED`);
+        logger.info(`   ├─ User ID: ${userId}`);
+        logger.info(`   ├─ Conversation: ${conversationType}:${conversationId}`);
+        logger.info(`   ├─ User is in encryptedKeys[] array: YES`);
+        logger.info(`   └─ Response: 200 with encrypted key data`);
+        logger.info(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
 
         return res.json(encryptedKeyData);
     } catch (err) {
@@ -170,7 +171,7 @@ exports.addUserKey = async (req, res) => {
         const { userId, encryptedKey, ephemeralPublicKey, algorithm, conversationType } = req.body;
         const requestingUserId = req.user.sub || req.user.userId;
 
-        console.log(`🔐 Adding encrypted key for user ${userId} in ${conversationType}:${conversationId}`);
+        logger.info(`🔐 Adding encrypted key for user ${userId} in ${conversationType}:${conversationId}`);
 
         
         const requestingUserKey = await service.getUserConversationKey(
@@ -196,13 +197,13 @@ exports.addUserKey = async (req, res) => {
         );
 
         if (added) {
-            console.log(`✅ Added encrypted key for user ${userId}`);
+            logger.info(`✅ Added encrypted key for user ${userId}`);
             res.status(200).json({ success: true });
         } else {
             res.status(400).json({ error: 'Failed to add encrypted key' });
         }
     } catch (error) {
-        console.error('ADD USER KEY ERROR:', error);
+        logger.error('ADD USER KEY ERROR:', error);
         res.status(500).json({ error: 'Failed to add user key' });
     }
 };
@@ -321,7 +322,7 @@ exports.repairUserAccess = async (req, res) => {
     try {
         const userId = req.user.sub;
 
-        console.log(`🔧 [Controller] Repair access request from user ${userId}`);
+        logger.info(`🔧 [Controller] Repair access request from user ${userId}`);
 
         const results = await conversationKeysService.repairUserConversationAccess(userId);
 
@@ -331,7 +332,7 @@ exports.repairUserAccess = async (req, res) => {
             ...results
         });
     } catch (err) {
-        console.error('❌ [Controller] Repair access failed:', err);
+        logger.error('❌ [Controller] Repair access failed:', err);
         
         
         return res.status(200).json({

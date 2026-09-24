@@ -1,6 +1,8 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import { useAuth } from '../contexts/AuthContext'; 
+import logger from '../utils/logger';
+import { sameId } from './conversationUtils';
 
 export function useChatSocket(conversationId, conversationType, eventHandler) {
     const { socket } = useSocket();
@@ -45,11 +47,11 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         
         socket.emit('chat:join', conversationId, (response) => {
             if (response?.error) {
-                console.error(`❌[chat: join] Failed to join ${conversationType}: ${response.error} `, response);
+                logger.error(`❌[chat: join] Failed to join ${conversationType}: ${response.error} `, response);
 
                 
                 if (response.code === 'UNAUTHORIZED') {
-                    console.error(`🚫[chat: join] Not authorized to join channel ${conversationId} `);
+                    logger.error(`🚫[chat: join] Not authorized to join channel ${conversationId} `);
                     eventHandlerRef.current?.({
                         type: 'join-error',
                         payload: {
@@ -66,18 +68,9 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
     }, [socket, conversationId, conversationType, encryptionReady]); 
 
     
-    const leaveConversation = useCallback(() => {
-        if (conversationType === 'dm') {
-            return;
-        }
-
-        if (!socket || !conversationId) return;
-
-        
-        if (socket.connected) {
-            socket.emit('chat:leave', { conversationId });
-        }
-    }, [socket, conversationId, conversationType]);
+    // The server keeps every socket joined to all of the user's channel rooms and
+    // has no 'chat:leave' handler; isolation is done by filtering on conversation id.
+    const leaveConversation = useCallback(() => { }, []);
 
     
     useEffect(() => {
@@ -86,22 +79,17 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             joinConversation();
         }
 
-        return () => {
-            if (socket?.connected && conversationId) {
-                socket.emit('chat:leave', conversationId);
-            }
-        };
     }, [socket, conversationId, conversationType, encryptionReady, joinConversation]); 
 
     
     const emitTyping = useCallback((isTyping) => {
         if (!socket || !conversationId) return;
 
-        socket.emit('chat:typing', {
-            channelId: conversationId,
-            isTyping
-        });
-    }, [socket, conversationId]);
+        if (!isTyping) return; // server has no stop-typing event; receivers time out
+        socket.emit('typing', conversationType === 'dm'
+            ? { dmSessionId: conversationId }
+            : { channelId: conversationId });
+    }, [socket, conversationId, conversationType]);
 
     
     const markAsRead = useCallback((messageIds) => {
@@ -136,6 +124,15 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             wasDisconnectedRef.current = true;
         };
 
+        // True when a payload's channel / DM id matches the open conversation.
+        const belongsHere = (channelId, dmId) => (
+            conversationType === 'dm' ? sameId(dmId, conversationId) : sameId(channelId, conversationId)
+        );
+        const messageBelongsHere = (msg) => {
+            if (!msg || typeof msg !== 'object') return false;
+            return belongsHere(msg.channelId ?? msg.channel, msg.dmId ?? msg.dm ?? msg.dmSessionId);
+        };
+
         socket.on('connect', handleConnect);
         socket.on('disconnect', handleDisconnect);
 
@@ -155,7 +152,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             
             
             
-            if (messageConversationId !== conversationId) {
+            if (!sameId(messageConversationId, conversationId)) {
                 return; 
             }
 
@@ -225,7 +222,9 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         };
 
         const handleMessageEdited = async (data) => {
-            
+            // Payload is the full message; ignore edits from other conversations
+            // when it carries a conversation id.
+            if ((data?.channel || data?.dm || data?.channelId || data?.dmId) && !messageBelongsHere(data)) return;
             const msgId = data._id || data.id;
 
             
@@ -314,16 +313,25 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
 
         
 
+        // Server 'typing' payload: { from, fromName, dmSessionId | channelId }.
         const handleUserTyping = (data) => {
+            if (!belongsHere(data?.channelId, data?.dmSessionId)) return;
             eventHandlerRef.current?.({
                 type: 'user-typing',
-                payload: data
+                payload: {
+                    userId: data.from ?? data.userId,
+                    userName: data.fromName ?? data.userName,
+                    isTyping: data.isTyping !== false,
+                }
             });
         };
 
         
 
+        const pollBelongsHere = (poll) => belongsHere(poll?.channelId ?? poll?.channel, null);
+
         const handlePollCreated = (data) => {
+            if (!pollBelongsHere(data)) return;
             eventHandlerRef.current?.({
                 type: 'poll-created',
                 payload: data
@@ -331,6 +339,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         };
 
         const handlePollUpdated = (data) => {
+            if (!pollBelongsHere(data)) return;
             eventHandlerRef.current?.({
                 type: 'poll-updated',
                 payload: data
@@ -347,6 +356,7 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         
 
         const handleChannelUpdated = (data) => {
+            if (!belongsHere(data?.channelId, null)) return;
             eventHandlerRef.current?.({
                 type: 'channel-updated',
                 payload: data
@@ -354,13 +364,17 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         };
 
         const handleMemberJoined = (data) => {
+            if (!belongsHere(data?.channelId, null)) return;
             eventHandlerRef.current?.({
                 type: 'member-joined',
                 payload: data
             });
         };
 
+        // Timeline 'left' pill comes from the server's system new-message;
+        // this event is only for member-list updates.
         const handleMemberLeft = (data) => {
+            if (!belongsHere(data?.channelId, null)) return;
             eventHandlerRef.current?.({
                 type: 'member-left',
                 payload: data
@@ -395,10 +409,11 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
         socket.on('message:reaction_added', handleReactionAdded);   
         socket.on('message:reaction_removed', handleReactionRemoved); 
 
-        socket.on('chat:user_typing', handleUserTyping);
+        socket.on('typing', handleUserTyping);
 
         socket.on('poll:new', handlePollCreated);
         socket.on('poll:updated', handlePollUpdated);
+        socket.on('poll:update', handlePollUpdated);
         socket.on('poll:removed', handlePollRemoved);
 
         socket.on('channel-updated', handleChannelUpdated);
@@ -427,10 +442,11 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             socket.off('message:reaction_added', handleReactionAdded);
             socket.off('message:reaction_removed', handleReactionRemoved);
 
-            socket.off('chat:user_typing', handleUserTyping);
+            socket.off('typing', handleUserTyping);
 
             socket.off('poll:new', handlePollCreated);
             socket.off('poll:updated', handlePollUpdated);
+            socket.off('poll:update', handlePollUpdated);
             socket.off('poll:removed', handlePollRemoved);
 
             socket.off('channel-updated', handleChannelUpdated);
@@ -442,11 +458,8 @@ export function useChatSocket(conversationId, conversationType, eventHandler) {
             
             socket.off('connect', handleConnect);
             socket.off('disconnect', handleDisconnect);
-
-            
-            leaveConversation();
         };
-    }, [socket, conversationId, conversationType, joinConversation, leaveConversation]);
+    }, [socket, conversationId, conversationType, joinConversation]);
 
     return {
         connected: socket?.connected || false,

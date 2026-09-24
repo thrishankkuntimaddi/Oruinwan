@@ -4,7 +4,7 @@ const isProduction = process.env.NODE_ENV === 'production';
 function notFoundHandler(req, res) {
   if (!isProduction) {
     
-    console.log('❌ [404] Route not found:', {
+    logger.info('❌ [404] Route not found:', {
       method: req.method,
       path: req.path,
       originalUrl: req.originalUrl,
@@ -21,29 +21,36 @@ function notFoundHandler(req, res) {
 }
 
 function globalErrorHandler(err, req, res, next) {
-  
-  logger.error('Global error handler:', {
-    error: err.message,
-    stack: err.stack,
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  let statusCode = Number(err.statusCode || err.status || 500);
+  if (!Number.isInteger(statusCode) || statusCode < 400 || statusCode > 599) statusCode = 500;
+
+  logger.error({
+    err,
+    status: statusCode,
     path: req.path,
     method: req.method,
     user: req.user?.sub,
-    
-    timestamp: new Date().toISOString()
-  });
+  }, 'Global error handler');
 
-  
-  const statusCode = err.statusCode || err.status || 500;
+  const isServerError = statusCode >= 500;
+  // In production only expose messages for client errors (4xx); 5xx gets a generic message.
+  const hideDetails = isProduction && isServerError;
 
-  
   const errorResponse = {
-    error: statusCode === 500 ? 'Internal Server Error' : (err.name || 'Error'),
-    message: isProduction && statusCode === 500
+    error: isServerError ? 'Internal Server Error' : (err.name || 'Error'),
+    message: hideDetails
       ? 'An unexpected error occurred. Please try again later.'
-      : err.message
+      : (err.message || 'Request failed'),
   };
 
-  
+  if (!hideDetails && err.code !== undefined && err.code !== null) {
+    errorResponse.code = err.code;
+  }
+
   if (!isProduction) {
     errorResponse.stack = err.stack;
   }

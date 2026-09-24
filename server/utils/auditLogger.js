@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const AuditLog = require("../models/AuditLog");
 
 exports.logAudit = async ({
@@ -32,11 +33,11 @@ exports.logAudit = async ({
         await auditEntry.save();
 
         const statusEmoji = status === "success" ? "✅" : status === "failure" ? "❌" : "⏳";
-        console.log(`${statusEmoji} AUDIT: ${action} by user ${userId} (${status})`);
+        logger.info(`${statusEmoji} AUDIT: ${action} by user ${userId} (${status})`);
 
         return auditEntry;
     } catch (err) {
-        console.error("❌ Error creating audit log:", err);
+        logger.error("❌ Error creating audit log:", err);
         
     }
 };
@@ -79,7 +80,7 @@ exports.getCompanyAuditLogs = async (companyId, options = {}) => {
             .populate("userId", "username email profilePicture")
             .lean();
     } catch (err) {
-        console.error("Error fetching company audit logs:", err);
+        logger.error("Error fetching company audit logs:", err);
         return [];
     }
 };
@@ -92,7 +93,7 @@ exports.getUserAuditLogs = async (userId, limit = 50) => {
             .populate("userId", "username email")
             .lean();
     } catch (err) {
-        console.error("Error fetching user audit logs:", err);
+        logger.error("Error fetching user audit logs:", err);
         return [];
     }
 };
@@ -105,7 +106,7 @@ exports.getResourceAuditLogs = async (resource, resourceId, limit = 50) => {
             .populate("userId", "username email")
             .lean();
     } catch (err) {
-        console.error("Error fetching resource audit logs:", err);
+        logger.error("Error fetching resource audit logs:", err);
         return [];
     }
 };
@@ -153,7 +154,7 @@ exports.getAuditStats = async (companyId, startDate, endDate) => {
             topUsers: byUser.map(u => ({ userId: u._id, count: u.count }))
         };
     } catch (err) {
-        console.error("Error fetching audit stats:", err);
+        logger.error("Error fetching audit stats:", err);
         return null;
     }
 };
@@ -167,10 +168,10 @@ exports.cleanupOldLogs = async (days = 365) => {
             createdAt: { $lt: cutoffDate }
         });
 
-        console.log(`🗑️  Cleaned up ${result.deletedCount} audit logs older than ${days} days`);
+        logger.info(`🗑️  Cleaned up ${result.deletedCount} audit logs older than ${days} days`);
         return result.deletedCount;
     } catch (err) {
-        console.error("Error cleaning up old audit logs:", err);
+        logger.error("Error cleaning up old audit logs:", err);
         return 0;
     }
 };

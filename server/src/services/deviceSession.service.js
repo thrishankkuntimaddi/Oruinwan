@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const UserDeviceSession = require('../models/UserDeviceSession');
 const User = require('../../models/User');
 
@@ -31,7 +32,7 @@ exports.createOrUpdateSession = async ({
             { upsert: true, new: true }
         );
 
-        console.log(`✅ [PHASE 3] Device session created/updated: ${deviceName} (${deviceId.substring(0, 8)}...)`);
+        logger.info(`✅ [PHASE 3] Device session created/updated: ${deviceName} (${deviceId.substring(0, 8)}...)`);
 
         
         let wasNewDevice = false;
@@ -57,7 +58,7 @@ exports.createOrUpdateSession = async ({
         
         if (wasNewDevice) {
             try {
-                const User = require('../models/User');
+                const User = require('../../models/User');
                 const securityNotification = require('./securityNotification.service');
 
                 
@@ -82,7 +83,7 @@ exports.createOrUpdateSession = async ({
 
         return session;
     } catch (error) {
-        console.error('Error creating/updating device session:', error);
+        logger.error('Error creating/updating device session:', error);
         throw error;
     }
 };
@@ -101,7 +102,7 @@ exports.getDeviceSessions = async (userId, includeRevoked = false) => {
 
         return sessions;
     } catch (error) {
-        console.error('Error fetching device sessions:', error);
+        logger.error('Error fetching device sessions:', error);
         throw error;
     }
 };
@@ -129,15 +130,15 @@ exports.revokeDeviceSession = async (userId, deviceId) => {
         );
         const deletedTokens = { deletedCount: result.modifiedCount };
 
-        console.log(`🔒 [PHASE 3] Device revoked: ${session.deviceName} (${deviceId.substring(0, 8)}...)`);
-        console.log(`   - Invalidated ${deletedTokens.deletedCount} refresh token(s)`);
+        logger.info(`🔒 [PHASE 3] Device revoked: ${session.deviceName} (${deviceId.substring(0, 8)}...)`);
+        logger.info(`   - Invalidated ${deletedTokens.deletedCount} refresh token(s)`);
 
         return {
             session,
             tokensRevoked: deletedTokens.deletedCount
         };
     } catch (error) {
-        console.error('Error revoking device session:', error);
+        logger.error('Error revoking device session:', error);
         throw error;
     }
 };
@@ -162,11 +163,11 @@ exports.revokeAllOtherSessions = async (userId, currentDeviceId) => {
             { $pull: { refreshTokens: { deviceId: { $ne: currentDeviceId } } } }
         );
 
-        console.log(`🔒 [PHASE 3] Revoked ${result.modifiedCount} other device(s) for user ${userId}`);
+        logger.info(`🔒 [PHASE 3] Revoked ${result.modifiedCount} other device(s) for user ${userId}`);
 
         return result.modifiedCount;
     } catch (error) {
-        console.error('Error revoking other sessions:', error);
+        logger.error('Error revoking other sessions:', error);
         throw error;
     }
 };
@@ -174,13 +175,16 @@ exports.revokeAllOtherSessions = async (userId, currentDeviceId) => {
 exports.updateSessionActivity = async (userId, deviceId) => {
     try {
         
+        // Fire-and-forget, but the rejection MUST be handled: an unhandled rejection
+        // terminates the process in production.
         UserDeviceSession.updateOne(
             { userId, deviceId },
             { $set: { lastActiveAt: new Date() } }
-        ).exec();
+        ).exec().catch((error) => {
+            logger.warn({ err: error.message, userId, deviceId }, 'Failed to update session activity');
+        });
     } catch (error) {
-        
-        console.warn('Failed to update session activity:', error.message);
+        logger.warn({ err: error.message }, 'Failed to update session activity');
     }
 };
 
@@ -194,7 +198,8 @@ exports.isSessionRevoked = async (userId, deviceId) => {
 
         return session.isRevoked();
     } catch (error) {
-        console.error('Error checking session revocation:', error);
-        return false;
+        // Fail CLOSED: if we cannot prove the device session is still valid, treat it as revoked.
+        logger.error({ err: error, userId, deviceId }, '[SECURITY] Session revocation check failed — failing closed (treating as revoked)');
+        return true;
     }
 };

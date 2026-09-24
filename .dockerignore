@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/build
+**/.env
+**/.env.*
+!**/.env.example
+.git
+client
+desktop
+mobile
+pictures
+structure.txt
+**/__tests__
+**/*.test.js
+server/uploads
+server/scripts
+server/migrations

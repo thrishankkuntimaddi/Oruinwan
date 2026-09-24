@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const Workspace = require("../../../models/Workspace");
 const Channel = require("../channels/channel.model.js");
 const User = require("../../../models/User");
@@ -8,10 +9,10 @@ const Note = require("../../../models/Note");
 const Update = require("../../../models/Update");
 const Favorite = require("../../../models/Favorite");
 const Invite = require("../../../models/Invite");
-const { _createInvite } = require("../../../utils/invite");
+const {} = require("../../../utils/invite");
 const sendEmail = require("../../../utils/sendEmail");
-const { handleError, _notFound, _badRequest, _forbidden } = require("../../../utils/responseHelpers");
-const { _isMember, normalizeMemberFormat } = require("../../../utils/memberHelpers");
+const { handleError} = require("../../../utils/responseHelpers");
+const { normalizeMemberFormat } = require("../../../utils/memberHelpers");
 const conversationKeysService = require("../../modules/conversations/conversationKeys.service");
 
 exports.createWorkspace = async (req, res) => {
@@ -91,7 +92,7 @@ exports.createWorkspace = async (req, res) => {
       }
     });
 
-    console.log("🏗 [PHASE 2] Workspace created:", workspace._id.toString());
+    logger.info("🏗 [PHASE 2] Workspace created:", workspace._id.toString());
 
     
     const creationDate = new Date();
@@ -127,11 +128,11 @@ exports.createWorkspace = async (req, res) => {
       }]
     });
 
-    console.log("📢 [PHASE 2] Default channels created: general, announcements");
+    logger.info("📢 [PHASE 2] Default channels created: general, announcements");
 
     
     
-    console.log(`🔐 [PHASE 5] Generating conversation keys for default channels...`);
+    logger.info(`🔐 [PHASE 5] Generating conversation keys for default channels...`);
 
     const channelsToBootstrap = [
       { channel: generalChannel, name: 'general' },
@@ -146,14 +147,14 @@ exports.createWorkspace = async (req, res) => {
           workspaceId: workspace._id.toString(),
           members: [userId]
         });
-        console.log(`✅ [PHASE 5] Bootstrapped conversation key for #${name}`);
+        logger.info(`✅ [PHASE 5] Bootstrapped conversation key for #${name}`);
       } catch (keyError) {
         
         
         
-        console.error(`⚠️ [PHASE 5] Failed to bootstrap key for #${name} (non-fatal):`, keyError.message);
-        console.warn(`   Workspace will be created without E2EE keys for #${name}.`);
-        console.warn(`   Keys will be distributed via repair when E2EE is configured.`);
+        logger.error(`⚠️ [PHASE 5] Failed to bootstrap key for #${name} (non-fatal):`, keyError.message);
+        logger.warn(`   Workspace will be created without E2EE keys for #${name}.`);
+        logger.warn(`   Keys will be distributed via repair when E2EE is configured.`);
       }
     }
 
@@ -174,7 +175,7 @@ exports.createWorkspace = async (req, res) => {
 
     await user.save();
 
-    console.log("👤 [PHASE 2] User added as member:", userId);
+    logger.info("👤 [PHASE 2] User added as member:", userId);
 
     return res.status(201).json({
       message: "Workspace created successfully",
@@ -381,7 +382,15 @@ exports.inviteToWorkspace = async (req, res) => {
 
     if (inviteType === "email" && emails) {
       
-      const emailList = emails.split(',').map(e => e.trim()).filter(Boolean);
+      // The web client sends an array; older callers send a comma-separated string.
+      const emailList = [...new Set(
+        (Array.isArray(emails) ? emails : String(emails).split(','))
+          .map(e => String(e).trim().toLowerCase())
+          .filter(e => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+      )];
+      if (emailList.length === 0) {
+        return res.status(400).json({ message: "Provide at least one valid email address" });
+      }
 
       for (const email of emailList) {
         
@@ -410,14 +419,10 @@ exports.inviteToWorkspace = async (req, res) => {
 
         
         try {
-          const { workspaceInvitationTemplate } = require('../../../utils/emailTemplates');
-          const template = workspaceInvitationTemplate(
-            workspace.name,
-            inviterName,
-            inviteLink,
-            'Member',
-            daysValid
-          );
+          const { workspaceInviteTemplate } = require('../../../utils/emailTemplates');
+          // Address the invitee by their account name when they already have one.
+          const inviteeName = (userExists && userExists.username) || email.split('@')[0];
+          const template = workspaceInviteTemplate(inviteeName, workspace.name, inviteLink);
 
           await sendEmail({
             to: email,
@@ -425,17 +430,18 @@ exports.inviteToWorkspace = async (req, res) => {
             html: template.html,
             text: template.text
           });
-
-        } catch (_e) {
-          console.warn("⚠️ SMTP not configured — Email not sent");
-
+          invites.push({ email, inviteLink, userExists: !!userExists, emailSent: true });
+        } catch (emailErr) {
+          logger.error({ err: emailErr.message, email }, 'Workspace invite email could not be delivered');
+          invites.push({ email, inviteLink, userExists: !!userExists, emailSent: false, emailError: emailErr.message });
         }
-
-        invites.push({ email, inviteLink, userExists: !!userExists });
       }
 
-      return res.json({
-        message: "Email invites sent successfully",
+      const failed = invites.filter((i) => i.emailSent === false).length;
+      return res.status(failed && failed === invites.length ? 502 : 200).json({
+        message: failed === 0
+          ? "Email invites sent successfully"
+          : `${invites.length - failed} of ${invites.length} invite emails sent; ${failed} could not be delivered. Share the invite link manually or fix the email provider.`,
         invites
       });
     } else {
@@ -463,7 +469,7 @@ exports.inviteToWorkspace = async (req, res) => {
       });
     }
   } catch (err) {
-    console.error("INVITE TO WORKSPACE ERROR:", err);
+    logger.error("INVITE TO WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -601,7 +607,7 @@ exports.joinWorkspace = async (req, res) => {
     
     
     
-    console.log(`🔐 [PHASE 4] Distributing conversation keys to user ${userId}...`);
+    logger.info(`🔐 [PHASE 4] Distributing conversation keys to user ${userId}...`);
     for (const channel of defaultChannels) {
       try {
         
@@ -616,16 +622,16 @@ exports.joinWorkspace = async (req, res) => {
           );
 
           if (distributed) {
-            console.log(`✅ [PHASE 4] Distributed conversation key for #${channel.name} to user ${userId}`);
+            logger.info(`✅ [PHASE 4] Distributed conversation key for #${channel.name} to user ${userId}`);
           } else {
-            console.warn(`⚠️ [PHASE 4] Could not distribute key for #${channel.name} to user ${userId}`);
+            logger.warn(`⚠️ [PHASE 4] Could not distribute key for #${channel.name} to user ${userId}`);
           }
         } else {
-          console.log(`ℹ️ [PHASE 4] No conversation key exists for #${channel.name} yet (will be created on first message)`);
+          logger.info(`ℹ️ [PHASE 4] No conversation key exists for #${channel.name} yet (will be created on first message)`);
         }
       } catch (keyError) {
         
-        console.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
+        logger.error(`❌ [PHASE 4] Key distribution failed for #${channel.name}:`, keyError.message);
       }
     }
 
@@ -656,7 +662,7 @@ exports.joinWorkspace = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("JOIN WORKSPACE ERROR:", err);
+    logger.error("JOIN WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -699,7 +705,7 @@ exports.getWorkspaceMembers = async (req, res) => {
 
     return res.json({ members });
   } catch (err) {
-    console.error("GET WORKSPACE MEMBERS ERROR:", err);
+    logger.error("GET WORKSPACE MEMBERS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -813,7 +819,7 @@ exports.getWorkspaceChannels = async (req, res) => {
 
     return res.json({ channels: channelsWithMembershipInfo });
   } catch (err) {
-    console.error("GET WORKSPACE CHANNELS ERROR:", err);
+    logger.error("GET WORKSPACE CHANNELS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -859,7 +865,7 @@ exports.createWorkspaceChannel = async (req, res) => {
       );
 
       if (invalidMembers.length > 0) {
-        console.error('🚨 [createWorkspaceChannel] SECURITY: Attempt to add non-workspace members to channel!', {
+        logger.error('🚨 [createWorkspaceChannel] SECURITY: Attempt to add non-workspace members to channel!', {
           workspaceId,
           invalidMembers
         });
@@ -878,7 +884,7 @@ exports.createWorkspaceChannel = async (req, res) => {
     
     
 
-    console.log(`🔍 [DEBUG] Channel creation request:`, {
+    logger.info(`🔍 [DEBUG] Channel creation request:`, {
       channelMembers,
       channelMembersType: typeof channelMembers,
       channelMembersLength: channelMembers?.length,
@@ -891,7 +897,7 @@ exports.createWorkspaceChannel = async (req, res) => {
       ? [...new Set([userId, ...channelMembers])]
       : [userId]; 
 
-    console.log(`🔍 [DEBUG] finalMemberIds:`, finalMemberIds);
+    logger.info(`🔍 [DEBUG] finalMemberIds:`, finalMemberIds);
 
     const finalMembers = finalMemberIds.map(memberId => ({
       user: memberId,
@@ -916,7 +922,7 @@ exports.createWorkspaceChannel = async (req, res) => {
     
     
     try {
-      console.log(`🔐 [PHASE 5] Channel created, generating conversation key for "${channel.name}"...`);
+      logger.info(`🔐 [PHASE 5] Channel created, generating conversation key for "${channel.name}"...`);
 
       
       
@@ -928,10 +934,10 @@ exports.createWorkspaceChannel = async (req, res) => {
         userId           
       );
 
-      console.log(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
+      logger.info(`✅ [PHASE 5] Conversation key created for channel: ${channel.name}`);
 
     } catch (keyError) {
-      console.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
+      logger.error(`❌ [PHASE 5] Failed to generate conversation key:`, keyError);
 
       
       await Channel.findByIdAndDelete(channel._id);
@@ -962,7 +968,7 @@ exports.createWorkspaceChannel = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("CREATE WORKSPACE CHANNEL ERROR:", err);
+    logger.error("CREATE WORKSPACE CHANNEL ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1011,7 +1017,7 @@ exports.getAllWorkspaceMembers = async (req, res) => {
 
     return res.json({ members });
   } catch (err) {
-    console.error("GET ALL WORKSPACE MEMBERS ERROR:", err);
+    logger.error("GET ALL WORKSPACE MEMBERS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1070,7 +1076,7 @@ exports.renameWorkspace = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("RENAME WORKSPACE ERROR:", err);
+    logger.error("RENAME WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1136,7 +1142,7 @@ exports.updateWorkspace = async (req, res) => {
       }
     });
   } catch (err) {
-    console.error("UPDATE WORKSPACE ERROR:", err);
+    logger.error("UPDATE WORKSPACE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -1176,7 +1182,7 @@ exports.getWorkspaceStats = async (req, res) => {
       settings: workspace.settings
     });
   } catch (err) {
-    console.error("GET WORKSPACE STATS ERROR:", err);
+    logger.error("GET WORKSPACE STATS ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

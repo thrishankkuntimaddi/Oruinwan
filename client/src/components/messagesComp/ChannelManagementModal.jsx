@@ -14,6 +14,7 @@ import RemoveMemberModal from "./channelManagementComponents/RemoveMemberModal";
 import PromoteAdminModal from "./channelManagementComponents/PromoteAdminModal";
 import DemoteAdminModal from "./channelManagementComponents/DemoteAdminModal";
 import IntegrationsTab from "./channelManagementComponents/IntegrationsTab";
+import logger from '../../utils/logger';
 
 export default function ChannelManagementModal({ channel, onClose, currentUserId, initialTab = "members" }) {
     const { workspaceId } = useParams();
@@ -60,7 +61,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             const res = await api.get(`/api/channels/${channel.id}/members`);
             setMembers(res.data.members || []);
         } catch (err) {
-            console.error("Load members failed:", err);
+            logger.error("Load members failed:", err);
         }
     }, [channel?.id]);
 
@@ -72,7 +73,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             const res = await api.get(`/api/workspaces/${channel.workspaceId}/all-members`);
             setAllUsers(res.data.members || []);
         } catch (err) {
-            console.error("❌ Load workspace members failed:", err);
+            logger.error("❌ Load workspace members failed:", err);
         }
     }, [channel?.workspaceId]);
 
@@ -89,7 +90,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
 
     
     if (!channel) {
-        console.error("ChannelManagementModal: channel prop is undefined");
+        logger.error("ChannelManagementModal: channel prop is undefined");
         onClose?.();
         return null;
     }
@@ -103,7 +104,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             await api.post(`/api/channels/${channel.id}/invite`, { userId });
             loadMembers();
         } catch (err) {
-            console.error("Invite failed:", err);
+            logger.error("Invite failed:", err);
             showToast(err?.response?.data?.message || "Invite failed", "error");
         } finally {
             setLoading(false);
@@ -125,7 +126,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             setMemberToRemove(null);
             loadMembers();
         } catch (err) {
-            console.error("Remove failed:", err);
+            logger.error("Remove failed:", err);
             showToast(err?.response?.data?.message || "Failed to remove member", "error");
         } finally {
             setLoading(false);
@@ -147,7 +148,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             setMemberToPromote(null);
             await loadMembers();
         } catch (err) {
-            console.error("Promote failed:", err);
+            logger.error("Promote failed:", err);
             showToast(err?.response?.data?.message || "Failed to promote member", "error");
         } finally {
             setLoading(false);
@@ -170,7 +171,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             setMemberToDemote(null);
             await loadMembers();
         } catch (err) {
-            console.error("Demote failed:", err);
+            logger.error("Demote failed:", err);
             showToast(err?.response?.data?.message || "Failed to demote admin", "error");
         } finally {
             setLoading(false);
@@ -199,7 +200,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             
             setTimeout(() => onClose?.(), 800);
         } catch (err) {
-            console.error("Toggle privacy failed:", err);
+            logger.error("Toggle privacy failed:", err);
             showToast(err?.response?.data?.message || "Failed to change channel privacy", "error");
         } finally {
             setLoading(false);
@@ -221,7 +222,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             
             channel.isPublic = newIsPublic;
         } catch (err) {
-            console.error("Toggle public failed:", err);
+            logger.error("Toggle public failed:", err);
             showToast(err?.response?.data?.message || "Failed to change public status", "error");
         } finally {
             setLoading(false);
@@ -244,7 +245,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
                 window.location.href = `/workspace/${workspaceId}/home`;
             }, 1000);
         } catch (err) {
-            console.error("Delete channel failed:", err);
+            logger.error("Delete channel failed:", err);
             showToast(err?.response?.data?.message || "Failed to delete channel", "error");
         } finally {
             setLoading(false);
@@ -265,7 +266,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             setShowClearMessagesConfirm(false);
             
         } catch (err) {
-            console.error("Clear messages failed:", err);
+            logger.error("Clear messages failed:", err);
             showToast(err?.response?.data?.message || "Failed to clear messages", "error");
         } finally {
             setLoading(false);
@@ -292,7 +293,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             setEditedName(editedName.trim().toLowerCase());
             
         } catch (err) {
-            console.error("Update name failed:", err);
+            logger.error("Update name failed:", err);
             showToast(err?.response?.data?.message || "Failed to update channel name", "error");
         } finally {
             setLoading(false);
@@ -314,7 +315,7 @@ export default function ChannelManagementModal({ channel, onClose, currentUserId
             setIsEditingDescription(false);
             channel.description = editedDescription;
         } catch (err) {
-            console.error("Update description failed:", err);
+            logger.error("Update description failed:", err);
             showToast(err?.response?.data?.message || "Failed to update channel description", "error");
         } finally {
             setLoading(false);

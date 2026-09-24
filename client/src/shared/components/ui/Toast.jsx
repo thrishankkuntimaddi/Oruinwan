@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { CheckCircle2, XCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 const TYPES = {
@@ -39,10 +39,18 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
     const cfg = TYPES[type] || TYPES.success;
     const Icon = cfg.icon;
 
+    // Keep the latest onClose in a ref so an inline callback from the parent
+    // doesn't restart the auto-dismiss timer on every render.
+    const onCloseRef = useRef(onClose);
+    useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+    const exitTimerRef = useRef(null);
+    useEffect(() => () => clearTimeout(exitTimerRef.current), []);
+
     const dismiss = useCallback(() => {
         setExiting(true);
-        setTimeout(onClose, 250);
-    }, [onClose]);
+        clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = setTimeout(() => onCloseRef.current?.(), 250);
+    }, []);
 
     useEffect(() => {
         const step = 100 / (duration / 16);

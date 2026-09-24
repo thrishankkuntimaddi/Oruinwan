@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const gateway = require('../../../../ai/api/ai.gateway');
 const activityService = require('../../features/activity/activity.service');
@@ -6,7 +7,7 @@ const aiSummarizer = require('./ai.summarizer.service');
 
 exports.chat = async (req, res) => {
   try {
-    console.log('➡️  [AI Controller] Delegating chat → AI Gateway');
+    logger.info('➡️  [AI Controller] Delegating chat → AI Gateway');
 
     const { message, history, workspaceId } = req.body;
     const userId = req.user.sub;
@@ -27,7 +28,7 @@ exports.chat = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error('❌ [AI Controller] chat error:', error);
+    logger.error('❌ [AI Controller] chat error:', error);
     return res.status(500).json({
       message: 'AI Service Unavailable',
       error: error.message,
@@ -38,7 +39,7 @@ exports.chat = async (req, res) => {
 
 exports.summarize = async (req, res) => {
   try {
-    console.log('➡️  [AI Controller] Delegating summarize → AI Gateway');
+    logger.info('➡️  [AI Controller] Delegating summarize → AI Gateway');
 
     const { text } = req.body;
     if (!text) return res.status(400).json({ message: 'No text provided' });
@@ -56,14 +57,14 @@ exports.summarize = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error('❌ [AI Controller] summarize error:', error);
+    logger.error('❌ [AI Controller] summarize error:', error);
     return res.status(500).json({ message: 'Summarization Failed', error: error.message });
   }
 };
 
 exports.generateTask = async (req, res) => {
   try {
-    console.log('➡️  [AI Controller] Delegating generateTask → AI Gateway');
+    logger.info('➡️  [AI Controller] Delegating generateTask → AI Gateway');
 
     const { context } = req.body;
     const result = await gateway.generateTask({ context }, { userId: req.user.sub });
@@ -79,7 +80,7 @@ exports.generateTask = async (req, res) => {
 
     return res.status(200).json(result);
   } catch (error) {
-    console.error('❌ [AI Controller] generateTask error:', error);
+    logger.error('❌ [AI Controller] generateTask error:', error);
     return res.status(500).json({ message: 'Task Generation Failed', error: error.message });
   }
 };
@@ -92,7 +93,7 @@ exports.summarizeDocument = async (req, res) => {
     const result = await aiSummarizer.summarizeDocument(text, { title, type, noCache });
     return res.status(200).json(result);
   } catch (error) {
-    console.error('❌ [AI Controller] summarizeDocument error:', error);
+    logger.error('❌ [AI Controller] summarizeDocument error:', error);
     return res.status(500).json({ message: 'Summarization failed', error: error.message });
   }
 };
@@ -108,7 +109,7 @@ exports.semanticSearch = async (req, res) => {
     const result = await aiSummarizer.semanticSearch(query, docs, { topK, noCache });
     return res.status(200).json(result);
   } catch (error) {
-    console.error('❌ [AI Controller] semanticSearch error:', error);
+    logger.error('❌ [AI Controller] semanticSearch error:', error);
     return res.status(500).json({ message: 'Semantic search failed', error: error.message });
   }
 };

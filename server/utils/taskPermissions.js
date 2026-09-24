@@ -1,3 +1,4 @@
+const logger = require('./logger');
 const Workspace = require('../models/Workspace');
 
 async function isWorkspaceManager(userId, workspaceId) {
@@ -11,7 +12,7 @@ async function isWorkspaceManager(userId, workspaceId) {
 
         return member && (member.role === 'owner' || member.role === 'admin');
     } catch (err) {
-        console.error('Error checking workspace manager status:', err);
+        logger.error('Error checking workspace manager status:', err);
         return false;
     }
 }

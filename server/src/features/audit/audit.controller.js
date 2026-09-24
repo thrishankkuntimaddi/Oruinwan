@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const auditService = require('./audit.service');
 
 async function getCompanyAuditLogs(req, res) {
@@ -15,7 +16,7 @@ async function getCompanyAuditLogs(req, res) {
         const result = await auditService.getCompanyAuditLogs(companyId, filters);
         return res.json(result);
     } catch (error) {
-        console.error('Get Audit Logs Error:', error);
+        logger.error('Get Audit Logs Error:', error);
         return res.status(500).json({ message: 'Server error fetching audit logs' });
     }
 }
@@ -37,7 +38,7 @@ async function exportAuditLogs(req, res) {
         
         return res.json(result.logs);
     } catch (error) {
-        console.error('Export Audit Logs Error:', error);
+        logger.error('Export Audit Logs Error:', error);
         return res.status(500).json({ message: 'Server error exporting logs' });
     }
 }
@@ -55,7 +56,7 @@ async function getComplianceLogs(req, res) {
         const result = await auditService.getComplianceLogs(companyId, filters);
         return res.json(result);
     } catch (error) {
-        console.error('Get Compliance Logs Error:', error);
+        logger.error('Get Compliance Logs Error:', error);
         return res.status(500).json({ message: 'Server error fetching compliance logs' });
     }
 }

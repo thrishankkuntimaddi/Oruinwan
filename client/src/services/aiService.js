@@ -1,4 +1,5 @@
 import api from './api';
+import logger from '../utils/logger';
 
 export const aiService = {
     
@@ -15,7 +16,7 @@ export const aiService = {
                 hasActions: !!response.data.actionsExecuted
             };
         } catch (error) {
-            console.error('AI Chat Error:', error);
+            logger.error('AI Chat Error:', error);
             throw error;
         }
     },
@@ -26,7 +27,7 @@ export const aiService = {
             const response = await api.post('/api/ai/summarize', { text });
             return response.data;
         } catch (error) {
-            console.error('AI Summarize Error:', error);
+            logger.error('AI Summarize Error:', error);
             throw error;
         }
     },
@@ -37,7 +38,7 @@ export const aiService = {
             const response = await api.post('/api/ai/generate-task', { context });
             return response.data;
         } catch (error) {
-            console.error('AI Task Gen Error:', error);
+            logger.error('AI Task Gen Error:', error);
             throw error;
         }
     }

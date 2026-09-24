@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '@services/api';
 import { Megaphone, Send, Calendar, Users, Check } from 'lucide-react';
 import { useToast } from '../../../../contexts/ToastContext';
+import logger from '../../../../utils/logger';
 
 const Broadcast = () => {
     const [activeTab, setActiveTab] = useState('compose');
@@ -18,11 +19,11 @@ const Broadcast = () => {
 
     const fetchCompanies = async () => {
         try { const res = await api.get('/api/admin/active-companies'); setCompanies(res.data); }
-        catch (err) { console.error('Failed to fetch companies:', err); }
+        catch (err) { logger.error('Failed to fetch companies:', err); }
     };
     const fetchHistory = async () => {
         try { const res = await api.get('/api/admin/broadcast/history'); setBroadcastHistory(res.data); }
-        catch (err) { console.error('Failed to fetch history:', err); }
+        catch (err) { logger.error('Failed to fetch history:', err); }
     };
     const handleCompanyToggle = (id) => {
         setFormData(prev => ({ ...prev, targetCompanies: prev.targetCompanies.includes(id) ? prev.targetCompanies.filter(x => x !== id) : [...prev.targetCompanies, id] }));

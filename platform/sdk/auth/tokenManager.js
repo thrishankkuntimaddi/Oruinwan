@@ -32,9 +32,10 @@ const storage = {
 
 // ─── Token Keys ───────────────────────────────────────────────────────────────
 
+// Web refresh tokens live only in the server's httpOnly `jwt` cookie; the
+// client never stores a refresh token.
 const TOKEN_KEYS = {
   ACCESS: 'accessToken',
-  REFRESH: 'refreshToken',
 };
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -48,22 +49,12 @@ export function getAccessToken() {
 }
 
 /**
- * Retrieve the current refresh token.
- * @returns {string|null}
- */
-export function getRefreshToken() {
-  return storage.get(TOKEN_KEYS.REFRESH);
-}
-
-/**
- * Persist both tokens.
+ * Persist the access token.
  * @param {Object} params
  * @param {string} params.accessToken
- * @param {string} [params.refreshToken]
  */
-export function setTokens({ accessToken, refreshToken }) {
+export function setTokens({ accessToken }) {
   if (accessToken) storage.set(TOKEN_KEYS.ACCESS, accessToken);
-  if (refreshToken) storage.set(TOKEN_KEYS.REFRESH, refreshToken);
 }
 
 /**
@@ -71,7 +62,6 @@ export function setTokens({ accessToken, refreshToken }) {
  */
 export function clearTokens() {
   storage.remove(TOKEN_KEYS.ACCESS);
-  storage.remove(TOKEN_KEYS.REFRESH);
 }
 
 /**
@@ -86,7 +76,6 @@ export function hasAccessToken() {
 
 const tokenManager = {
   getAccessToken,
-  getRefreshToken,
   setTokens,
   clearTokens,
   hasAccessToken,

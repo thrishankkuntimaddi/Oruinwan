@@ -1,4 +1,5 @@
 'use strict';
+const logger = require('../../../utils/logger');
 
 const mongoose = require('mongoose');
 const Workspace = require('../../../models/Workspace');
@@ -48,7 +49,7 @@ async function logAction(opts) {
         ]);
     } catch (err) {
         
-        console.error('[WorkspaceOS] audit log write failed (non-fatal):', err.message);
+        logger.error('[WorkspaceOS] audit log write failed (non-fatal):', err.message);
     }
 }
 
@@ -113,7 +114,7 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
                 members: [userId]
             });
         } catch (keyErr) {
-            console.warn('[WorkspaceOS] Key bootstrap failed for cloned channel (non-fatal):', keyErr.message);
+            logger.warn('[WorkspaceOS] Key bootstrap failed for cloned channel (non-fatal):', keyErr.message);
         }
     }
 
@@ -249,7 +250,7 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
                 members: [userId]
             });
         } catch (keyErr) {
-            console.warn('[WorkspaceOS] Key bootstrap failed for imported channel (non-fatal):', keyErr.message);
+            logger.warn('[WorkspaceOS] Key bootstrap failed for imported channel (non-fatal):', keyErr.message);
         }
     }
 
@@ -332,7 +333,7 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
             'analyticsCache.activeMembers7d': activeAuthorsSince7d,
             'analyticsCache.lastComputedAt': new Date()
         }
-    }).catch(err => console.warn('[WorkspaceOS] Cache update failed:', err.message));
+    }).catch(err => logger.warn('[WorkspaceOS] Cache update failed:', err.message));
 
     return {
         summary: {

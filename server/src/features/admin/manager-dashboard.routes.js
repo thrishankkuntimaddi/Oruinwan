@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -50,7 +51,7 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
 
         res.json({ workspaces });
     } catch (error) {
-        console.error('Manager Dashboard My Workspaces Error:', error);
+        logger.error('Manager Dashboard My Workspaces Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -100,7 +101,7 @@ router.get('/team-load', requireAuth, requireManager, async (req, res) => {
 
         res.json({ teamMembers, overloaded, idle });
     } catch (error) {
-        console.error('Manager Dashboard Team Load Error:', error);
+        logger.error('Manager Dashboard Team Load Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -138,7 +139,7 @@ router.get('/unassigned-employees', requireAuth, requireManager, async (req, res
 
         res.json({ unassigned });
     } catch (error) {
-        console.error('Manager Dashboard Unassigned Employees Error:', error);
+        logger.error('Manager Dashboard Unassigned Employees Error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
@@ -216,7 +217,7 @@ router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, asyn
             }
         });
     } catch (error) {
-        console.error('Manager Dashboard Metrics Error:', error);
+        logger.error('Manager Dashboard Metrics Error:', error);
         if (error.name === 'CastError') {
             return res.status(400).json({ success: false, message: 'Invalid department ID' });
         }
@@ -275,7 +276,7 @@ router.get('/dashboard/team-load/:departmentId', requireAuth, requireManager, as
             idle
         });
     } catch (error) {
-        console.error('Manager Dashboard Team Load Error:', error);
+        logger.error('Manager Dashboard Team Load Error:', error);
         if (error.name === 'CastError') {
             return res.status(400).json({ success: false, message: 'Invalid department ID' });
         }
@@ -318,7 +319,7 @@ router.get('/dashboard/unassigned/:departmentId', requireAuth, requireManager, a
 
         res.json({ unassigned });
     } catch (error) {
-        console.error('Manager Dashboard Unassigned Error:', error);
+        logger.error('Manager Dashboard Unassigned Error:', error);
         if (error.name === 'CastError') {
             return res.status(400).json({ success: false, message: 'Invalid department ID' });
         }
@@ -369,7 +370,7 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
             teamWorkload: []
         });
     } catch (error) {
-        console.error('Manager Dashboard Reports Error:', error);
+        logger.error('Manager Dashboard Reports Error:', error);
         if (error.name === 'CastError') {
             return res.status(400).json({ success: false, message: 'Invalid department ID' });
         }
@@ -423,7 +424,7 @@ router.get('/tasks/:departmentId', requireAuth, requireManager, async (req, res)
 
         res.json({ tasks, total: allTasks.length });
     } catch (error) {
-        console.error('Manager Tasks GET Error:', error);
+        logger.error('Manager Tasks GET Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -459,7 +460,7 @@ router.post('/tasks/:departmentId', requireAuth, requireManager, async (req, res
 
         res.status(201).json({ task, message: 'Task created successfully' });
     } catch (error) {
-        console.error('Manager Tasks POST Error:', error);
+        logger.error('Manager Tasks POST Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });
@@ -492,7 +493,7 @@ router.patch('/tasks/:taskId/status', requireAuth, requireManager, async (req, r
 
         res.json({ task, message: 'Task status updated' });
     } catch (error) {
-        console.error('Manager Tasks PATCH Error:', error);
+        logger.error('Manager Tasks PATCH Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });
     }
 });

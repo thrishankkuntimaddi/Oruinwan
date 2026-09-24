@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, X, Send, Users, Hash, MessageSquare } from "lucide-react";
 import api from '@services/api';
+import logger from '../../utils/logger';
 
 const T = {
   bg:          'var(--bg-surface)',
@@ -51,7 +52,7 @@ export default function BroadcastModal({ workspaceId, onClose, onSendBroadcast }
                 setDmContacts(dms); setChannels(chans); setMembers(mems);
                 setLoading(false);
             } catch (err) {
-                console.error("Failed to load broadcast data:", err);
+                logger.error("Failed to load broadcast data:", err);
                 setLoading(false);
             }
         }

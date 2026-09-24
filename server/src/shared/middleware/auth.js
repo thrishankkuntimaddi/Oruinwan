@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const User = require("../../../models/User");
@@ -60,9 +61,13 @@ module.exports = async function requireAuth(req, res, next) {
         
         
         if (err.name !== 'TokenExpiredError') {
-          return res.status(401).json({ message: 'Invalid access token' });
+          return res.status(401).json({ message: 'Invalid access token', code: 'TOKEN_INVALID' });
         }
-        
+        // Expired access token with nothing to refresh from (native clients
+        // refresh explicitly): tell the client exactly why, not "No token".
+        if (!refreshToken) {
+          return res.status(401).json({ message: 'Access token expired', code: 'TOKEN_EXPIRED' });
+        }
       }
     }
 
@@ -82,13 +87,13 @@ module.exports = async function requireAuth(req, res, next) {
         });
 
         if (!user) {
-          return res.status(401).json({ message: "Invalid refresh token" });
+          return res.status(401).json({ message: "Invalid refresh token", code: 'REFRESH_INVALID' });
         }
 
         
         const tokenEntry = user.refreshTokens.find(t => t.tokenHash === refreshHash);
         if (!tokenEntry || tokenEntry.expiresAt < new Date()) {
-          return res.status(401).json({ message: "Refresh token expired" });
+          return res.status(401).json({ message: "Refresh token expired", code: 'REFRESH_EXPIRED' });
         }
 
         
@@ -111,7 +116,7 @@ module.exports = async function requireAuth(req, res, next) {
         
         if (err.name === 'TokenExpiredError') {
           
-          return res.status(401).json({ message: 'Refresh token expired' });
+          return res.status(401).json({ message: 'Refresh token expired', code: 'REFRESH_EXPIRED' });
         }
         if (err.name === 'JsonWebTokenError') {
           
@@ -120,15 +125,15 @@ module.exports = async function requireAuth(req, res, next) {
         }
         
         
-        console.error('AUTH MIDDLEWARE CATCH (refresh path):', err);
+        logger.error('AUTH MIDDLEWARE CATCH (refresh path):', err);
         return res.status(500).json({ message: 'Server error during authentication' });
       }
     }
 
-    return res.status(401).json({ message: "No token" });
+    return res.status(401).json({ message: "No token", code: 'NO_TOKEN' });
 
   } catch (err) {
-    console.error("AUTH MIDDLEWARE ERROR:", err);
+    logger.error("AUTH MIDDLEWARE ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };

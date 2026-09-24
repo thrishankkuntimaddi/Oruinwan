@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trash2, Download, Video } from 'lucide-react';
 import { uploadNoteAttachment } from '../../../../utils/uploadHelpers';
+import logger from '../../../../utils/logger';
 
 const VideoBlock = ({
     block,
@@ -37,7 +38,7 @@ const VideoBlock = ({
 
                 showToast('Video uploaded successfully', 'success');
             } catch (error) {
-                console.error('Upload error:', error);
+                logger.error('Upload error:', error);
                 showToast('Failed to upload video', 'error');
                 setUploadProgress(prev => {
                     const newProgress = { ...prev };
@@ -60,7 +61,7 @@ const VideoBlock = ({
             document.body.removeChild(link);
             showToast('Download started', 'success');
         } catch (error) {
-            console.error('Download error:', error);
+            logger.error('Download error:', error);
             showToast('Failed to download video', 'error');
         }
     };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, Save, Loader2 } from 'lucide-react';
 import api from '@services/api';
+import logger from '../../utils/logger';
 
 const T = {
     bg:          'var(--bg-surface)',
@@ -39,7 +40,7 @@ export default function NotificationPreferences({ workspaceId }) {
             if (data.preferences) setPrefs(p => ({ ...p, ...data.preferences }));
         } catch (err) {
             setError('Failed to load preferences');
-            console.error('[NotificationPreferences] fetch error:', err);
+            logger.error('[NotificationPreferences] fetch error:', err);
         } finally { setLoading(false); }
     }, [workspaceId]);
 
@@ -57,7 +58,7 @@ export default function NotificationPreferences({ workspaceId }) {
             setTimeout(() => setSaved(false), 2500);
         } catch (err) {
             setError('Failed to save preferences');
-            console.error('[NotificationPreferences] save error:', err);
+            logger.error('[NotificationPreferences] save error:', err);
         } finally { setSaving(false); }
     };
 

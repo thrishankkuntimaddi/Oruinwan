@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const mongoose = require('mongoose');
@@ -17,6 +18,21 @@ const Task = require('../../../models/Task');
 const Note = require('../../../models/Note');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
+const { toSafeUser } = require('../../shared/utils/safeUser');
+
+// Company of the authenticated admin (requireAdmin may replace req.user with the full doc).
+function callerCompanyId(req) {
+  const c = req.user && req.user.companyId;
+  if (!c) return null;
+  return String(c._id || c);
+}
+
+// Load an employee only if they belong to the caller's company; 404 otherwise.
+async function findCompanyEmployee(req) {
+  const companyId = callerCompanyId(req);
+  if (!companyId || !mongoose.Types.ObjectId.isValid(req.params.id)) return null;
+  return User.findOne({ _id: req.params.id, companyId });
+}
 
 const requireSuperAdmin = async (req, res, next) => {
   try {
@@ -78,8 +94,30 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
       revenueGrowth: 0
     });
   } catch (err) {
-    console.error('Error fetching overview stats:', err);
+    logger.error('Error fetching overview stats:', err);
     res.status(500).json({ message: 'Server Error' });
+  }
+});
+
+// Platform-wide audit trail for the Chttrix admin console. Newest first.
+router.get('/audit-logs', requireSuperAdmin, async (req, res) => {
+  try {
+    const AuditLog = require('../../../models/AuditLog');
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 200, 1), 1000);
+    const filter = {};
+    if (req.query.companyId && mongoose.Types.ObjectId.isValid(req.query.companyId)) filter.companyId = req.query.companyId;
+    if (req.query.action) filter.action = String(req.query.action);
+    if (req.query.severity) filter.severity = String(req.query.severity);
+    const logs = await AuditLog.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .populate('userId', 'username email')
+      .populate('companyId', 'name')
+      .lean();
+    return res.json(logs);
+  } catch (err) {
+    logger.error('[Admin] audit-logs failed:', err);
+    return res.status(500).json({ message: 'Failed to load audit logs' });
   }
 });
 
@@ -99,7 +137,7 @@ router.get('/overview/activities', requireSuperAdmin, async (req, res) => {
 
     res.json(formattedActivities);
   } catch (err) {
-    console.error('Error fetching activities:', err);
+    logger.error('Error fetching activities:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -115,7 +153,7 @@ router.get('/pending-companies', requireSuperAdmin, async (req, res) => {
 
     res.json(companies);
   } catch (err) {
-    console.error("❌ Error fetching pending companies:", err);
+    logger.error("❌ Error fetching pending companies:", err);
     res.status(500).json({ message: "Server Error" });
   }
 });
@@ -150,9 +188,9 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
           html: template.html,
           text: template.text
         });
-        console.log(`📧 Approval email sent to personal email: ${personalEmail}`);
+        logger.info(`📧 Approval email sent to personal email: ${personalEmail}`);
       } catch (_emailError) {
-        console.error('Failed to send approval email:', emailError.message);
+        logger.error('Failed to send approval email:', emailError.message);
         
       }
     }
@@ -205,7 +243,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
           text: template.text
         });
       } catch (_emailError) {
-        console.error('Failed to send rejection email:', emailError.message);
+        logger.error('Failed to send rejection email:', emailError.message);
         
       }
     }
@@ -241,7 +279,7 @@ router.get('/active-companies', requireSuperAdmin, async (req, res) => {
 
     res.json(companies);
   } catch (err) {
-    console.error('❌ Error fetching active companies:', err);
+    logger.error('❌ Error fetching active companies:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -263,7 +301,7 @@ router.get('/tickets', requireSuperAdmin, async (req, res) => {
 
     res.json(tickets);
   } catch (err) {
-    console.error('Error fetching tickets:', err);
+    logger.error('Error fetching tickets:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -281,7 +319,7 @@ router.get('/tickets/:id', requireSuperAdmin, async (req, res) => {
 
     res.json(ticket);
   } catch (err) {
-    console.error('Error fetching ticket:', err);
+    logger.error('Error fetching ticket:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -336,7 +374,7 @@ router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
 
     res.json(updatedTicket);
   } catch (err) {
-    console.error('Error updating ticket:', err);
+    logger.error('Error updating ticket:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -394,7 +432,7 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
       broadcast
     });
   } catch (err) {
-    console.error('Error sending broadcast:', err);
+    logger.error('Error sending broadcast:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -408,7 +446,7 @@ router.get('/broadcast/history', requireSuperAdmin, async (req, res) => {
 
     res.json(broadcasts);
   } catch (err) {
-    console.error('Error fetching broadcast history:', err);
+    logger.error('Error fetching broadcast history:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -476,7 +514,7 @@ router.get('/dm-users', requireSuperAdmin, async (req, res) => {
 
     res.json(enriched);
   } catch (err) {
-    console.error('Error fetching DM users:', err);
+    logger.error('Error fetching DM users:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -505,7 +543,7 @@ router.get('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
 
     res.json(messages);
   } catch (err) {
-    console.error('Error fetching DM messages for user:', err);
+    logger.error('Error fetching DM messages for user:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -569,7 +607,7 @@ router.post('/dm/user/:userId', requireSuperAdmin, async (req, res) => {
 
     res.json(newMessage);
   } catch (err) {
-    console.error('Error sending DM to user:', err);
+    logger.error('Error sending DM to user:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -597,7 +635,7 @@ router.get('/billing/overview', requireSuperAdmin, async (req, res) => {
       projectedRevenue
     });
   } catch (err) {
-    console.error('Error fetching billing overview:', err);
+    logger.error('Error fetching billing overview:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -621,7 +659,7 @@ router.get('/billing/companies', requireSuperAdmin, async (req, res) => {
 
     res.json(formattedBillings);
   } catch (err) {
-    console.error('Error fetching company billing:', err);
+    logger.error('Error fetching company billing:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -715,7 +753,7 @@ router.get('/health/metrics', requireSuperAdmin, async (req, res) => {
       errors: [] 
     });
   } catch (err) {
-    console.error('Error fetching system health:', err);
+    logger.error('Error fetching system health:', err);
     res.status(500).json({ message: 'Server Error' });
   }
 });
@@ -735,12 +773,12 @@ router.get('/employees', requireAuth, requireAdmin, async (req, res) => {
     })
         .populate('departments')
         .populate('managedDepartments')
-        .select('-passwordHash -refreshTokens')
+        .select('-passwordHash -refreshTokens -encryption.encryptedPrivateKey')
         .sort({ createdAt: -1 });
 
-    res.json(employees);
+    res.json(employees.map(toSafeUser));
   } catch (error) {
-    console.error('Error fetching employees:', error);
+    logger.error('Error fetching employees:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -750,7 +788,7 @@ router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res)
     const { reason } = req.body;
     const adminId = req.user.sub || req.user._id;
 
-    const employee = await User.findById(req.params.id);
+    const employee = await findCompanyEmployee(req);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -767,16 +805,16 @@ router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res)
 
     await employee.save();
 
-    res.json({ message: 'Employee suspended successfully', employee });
+    res.json({ message: 'Employee suspended successfully', employee: toSafeUser(employee) });
   } catch (error) {
-    console.error('Error suspending employee:', error);
+    logger.error('Error suspending employee:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const employee = await User.findById(req.params.id);
+    const employee = await findCompanyEmployee(req);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -788,16 +826,16 @@ router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res
 
     await employee.save();
 
-    res.json({ message: 'Employee activated successfully', employee });
+    res.json({ message: 'Employee activated successfully', employee: toSafeUser(employee) });
   } catch (error) {
-    console.error('Error activating employee:', error);
+    logger.error('Error activating employee:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
 router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const employee = await User.findById(req.params.id);
+    const employee = await findCompanyEmployee(req);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -827,7 +865,7 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
 
     res.json({ message: 'Employee permanently removed from company' });
   } catch (error) {
-    console.error('Error removing employee:', error);
+    logger.error('Error removing employee:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -840,17 +878,22 @@ router.put('/employees/:id/assign-department', requireAuth, requireAdmin, async 
       return res.status(400).json({ message: 'Department IDs must be an array' });
     }
 
-    const employee = await User.findById(req.params.id);
+    const employee = await findCompanyEmployee(req);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    const validDeptCount = await Department.countDocuments({ _id: { $in: departmentIds }, company: callerCompanyId(req) });
+    if (validDeptCount !== new Set(departmentIds.map(String)).size) {
+      return res.status(400).json({ message: 'One or more departments do not belong to your company' });
     }
 
     employee.departments = departmentIds;
     await employee.save();
 
-    res.json({ message: 'Department assignment updated', employee });
+    res.json({ message: 'Department assignment updated', employee: toSafeUser(employee) });
   } catch (error) {
-    console.error('Error assigning department:', error);
+    logger.error('Error assigning department:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -863,7 +906,7 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
       return res.status(400).json({ message: 'Invalid role' });
     }
 
-    const employee = await User.findById(req.params.id);
+    const employee = await findCompanyEmployee(req);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -876,6 +919,13 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
     employee.companyRole = role;
 
     
+    if (role === 'manager' && Array.isArray(managedDepartments) && managedDepartments.length) {
+      const validManaged = await Department.countDocuments({ _id: { $in: managedDepartments }, company: callerCompanyId(req) });
+      if (validManaged !== new Set(managedDepartments.map(String)).size) {
+        return res.status(400).json({ message: 'One or more departments do not belong to your company' });
+      }
+    }
+
     if (role === 'manager' && managedDepartments) {
       employee.managedDepartments = managedDepartments;
     } else if (role !== 'manager') {
@@ -884,9 +934,9 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
 
     await employee.save();
 
-    res.json({ message: 'Employee role updated', employee });
+    res.json({ message: 'Employee role updated', employee: toSafeUser(employee) });
   } catch (error) {
-    console.error('Error changing role:', error);
+    logger.error('Error changing role:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -896,18 +946,18 @@ router.get('/departments/:id/workspaces', requireAuth, requireAdmin, async (req,
     const Department = require('../../../models/Department');
     const Workspace = require('../../../models/Workspace');
 
-    const department = await Department.findById(req.params.id);
+    const department = await Department.findOne({ _id: req.params.id, company: callerCompanyId(req) });
     if (!department) {
       return res.status(404).json({ message: 'Department not found' });
     }
 
-    const workspaces = await Workspace.find({ departmentId: req.params.id })
+    const workspaces = await Workspace.find({ departmentId: req.params.id, company: callerCompanyId(req) })
       .populate('members', 'username email')
       .select('name description members createdAt');
 
     res.json(workspaces);
   } catch (error) {
-    console.error('Error fetching workspaces:', error);
+    logger.error('Error fetching workspaces:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
@@ -920,7 +970,7 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
       return res.status(400).json({ message: 'Workspace IDs must be an array' });
     }
 
-    const employee = await User.findById(req.params.id);
+    const employee = await findCompanyEmployee(req);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
     }
@@ -928,6 +978,11 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
     
     
     
+    const validWsCount = await Workspace.countDocuments({ _id: { $in: workspaceIds }, company: callerCompanyId(req) });
+    if (validWsCount !== new Set(workspaceIds.map(String)).size) {
+      return res.status(400).json({ message: 'One or more workspaces do not belong to your company' });
+    }
+
     const existingIds = employee.workspaces.map(w => w.workspace.toString());
     const newEntries = workspaceIds
       .filter(id => !existingIds.includes(id.toString()))
@@ -938,9 +993,9 @@ router.post('/employees/:id/assign-workspace', requireAuth, requireAdmin, async 
     ];
     await employee.save();
 
-    res.json({ message: 'Workspace assignment updated', employee });
+    res.json({ message: 'Workspace assignment updated', employee: toSafeUser(employee) });
   } catch (error) {
-    console.error('Error assigning workspace:', error);
+    logger.error('Error assigning workspace:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

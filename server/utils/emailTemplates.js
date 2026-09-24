@@ -522,7 +522,56 @@ function allDevicesRevokedTemplate(name, revokedCount, deviceName, formattedTime
   };
 }
 
+function companyApprovedTemplate(name, companyName, loginUrl, note) {
+  const body = `
+    ${_p(`Hi <strong style="color:${T.textPrimary}">${name}</strong>,`)}
+    ${_p(`Great news: <strong style="color:${T.textPrimary}">${companyName}</strong> has been approved on Chttrix. Your company workspace is ready and your team can start collaborating.`)}
+    ${note ? _alert(note, 'info') : ''}
+    ${_btn('Sign in to Chttrix', loginUrl)}
+    ${_link('Sign in', loginUrl)}
+    ${_p('Next steps: complete your company setup, invite your team, and create your first workspace.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
+  `;
+  return {
+    subject: `${companyName} has been approved on Chttrix`,
+    text: `Hi ${name}, ${companyName} has been approved on Chttrix. Sign in: ${loginUrl}${note ? `\n\nNote from the Chttrix team: ${note}` : ''}`,
+    html: _shell({
+      icon: '✅',
+      title: 'Company approved',
+      subtitle: `${companyName} is live on Chttrix.`,
+      preheader: `${companyName} has been approved. Sign in to get started.`,
+      body,
+    }),
+  };
+}
+
+function companyRejectedTemplate(name, companyName, reason, note) {
+  const body = `
+    ${_p(`Hi <strong style="color:${T.textPrimary}">${name}</strong>,`)}
+    ${_p(`We reviewed the registration for <strong style="color:${T.textPrimary}">${companyName}</strong> and could not approve it at this time.`)}
+    ${_alert(`<strong>Reason:</strong> ${reason || 'The submitted details could not be verified.'}`, 'danger')}
+    ${note ? _p(note) : ''}
+    ${_p('You can update your details and submit the registration again, or reply to this email if you believe this was a mistake.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
+  `;
+  return {
+    subject: `Update on your Chttrix registration for ${companyName}`,
+    text: `Hi ${name}, the registration for ${companyName} was not approved. Reason: ${reason || 'The submitted details could not be verified.'}${note ? `\n\n${note}` : ''}`,
+    html: _shell({
+      icon: '🔍',
+      title: 'Registration not approved',
+      subtitle: `We could not approve ${companyName} yet.`,
+      preheader: `Your Chttrix registration for ${companyName} needs attention.`,
+      body,
+    }),
+  };
+}
+
+/** Six-digit numeric verification code from a CSPRNG (used for email verification flows). */
+function generateVerificationCode() {
+  return String(require('crypto').randomInt(0, 1000000)).padStart(6, '0');
+}
+
 module.exports = {
+  generateVerificationCode,
   
   verifyEmailTemplate,
   passwordResetTemplate,
@@ -532,6 +581,8 @@ module.exports = {
   
   inviteTemplate,
   bulkWelcomeTemplate,
+  companyApprovedTemplate,
+  companyRejectedTemplate,
   
   workspaceInviteTemplate,
   workspaceInviteReminderTemplate,

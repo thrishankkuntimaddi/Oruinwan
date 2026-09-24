@@ -1,3 +1,4 @@
+const logger = require('../../utils/logger');
 const sendEmail = require('../../utils/sendEmail');
 const {
     newDeviceSignInTemplate,
@@ -13,7 +14,7 @@ exports.sendSecurityNotification = async ({
     try {
         
         if (!user || !user.email) {
-            console.warn('⚠️ [NOTIFICATION] Cannot send notification - no user email');
+            logger.warn('⚠️ [NOTIFICATION] Cannot send notification - no user email');
             return;
         }
 
@@ -33,7 +34,7 @@ exports.sendSecurityNotification = async ({
         const emailContent = buildEmailContent(eventType, auditEvent, user);
 
         if (!emailContent) {
-            console.warn('⚠️ [NOTIFICATION] Failed to build email content');
+            logger.warn('⚠️ [NOTIFICATION] Failed to build email content');
             return;
         }
 
@@ -44,11 +45,11 @@ exports.sendSecurityNotification = async ({
             html: emailContent.html
         });
 
-        console.log(`✅ [NOTIFICATION] Sent ${eventType} notification to ${user.email}`);
+        logger.info(`✅ [NOTIFICATION] Sent ${eventType} notification to ${user.email}`);
 
     } catch (error) {
         
-        console.warn(`⚠️ [NOTIFICATION] Failed to send ${eventType} notification (non-critical):`, error.message);
+        logger.warn(`⚠️ [NOTIFICATION] Failed to send ${eventType} notification (non-critical):`, error.message);
         
     }
 };

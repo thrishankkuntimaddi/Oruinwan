@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '@services/api';
 import { useSocket } from './SocketContext';
+import logger from '../utils/logger';
 
 const WorkspaceContext = createContext();
 
@@ -20,7 +21,15 @@ export const WorkspaceProvider = ({ children }) => {
     const [activeWorkspace, setActiveWorkspace] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { socket } = useSocket();
+    const { socket, isConnected } = useSocket();
+    const activeWorkspaceId = activeWorkspace?.id ? String(activeWorkspace.id) : null;
+
+    // Join the active workspace's socket room (server: chatHandlers 'join-workspace'
+    // expects { workspaceId } and verifies membership). Re-emitted on every (re)connect.
+    useEffect(() => {
+        if (!socket || !isConnected || !activeWorkspaceId) return;
+        socket.emit('join-workspace', { workspaceId: activeWorkspaceId });
+    }, [socket, isConnected, activeWorkspaceId]);
 
     
     useEffect(() => {
@@ -56,7 +65,7 @@ export const WorkspaceProvider = ({ children }) => {
 
                             setActiveWorkspace(active);
                         } else {
-                            console.warn('⚠️ [WorkspaceContext] WorkspaceId not found in user workspaces:', workspaceId);
+                            logger.warn('⚠️ [WorkspaceContext] WorkspaceId not found in user workspaces:', workspaceId);
                             setError('Workspace not found');
                         }
                     }
@@ -64,7 +73,7 @@ export const WorkspaceProvider = ({ children }) => {
 
                 }
             } catch (err) {
-                console.error('❌ [WorkspaceContext] Error fetching workspaces:', err);
+                logger.error('❌ [WorkspaceContext] Error fetching workspaces:', err);
                 setError(err.message || 'Failed to load workspaces');
             } finally {
                 setLoading(false);
@@ -148,7 +157,7 @@ export const WorkspaceProvider = ({ children }) => {
                 }
             }
         } catch (err) {
-            console.error('❌ [WorkspaceContext] Error refreshing workspace:', err);
+            logger.error('❌ [WorkspaceContext] Error refreshing workspace:', err);
         }
     };
 

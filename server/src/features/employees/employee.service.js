@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const crypto = require('crypto');
 const XLSX = require('xlsx');
 const User = require('../../../models/User');
@@ -87,7 +88,7 @@ async function _sendInviteEmail(email, companyName, inviteLink, name = '') {
         });
         return { sent: true };
     } catch (err) {
-        console.warn('[INVITE] Email send failed:', err.message);
+        logger.warn('[INVITE] Email send failed:', err.message);
         return { sent: false, reason: err.message };
     }
 }

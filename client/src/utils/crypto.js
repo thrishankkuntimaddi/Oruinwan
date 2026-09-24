@@ -1,3 +1,4 @@
+import logger from './logger';
 const CRYPTO_CONFIG = {
     
     algorithm: 'AES-GCM',
@@ -28,7 +29,7 @@ export async function generateWorkspaceKey() {
 
         return key;
     } catch (error) {
-        console.error('Failed to generate workspace key:', error);
+        logger.error('Failed to generate workspace key:', error);
         throw new Error('Key generation failed');
     }
 }
@@ -74,7 +75,7 @@ export async function deriveKeyFromPassword(password, salt, iterations = CRYPTO_
 
         return derivedKey;
     } catch (error) {
-        console.error('Failed to derive key from password:', error);
+        logger.error('Failed to derive key from password:', error);
         throw new Error('Key derivation failed');
     }
 }
@@ -91,7 +92,7 @@ export async function generateUMEK() {
         );
         return umek;
     } catch (error) {
-        console.error('Failed to generate UMEK:', error);
+        logger.error('Failed to generate UMEK:', error);
         throw new Error('UMEK generation failed');
     }
 }
@@ -120,7 +121,7 @@ export async function encryptIdentityPrivateKey(privateKeyJWK, umek) {
             iv: arrayBufferToBase64(iv)
         };
     } catch (error) {
-        console.error('Failed to encrypt identity private key:', error);
+        logger.error('Failed to encrypt identity private key:', error);
         throw new Error('Identity private key encryption failed');
     }
 }
@@ -142,7 +143,7 @@ export async function decryptIdentityPrivateKey(encryptedPrivateKeyBase64, ivBas
 
         return new TextDecoder().decode(decryptedBytes);
     } catch (error) {
-        console.error('Failed to decrypt identity private key:', error);
+        logger.error('Failed to decrypt identity private key:', error);
         throw new Error('Identity private key decryption failed');
     }
 }
@@ -184,7 +185,7 @@ export async function deriveThreadKey(conversationKey, parentMessageId) {
 
         return threadKey;
     } catch (error) {
-        console.error('Thread key derivation failed:', error);
+        logger.error('Thread key derivation failed:', error);
         throw new Error('Thread key derivation failed');
     }
 }
@@ -215,7 +216,7 @@ export async function encryptAESGCM(plaintext, key, iv = null) {
             iv: ivBytes
         };
     } catch (error) {
-        console.error('Encryption failed:', error);
+        logger.error('Encryption failed:', error);
         throw new Error('Encryption failed');
     }
 }
@@ -229,7 +230,7 @@ export async function encryptMessage(message, workspaceKey) {
             iv: arrayBufferToBase64(iv)
         };
     } catch (error) {
-        console.error('Message encryption failed:', error);
+        logger.error('Message encryption failed:', error);
         throw error;
     }
 }
@@ -248,7 +249,7 @@ export async function decryptAESGCM(ciphertext, key, iv) {
 
         return plaintext;
     } catch (error) {
-        console.error('Decryption failed:', error);
+        logger.error('Decryption failed:', error);
         throw new Error('Decryption failed - invalid key or corrupted data');
     }
 }
@@ -267,7 +268,7 @@ export async function decryptMessage(ciphertextBase64, ivBase64, workspaceKey) {
 
         return plaintext;
     } catch (error) {
-        console.error('Message decryption failed:', error);
+        logger.error('Message decryption failed:', error);
         throw error;
     }
 }
@@ -277,7 +278,7 @@ export async function exportKey(key) {
         const exported = await crypto.subtle.exportKey('raw', key);
         return exported;
     } catch (error) {
-        console.error('Key export failed:', error);
+        logger.error('Key export failed:', error);
         throw new Error('Key export failed');
     }
 }
@@ -297,7 +298,7 @@ export async function importKey(keyBytes) {
 
         return key;
     } catch (error) {
-        console.error('Key import failed:', error);
+        logger.error('Key import failed:', error);
         throw new Error('Key import failed');
     }
 }
@@ -315,7 +316,7 @@ export async function encryptWorkspaceKey(workspaceKey, kek) {
             iv: arrayBufferToBase64(iv)
         };
     } catch (error) {
-        console.error('Workspace key encryption failed:', error);
+        logger.error('Workspace key encryption failed:', error);
         throw error;
     }
 }
@@ -334,7 +335,7 @@ export async function decryptWorkspaceKey(encryptedKeyBase64, ivBase64, kek) {
 
         return workspaceKey;
     } catch (error) {
-        console.error('Workspace key decryption failed:', error);
+        logger.error('Workspace key decryption failed:', error);
         throw error;
     }
 }
@@ -374,7 +375,12 @@ export function isCryptoSupported() {
 }
 
 export function isSecureContext() {
-    return window.isSecureContext;
+    // Browsers expose window.isSecureContext. Outside a browser (tests, SSR,
+    // Node tooling) Web Crypto is always available, so treat it as secure.
+    if (typeof window !== 'undefined' && typeof window.isSecureContext === 'boolean') {
+        return window.isSecureContext;
+    }
+    return true;
 }
 
 export function validateCryptoSetup() {

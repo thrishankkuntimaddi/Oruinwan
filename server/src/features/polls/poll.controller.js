@@ -1,9 +1,10 @@
+const logger = require('../../../utils/logger');
 const Poll = require("./poll.model.js");
 const Channel = require("../channels/channel.model.js");
 const _User = require("../../../models/User");
 
 exports.createPoll = async (req, res) => {
-    console.log('🔄 [POLLS:MODULAR] Function invoked: createPoll');
+    logger.info('🔄 [POLLS:MODULAR] Function invoked: createPoll');
     try {
         const { channelId, question, options, type } = req.body;
         const userId = req.user.sub;
@@ -51,13 +52,13 @@ exports.createPoll = async (req, res) => {
 
         res.status(201).json({ poll });
     } catch (err) {
-        console.error("Error creating poll:", err);
+        logger.error("Error creating poll:", err);
         res.status(500).json({ error: "Failed to create poll" });
     }
 };
 
 exports.getPollById = async (req, res) => {
-    console.log('🔄 [POLLS:MODULAR] Function invoked: getPollById');
+    logger.info('🔄 [POLLS:MODULAR] Function invoked: getPollById');
     try {
         const { pollId } = req.params;
         const userId = req.user.sub;
@@ -77,13 +78,13 @@ exports.getPollById = async (req, res) => {
 
         res.json({ poll });
     } catch (err) {
-        console.error("Error fetching poll:", err);
+        logger.error("Error fetching poll:", err);
         res.status(500).json({ error: "Failed to fetch poll" });
     }
 };
 
 exports.getPollsByChannel = async (req, res) => {
-    console.log('🔄 [POLLS:MODULAR] Function invoked: getPollsByChannel');
+    logger.info('🔄 [POLLS:MODULAR] Function invoked: getPollsByChannel');
     try {
         const { channelId } = req.params;
         const userId = req.user.sub;
@@ -104,13 +105,13 @@ exports.getPollsByChannel = async (req, res) => {
 
         res.json({ polls });
     } catch (err) {
-        console.error("Error fetching polls:", err);
+        logger.error("Error fetching polls:", err);
         res.status(500).json({ error: "Failed to fetch polls" });
     }
 };
 
 exports.vote = async (req, res) => {
-    console.log('🔄 [POLLS:MODULAR] Function invoked: vote');
+    logger.info('🔄 [POLLS:MODULAR] Function invoked: vote');
     try {
         const { pollId } = req.params;
         const { optionIds } = req.body; 
@@ -169,13 +170,13 @@ exports.vote = async (req, res) => {
 
         res.json({ poll });
     } catch (err) {
-        console.error("Error voting on poll:", err);
+        logger.error("Error voting on poll:", err);
         res.status(500).json({ error: "Failed to vote" });
     }
 };
 
 exports.deletePoll = async (req, res) => {
-    console.log('🔄 [POLLS:MODULAR] Function invoked: deletePoll');
+    logger.info('🔄 [POLLS:MODULAR] Function invoked: deletePoll');
     try {
         const { pollId } = req.params;
         const userId = req.user.sub;
@@ -198,13 +199,13 @@ exports.deletePoll = async (req, res) => {
 
         res.json({ message: "Poll deleted successfully", pollId });
     } catch (err) {
-        console.error("Error deleting poll:", err);
+        logger.error("Error deleting poll:", err);
         res.status(500).json({ error: "Failed to delete poll" });
     }
 };
 
 exports.closePoll = async (req, res) => {
-    console.log('🔄 [POLLS:MODULAR] Function invoked: closePoll');
+    logger.info('🔄 [POLLS:MODULAR] Function invoked: closePoll');
     try {
         const { pollId } = req.params;
         const userId = req.user.sub;
@@ -229,7 +230,7 @@ exports.closePoll = async (req, res) => {
 
         res.json({ poll });
     } catch (err) {
-        console.error("Error closing poll:", err);
+        logger.error("Error closing poll:", err);
         res.status(500).json({ error: "Failed to close poll" });
     }
 };

@@ -1,5 +1,6 @@
+const logger = require('../../../utils/logger');
 const errorHandler = (err, req, res, _next) => {
-    console.error('Error:', err);
+    logger.error('Error:', err);
 
     
     if (err.name === 'ValidationError') {

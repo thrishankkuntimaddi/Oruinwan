@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
 import CreateChannelModal from "../messagesComp/CreateChannelModal";
+import logger from '../../utils/logger';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
@@ -65,7 +66,7 @@ export const ChannelList = () => {
                     setChannels(data.channels);
                 }
             } catch (err) {
-                console.error('Failed to fetch channels:', err);
+                logger.error('Failed to fetch channels:', err);
             } finally {
                 setLoading(false);
             }

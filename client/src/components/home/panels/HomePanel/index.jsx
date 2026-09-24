@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Trash2, X, Calendar, Clock, Video, ExternalLink, Plus, Loader } from 'lucide-react';
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
-import { useAuth } from "../../../../contexts/AuthContext";
 import { useToast } from "../../../../contexts/ToastContext";
 import { useWorkspace } from "../../../../contexts/WorkspaceContext";
-import api, { API_BASE } from '@services/api';
-import { io } from "socket.io-client";
+import api from '@services/api';
+import { useSocket } from "../../../../contexts/SocketContext";
 import { useScheduledMeetings } from "../../../../hooks/useScheduledMeetings";
 
 import WorkspaceHeader from "./WorkspaceHeader";
@@ -17,12 +16,13 @@ import WorkspaceModals from "./WorkspaceModals";
 import WorkspaceSettingsModal from "./WorkspaceSettingsModal";
 import DeleteWorkspaceModal from "./DeleteWorkspaceModal";
 import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
+import logger from '../../../../utils/logger';
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
 
     const { allItems: items, deleteItem, addItem, toggleFavorite, refreshContacts } = useContacts();
-    const { accessToken } = useAuth();
+    const { socket } = useSocket();
     const { showToast } = useToast();
     const { activeWorkspace } = useWorkspace();
 
@@ -61,22 +61,18 @@ const HomePanel = ({ title }) => {
 
     
     React.useEffect(() => {
-        if (!accessToken || !activeWorkspace?.id) return;
+        if (!socket || !activeWorkspace?.id) return;
+        const wsId = activeWorkspace.id;
 
-        const socket = io(API_BASE, {
-            auth: { token: accessToken },
-            transports: ["websocket"],
-        });
-
-        socket.on("new-dm-session", (data) => {
-            
-            refreshContacts(activeWorkspace.id);
-        });
+        const handleNewDmSession = () => {
+            refreshContacts(wsId);
+        };
+        socket.on("new-dm-session", handleNewDmSession);
 
         return () => {
-            socket.disconnect();
+            socket.off("new-dm-session", handleNewDmSession);
         };
-    }, [activeWorkspace?.id, accessToken, refreshContacts]);
+    }, [socket, activeWorkspace?.id, refreshContacts]);
 
     
     
@@ -136,7 +132,7 @@ const HomePanel = ({ title }) => {
                 const response = await api.get(`/api/workspaces/${activeWorkspace.id}/members`);
                 setWorkspaceMembers(response.data.members || []);
             } catch (err) {
-                console.error('Error fetching workspace members:', err);
+                logger.error('Error fetching workspace members:', err);
             }
         };
 
@@ -195,7 +191,7 @@ const HomePanel = ({ title }) => {
             
             if (activeWorkspace?.id) refreshContacts(activeWorkspace.id);
         } catch (error) {
-            console.error("Error renaming workspace:", error);
+            logger.error("Error renaming workspace:", error);
             showToast(error.response?.data?.message || "Failed to rename workspace", "error");
         }
     };
@@ -220,9 +216,9 @@ const HomePanel = ({ title }) => {
             setInviteLink(response.data.inviteLink);
             showToast("✅ Invitation link generated!", "success");
         } catch (error) {
-            console.error("❌ Link generation error:", error);
-            console.error("Error response:", error.response);
-            console.error("Error data:", error.response?.data);
+            logger.error("❌ Link generation error:", error);
+            logger.error("Error response:", error.response);
+            logger.error("Error data:", error.response?.data);
 
             const errorMsg = error.response?.data?.message || error.message || "Failed to generate link";
             showToast(errorMsg, "error");
@@ -262,7 +258,7 @@ const HomePanel = ({ title }) => {
 
             handleCloseInvite();
         } catch (error) {
-            console.error("Invitation error:", error);
+            logger.error("Invitation error:", error);
             showToast(error.response?.data?.message || "Failed to send invitations", "error");
         } finally {
             setIsInviting(false);
@@ -270,34 +266,22 @@ const HomePanel = ({ title }) => {
     }, [activeWorkspace?.id, inviteEmail, selectedRole, showToast, handleCloseInvite]);
 
     
+    // Workspace room is joined by WorkspaceContext on the shared socket.
     React.useEffect(() => {
-        if (!activeWorkspace?.id || !showInviteModal || !accessToken) return;
+        if (!socket || !activeWorkspace?.id || !showInviteModal) return;
 
-        const socket = io(API_BASE, {
-            auth: { token: accessToken },
-            transports: ["websocket"],
-        });
-
-        socket.on("connect", () => {
-            socket.emit("join-workspace", { workspaceId: activeWorkspace.id });
-        });
-
-        socket.on("connect_error", (err) => {
-            console.error('❌ [HomePanel] Socket connection error:', err.message);
-        });
-
-        socket.on("workspace-joined", (data) => {
-            
+        const handleWorkspaceJoined = (data) => {
             if (inviteLink) {
                 handleGenerateLink();
-                showToast(`🔔 ${data.username} joined! Link refreshed.`, "success");
+                showToast(`🔔 ${data?.username || 'Someone'} joined! Link refreshed.`, "success");
             }
-        });
+        };
+        socket.on("workspace-joined", handleWorkspaceJoined);
 
         return () => {
-            socket.disconnect();
+            socket.off("workspace-joined", handleWorkspaceJoined);
         };
-    }, [activeWorkspace?.id, showInviteModal, inviteLink, handleGenerateLink, showToast, accessToken]);
+    }, [socket, activeWorkspace?.id, showInviteModal, inviteLink, handleGenerateLink, showToast]);
 
     const handleDeleteSelected = () => {
         selectedItems.forEach(id => deleteItem(id));

@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import api from '@services/api';
+import logger from '../../../../utils/logger';
 
 export default function useHeaderActions({ chat, showToast, onClose, onDeleteChat }) {
 
@@ -43,7 +44,7 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
             
             window.location.reload();
         } catch (err) {
-            console.error('Clear chat error:', err);
+            logger.error('Clear chat error:', err);
             showToast('Failed to clear chat', 'error');
         }
     }, [chat, showToast]);
@@ -57,7 +58,7 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
             onClose?.();
             if (onDeleteChat) onDeleteChat();
         } catch (err) {
-            console.error('Delete chat error:', err);
+            logger.error('Delete chat error:', err);
             
             onClose?.();
             if (onDeleteChat) onDeleteChat();
@@ -77,7 +78,7 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
                 return true;
             }
         } catch (err) {
-            console.error('Block toggle error:', err);
+            logger.error('Block toggle error:', err);
             showToast('Action failed', 'error');
             return currentlyBlocked;
         }
@@ -96,7 +97,7 @@ export default function useHeaderActions({ chat, showToast, onClose, onDeleteCha
                 return true;
             }
         } catch (err) {
-            console.error('Mute toggle error:', err);
+            logger.error('Mute toggle error:', err);
             showToast('Action failed', 'error');
             return currentlyMuted;
         }

@@ -1,3 +1,4 @@
+const logger = require('../../../utils/logger');
 const WorkspaceFile = require('./WorkspaceFile');
 const FileVersion = require('./FileVersion');
 const FileComment = require('./FileComment');
@@ -6,14 +7,14 @@ const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
 
-async function uploadStorage(multerFile, folder) {
+async function uploadStorage(multerFile, folder, owner = {}) {
     
     if (process.env.GCS_BUCKET_NAME) {
         try {
             const { uploadToGCS } = require('../../modules/uploads/upload.service');
-            return await uploadToGCS(multerFile, folder);
+            return await uploadToGCS(multerFile, folder, owner);
         } catch (gcsErr) {
-            console.warn('[FilesService] GCS upload failed — falling back to local disk:', gcsErr.message);
+            logger.warn('[FilesService] GCS upload failed — falling back to local disk:', gcsErr.message);
         }
     }
 
@@ -54,7 +55,7 @@ function assertAccess(file, userId, minRole = 'view') {
 }
 
 async function uploadFile(userId, workspaceId, multerFile, opts = {}) {
-    const gcsResult = await uploadStorage(multerFile, `workspaces/${workspaceId}/files`);
+    const gcsResult = await uploadStorage(multerFile, `workspaces/${workspaceId}/files`, { userId });
 
     const file = await WorkspaceFile.create({
         workspaceId,
@@ -133,7 +134,7 @@ async function createVersion(userId, fileId, multerFile, changeNote = '') {
     });
 
     
-    const gcsResult = await uploadStorage(multerFile, `workspaces/${file.workspaceId}/files/versions`);
+    const gcsResult = await uploadStorage(multerFile, `workspaces/${file.workspaceId}/files/versions`, { userId });
 
     file.url = gcsResult.url;
     file.gcsPath = gcsResult.gcsPath;
