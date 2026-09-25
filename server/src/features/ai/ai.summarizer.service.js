@@ -3,23 +3,9 @@ const logger = require('../../../utils/logger');
 
 const crypto = require('crypto');
 
-let _genAI = null;
-
-function getGenAI() {
-    if (!_genAI) {
-        const { GoogleGenerativeAI } = require('@google/generative-ai');
-        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || '';
-        if (!apiKey) {
-            logger.warn('[AISummarizer] ⚠️  No Gemini API key found — AI calls will use fallback.');
-        }
-        _genAI = new GoogleGenerativeAI(apiKey);
-    }
-    return _genAI;
-}
-
-function getModel(modelName = (process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash')) {
-    return getGenAI().getGenerativeModel({ model: modelName });
-}
+const gateway = require('../../../../ai/api/ai.gateway');
+const sys = (context = {}) => ({ userId: context.userId || 'system', ...context });
+const isConfigured = () => { try { return !!gateway.getOrchestrator().provider.isConfigured; } catch { return false; } };
 
 const _cache = new Map();
 
@@ -66,7 +52,7 @@ function clearCache() {
 }
 
 async function summarizeDocument(text, opts = {}) {
-    const { title = '', type = 'generic', ttlMs = 600_000, noCache = false } = opts;
+    const { title = '', type = 'generic', ttlMs = 600_000, noCache = false, context = {} } = opts;
 
     const truncated = (text || '').substring(0, 8_000);
     const cKey = _cacheKey('summarize', title, truncated);
@@ -76,10 +62,7 @@ async function summarizeDocument(text, opts = {}) {
         if (hit) return { summary: hit, cached: true, fallback: false };
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY;
-
-    
-    if (!apiKey || !truncated.trim()) {
+    if (!isConfigured() || !truncated.trim()) {
         const fallbackText = truncated
             .replace(/[#*>`_\[\]]/g, '')
             .replace(/\s+/g, ' ')
@@ -98,17 +81,7 @@ async function summarizeDocument(text, opts = {}) {
             ? `This is a ${type} document.  `
             : '';
 
-        const prompt = [
-            `You are a concise technical writer.  ${typeHint}`,
-            `Summarise the following content in 2–4 clear, informative sentences.`,
-            `Return ONLY the summary — no bullet points, no headings, no formatting.`,
-            title ? `\nDocument title: ${title}` : '',
-            `\n---\n${truncated}`,
-        ].join('');
-
-        const model = getModel((process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash'));
-        const result = await model.generateContent(prompt);
-        const summary = result.response.text().trim();
+        const { summary } = await gateway.summarize({ text: truncated, style: 'brief', title: title || (type !== 'generic' ? `${type} document` : '') }, sys(context));
 
         if (!noCache) _cacheSet(cKey, summary, ttlMs);
         return { summary, cached: false, fallback: false };
@@ -133,7 +106,7 @@ async function summarizeDocument(text, opts = {}) {
 }
 
 async function semanticSearch(query, docs, opts = {}) {
-    const { topK = 10, ttlMs = 300_000, noCache = false } = opts;
+    const { topK = 10, ttlMs = 300_000, noCache = false, context = {} } = opts;
 
     if (!query || !docs || docs.length === 0) {
         return { results: [], cached: false };
@@ -148,10 +121,7 @@ async function semanticSearch(query, docs, opts = {}) {
         if (hit) return { results: hit, cached: true };
     }
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY;
-
-    
-    if (!apiKey) {
+    if (!isConfigured()) {
         const results = docs.slice(0, topK).map((d, i) => ({ ...d, score: 1 - i * 0.05 }));
         if (!noCache) _cacheSet(cKey, results, ttlMs);
         return { results, cached: false };
@@ -159,34 +129,10 @@ async function semanticSearch(query, docs, opts = {}) {
 
     
     try {
-        const docList = docs.map((d, i) =>
-            `[${i}] ID:${d.id}\nTitle: ${d.title}\nSnippet: ${(d.snippet || '').substring(0, 300)}`
-        ).join('\n\n');
-
-        const prompt = [
-            `You are a search-relevance engine.`,
-            `Given the query and the list of documents below, return a JSON array of objects`,
-            `with keys "index" (the bracket number) and "score" (0.0–1.0, higher = more relevant).`,
-            `Include ALL documents.  Return ONLY valid JSON — no prose, no markdown fences.`,
-            ``,
-            `Query: "${query}"`,
-            ``,
-            `Documents:`,
-            docList,
-        ].join('\n');
-
-        const model = getModel((process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash'));
-        const result = await model.generateContent(prompt);
-        let rawJson = result.response.text().trim();
-
-        
-        rawJson = rawJson.replace(/^```(?:json)?/m, '').replace(/```$/m, '').trim();
-
-        const scored = JSON.parse(rawJson); 
-
-        const results = scored
-            .map(s => ({ ...docs[s.index], score: parseFloat(s.score) || 0 }))
-            .filter(d => d.id)                        
+        const { scores } = await gateway.rerank({ query, docs: docs.map(d => ({ id: d.id, title: d.title, snippet: d.snippet })) }, sys(context));
+        const results = docs
+            .map((d, i) => ({ ...d, score: scores[i] || 0 }))
+            .filter(d => d.id)
             .sort((a, b) => b.score - a.score)
             .slice(0, topK);
 

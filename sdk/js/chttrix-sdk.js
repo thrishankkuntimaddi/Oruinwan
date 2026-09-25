@@ -271,9 +271,19 @@
     _aiResource() {
       const sdk = this;
       return {
-        chat: ({ message, history, workspaceId }) => sdk.request('/api/ai/chat', { method: 'POST', body: { message, history, workspaceId }, auth: 'bearer' }),
-        summarize: ({ text, workspaceId }) => sdk.request('/api/ai/summarize', { method: 'POST', body: { text, workspaceId }, auth: 'bearer' }),
+        chat: ({ message, history, workspaceId, context }) => sdk.request('/api/ai/chat', { method: 'POST', body: { message, history, workspaceId, context }, auth: 'bearer' }),
+        summarize: ({ text, workspaceId, style, title }) => sdk.request('/api/ai/summarize', { method: 'POST', body: { text, workspaceId, style, title }, auth: 'bearer' }),
         generateTask: ({ context, workspaceId }) => sdk.request('/api/ai/generate-task', { method: 'POST', body: { context, workspaceId }, auth: 'bearer' }),
+        smartReplies: ({ messages, workspaceId, tone }) => sdk.request('/api/ai/smart-replies', { method: 'POST', body: { messages, workspaceId, tone }, auth: 'bearer' }),
+        translate: ({ text, targetLang, workspaceId }) => sdk.request('/api/ai/translate', { method: 'POST', body: { text, targetLang, workspaceId }, auth: 'bearer' }),
+        draft: ({ instruction, messages, tone, replyTo, existing, workspaceId }) => sdk.request('/api/ai/draft', { method: 'POST', body: { instruction, messages, tone, replyTo, existing, workspaceId }, auth: 'bearer' }),
+        conversation: ({ messages, mode, question, title, workspaceId }) => sdk.request('/api/ai/conversation', { method: 'POST', body: { messages, mode, question, title, workspaceId }, auth: 'bearer' }),
+        extractTasks: ({ text, max, create, workspaceId }) => sdk.request('/api/ai/extract-tasks', { method: 'POST', body: { text, max, create, workspaceId }, auth: 'bearer' }),
+        noteAssist: ({ action, text, title, instruction, workspaceId }) => sdk.request('/api/ai/notes/assist', { method: 'POST', body: { action, text, title, instruction, workspaceId }, auth: 'bearer' }),
+        taskAssist: ({ action, task, instruction, workspaceId }) => sdk.request('/api/ai/tasks/assist', { method: 'POST', body: { action, task, instruction, workspaceId }, auth: 'bearer' }),
+        capabilities: () => sdk.request('/api/ai/capabilities', { auth: 'bearer' }),
+        settings: ({ workspaceId }) => sdk.request(`/api/ai/settings?workspaceId=${encodeURIComponent(workspaceId)}`, { auth: 'bearer' }),
+        usage: ({ workspaceId, days = 30 }) => sdk.request(`/api/ai/usage?workspaceId=${encodeURIComponent(workspaceId)}&days=${days}`, { auth: 'bearer' }),
       };
     }
 

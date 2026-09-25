@@ -51,7 +51,14 @@ const WorkspaceSchema = new mongoose.Schema({
     allowMemberChannelCreation: { type: Boolean, default: true },
     requireAdminApproval: { type: Boolean, default: false },
     isDiscoverable: { type: Boolean, default: false },
-    autoArchiveInactiveDays: { type: Number, default: 90 }
+    autoArchiveInactiveDays: { type: Number, default: 90 },
+    // AI: which provider/model this workspace uses ('default' = server env config).
+    ai: {
+      enabled: { type: Boolean, default: true },
+      provider: { type: String, enum: ['default', 'gemini', 'openai', 'anthropic', 'claude', 'local_llm'], default: 'default' },
+      model: { type: String, default: null },
+      smartReplies: { type: Boolean, default: true },
+    },
   },
 
   

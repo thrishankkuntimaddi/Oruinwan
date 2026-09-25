@@ -63,8 +63,43 @@ function wrapForUser(conversationKeyBytes, userPublicKeyPem) {
     }
 }
 
+/**
+ * Encrypt plaintext for a conversation the way the web client does
+ * (AES-256-GCM, 12-byte IV, auth tag appended to the ciphertext, base64), using
+ * the conversation key the server holds wrapped under SERVER_KEK. Used for
+ * messages the assistant sends on a user's behalf, so they stay E2EE on the
+ * wire and readable by every member.
+ */
+async function encryptForConversation(conversationId, conversationType, plaintext) {
+    const ConversationKey = require('../../../models/ConversationKey');
+    const doc = await ConversationKey.findByConversation(conversationId, conversationType);
+    if (!doc || !doc.workspaceEncryptedKey) {
+        throw new Error('Conversation key unavailable for server-side encryption');
+    }
+    const key = unwrapWithServerKEK(doc.workspaceEncryptedKey, doc.workspaceKeyIv, doc.workspaceKeyAuthTag);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    const encrypted = Buffer.concat([cipher.update(Buffer.from(String(plaintext), 'utf8')), cipher.final(), cipher.getAuthTag()]);
+    return { ciphertext: encrypted.toString('base64'), messageIv: iv.toString('base64') };
+}
+
+/** Wrap a secret (e.g. a workspace's AI API key) under SERVER_KEK for storage. */
+function sealSecret(plaintext) {
+    const { ciphertext, iv, authTag } = encryptWithWorkspaceKey(Buffer.from(String(plaintext), 'utf8'));
+    return `enc:v1:${ciphertext}:${iv}:${authTag}`;
+}
+
+function openSecret(sealed) {
+    if (typeof sealed !== 'string' || !sealed.startsWith('enc:v1:')) return sealed;
+    const [, , ciphertext, iv, authTag] = sealed.split(':');
+    return unwrapWithServerKEK(ciphertext, iv, authTag).toString('utf8');
+}
+
 module.exports = {
     unwrapWithServerKEK,
     encryptWithWorkspaceKey,
-    wrapForUser
+    wrapForUser,
+    encryptForConversation,
+    sealSecret,
+    openSecret,
 };

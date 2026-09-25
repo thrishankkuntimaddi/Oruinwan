@@ -166,10 +166,15 @@ const CentralContentView = ({
                             members={channelMembers || []}
                             showSmartReply={showSmartReply}
                             showScreenRecord={showScreenRecord}
+                            workspaceId={workspaceId}
                             recentMessages={
-                                (conversation.events || []).slice(-5).map(e => ({
-                                    sender: e.sender?.username || e.sender,
-                                    text: e.text || e.payload?.text || ''
+                                // Decrypted tail of the conversation for smart replies (E2EE text
+                                // lives in decryptedContent; payload.text is empty on the wire).
+                                (conversation.events || []).slice(-8).map(e => ({
+                                    id: e.id,
+                                    sender: e.sender?.username || (typeof e.sender === 'string' ? e.sender : 'User'),
+                                    text: e.decryptedContent || e.text || e.payload?.text || '',
+                                    isMe: String(e.sender?._id || e.sender) === String(currentUserId),
                                 })).filter(e => e.text)
                             }
                         />

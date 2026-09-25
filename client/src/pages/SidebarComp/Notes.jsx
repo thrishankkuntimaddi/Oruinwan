@@ -21,6 +21,7 @@ import NoteInfoModal from "./notesComponents/ui/NoteInfoModal";
 import ShareNoteModal from "./notesComponents/ui/ShareNoteModal";
 import SlashCommandMenu from "./notesComponents/ui/SlashCommandMenu";
 import AIPanel from "./notesComponents/ui/AIPanel";
+import { useAIContext } from "../../contexts/AIContext";
 import VersionHistoryPanel from "./notesComponents/ui/VersionHistoryPanel";
 
 import {
@@ -421,6 +422,17 @@ ${blockHtml}
     }, [id, updateNote]);
 
     
+    // Let Chttrix AI (⌘⇧A) see the open note.
+    const aiCtx = useAIContext();
+    const setAINote = aiCtx?.setNote;
+    const blocksRef = useRef(blocks);
+    blocksRef.current = blocks;
+    useEffect(() => {
+        if (!setAINote || !id) return undefined;
+        setAINote({ id, title, getText: () => (blocksRef.current || []).map(b => String(b.content || '').replace(/<[^>]*>/g, '')).filter(Boolean).join('\n') });
+        return () => setAINote(null);
+    }, [setAINote, id, title]);
+
     const handleAIInsertBlock = (type, content, meta) => {
         addBlock(type, content, meta);
         showToast("AI result inserted", "success");
@@ -697,6 +709,7 @@ ${blockHtml}
                 <AIPanel
                     blocks={blocks}
                     title={title}
+                    workspaceId={workspaceId}
                     onInsertBlock={handleAIInsertBlock}
                     onClose={() => setShowAI(false)}
                 />

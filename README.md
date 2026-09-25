@@ -672,26 +672,30 @@ The Redis adapter ensures that Socket.IO events broadcast correctly across all s
 
 ## 🤖 AI System
 
-Chttrix Intelligence is powered by **Google Gemini** (`gemini-2.5-flash` by default) via the `@google/generative-ai` SDK, behind a provider abstraction so the whole layer runs with a mock provider in tests.
+Chttrix Intelligence is one AI layer (`/ai`) that every feature calls through a single gateway. The server default is **Google Gemini** (`gemini-2.5-flash`); each workspace can switch to **OpenAI**, **Anthropic Claude** or a **local / self-hosted OpenAI-compatible model** (Ollama, LM Studio, vLLM) from **Settings → Chttrix AI**, with its own API key sealed under the server key. Tests run against a mock provider.
 
-### Capabilities
-| Feature | How it Works |
+### Where it shows up
+| Surface | What it does |
 |---|---|
-| **Chat** | Stateful conversation with `GenerativeModel.startChat()`, history preserved per session |
-| **Screen Context** | Client sends current page text → AI answers contextually |
-| **Summarize** | Last N messages → Gemini produces bullet summary |
-| **Draft Message** | Natural language instruction → Gemini generates draft |
-| **Add Task** | AI identifies task details → creates task via internal API |
-| **AI Insights** | Aggregated workspace stats → Gemini generates executive summary |
+| **Assistant** (⌘⇧A) | Chat with tools: sees the open conversation / note / task, summarizes, pulls action items, drafts replies (insert into the message box), creates and updates tasks, notes and meetings, sends messages when asked, lists channels & members |
+| **Smart replies** | Reply chips under the composer in channels and DMs, generated from the decrypted last messages |
+| **Message toolbar** | Translate any message; summarize a thread |
+| **Notes** | Summarize, extract action items (→ tasks), expand, rewrite, structure, proofread, shorten, continue, or free-form instructions |
+| **Tasks** | Write description, suggest subtasks, acceptance criteria, effort estimate |
+| **Command palette** (⌘/) | Natural-language commands: create task, schedule meeting, ask the knowledge base |
+| **Settings → Chttrix AI** | Turn AI / smart replies on or off, pick provider & model, connect keys, test the connection, see usage |
+
+Messages are end-to-end encrypted: the client decrypts and sends only the text it can read; the server never feeds stored message content to a model.
 
 ### AI Architecture (`/ai` directory)
-The server's AI controller is transport only. It hands plain payloads to `ai/api/ai.gateway.js`, which delegates to the orchestrator:
+The server's AI controller is transport only (`/api/ai/*`, guarded by membership, per-workspace AI toggle and a per-user rate limit). It hands plain payloads to `ai/api/ai.gateway.js`, which delegates to the orchestrator:
 
-- **Orchestrator** — maps an intent (`chat`, `summarize`, `generate_task`) to an agent, injects memory and tools, and returns the result plus an activity event descriptor
-- **Agents** — `ChatAgent` (multi-round tool calling), `SummarizeAgent`, `TaskAgent` (strict JSON extraction with fallback)
-- **Tools** — declarations plus executors; the server injects the side-effect implementations from `server/utils/aiActions.js`
-- **Memory** — bounded per user and workspace (turn cap, TTL, LRU size cap, no timers), cleared on logout
-- **Providers** — `gemini` and `mock`; selected with `AI_PROVIDER`
+- **Orchestrator** — maps an intent to an agent, injects the provider (server default or the workspace's own), tools and memory, records usage, returns the result plus an activity event
+- **Agents** — `ChatAgent` (multi-round tool calling), `SummarizeAgent`, `TaskAgent`, and the one-shot assist agents: smart replies, translate, draft, conversation summary / Q&A, extract tasks, note assist, answer-from-sources, re-rank, intent classification
+- **Tools** — declarations plus executors; the server injects the side-effect implementations from `server/utils/aiActions.js` (membership-checked, E2EE-safe message sending)
+- **Memory** — bounded per user and workspace (turn cap, TTL, LRU size cap, no timers), cleared on "New chat"
+- **Providers** — `gemini`, `openai`, `anthropic`, `local_llm`, `mock`; register more with `registerProvider()`
+- **Usage** — every call is logged to `AIUsage` (intent, provider, model, latency, errors) for the Settings dashboard
 
 Configuration and extension points are documented in [`ai/README.md`](ai/README.md).
 

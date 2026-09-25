@@ -1,21 +1,49 @@
-const logger = require('../../../utils/logger');
+'use strict';
+
+/**
+ * /api/ai — Chttrix Intelligence.
+ *
+ * Every route: JWT auth → per-user rate limit → workspace membership + AI
+ * enabled (requireAIAccess) → controller → ai gateway. Routes marked
+ * `optional` work without a workspace (personal use, SDK).
+ */
 const express = require('express');
 const router = express.Router();
-const aiController = require('./ai.controller');
 const auth = require('../../shared/middleware/auth');
+const { aiLimiter, requireAIAccess } = require('./ai.access');
+const c = require('./ai.controller');
 
-router.use((req, res, next) => {
-    logger.info(`🤖 AI Request: ${req.method} ${req.originalUrl}`);
-    logger.info('Payload:', JSON.stringify(req.body).substring(0, 100)); 
-    next();
-});
+router.use(auth, aiLimiter);
 
-router.post('/chat', auth, aiController.chat);
-router.post('/summarize', auth, aiController.summarize);
-router.post('/generate-task', auth, aiController.generateTask);
+const member = requireAIAccess();
+const optional = requireAIAccess({ optional: true });
+const admin = requireAIAccess({ adminOnly: true });
 
-router.post('/summarize-document', auth, aiController.summarizeDocument);
-router.post('/semantic-search',    auth, aiController.semanticSearch);
-router.get('/cache-stats',         auth, aiController.cacheStats);
+// Assistant
+router.post('/chat', optional, c.chat);
+router.post('/memory/clear', optional, c.clearMemory);
+
+// In-app actions (plaintext is decrypted by the client and sent here)
+router.post('/smart-replies', member, c.smartReplies);
+router.post('/translate', optional, c.translate);
+router.post('/draft', optional, c.draft);
+router.post('/conversation', member, c.conversation);
+router.post('/extract-tasks', member, c.extractTasks);
+router.post('/notes/assist', optional, c.noteAssist);
+router.post('/tasks/assist', optional, c.taskAssist);
+router.post('/summarize', optional, c.summarize);
+router.post('/generate-task', optional, c.generateTask);
+
+// Documents / search helpers
+router.post('/summarize-document', optional, c.summarizeDocument);
+router.post('/semantic-search', optional, c.semanticSearch);
+router.get('/cache-stats', c.cacheStats);
+
+// Configuration
+router.get('/capabilities', c.capabilities);
+router.get('/settings', member, c.getSettings);
+router.put('/settings', admin, c.updateSettings);
+router.post('/settings/test', admin, c.testProvider);
+router.get('/usage', member, c.usage);
 
 module.exports = router;

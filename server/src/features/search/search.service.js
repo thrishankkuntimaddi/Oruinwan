@@ -10,15 +10,7 @@ const WorkspaceFile = require('../files/WorkspaceFile');
 const KnowledgePage = require('../knowledge/KnowledgePage');
 const logger       = require('../../../utils/logger');
 
-let _model = null;
-function _getModel() {
-    if (!_model) {
-        const { GoogleGenerativeAI } = require('@google/generative-ai');
-        const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || '';
-        _model = new GoogleGenerativeAI(apiKey).getGenerativeModel({ model: (process.env.GEMINI_FAST_MODEL || 'gemini-2.5-flash') });
-    }
-    return _model;
-}
+const gateway = require('../../../../ai/api/ai.gateway');
 
 function buildDateFilter(from, to) {
     if (!from && !to) return null;
@@ -87,11 +79,6 @@ async function semanticRerank(query, results) {
     // Skip re-ranking for very small result sets (already optimal)
     if (results.length <= 3) return results;
 
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY;
-    if (!apiKey) {
-        logger.debug('[SearchService] semanticRerank: No AI key — skipping re-ranking');
-        return results;
-    }
 
     try {
         // Build a compact representation for the prompt
@@ -101,25 +88,9 @@ async function semanticRerank(query, results) {
             return `${i}: [${r.type}] ${label} — ${truncateText(stripMarkdown(preview), 80)}`;
         });
 
-        const prompt = [
-            `You are a relevance ranking engine for a team workspace search.`,
-            `User query: "${query}"`,
-            ``,
-            `Rank the following results from MOST to LEAST relevant.`,
-            `Return ONLY a JSON array of the original indices in ranked order, e.g. [2,0,4,1,3].`,
-            `Do not include any explanation.`,
-            ``,
-            `Results:`,
-            ...candidates,
-        ].join('\n');
-
-        const model = _getModel();
-        const result = await model.generateContent(prompt);
-        let raw = result.response.text().trim()
-            .replace(/^```(?:json)?/m, '').replace(/```$/m, '').trim();
-
-        const ranked = JSON.parse(raw);
-        if (!Array.isArray(ranked)) throw new Error('Not an array');
+        const head = results.slice(0, 20);
+        const { scores } = await gateway.rerank({ query, docs: head.map((r, i) => ({ id: String(i), title: r.title || r.text || r.name || 'untitled', snippet: candidates[i] })) }, { userId: 'system' });
+        const ranked = head.map((_, i) => i).sort((a, b) => (scores[b] || 0) - (scores[a] || 0));
 
         // Re-order results according to AI ranking
         const reranked = ranked

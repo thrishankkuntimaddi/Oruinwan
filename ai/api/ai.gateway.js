@@ -5,10 +5,14 @@
  *
  *   client -> HTTP -> server/src/features/ai/ai.controller.js (transport only)
  *          -> ai.gateway (this file: plain data in, plain data out)
- *          -> ai/orchestrator -> ai/agents -> ai/providers (Gemini or mock)
+ *          -> ai/orchestrator -> ai/agents -> ai/providers (Gemini, OpenAI, Anthropic, local, mock)
  *
  * Rules: no Express objects here, every function takes a payload and a
  * context, and the server's side-effect helpers are injected as tool actions.
+ *
+ * Context accepted by every call:
+ *   { userId, workspaceId?, req?, io?, provider?, model?, remember? }
+ * `provider` lets the server pass a workspace-specific provider instance.
  */
 
 'use strict';
@@ -17,6 +21,7 @@ const { Orchestrator } = require('../orchestrator');
 const logger = require('../utils/logger');
 
 let _orchestrator = null;
+let _options = {};
 
 function loadServerActions() {
   try {
@@ -27,9 +32,15 @@ function loadServerActions() {
   }
 }
 
+/** Configure the shared orchestrator before first use (e.g. usage logging). */
+function configure(options = {}) {
+  _options = { ..._options, ...options };
+  _orchestrator = null;
+}
+
 /** Lazily build the shared orchestrator (or replace it, mainly for tests). */
 function getOrchestrator() {
-  if (!_orchestrator) _orchestrator = new Orchestrator({ actions: loadServerActions() });
+  if (!_orchestrator) _orchestrator = new Orchestrator({ actions: loadServerActions(), ..._options });
   return _orchestrator;
 }
 
@@ -37,34 +48,47 @@ function setOrchestrator(orchestrator) {
   _orchestrator = orchestrator;
 }
 
-/**
- * @param {{ message: string, history?: Array, workspaceId?: string }} payload
- * @param {{ userId: string, req?: object, remember?: boolean }} context
- * @returns {Promise<{ text: string, actionsExecuted?: Array, event: object }>}
- */
-async function chat(payload, context) {
-  return getOrchestrator().run('chat', payload, context);
+/** Generic entry point: run any registered intent. */
+function run(intent, payload, context = {}) {
+  return getOrchestrator().run(intent, payload, context);
 }
 
-/**
- * @param {{ text: string, style?: string }} payload
- * @returns {Promise<{ summary: string, event: object }>}
- */
-async function summarize(payload, context = {}) {
-  return getOrchestrator().run('summarize', payload, context);
-}
-
-/**
- * @param {{ context: string }} payload
- * @returns {Promise<{ title: string, description: string, priority: string, dueDate?: string, event: object }>}
- */
-async function generateTask(payload, context = {}) {
-  return getOrchestrator().run('generate_task', payload, context);
-}
+/* Assistant chat with tools and memory. */
+const chat = (payload, context) => run('chat', payload, context);
+/* One-shot helpers (no tools, no memory). */
+const summarize = (payload, context = {}) => run('summarize', payload, context);
+const generateTask = (payload, context = {}) => run('generate_task', payload, context);
+const smartReplies = (payload, context = {}) => run('smart_replies', payload, context);
+const translate = (payload, context = {}) => run('translate', payload, context);
+const draft = (payload, context = {}) => run('draft', payload, context);
+const conversation = (payload, context = {}) => run('conversation', payload, context);
+const extractTasks = (payload, context = {}) => run('extract_tasks', payload, context);
+const noteAssist = (payload, context = {}) => run('note_assist', payload, context);
+const answer = (payload, context = {}) => run('answer', payload, context);
+const rerank = (payload, context = {}) => run('rerank', payload, context);
+const classifyIntent = (payload, context = {}) => run('classify_intent', payload, context);
 
 /** Forget a user's conversation memory (called on logout / "new chat"). */
 function clearMemory({ userId, workspaceId } = {}) {
   return getOrchestrator().clearMemory({ userId, workspaceId });
 }
 
-module.exports = { chat, summarize, generateTask, clearMemory, getOrchestrator, setOrchestrator };
+module.exports = {
+  configure,
+  run,
+  chat,
+  summarize,
+  generateTask,
+  smartReplies,
+  translate,
+  draft,
+  conversation,
+  extractTasks,
+  noteAssist,
+  answer,
+  rerank,
+  classifyIntent,
+  clearMemory,
+  getOrchestrator,
+  setOrchestrator,
+};

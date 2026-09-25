@@ -15,9 +15,10 @@ const resolveDependency = require('../utils/resolveDependency');
  *     -> { text, functionCalls: [{ name, args }], continue(toolResults) -> same shape }
  */
 class GeminiProvider {
-  constructor({ apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY } = {}) {
+  constructor({ apiKey = config.keys.gemini, defaultModels } = {}) {
     this.name = 'gemini';
     this.apiKey = apiKey;
+    this.models = defaultModels || config.models.byProvider.gemini;
     this._client = null;
   }
 
@@ -39,14 +40,14 @@ class GeminiProvider {
   }
 
   _getModel({ model, systemInstruction, tools }) {
-    const params = { model: model || config.models.chat };
+    const params = { model: model || this.models.chat };
     if (systemInstruction) params.systemInstruction = systemInstruction;
     if (tools && tools.length) params.tools = [{ functionDeclarations: tools }];
     return this._getClient().getGenerativeModel(params);
   }
 
   async generateText({ model, prompt, systemInstruction, generationConfig }) {
-    const gen = this._getModel({ model: model || config.models.fast, systemInstruction });
+    const gen = this._getModel({ model: model || this.models.fast, systemInstruction });
     const result = await gen.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
       generationConfig: { ...config.generation, ...generationConfig },

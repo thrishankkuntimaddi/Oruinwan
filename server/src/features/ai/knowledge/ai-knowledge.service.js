@@ -5,26 +5,14 @@ const Message       = require('../../messages/message.model');
 const KnowledgePage = require('../../knowledge/KnowledgePage');
 const ScheduledMeeting = require('../../../models/ScheduledMeeting');
 
-async function search(query, workspaceId) {
+async function search(query, workspaceId, context = {}) {
     if (!query || !workspaceId) return { results: [], cached: false };
 
     const regex = new RegExp(query.split(/\s+/).join('|'), 'i');
 
     
-    const [messages, pages] = await Promise.all([
-        Message.find({
-            workspace:            workspaceId,
-            isDeleted:            { $ne: true },
-            isDeletedUniversally: { $ne: true },
-            type:                 { $in: ['message', 'checklist'] },
-            text:                 { $regex: regex },
-        })
-            .sort({ createdAt: -1 })
-            .limit(20)
-            .select('text createdAt channel sender')
-            .populate('sender', 'username')
-            .lean(),
-
+    const messages = [];
+    const [pages] = await Promise.all([
         KnowledgePage.find({
             workspaceId,
             $or: [
@@ -58,7 +46,7 @@ async function search(query, workspaceId) {
     if (!docs.length) return { results: [], cached: false };
 
     // --- Second pass: semantic re-ranking ---
-    const { results, cached } = await aiCore.semanticSearch(query, docs, { topK: 10 });
+    const { results, cached } = await aiCore.semanticSearch(query, docs, { topK: 10, context });
 
     return {
         results: results.map(r => ({
@@ -80,7 +68,7 @@ async function search(query, workspaceId) {
  * @param {string} workspaceId
  * @returns {Promise<{ answer: string, references: Array, fallback: boolean }>}
  */
-async function askQuestion(question, workspaceId) {
+async function askQuestion(question, workspaceId, context = {}) {
     if (!question) return { answer: 'Please provide a question.', references: [], fallback: true };
 
     // Fetch top 5 knowledge pages (relevance: regex match or most recent)
@@ -113,7 +101,7 @@ async function askQuestion(question, workspaceId) {
         })),
     ];
 
-    const { answer, fallback } = await aiCore.answerQuestion(question, contextDocs);
+    const { answer, fallback } = await aiCore.answerQuestion(question, contextDocs, context);
 
     const references = [
         ...pages.slice(0, 3).map(p => ({ type: 'knowledge', title: p.title, id: p._id })),
@@ -131,7 +119,7 @@ async function askQuestion(question, workspaceId) {
  * @param {string} workspaceId
  * @returns {Promise<{ meetings: Array, answer: string, fallback: boolean }>}
  */
-async function queryMeetings(question, workspaceId) {
+async function queryMeetings(question, workspaceId, context = {}) {
     const regex = new RegExp(question.split(/\s+/).slice(0, 5).join('|'), 'i');
 
     const meetings = await ScheduledMeeting.find({
@@ -160,7 +148,7 @@ async function queryMeetings(question, workspaceId) {
         content: [m.summary, m.transcript, m.sharedNotes].filter(Boolean).join('\n').substring(0, 2_000),
     }));
 
-    const { answer, fallback } = await aiCore.answerQuestion(question, contextDocs);
+    const { answer, fallback } = await aiCore.answerQuestion(question, contextDocs, context);
 
     return {
         meetings: allMeetings.map(m => ({

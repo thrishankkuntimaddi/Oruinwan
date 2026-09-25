@@ -1263,7 +1263,7 @@ exports.translateMessage = async (req, res) => {
         }
         if (targetLang.length > 40) return res.status(400).json({ message: 'Invalid targetLang' });
 
-        const result = await aiMessagingService.translateMessage(text, targetLang.trim());
+        const result = await aiMessagingService.translateMessage(text, targetLang.trim(), { userId: req.user.sub });
         return res.json(result);
     } catch (err) {
         logger.warn('[AI translate] failed:', err.message);

@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
+import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useAIContext } from '../../contexts/AIContext';
+import AITaskAssist from './AITaskAssist';
 
 const T = {
     base: 'var(--bg-base)',
@@ -144,6 +147,15 @@ function ActivityLog({ taskId }) {
 }
 
 export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, onUpdate, onDelete }) {
+    const { activeWorkspace } = useWorkspace();
+    const aiWorkspaceId = activeWorkspace?.id || activeWorkspace?._id || task?.workspace?._id || task?.workspace || null;
+    const aiCtx = useAIContext();
+    const setAITask = aiCtx?.setTask;
+    useEffect(() => {
+        if (!setAITask || !task) return undefined;
+        setAITask({ id: task.id || task._id, title: task.title, description: task.description, status: task.status, priority: task.priority, dueDate: task.dueDate });
+        return () => setAITask(null);
+    }, [setAITask, task?.id, task?._id, task?.title, task?.description, task?.status, task?.priority, task?.dueDate]);
     const { showToast } = useToast();
     const [tab, setTab] = useState('details');
     const [editTitle, setEditTitle] = useState(false);
@@ -339,6 +351,9 @@ export default function WorkspaceTaskDetailPanel({ task, members = [], onClose, 
                                     {task.description || 'Click to add description…'}
                                 </p>
                             )}
+                            <div style={{ marginTop: '8px' }}>
+                                <AITaskAssist task={task} workspaceId={aiWorkspaceId} onApplyDescription={(text) => { setDesc(text); save({ description: text }); }} />
+                            </div>
                         </div>
 
                         {}

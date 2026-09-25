@@ -5,7 +5,7 @@ import { useIsMobile } from '../hooks/useIsMobile';
 import MobileBottomNav from '../components/layout/MobileBottomNav';
 import {
     User, Lock, Palette, Bell, Globe, Shield, Laptop, Settings as SettingsIcon,
-    ChevronRight, Search, ArrowLeft, X, Menu, Plug
+    ChevronRight, Search, ArrowLeft, X, Menu, Plug, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
@@ -21,6 +21,7 @@ import SecurityTab from './settingsTabs/SecurityTab';
 import SessionsTab from './settingsTabs/SessionsTab';
 import AdvancedTab from './settingsTabs/AdvancedTab';
 import IntegrationsTab from './settingsTabs/IntegrationsTab';
+import AITab from './settingsTabs/AITab';
 import ComplianceTab from './settingsTabs/ComplianceTab';
 
 const S = {
@@ -35,7 +36,8 @@ const NAV_SECTIONS = [
     { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme & font size' },
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & 2FA' },
     { id: 'sessions', label: 'Sessions', icon: Laptop, description: 'Active devices' },
-    { id: 'integrations', label: 'Integrations', icon: Plug, description: 'GitHub, Slack, AI & more' },
+    { id: 'integrations', label: 'Integrations', icon: Plug, description: 'GitHub, Slack & more' },
+    { id: 'ai', label: 'Chttrix AI', icon: Sparkles, description: 'Provider, model, usage' },
     { id: 'compliance', label: 'Compliance & Privacy', icon: Shield, description: 'GDPR, audit logs, retention' },
     { id: 'advanced', label: 'Advanced', icon: SettingsIcon, description: 'Account & data' },
 ];
@@ -589,6 +591,20 @@ const Settings = () => {
                                     </div>
                                 )}
                                 <IntegrationsTab workspaceId={selectedWorkspaceId} />
+                            </div>
+                        )}
+                        {activeSection === 'ai' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                {workspaces.length > 1 && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', marginBottom: 8, ...S.font }}>Workspace</label>
+                                        <select value={selectedWorkspaceId} onChange={e => setSelectedWorkspaceId(e.target.value)}
+                                            style={{ padding: '6px 10px', fontSize: 13, backgroundColor: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: 2, color: 'var(--text-primary)', outline: 'none', ...S.font }}>
+                                            {workspaces.map(ws => <option key={ws.id} value={ws.id}>{ws.name}</option>)}
+                                        </select>
+                                    </div>
+                                )}
+                                <AITab workspaceId={selectedWorkspaceId} />
                             </div>
                         )}
                         {activeSection === 'advanced' && <AdvancedTab />}

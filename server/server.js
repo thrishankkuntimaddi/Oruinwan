@@ -270,7 +270,6 @@ app.use("/api/managers", require("./src/features/managers/managers.routes"));
 app.use("/api/analytics", require("./src/features/analytics/analytics.routes"));
 app.use("/api/ai", require("./src/features/ai/ai.routes"));
 
-app.use("/api/ai", requireAuth, require("./src/features/ai/smartReply.routes"));
 
 app.use("/api/ai", requireAuth, require("./src/features/ai/assistant/ai-assistant.routes"));
 

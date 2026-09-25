@@ -11,6 +11,7 @@ import { useWorkspace } from '../../../contexts/WorkspaceContext';
 import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
 import { useNotifications } from '../../../contexts/NotificationsContext';
+import { useAIContext } from '../../../contexts/AIContext';
 
 import CentralContentView from './views/CentralContentView.jsx';
 import ErrorDisplay from './views/ErrorDisplay.jsx';
@@ -673,6 +674,28 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     // Opening a conversation (or returning to the tab while it is open) marks
     // it read everywhere: server readBy, this tab's badge, other tabs/devices.
+    // Expose the open conversation (decrypted) to Chttrix AI.
+    const aiCtx = useAIContext();
+    const setAIConversation = aiCtx?.setConversation;
+    useEffect(() => {
+        if (!setAIConversation || !conversationId) return undefined;
+        setAIConversation({
+            id: String(conversationId),
+            type: conversationType,
+            name: chat?.name || '',
+            getMessages: () => (conversationRef.current?.events || [])
+                .filter(e => e && (e.type === 'message' || !e.type))
+                .map(e => ({
+                    id: e.id,
+                    sender: e.sender?.username || (typeof e.sender === 'string' ? e.sender : 'User'),
+                    text: e.decryptedContent || e.text || e.payload?.text || '',
+                    isMe: String(e.sender?._id || e.sender) === String(currentUserId),
+                }))
+                .filter(m => m.text),
+        });
+        return () => setAIConversation(null);
+    }, [setAIConversation, conversationId, conversationType, chat?.name, currentUserId]);
+
     const notifCtx = useNotifications();
     const clearConversationUnread = notifCtx?.clearConversationUnread;
     const lastMessageIdRef = useRef(null);
@@ -800,13 +823,12 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const { preview: linkPreview, loading: linkPreviewLoading, clearPreview: clearLinkPreview } = useLinkPreview(newMessage);
 
     
-    const handleSend = useCallback(async (markdown) => {
-        
-        
-
-        
+    const handleSend = useCallback(async (markdown, { mentionText = '' } = {}) => {
         const messageData = {
             text: markdown,
+            // Plaintext @handles only (never the message body); the server uses
+            // it to notify mentioned members of this E2EE message.
+            mentionText,
             attachments: [],
             replyTo: null,
             quotedMessageId: replyingTo?._id || null,
@@ -1534,7 +1556,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onOpenCanvas={setActiveTab}
 
                 
-                showSmartReply={chat?.type === 'channel'}
+                showSmartReply={chat?.type === 'channel' || chat?.type === 'dm'}
                 showScreenRecord={chat?.type === 'channel'}
 
                 

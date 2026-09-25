@@ -264,8 +264,8 @@ async function createTask(userId, taskData, io, req) {
                 await msg.save();
                 await msg.populate("sender", "username profilePicture");
                 if (io) io.to(`channel:${task.channel}`).emit("new-message", msg);
-            } else {
-                
+            }
+            {
                 const creator = await User.findById(userId).select('username email').lean();
                 const assignerUsername = creator?.username || 'Someone';
 
@@ -578,28 +578,38 @@ async function updateTask(userId, taskId, updates, io, req) {
         }
     }
 
-    // Everyone on the task (assignees, creator, watchers) except the person
-    // who moved it hears about status changes.
-    const statusChange = changes.find(c => c.action === 'status_changed');
-    if (statusChange) {
+    // Bell notifications: new assignees, removed assignees, status moves and
+    // other edits go to everyone on the task except the person editing it.
+    if (changes.length > 0) {
         (async () => {
             const notificationService = require('../notifications/notificationService');
             const changer = await User.findById(userId).select('username').lean();
-            const recipientIds = [...new Set([
+            const actorUsername = changer?.username || 'Someone';
+            const base = { workspaceId: task.workspace, taskTitle: task.title, taskId: String(task._id) };
+            const me = String(userId);
+
+            const added = changes.filter(c => c.action === 'assignee_added').map(c => String(c.to)).filter(id => id !== me);
+            const removed = changes.filter(c => c.action === 'assignee_removed').map(c => String(c.from)).filter(id => id !== me);
+            await Promise.allSettled(added.map(assigneeId => notificationService.taskAssigned(io, { ...base, assigneeId, assignerUsername: actorUsername })));
+            if (removed.length) await notificationService.taskRemoved(io, { ...base, recipientIds: removed, actorUsername, reason: 'unassigned' });
+
+            const audience = [...new Set([
                 ...task.assignedTo.map(String),
                 String(task.createdBy || ''),
                 ...(task.watchers || []).map(String),
-            ])].filter(id => id && id !== String(userId));
-            await notificationService.taskStatusChanged(io, {
-                recipientIds,
-                changerUsername: changer?.username || 'Someone',
-                workspaceId: task.workspace,
-                taskTitle: task.title,
-                taskId: String(task._id),
-                from: statusChange.from,
-                to: statusChange.to,
-            });
-        })().catch(err => logger.warn({ err }, '[updateTask] status notification failed'));
+            ])].filter(id => id && id !== me && !added.includes(id));
+
+            const statusChange = changes.find(c => c.action === 'status_changed');
+            if (statusChange) {
+                await notificationService.taskStatusChanged(io, { ...base, recipientIds: audience, changerUsername: actorUsername, from: statusChange.from, to: statusChange.to });
+            }
+            const otherFields = [...new Set(changes
+                .filter(c => !['status_changed', 'unblocked', 'assignee_added', 'assignee_removed'].includes(c.action))
+                .map(c => c.field || c.action))];
+            if (otherFields.length) {
+                await notificationService.taskUpdated(io, { ...base, recipientIds: audience, actorUsername, summary: `Changed ${otherFields.join(', ')}` });
+            }
+        })().catch(err => logger.warn({ err }, '[updateTask] notifications failed'));
     }
 
     return {
@@ -647,9 +657,22 @@ async function deleteTask(userId, taskId, io, req) {
     
     
     if (isCreator || isWorkspaceAdmin) {
-        
+
         task.deleted = true;
         await task.save();
+
+        (async () => {
+            const notificationService = require('../notifications/notificationService');
+            const actor = await User.findById(userId).select('username').lean();
+            await notificationService.taskRemoved(io, {
+                recipientIds: task.assignedTo.map(String).filter(id => id !== String(userId)),
+                actorUsername: actor?.username || 'Someone',
+                workspaceId: task.workspace,
+                taskTitle: task.title,
+                taskId: String(task._id),
+                reason: 'deleted',
+            });
+        })().catch(err => logger.warn({ err }, '[deleteTask] notification failed'));
 
         
         if (task.channel) {
@@ -925,7 +948,23 @@ async function requestTransfer(userId, taskId, newAssigneeId, note, io, req) {
 
     await task.save();
 
-    
+    (async () => {
+        const notificationService = require('../notifications/notificationService');
+        const [requester, target] = await Promise.all([
+            User.findById(userId).select('username').lean(),
+            User.findById(newAssigneeId).select('username').lean(),
+        ]);
+        await notificationService.taskTransfer(io, {
+            recipientIds: [String(newAssigneeId), String(task.createdBy || '')].filter(id => id && id !== String(userId)),
+            requesterUsername: requester?.username || 'Someone',
+            toUsername: target?.username || 'a teammate',
+            workspaceId: task.workspace,
+            taskTitle: task.title,
+            taskId: String(task._id),
+            note,
+        });
+    })().catch(err => logger.warn({ err }, '[requestTransfer] notification failed'));
+
     await logAction({
         userId,
         action: "task_updated",
@@ -1001,6 +1040,20 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
 
         await task.save();
 
+        (async () => {
+            const notificationService = require('../notifications/notificationService');
+            const approver = await User.findById(userId).select('username').lean();
+            const actorUsername = approver?.username || 'Someone';
+            const base = { workspaceId: task.workspace, taskTitle: task.title, taskId: String(task._id) };
+            const requesterId = String(task.transferRequest.requestedBy?._id || task.transferRequest.requestedBy || '');
+            if (String(newAssigneeId) !== String(userId)) {
+                await notificationService.taskAssigned(io, { ...base, assigneeId: String(newAssigneeId), assignerUsername: actorUsername });
+            }
+            if (requesterId && requesterId !== String(userId)) {
+                await notificationService.taskUpdated(io, { ...base, recipientIds: [requesterId], actorUsername, summary: 'Your transfer request was approved', kind: 'transfer_approved' });
+            }
+        })().catch(err => logger.warn({ err }, '[handleTransferRequest] notification failed'));
+
         
         await logAction({
             userId,
@@ -1048,6 +1101,19 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
     } else if (action === 'reject') {
         task.transferRequest.status = 'rejected';
         await task.save();
+
+        (async () => {
+            const notificationService = require('../notifications/notificationService');
+            const rejecter = await User.findById(userId).select('username').lean();
+            const requesterId = String(task.transferRequest.requestedBy?._id || task.transferRequest.requestedBy || '');
+            if (requesterId && requesterId !== String(userId)) {
+                await notificationService.taskUpdated(io, {
+                    recipientIds: [requesterId], actorUsername: rejecter?.username || 'Someone',
+                    workspaceId: task.workspace, taskTitle: task.title, taskId: String(task._id),
+                    summary: 'Your transfer request was declined', kind: 'transfer_rejected',
+                });
+            }
+        })().catch(err => logger.warn({ err }, '[handleTransferRequest] notification failed'));
 
         
         await logAction({
@@ -1142,6 +1208,23 @@ async function createSubtask(userId, parentId, subtaskData, io, req) {
     if (!parentTask.subtasks) parentTask.subtasks = [];
     parentTask.subtasks.push(subtask._id);
     await parentTask.save();
+
+    (async () => {
+        const notificationService = require('../notifications/notificationService');
+        const creator = await User.findById(userId).select('username').lean();
+        const actorUsername = creator?.username || 'Someone';
+        const me = String(userId);
+        const subAssignees = subtask.assignedTo.map(String).filter(id => id !== me);
+        await Promise.allSettled(subAssignees.map(assigneeId => notificationService.taskAssigned(io, {
+            assigneeId, assignerUsername: actorUsername, workspaceId: subtask.workspace, taskTitle: subtask.title, taskId: String(subtask._id),
+        })));
+        const parentAudience = [...new Set([...parentTask.assignedTo.map(String), String(parentTask.createdBy || '')])]
+            .filter(id => id && id !== me && !subAssignees.includes(id));
+        await notificationService.taskUpdated(io, {
+            recipientIds: parentAudience, actorUsername, workspaceId: parentTask.workspace,
+            taskTitle: parentTask.title, taskId: String(parentTask._id), summary: `Added subtask "${subtask.title}"`, kind: 'subtask',
+        });
+    })().catch(err => logger.warn({ err }, '[createSubtask] notification failed'));
 
     
     await TaskActivity.create({

@@ -11,6 +11,7 @@ class MockProvider {
   constructor(handler) {
     this.name = 'mock';
     this.isConfigured = true;
+    this.models = { chat: 'mock', fast: 'mock' };
     this.calls = [];
     this.handler = handler || (({ kind, prompt, message }) =>
       kind === 'text' ? `mock:${prompt}` : `mock:${message}`);

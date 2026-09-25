@@ -23,7 +23,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
     }, []);
 
     
-    const sendMessage = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, linkPreview = null }) => {
+    const sendMessage = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, linkPreview = null, mentionText = '' }) => {
 
         
         if (!encryptionReady) {
@@ -189,6 +189,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     replyTo,
                     quotedMessageId,
                     clientTempId: tempId,
+                    mentionText: mentionText || undefined,
                     
                     linkPreview: linkPreview || undefined,
                 });
@@ -203,6 +204,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     replyTo,
                     quotedMessageId,
                     clientTempId: tempId,
+                    mentionText: mentionText || undefined,
                     
                     linkPreview: linkPreview || undefined,
                 });

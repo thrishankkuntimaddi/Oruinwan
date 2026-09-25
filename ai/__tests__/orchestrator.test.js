@@ -47,7 +47,7 @@ describe('Orchestrator', () => {
 
     const out = await orchestrator.run('chat', { message: 'create a task' }, { userId: 'u1', workspaceId: 'w1' });
     expect(out.text).toBe('done:3');
-    expect(createTaskForUser).toHaveBeenCalledWith(expect.objectContaining({ title: 'Ship it', userId: 'u1', workspaceId: 'w1' }));
+    expect(createTaskForUser).toHaveBeenCalledWith(expect.objectContaining({ title: 'Ship it' }), expect.objectContaining({ userId: 'u1', workspaceId: 'w1' }));
     expect(out.actionsExecuted).toHaveLength(3);
     expect(out.actionsExecuted[2].result).toEqual({ success: false, error: 'Unknown function: unknown_tool' });
     const toolRound = provider.calls.find((c) => c.kind === 'tool-results');
@@ -87,7 +87,7 @@ describe('Orchestrator', () => {
 
   test('summarize and generate_task parse provider output', async () => {
     const { orchestrator } = build(({ prompt }) =>
-      prompt.startsWith('Extract') ? '```json\n{"title":"Fix login","description":"bug","priority":"high","dueDate":"2026-10-01"}\n```' : 'A summary.');
+      prompt.includes('Extract a single task') ? '```json\n{"title":"Fix login","description":"bug","priority":"high","dueDate":"2026-10-01"}\n```' : 'A summary.');
     const s = await orchestrator.run('summarize', { text: 'long text' }, { userId: 'u1' });
     expect(s.summary).toBe('A summary.');
     const t = await orchestrator.run('generate_task', { context: 'login is broken, urgent' }, { userId: 'u1' });

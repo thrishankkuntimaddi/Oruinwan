@@ -13,6 +13,9 @@ const PREF_KEY_BY_TYPE = {
     task_assigned: 'task',
     task_comment: 'task',
     task_due_soon: 'task',
+    task_updated: 'task',
+    task_removed: 'task',
+    task_transfer: 'task',
     schedule_created: 'meeting',
     meeting_reminder: 'meeting',
 };
@@ -160,10 +163,44 @@ async function taskStatusChanged(io, { recipientIds, changerUsername, workspaceI
     });
 }
 
+async function taskUpdated(io, { recipientIds, actorUsername, workspaceId, taskTitle, taskId, summary, kind = 'update' }) {
+    return createMany(io, recipientIds, {
+        workspaceId,
+        type: 'task_updated',
+        title: `${actorUsername} updated "${taskTitle}"`,
+        body: summary || 'Task details changed',
+        link: taskId ? `/tasks/${taskId}` : null,
+        meta: { actorUsername, taskTitle, taskId, kind },
+        push: false,
+    });
+}
+
+async function taskRemoved(io, { recipientIds, actorUsername, workspaceId, taskTitle, taskId, reason = 'unassigned' }) {
+    return createMany(io, recipientIds, {
+        workspaceId,
+        type: 'task_removed',
+        title: reason === 'deleted' ? `${actorUsername} deleted "${taskTitle}"` : `${actorUsername} unassigned you from "${taskTitle}"`,
+        body: reason === 'deleted' ? 'The task was removed' : 'You are no longer assigned to this task',
+        link: reason === 'deleted' ? '/tasks' : (taskId ? `/tasks/${taskId}` : null),
+        meta: { actorUsername, taskTitle, taskId, reason },
+    });
+}
+
+async function taskTransfer(io, { recipientIds, requesterUsername, workspaceId, taskTitle, taskId, toUsername, note }) {
+    return createMany(io, recipientIds, {
+        workspaceId,
+        type: 'task_transfer',
+        title: `${requesterUsername} requested a transfer`,
+        body: `"${taskTitle}" → ${toUsername}${note ? ` · ${note}` : ''}`,
+        link: taskId ? `/tasks/${taskId}` : null,
+        meta: { requesterUsername, toUsername, taskTitle, taskId, note },
+    });
+}
+
 async function noteShared(io, { recipientIds, sharerUsername, workspaceId, noteTitle, noteId }) {
     return createMany(io, recipientIds, {
         workspaceId,
-        type: 'ai_suggestion',
+        type: 'note_shared',
         title: `${sharerUsername} shared a note with you`,
         body: noteTitle,
         link: noteId ? `/notes/${noteId}` : null,
@@ -253,6 +290,9 @@ module.exports = {
     taskAssigned,
     taskComment,
     taskStatusChanged,
+    taskUpdated,
+    taskRemoved,
+    taskTransfer,
     noteShared,
     aiSuggestion,
     memberJoined,

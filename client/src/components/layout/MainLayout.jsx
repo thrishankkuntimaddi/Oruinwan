@@ -21,6 +21,12 @@ const NOTIF_ICONS = {
     huddle_started:  { Icon: Bell,          color: 'var(--state-danger)' },
     schedule_created:{ Icon: Bell,          color: 'var(--accent)' },
     reaction:        { Icon: Bell,          color: 'var(--text-secondary)' },
+    thread_reply:    { Icon: MessageCircle, color: 'var(--text-muted)' },
+    task_updated:    { Icon: Check,         color: 'var(--text-secondary)' },
+    task_removed:    { Icon: Trash2,        color: 'var(--state-danger)' },
+    task_transfer:   { Icon: ExternalLink,  color: 'var(--accent)' },
+    task_due_soon:   { Icon: Bell,          color: 'var(--accent)' },
+    note_shared:     { Icon: Sparkles,      color: 'var(--text-secondary)' },
 };
 
 function timeAgo(dateStr) {

@@ -11,6 +11,7 @@ import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete
 import SlashCommandMenu from "../../../../components/chat/slash/SlashCommandMenu";
 import SlashCommandPreview from "../../../../components/chat/slash/SlashCommandPreview";
 import SmartReplySuggestions from "./SmartReplySuggestions";
+import { useAIContext } from "../../../../contexts/AIContext";
 import ScreenRecorder from "./ScreenRecorder";
 
 const turndownService = new TurndownService({
@@ -71,6 +72,7 @@ export default function FooterInput({
   members = [],
   recentMessages = [],
   showSmartReply = false,
+  workspaceId = null,
   showScreenRecord = false,
 }) {
   const emojiRef = useRef(null);
@@ -116,6 +118,25 @@ export default function FooterInput({
     setSlashQuery("");
     setPreviewCommand(cmd);
   }, [onChange]);
+
+  // Chttrix AI (assistant panel, smart replies, drafts) inserts text here.
+  const aiCtx = useAIContext();
+  const insertText = useCallback((text) => {
+    if (!editableRef.current || !text) return;
+    editableRef.current.focus();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) { const r = sel.getRangeAt(0); r.collapse(false); sel.removeAllRanges(); sel.addRange(r); }
+    document.execCommand('insertText', false, text);
+    const html = editableRef.current.innerHTML || '';
+    setHasText(!!editableRef.current.textContent?.trim());
+    onChange({ target: { value: html } });
+  }, [onChange]);
+  useEffect(() => {
+    const onInsert = (e) => insertText(e?.detail?.text);
+    document.addEventListener('chttrix:composer:insert', onInsert);
+    const unregister = aiCtx?.registerComposer?.({ insert: insertText });
+    return () => { document.removeEventListener('chttrix:composer:insert', onInsert); unregister?.(); };
+  }, [aiCtx, insertText]);
 
   const prevMessageRef = useRef(newMessage);
 
@@ -267,6 +288,7 @@ export default function FooterInput({
       {showSmartReply && recentMessages.length > 0 && (
         <SmartReplySuggestions
           recentMessages={recentMessages}
+          workspaceId={workspaceId}
           enabled={showSmartReply}
           onSelect={(text) => {
             if (!editableRef.current) return;

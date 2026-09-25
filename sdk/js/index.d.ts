@@ -67,10 +67,32 @@ export interface WebhooksResource {
   unsubscribe(webhookId: string): Promise<{ message: string }>;
 }
 
+/** A decrypted chat message the client sends for AI features (never ciphertext). */
+export interface AiMessage { sender?: string; text: string; isMe?: boolean; id?: string }
+/** What the user is looking at, passed to `ai.chat` so the assistant can act on it. */
+export interface AiContext {
+  screen?: { route?: string; title?: string };
+  conversation?: { id?: string; type?: 'channel' | 'dm'; name?: string; messages?: AiMessage[] };
+  note?: { id?: string; title?: string; text?: string };
+  task?: { id?: string; title?: string; description?: string; status?: string; priority?: string; dueDate?: string };
+  selection?: string;
+}
+export interface AiAction { function: string; parameters?: Record<string, unknown>; result?: { success?: boolean; error?: string } & Record<string, unknown> }
+
 export interface AiResource {
-  chat(input: { message: string; history?: Array<{ sender: 'user' | 'ai'; text: string }>; workspaceId?: string }): Promise<{ text: string; actionsExecuted?: unknown[] }>;
-  summarize(input: { text: string; workspaceId?: string }): Promise<{ summary: string }>;
+  chat(input: { message: string; history?: Array<{ sender: 'user' | 'ai'; text: string }>; workspaceId?: string; context?: AiContext }): Promise<{ text: string; actionsExecuted?: AiAction[] | null; provider?: string }>;
+  summarize(input: { text: string; workspaceId?: string; style?: 'brief' | 'detailed' | 'bullets'; title?: string }): Promise<{ summary: string }>;
   generateTask(input: { context: string; workspaceId?: string }): Promise<{ title: string; description: string; priority: string; dueDate?: string }>;
+  smartReplies(input: { messages: AiMessage[]; workspaceId: string; tone?: string }): Promise<{ suggestions: string[] }>;
+  translate(input: { text: string; targetLang: string; workspaceId?: string }): Promise<{ translated: string; detectedLang: string | null }>;
+  draft(input: { instruction: string; messages?: AiMessage[]; tone?: string; replyTo?: string; existing?: string; workspaceId?: string }): Promise<{ draft: string }>;
+  conversation(input: { messages: AiMessage[]; mode?: 'summary' | 'bullets' | 'action_items' | 'decisions' | 'question'; question?: string; title?: string; workspaceId: string }): Promise<{ text: string; items?: Array<{ title: string; owner: string | null; due: string | null; priority: string }> | null }>;
+  extractTasks(input: { text: string; max?: number; create?: boolean; workspaceId: string }): Promise<{ tasks: Array<{ title: string; description: string; priority: string; dueDate?: string }>; created: unknown[] }>;
+  noteAssist(input: { action: 'summarize' | 'extract' | 'expand' | 'rewrite' | 'structure' | 'proofread' | 'shorten' | 'continue' | 'title' | 'custom'; text: string; title?: string; instruction?: string; workspaceId?: string }): Promise<{ text: string; action: string }>;
+  taskAssist(input: { action: 'describe' | 'subtasks' | 'acceptance' | 'summary' | 'estimate' | 'custom'; task: { title: string; description?: string; status?: string; priority?: string; dueDate?: string; subtasks?: string[] }; instruction?: string; workspaceId?: string }): Promise<{ text: string; action: string }>;
+  capabilities(): Promise<{ intents: string[]; tools: Array<{ name: string; description: string }>; noteActions: string[]; taskActions: string[]; providers: string[] }>;
+  settings(input: { workspaceId: string }): Promise<{ settings: Record<string, unknown>; canManage: boolean }>;
+  usage(input: { workspaceId: string; days?: number }): Promise<{ days: number; totals: { calls: number; errors: number; avgMs: number; users: number }; byIntent: unknown[]; byDay: unknown[] }>;
 }
 
 export interface RealtimeResource {

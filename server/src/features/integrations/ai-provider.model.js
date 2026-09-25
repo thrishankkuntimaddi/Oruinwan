@@ -10,7 +10,7 @@ const aiProviderSchema = new mongoose.Schema({
   provider: {
     type: String,
     required: true,
-    enum: ['openai', 'gemini', 'claude', 'local_llm']
+    enum: ['openai', 'gemini', 'anthropic', 'claude', 'local_llm']
   },
   
   apiKey: {

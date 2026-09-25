@@ -2,6 +2,8 @@ const router = require('express').Router();
 const requireAuth = require('../../shared/middleware/auth');
 const integrationService = require('./integration.service');
 const aiProviderService = require('./ai-provider.service');
+const { requireAIAccess } = require('../ai/ai.access');
+const aiAdmin = requireAIAccess({ adminOnly: true });
 const Webhook = require('./webhook.model');
 
 router.use(requireAuth);
@@ -149,7 +151,7 @@ router.delete('/webhooks/:id', async (req, res) => {
   }
 });
 
-router.get('/ai-providers', async (req, res) => {
+router.get('/ai-providers', requireAIAccess(), async (req, res) => {
   try {
     const { workspaceId } = req.query;
     if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
@@ -161,7 +163,7 @@ router.get('/ai-providers', async (req, res) => {
   }
 });
 
-router.post('/ai-providers/connect', async (req, res) => {
+router.post('/ai-providers/connect', aiAdmin, async (req, res) => {
   try {
     const { workspaceId, provider, apiKey, config } = req.body;
     if (!workspaceId || !provider || !apiKey) {
@@ -177,7 +179,7 @@ router.post('/ai-providers/connect', async (req, res) => {
   }
 });
 
-router.post('/ai-providers/switch', async (req, res) => {
+router.post('/ai-providers/switch', aiAdmin, async (req, res) => {
   try {
     const { workspaceId, provider } = req.body;
     if (!workspaceId || !provider) return res.status(400).json({ message: 'workspaceId and provider required' });
@@ -189,7 +191,7 @@ router.post('/ai-providers/switch', async (req, res) => {
   }
 });
 
-router.post('/ai-providers/disconnect', async (req, res) => {
+router.post('/ai-providers/disconnect', aiAdmin, async (req, res) => {
   try {
     const { workspaceId, provider } = req.body;
     if (!workspaceId || !provider) return res.status(400).json({ message: 'workspaceId and provider required' });

@@ -25,6 +25,7 @@ import KnowledgePanel from "./components/layout/panels/KnowledgePanel";
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
 import { HuddleProvider } from "./contexts/HuddleContext";
 import { NotificationsProvider } from "./contexts/NotificationsContext";
+import { AIProvider } from "./contexts/AIContext";
 import NotificationsPage from "./pages/NotificationsPage";
 
 import Home from "./pages/SidebarComp/Home";
@@ -948,7 +949,9 @@ function AIInsightsDashboardWrapper() {
 function WorkspaceScope({ children }) {
   return (
     <WorkspaceProvider>
-      <NotificationsProvider>{children}</NotificationsProvider>
+      <NotificationsProvider>
+        <AIProvider>{children}</AIProvider>
+      </NotificationsProvider>
     </WorkspaceProvider>
   );
 }
