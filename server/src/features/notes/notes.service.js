@@ -308,6 +308,17 @@ async function shareNote(userId, noteId, userIds, io, req) {
         }
     }
 
+    if (populatedNote.workspace) {
+        const notificationService = require('../notifications/notificationService');
+        notificationService.noteShared(io, {
+            recipientIds: userIds.map(String).filter(id => id !== String(userId)),
+            sharerUsername: populatedNote.owner?.username || 'Someone',
+            workspaceId: populatedNote.workspace,
+            noteTitle: note.title || 'Untitled note',
+            noteId: String(note._id),
+        }).catch(() => {});
+    }
+
     return {
         message: 'Note shared successfully',
         note: populatedNote

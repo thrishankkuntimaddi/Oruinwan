@@ -192,15 +192,13 @@ function App() {
                             path="/workspace/:workspaceId/home"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
-                                  <NotificationsProvider>
+                                <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout sidePanel={<HomePanel />}>
                                         <Home />
                                       </MainLayout>
                                     </RequireWorkspace>
-                                  </NotificationsProvider>
-                                </WorkspaceProvider>
+                                  </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -210,15 +208,13 @@ function App() {
                             path="/workspace/:workspaceId/home/channel/:id"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
-                                  <NotificationsProvider>
+                                <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout sidePanel={<HomePanel />}>
                                         <Home />
                                       </MainLayout>
                                     </RequireWorkspace>
-                                  </NotificationsProvider>
-                                </WorkspaceProvider>
+                                  </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -228,13 +224,13 @@ function App() {
                             path="/workspace/:workspaceId/home/dm/:id"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<HomePanel />}>
                                       <Home />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -244,13 +240,13 @@ function App() {
                             path="/workspace/:workspaceId/home/dm/new/:dmId"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<HomePanel />}>
                                       <Home />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -260,13 +256,13 @@ function App() {
                             path="/workspace/:workspaceId/channels"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<ChannelsPanel />}>
                                       <Home />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -276,15 +272,13 @@ function App() {
                             path="/workspace/:workspaceId/channel/:id"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
-                                  <NotificationsProvider>
+                                <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout sidePanel={<ChannelsPanel />}>
                                         <Home />
                                       </MainLayout>
                                     </RequireWorkspace>
-                                  </NotificationsProvider>
-                                </WorkspaceProvider>
+                                  </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -294,15 +288,13 @@ function App() {
                             path="/workspace/:workspaceId/messages"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
-                                  <NotificationsProvider>
+                                <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout sidePanel={<MessagesPanel />}>
                                         <Messages />
                                       </MainLayout>
                                     </RequireWorkspace>
-                                  </NotificationsProvider>
-                                </WorkspaceProvider>
+                                  </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -312,13 +304,13 @@ function App() {
                             path="/workspace/:workspaceId/messages/dm/:dmId"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<MessagesPanel />}>
                                       <Messages />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -328,13 +320,13 @@ function App() {
                             path="/workspace/:workspaceId/dm/:id"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<MessagesPanel />}>
                                       <Home />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -344,13 +336,13 @@ function App() {
                             path="/workspace/:workspaceId/dm/new/:dmId"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<MessagesPanel />}>
                                       <Home />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -360,13 +352,13 @@ function App() {
                             path="/workspace/:workspaceId/tasks"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout>
                                       <MyTasks />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -376,13 +368,13 @@ function App() {
                             path="/workspace/:workspaceId/notes"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<NotesPanel />}>
                                       <Notes />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -392,13 +384,13 @@ function App() {
                             path="/workspace/:workspaceId/notes/:id"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout sidePanel={<NotesPanel />}>
                                       <Notes />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -410,13 +402,13 @@ function App() {
                              path="/workspace/:workspaceId/files"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout sidePanel={<FilesPanel />}>
                                        <FileLibrary />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -424,13 +416,13 @@ function App() {
                              path="/workspace/:workspaceId/files/:id"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout sidePanel={<FilesPanel />}>
                                        <FileLibrary />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -440,13 +432,13 @@ function App() {
                              path="/workspace/:workspaceId/knowledge"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout sidePanel={<KnowledgePanel />}>
                                        <KnowledgePage />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -454,13 +446,13 @@ function App() {
                              path="/workspace/:workspaceId/knowledge/graph"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout sidePanel={<KnowledgePanel />}>
                                        <KnowledgeGraph />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -468,13 +460,13 @@ function App() {
                              path="/workspace/:workspaceId/knowledge/:id"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout sidePanel={<KnowledgePanel />}>
                                        <KnowledgePage />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -482,13 +474,13 @@ function App() {
                              path="/workspace/:workspaceId/updates"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout>
                                        <Updates />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -498,13 +490,13 @@ function App() {
                              path="/workspace/:workspaceId/apps"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout>
                                        <AppsPage />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -515,13 +507,13 @@ function App() {
                               path="/workspace/:workspaceId/templates"
                               element={
                                 <RequireAuth>
-                                  <WorkspaceProvider>
+                                  <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout>
                                         <TemplateMarketplacePage />
                                       </MainLayout>
                                     </RequireWorkspace>
-                                  </WorkspaceProvider>
+                                  </WorkspaceScope>
                                 </RequireAuth>
                               }
                             />
@@ -530,13 +522,13 @@ function App() {
                              path="/workspace/:workspaceId/automations"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout>
                                        <AutomationsPage />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -544,13 +536,13 @@ function App() {
                              path="/workspace/:workspaceId/automations/new"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout>
                                        <AutomationBuilderPage />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -558,13 +550,13 @@ function App() {
                              path="/workspace/:workspaceId/automations/:id/edit"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <MainLayout>
                                        <AutomationBuilderPage />
                                      </MainLayout>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -574,13 +566,13 @@ function App() {
                              path="/workspace/:workspaceId/search"
                              element={
                                <RequireAuth>
-                                 <WorkspaceProvider>
+                                 <WorkspaceScope>
                                    <RequireWorkspace>
                                      <SearchProvider>
                                        <SearchResultsPage />
                                      </SearchProvider>
                                    </RequireWorkspace>
-                                 </WorkspaceProvider>
+                                 </WorkspaceScope>
                                </RequireAuth>
                              }
                            />
@@ -590,13 +582,13 @@ function App() {
                               path="/workspace/:workspaceId/developer"
                               element={
                                 <RequireAuth>
-                                  <WorkspaceProvider>
+                                  <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout>
                                         <DeveloperPortalWrapper />
                                       </MainLayout>
                                     </RequireWorkspace>
-                                  </WorkspaceProvider>
+                                  </WorkspaceScope>
                                 </RequireAuth>
                               }
                             />
@@ -606,13 +598,13 @@ function App() {
                             path="/workspace/:workspaceId/apps"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout>
                                       <AppsPage />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -622,11 +614,11 @@ function App() {
                             path="/workspace/:workspaceId/huddles"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <HuddleRouteWrapper />
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -636,11 +628,11 @@ function App() {
                             path="/workspace/:workspaceId/meetings/:meetingId"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MeetingDetailWrapper />
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -650,15 +642,13 @@ function App() {
                             path="/workspace/:workspaceId/notifications"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
-                                  <NotificationsProvider>
+                                <WorkspaceScope>
                                     <RequireWorkspace>
                                       <MainLayout>
                                         <NotificationsPage />
                                       </MainLayout>
                                     </RequireWorkspace>
-                                  </NotificationsProvider>
-                                </WorkspaceProvider>
+                                  </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -877,13 +867,13 @@ function App() {
                             path="/workspace/:workspaceId/ai-insights"
                             element={
                               <RequireAuth>
-                                <WorkspaceProvider>
+                                <WorkspaceScope>
                                   <RequireWorkspace>
                                     <MainLayout>
                                       <AIInsightsDashboardWrapper />
                                     </MainLayout>
                                   </RequireWorkspace>
-                                </WorkspaceProvider>
+                                </WorkspaceScope>
                               </RequireAuth>
                             }
                           />
@@ -952,6 +942,15 @@ function AIInsightsDashboardWrapper() {
   const { workspaceId } = useParams();
   const token = localStorage.getItem('accessToken') || localStorage.getItem('token') || '';
   return <AIInsightsDashboard workspaceId={workspaceId} token={token} />;
+}
+
+/** Every workspace route: workspace context plus live notifications/unread badges. */
+function WorkspaceScope({ children }) {
+  return (
+    <WorkspaceProvider>
+      <NotificationsProvider>{children}</NotificationsProvider>
+    </WorkspaceProvider>
+  );
 }
 
 export default App;

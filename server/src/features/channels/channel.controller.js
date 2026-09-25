@@ -35,12 +35,25 @@ exports.createChannel = async (req, res) => {
       return res.status(400).json({ message: "Channel name required" });
     }
 
-    
+    const workspace = await Workspace.findById(workspaceId).select('members settings').lean();
+    if (!workspace) {
+      return res.status(404).json({ message: "Workspace not found" });
+    }
+    const membership = (workspace.members || []).find(m => String(m.user) === String(userId));
+    if (!membership) {
+      return res.status(403).json({ message: "You are not a member of this workspace" });
+    }
+    const isWorkspaceAdmin = membership.role === 'admin' || membership.role === 'owner';
+    if (!isWorkspaceAdmin && workspace.settings?.allowMemberChannelCreation === false) {
+      return res.status(403).json({ message: "Channel creation is disabled for members in this workspace" });
+    }
+
     const distinctMemberIds = Array.from(new Set([userId, ...(memberIds || [])].map(String)));
 
-    
-    if (distinctMemberIds.length < 3) {
-      return res.status(400).json({ message: "At least 3 members are required to create a channel." });
+    const workspaceMemberIds = new Set((workspace.members || []).map(m => String(m.user)));
+    const outsiders = distinctMemberIds.filter(id => !workspaceMemberIds.has(id));
+    if (outsiders.length > 0) {
+      return res.status(403).json({ message: "Cannot add users who are not workspace members to this channel", invalidMembers: outsiders });
     }
 
     
@@ -167,6 +180,10 @@ exports.getMyChannels = async (req, res) => {
     })
       .select("-__v")
       .lean();
+
+    const messagesService = require('../../modules/messages/messages.service');
+    const unreadCounts = await messagesService.getChannelUnreadCounts(userId, channels);
+    for (const ch of channels) ch.unreadCount = unreadCounts.get(String(ch._id)) || 0;
 
     return res.json({ channels });
   } catch (err) {

@@ -19,6 +19,7 @@ jest.mock('../../../../models/Workspace');
 jest.mock('../../../../models/Task');
 jest.mock('../../conversations/conversationKeys.service', () => ({
     bootstrapConversationKey: jest.fn().mockResolvedValue({ success: true }),
+    ensureDMConversationKey: jest.fn().mockResolvedValue({ status: "OK" }),
 }));
 
 const messagesService = require('../messages.service');

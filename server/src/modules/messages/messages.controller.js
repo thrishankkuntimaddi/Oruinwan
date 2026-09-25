@@ -91,7 +91,13 @@ exports.sendDirectMessage = async (req, res) => {
                 return res.status(404).json({ message: 'Receiver not found' });
             }
 
-            
+            const Workspace = require('../../../models/Workspace');
+            const ws = await Workspace.findById(workspaceId).select('members').lean();
+            const memberIds = new Set((ws?.members || []).map(m => String(m.user || m)));
+            if (!ws || !memberIds.has(String(senderId)) || !memberIds.has(String(receiverId))) {
+                return res.status(403).json({ message: 'Both users must be members of this workspace' });
+            }
+
             dmSession = await messagesService.findOrCreateDMSession(
                 senderId,
                 receiverId,
@@ -314,23 +320,13 @@ exports.resolveDMSession = async (req, res) => {
 
         
         
-        if (isNewSession) {
-            try {
-                await conversationKeysService.bootstrapConversationKey({
-                    conversationId: dmSession._id,
-                    conversationType: 'dm',
-                    workspaceId: workspaceId,
-                    members: [String(currentUserId), String(otherUserId)]
-                });
-                logger.info(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Created new DM session ${dmSession._id} with keys`);
-            } catch (keyErr) {
-                
-                
-                logger.error(`⚠️ [MESSAGES:MODULAR][RESOLVE_DM] Key bootstrap failed (non-fatal):`, keyErr.message);
-            }
-        } else {
-            logger.info(`✅ [MESSAGES:MODULAR][RESOLVE_DM] Found existing DM session ${dmSession._id}`);
+        // New or existing: make sure the key exists and both participants hold it.
+        try {
+            await conversationKeysService.ensureDMConversationKey(dmSession._id);
+        } catch (keyErr) {
+            logger.error(`⚠️ [MESSAGES:MODULAR][RESOLVE_DM] Key ensure failed (non-fatal):`, keyErr.message);
         }
+        logger.info(`✅ [MESSAGES:MODULAR][RESOLVE_DM] ${isNewSession ? 'Created' : 'Found'} DM session ${dmSession._id}`);
 
         return res.json({
             success: true,

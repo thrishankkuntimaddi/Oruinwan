@@ -7,20 +7,18 @@ export async function encryptMessageForSending(plaintext, conversationId, conver
         
         let encryptionKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
-        if (!encryptionKey) {
-            throw new Error(`No conversation key found for ${conversationType}:${conversationId}`);
+        // getConversationKey returns a status object (not a key) when access is
+        // missing; never let that reach the network as an empty ciphertext.
+        if (!(encryptionKey instanceof CryptoKey)) {
+            const reason = encryptionKey?.message
+                || `No conversation key found for ${conversationType}:${conversationId}`;
+            const err = new Error(reason);
+            err.code = encryptionKey?.status || 'KEY_NOT_AVAILABLE';
+            throw err;
         }
 
-        
         if (parentMessageId) {
             encryptionKey = await deriveThreadKey(encryptionKey, parentMessageId);
-        }
-
-        
-        
-        if (!(encryptionKey instanceof CryptoKey)) {
-            logger.warn('⚠️ [Encryption Guard] Key not ready, blocking send');
-            return { status: 'ENCRYPTION_NOT_READY' };
         }
 
         
@@ -59,8 +57,7 @@ export async function decryptReceivedMessage(ciphertextBase64, ivBase64, convers
         
         let decryptionKey = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
-        if (!decryptionKey) {
-            
+        if (!(decryptionKey instanceof CryptoKey)) {
             throw new Error(`BROKEN_CHANNEL: No encryption key available for ${conversationType}:${conversationId}`);
         }
 
@@ -104,7 +101,7 @@ export async function decryptTextOrNull(ciphertextBase64, ivBase64, conversation
     if (!ciphertextBase64 || !ivBase64 || !conversationId) return null;
     try {
         let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
-        if (!key) return null;
+        if (!(key instanceof CryptoKey)) return null;
         if (parentMessageId) key = await deriveThreadKey(key, parentMessageId);
         const ciphertext = Uint8Array.from(atob(ciphertextBase64), c => c.charCodeAt(0));
         const iv = Uint8Array.from(atob(ivBase64), c => c.charCodeAt(0));
@@ -173,7 +170,7 @@ export async function batchDecryptMessages(messages, conversationId, conversatio
             logger.warn('⚠️ [Batch Decrypt] Conversation key fetch failed:', keyErr?.message);
         }
 
-        if (!conversationKey) {
+        if (!(conversationKey instanceof CryptoKey)) {
             // Keep every message: non-encrypted ones (system/poll/file/...) render
             // normally, encrypted ones get a placeholder instead of being dropped.
             logger.warn('⚠️ [Batch Decrypt] No conversation key available - using placeholders for encrypted messages');

@@ -4,6 +4,7 @@ import { Plus, Search, Trash2, CheckSquare, Megaphone, Settings2, X } from "luci
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useSocket } from "../../../contexts/SocketContext";
 import { useToast } from "../../../contexts/ToastContext";
+import { useNotifications } from "../../../contexts/NotificationsContext";
 import { messageService } from "../../../services/messageService";
 import NewDMModal from "../../messagesComp/NewDMModal";
 import BroadcastModal from "../../messagesComp/BroadcastModal";
@@ -17,6 +18,8 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     const { workspaceId, dmId, channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
     const { showToast } = useToast();
+    const notif = useNotifications();
+    const seedConversationUnread = notif?.seedConversationUnread;
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateDM, setShowCreateDM] = useState(false);
@@ -71,6 +74,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                     };
                 });
                 setContacts(formatted);
+                seedConversationUnread?.('dm', formatted.map(c => ({ id: c.id, unread: c.unread })));
             } catch (err) {
                 logger.error("Failed to load DMs:", err);
             } finally {
@@ -104,9 +108,11 @@ const MessagesPanel = ({ title, isMobile = false }) => {
 
     const displayList = [...broadcasts, ...contacts];
 
+    const unreadFor = (item) => (item.type === 'dm' && notif ? notif.getUnread('dm', item.id) : item.unread || 0);
+
     const filteredList = displayList.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesFilter = filter === "all" || (filter === "unread" && item.unread > 0);
+        const matchesFilter = filter === "all" || (filter === "unread" && unreadFor(item) > 0);
         return matchesSearch && matchesFilter;
     });
 
@@ -235,6 +241,8 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             }
         };
 
+        const unread = unreadFor(item);
+
         const rowStyle = {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: isMobile ? '10px 14px' : '8px 10px',
@@ -279,18 +287,18 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: isActive ? 600 : 400, color: isActive ? '#e4e4e4' : 'rgba(228,228,228,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <div style={{ fontSize: '13px', fontWeight: isActive || unread > 0 ? 600 : 400, color: isActive || unread > 0 ? '#e4e4e4' : 'rgba(228,228,228,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                             {item.name}
                         </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                        <div style={{ fontSize: '11px', color: unread > 0 ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                             {item.lastMessage || 'No messages yet'}
                         </div>
                     </div>
                 </div>
 
-                {item.unread > 0 && !isSelectionMode && (
+                {unread > 0 && !isSelectionMode && (
                     <div style={{ minWidth: '18px', height: '18px', borderRadius: '9px', background: '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#0c0c0c', fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', padding: '0 4px' }}>
-                        {item.unread}
+                        {unread > 99 ? '99+' : unread}
                     </div>
                 )}
             </div>

@@ -14,6 +14,7 @@ const sendEmail = require("../../../utils/sendEmail");
 const { handleError} = require("../../../utils/responseHelpers");
 const { normalizeMemberFormat } = require("../../../utils/memberHelpers");
 const conversationKeysService = require("../../modules/conversations/conversationKeys.service");
+const messagesService = require("../../modules/messages/messages.service");
 
 exports.createWorkspace = async (req, res) => {
   try {
@@ -568,7 +569,16 @@ exports.joinWorkspace = async (req, res) => {
     });
     await workspace.save();
 
-    
+    {
+      const notificationService = require('../notifications/notificationService');
+      notificationService.memberJoined(req.app?.get('io'), {
+        newUserId: String(userId),
+        newUsername: user.username || user.email,
+        workspaceId: workspace._id,
+        recipientIds: workspace.members.map(m => String(m.user)).filter(id => id !== String(userId)),
+      }).catch(() => {});
+    }
+
     user.workspaces.push({
       workspace: workspace._id,
       role: invite.role,
@@ -805,6 +815,8 @@ exports.getWorkspaceChannels = async (req, res) => {
     });
 
     
+    const unreadCounts = await messagesService.getChannelUnreadCounts(userId, visibleChannels);
+
     const channelsWithMembershipInfo = visibleChannels.map(channel => {
       const isMember = channel.members.some(m => {
         const memberId = m.user ? m.user.toString() : m.toString();
@@ -813,7 +825,8 @@ exports.getWorkspaceChannels = async (req, res) => {
 
       return {
         ...channel,
-        isMember 
+        isMember,
+        unreadCount: unreadCounts.get(String(channel._id)) || 0,
       };
     });
 
@@ -841,12 +854,16 @@ exports.createWorkspaceChannel = async (req, res) => {
     }
 
     
-    const isMember = workspace.members.some(m => String(m.user) === String(userId));
-    if (!isMember) {
+    const membership = workspace.members.find(m => String(m.user) === String(userId));
+    if (!membership) {
       return res.status(403).json({ message: "You are not a member of this workspace" });
     }
 
-    
+    const isWorkspaceAdmin = membership.role === 'admin' || membership.role === 'owner';
+    if (!isWorkspaceAdmin && workspace.settings?.allowMemberChannelCreation === false) {
+      return res.status(403).json({ message: "Channel creation is disabled for members in this workspace" });
+    }
+
     const existingChannel = await Channel.findOne({
       workspace: workspaceId,
       name: name.toLowerCase().trim()

@@ -8,24 +8,35 @@ export const useToast = () => {
     return ctx;
 };
 
+const MAX_VISIBLE = 4;
+
 export const ToastProvider = ({ children }) => {
     const [toasts, setToasts] = useState([]);
-
-    const showToast = useCallback((message, type = 'success', duration = 3500) => {
-        const id = Date.now() + Math.random();
-        setToasts(prev => [...prev, { id, message, type, duration }]);
-    }, []);
 
     const removeToast = useCallback((id) => {
         setToasts(prev => prev.filter(t => t.id !== id));
     }, []);
 
-    const contextValue = useMemo(() => ({ showToast }), [showToast]);
+    /**
+     * showToast(message, type, duration, options)
+     *   type: 'success' | 'error' | 'warning' | 'info' | 'message'
+     *   options: { title, avatar, onClick, key } — `key` replaces an existing
+     *   toast with the same key (one toast per conversation).
+     */
+    const showToast = useCallback((message, type = 'success', duration = 3500, options = {}) => {
+        const id = Date.now() + Math.random();
+        setToasts(prev => {
+            const kept = options.key ? prev.filter(t => t.key !== options.key) : prev;
+            return [...kept, { id, message, type, duration, ...options }].slice(-MAX_VISIBLE);
+        });
+        return id;
+    }, []);
+
+    const contextValue = useMemo(() => ({ showToast, removeToast }), [showToast, removeToast]);
 
     return (
         <ToastContext.Provider value={contextValue}>
             {children}
-            {}
             <div style={{
                 position: 'fixed',
                 top: '20px',
@@ -33,7 +44,8 @@ export const ToastProvider = ({ children }) => {
                 zIndex: 9999,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '8px',
+                alignItems: 'flex-end',
+                gap: '6px',
                 pointerEvents: 'none',
             }}>
                 {toasts.map(t => (
@@ -42,6 +54,9 @@ export const ToastProvider = ({ children }) => {
                             message={t.message}
                             type={t.type}
                             duration={t.duration}
+                            title={t.title}
+                            avatar={t.avatar}
+                            onClick={t.onClick}
                             onClose={() => removeToast(t.id)}
                         />
                     </div>

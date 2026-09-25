@@ -1,9 +1,8 @@
 import { generateWorkspaceKey, exportKey, importKey } from '../utils/crypto';
 import { wrapKeyWithRSA, wrapKeyWithX25519, unwrapKeyWithRSA, unwrapKeyWithX25519 } from '../utils/cryptoIdentity';
 import identityKeyService from './identityKeyService';
+import api from './api';
 import logger from '../utils/logger';
-
-const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
 
 // Current user id from the initialized identity (set on login/rehydration),
 // falling back to the access token's `sub` claim.
@@ -24,7 +23,9 @@ function getCurrentUserId() {
 
 class ConversationKeyService {
     constructor() {
-        this.conversationKeys = new Map(); 
+        this.conversationKeys = new Map();
+        // One network fetch per conversation while a message list decrypts in parallel.
+        this.inFlight = new Map();
 
         
         this.setupLogoutListener();
@@ -201,31 +202,18 @@ class ConversationKeyService {
     
     async storeConversationKeysOnServer(conversationId, conversationType, workspaceId, encryptedKeys, workspaceEncryptedKey, workspaceKeyIv, workspaceKeyAuthTag) {
         try {
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    conversationType,
-                    workspaceId,
-                    encryptedKeys,
-                    workspaceEncryptedKey,
-                    workspaceKeyIv,
-                    workspaceKeyAuthTag
-                })
+            await api.post(`/api/v2/conversations/${conversationId}/keys`, {
+                conversationType,
+                workspaceId,
+                encryptedKeys,
+                workspaceEncryptedKey,
+                workspaceKeyIv,
+                workspaceKeyAuthTag
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to store conversation keys on server');
-            }
-
-        } catch (error) {
-            logger.error('Failed to store conversation keys:', error);
-            throw error;
+        } catch (err) {
+            logger.error('Failed to store conversation keys:', err);
+            if (err?.response?.status === 409) throw new Error('Conversation keys already exist');
+            throw new Error('Failed to store conversation keys on server');
         }
     }
 
@@ -233,187 +221,85 @@ class ConversationKeyService {
 
     
     async fetchAndDecryptConversationKey(conversationId, conversationType) {
+        const cacheKey = `${conversationType}:${conversationId}`;
+        if (this.conversationKeys.has(cacheKey)) {
+            return this.conversationKeys.get(cacheKey).key;
+        }
+
+        let data;
         try {
-            
-            const cacheKey = `${conversationType}:${conversationId}`;
-            if (this.conversationKeys.has(cacheKey)) {
-                
-                return this.conversationKeys.get(cacheKey).key;
+            // api (axios) attaches the current token and refreshes it on 401,
+            // so an expired access token no longer looks like a key failure.
+            ({ data } = await api.get(`/api/v2/conversations/${conversationId}/keys`, {
+                params: { type: conversationType },
+            }));
+        } catch (err) {
+            const status = err?.response?.status;
+            const code = err?.response?.data?.error;
+
+            if (status === 404) {
+                logger.warn(`[E2EE] No key for ${cacheKey} (${code || 'NOT_FOUND'})`);
+                return { status: 'MISSING_FOR_USER', reason: code || 'KEY_NOT_INITIALIZED', conversationId, conversationType };
             }
 
-            
-            
-            
-
-            
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                
-                
-                
-                
-
-                if (response.status === 403) {
-                    
-                    
-                    
-                    logger.error(`🚫 [AUDIT][PHASE1][CLIENT-FETCH] Server returned 403 KEY_NOT_DISTRIBUTED`);
-                    logger.error(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-                    logger.error(`   ├─ Meaning: Conversation key EXISTS but user lacks access`);
-                    logger.error(`   ├─ INV-001 violation: User in channel.members but NOT in encryptedKeys[]`);
-                    logger.error(`   └─ Action: User BLOCKED from sending messages`);
-                    logger.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-
-                    logger.warn(`🚫 [FIX 4] 403 Forbidden for conversation key in ${conversationType}:${conversationId}`);
-
-                    
-                    try {
-                        const token = localStorage.getItem('accessToken');
-                        const channelResponse = await fetch(`${API_BASE}/api/v2/channels/${conversationId}`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            },
-                            credentials: 'include'
-                        });
-
-                        if (channelResponse.ok) {
-                            const channelData = await channelResponse.json();
-                            const currentUserId = getCurrentUserId();
-
-                            if (!currentUserId) {
-                                return {
-                                    status: 'ACCESS_DENIED',
-                                    reason: 'FORBIDDEN',
-                                    message: 'Access to encryption keys denied',
-                                    conversationId,
-                                    conversationType
-                                };
-                            }
-
-                            const isMember = channelData.channel?.members?.some(m =>
-                                String(m?.user?._id || m?.user || m?._id || m) === currentUserId
-                            );
-
-                            if (!isMember) {
-                                logger.error(`❌ [FIX 4] User is NOT a member of channel ${conversationId}`);
-                                return {
-                                    status: 'ACCESS_DENIED',
-                                    reason: 'NOT_A_MEMBER',
-                                    message: 'You are not a member of this channel',
-                                    conversationId,
-                                    conversationType
-                                };
-                            } else {
-                                logger.error(`⚠️ [FIX 4] User IS a member but key access denied (system error)`);
-                                return {
-                                    status: 'SYSTEM_ERROR',
-                                    reason: 'KEY_ACCESS_ERROR',
-                                    message: 'Unable to access encryption keys. Please refresh the page.',
-                                    conversationId,
-                                    conversationType
-                                };
-                            }
-                        }
-                    } catch (reconciliationError) {
-                        logger.error('[FIX 4] Membership reconciliation failed:', reconciliationError);
-                    }
-
-                    
+            if (status === 403) {
+                if (conversationType === 'dm') {
                     return {
                         status: 'ACCESS_DENIED',
-                        reason: 'FORBIDDEN',
-                        message: 'Access to encryption keys denied',
+                        reason: code || 'FORBIDDEN',
+                        message: code === 'NOT_A_PARTICIPANT'
+                            ? 'You are not a participant in this conversation'
+                            : 'Your key for this conversation is not ready yet. Please try again in a moment.',
                         conversationId,
-                        conversationType
+                        conversationType,
                     };
                 }
-
-                if (response.status === 404) {
-                    
-                    
-                    
-                    logger.warn(`❌ [AUDIT][PHASE1][CLIENT-FETCH] Server returned 404 NOT_FOUND`);
-                    logger.warn(`   ├─ Conversation: ${conversationType}:${conversationId}`);
-                    logger.warn(`   ├─ Meaning: No conversation key exists OR user not distributed`);
-                    logger.warn(`   ├─ Possible reasons: (1) New channel (2) Late joiner (3) Legacy key`);
-                    logger.warn(`   └─ Action: Cannot decrypt messages`);
-                    logger.warn(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-
-                    
-                    
-                    
-                    
-                    
-
-                    logger.warn(`⚠️ [PHASE 4] Conversation key missing for user in ${conversationType}:${conversationId}`);
-                    logger.warn(`   This may indicate: (1) new channel, (2) late joiner, or (3) legacy key`);
-
-                    
-                    return {
-                        status: 'MISSING_FOR_USER',
-                        reason: 'KEY_NOT_DISTRIBUTED',
-                        conversationId,
-                        conversationType
-                    };
-                }
-
-                throw new Error('Failed to fetch conversation key');
+                return this.explainChannelKeyDenied(conversationId, conversationType);
             }
 
-            const data = await response.json();
-            const { encryptedKey, ephemeralPublicKey, algorithm } = data;
-
-            
-            const privateKey = identityKeyService.getMyPrivateKey();
-
-            let conversationKeyBytes;
-
-            if (algorithm === 'X25519') {
-                conversationKeyBytes = await unwrapKeyWithX25519(encryptedKey, ephemeralPublicKey, privateKey);
-            } else {
-                conversationKeyBytes = await unwrapKeyWithRSA(encryptedKey, privateKey);
-            }
-
-            
-            const conversationKey = await importKey(conversationKeyBytes);
-
-            
-            this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
-
-            
-            
-            
-
-            return conversationKey;
-        } catch (error) {
-            logger.error(`Failed to fetch conversation key for ${conversationType}:${conversationId}:`, error);
-            throw error;
+            logger.error(`[E2EE] Failed to fetch conversation key for ${cacheKey}:`, err);
+            throw new Error('Failed to fetch conversation key');
         }
+
+        const { encryptedKey, ephemeralPublicKey, algorithm } = data;
+        // Throws "Identity keys not initialized" until the identity is unlocked;
+        // nothing is cached, so the next call retries once it is ready.
+        const privateKey = identityKeyService.getMyPrivateKey();
+
+        const conversationKeyBytes = algorithm === 'X25519'
+            ? await unwrapKeyWithX25519(encryptedKey, ephemeralPublicKey, privateKey)
+            : await unwrapKeyWithRSA(encryptedKey, privateKey);
+
+        const conversationKey = await importKey(conversationKeyBytes);
+        this.conversationKeys.set(cacheKey, { key: conversationKey, algorithm: 'AES-256' });
+        return conversationKey;
     }
+
+    // A channel key 403 means either "not a member" or a distribution gap.
+    async explainChannelKeyDenied(conversationId, conversationType) {
+        try {
+            const { data } = await api.get(`/api/v2/channels/${conversationId}`);
+            const currentUserId = getCurrentUserId();
+            const isMember = !!currentUserId && data?.channel?.members?.some(m =>
+                String(m?.user?._id || m?.user || m?._id || m) === currentUserId
+            );
+            if (currentUserId && !isMember) {
+                return { status: 'ACCESS_DENIED', reason: 'NOT_A_MEMBER', message: 'You are not a member of this channel', conversationId, conversationType };
+            }
+            if (isMember) {
+                return { status: 'SYSTEM_ERROR', reason: 'KEY_ACCESS_ERROR', message: 'Unable to access encryption keys. Please refresh the page.', conversationId, conversationType };
+            }
+        } catch (reconciliationError) {
+            logger.error('[E2EE] Channel membership check failed:', reconciliationError);
+        }
+        return { status: 'ACCESS_DENIED', reason: 'FORBIDDEN', message: 'Access to encryption keys denied', conversationId, conversationType };
+    }
+
 
     
     async fetchWorkspaceConversationKeys(workspaceId) {
         try {
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE}/api/v2/conversations/workspace/${workspaceId}/keys`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to fetch workspace conversation keys');
-            }
-
-            const data = await response.json();
+            const { data } = await api.get(`/api/v2/conversations/workspace/${workspaceId}/keys`);
             const { conversationKeys } = data;
 
             
@@ -459,8 +345,12 @@ class ConversationKeyService {
             return this.conversationKeys.get(cacheKey).key;
         }
 
-        
-        return await this.fetchAndDecryptConversationKey(conversationId, conversationType);
+        if (!this.inFlight.has(cacheKey)) {
+            const pending = this.fetchAndDecryptConversationKey(conversationId, conversationType)
+                .finally(() => this.inFlight.delete(cacheKey));
+            this.inFlight.set(cacheKey, pending);
+        }
+        return this.inFlight.get(cacheKey);
     }
 
     
@@ -493,26 +383,13 @@ class ConversationKeyService {
             }
 
             
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys/add-user`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include',
-                body: JSON.stringify({
-                    conversationType,
-                    userId: newUserId,
-                    encryptedKey,
-                    ephemeralPublicKey,
-                    algorithm
-                })
+            await api.post(`/api/v2/conversations/${conversationId}/keys/add-user`, {
+                conversationType,
+                userId: newUserId,
+                encryptedKey,
+                ephemeralPublicKey,
+                algorithm
             });
-
-            if (!response.ok) {
-                throw new Error('Failed to add participant');
-            }
 
         } catch (error) {
             logger.error('Failed to add participant:', error);
@@ -525,27 +402,12 @@ class ConversationKeyService {
     
     async fetchConversationKeys(conversationId, conversationType) {
         try {
-            const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE}/api/v2/conversations/${conversationId}/keys?type=${conversationType}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                credentials: 'include'
-            });
-
-            if (response.status === 404) {
-                
-                return null;
-            }
-
-            if (!response.ok) {
-                throw new Error(`Failed to fetch conversation keys: ${response.status}`);
-            }
-
-            return await response.json();
-        } catch (error) {
-            logger.error('[conversationKeyService] fetchConversationKeys error:', error);
-            throw error;
+            const { data } = await api.get(`/api/v2/conversations/${conversationId}/keys`, { params: { type: conversationType } });
+            return data;
+        } catch (err) {
+            if (err?.response?.status === 404) return null;
+            logger.error('[conversationKeyService] fetchConversationKeys error:', err);
+            throw new Error(`Failed to fetch conversation keys: ${err?.response?.status || err.message}`);
         }
     }
 
@@ -554,6 +416,7 @@ class ConversationKeyService {
     
     clearCache() {
         this.conversationKeys.clear();
+        this.inFlight.clear();
     }
 
     

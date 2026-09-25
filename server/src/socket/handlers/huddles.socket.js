@@ -1,4 +1,18 @@
 const logger = require('../../../utils/logger');
+
+function notifyHuddle(io, socket, { recipientIds, workspaceId, channelId, dmSessionId, channelName }) {
+    if (!workspaceId) return;
+    const notificationService = require('../../features/notifications/notificationService');
+    notificationService.huddleStarted(io, {
+        recipientIds: (recipientIds || []).filter(id => id !== String(socket.user.id)),
+        workspaceId,
+        channelId,
+        dmSessionId,
+        channelName,
+        startedBy: socket.user.username || 'Someone',
+    }).catch(err => logger.warn('[huddle:start] notification failed:', err.message));
+}
+
 function registerHuddleHandlers(io, socket) {
 
     
@@ -18,7 +32,7 @@ function registerHuddleHandlers(io, socket) {
             if (channelId) {
                 
                 const Channel = require('../../features/channels/channel.model');
-                const channel = await Channel.findById(channelId).select('members');
+                const channel = await Channel.findById(channelId).select('members name workspace');
                 if (!channel || !channel.isMember(socket.user.id)) {
                     socket.emit('error', { message: 'Not a member of this channel' });
                     return;
@@ -28,11 +42,16 @@ function registerHuddleHandlers(io, socket) {
                     startedBy: { _id: socket.user.id, username: socket.user.username || 'Unknown' },
                     timestamp: new Date()
                 });
+                notifyHuddle(io, socket, {
+                    recipientIds: channel.members.map(m => String(m?.user?._id || m?.user || m)),
+                    workspaceId: workspaceId || channel.workspace,
+                    channelId, channelName: channel.name,
+                });
 
             } else if (dmId) {
                 
                 const DMSession = require('../../../models/DMSession');
-                const dm = await DMSession.findById(dmId).select('participants');
+                const dm = await DMSession.findById(dmId).select('participants workspace');
                 const participants = dm?.participants?.map?.(p => String(p._id || p)) || [];
                 if (!dm || !participants.includes(String(socket.user.id))) {
                     socket.emit('error', { message: 'Not a participant of this DM' });
@@ -42,6 +61,11 @@ function registerHuddleHandlers(io, socket) {
                     huddleId, dmId,
                     startedBy: { _id: socket.user.id, username: socket.user.username || 'Unknown' },
                     timestamp: new Date()
+                });
+                notifyHuddle(io, socket, {
+                    recipientIds: participants,
+                    workspaceId: workspaceId || dm.workspace,
+                    dmSessionId: dmId,
                 });
 
             } else if (workspaceId) {

@@ -18,6 +18,7 @@ jest.mock('../messageAccess', () => ({
 
 jest.mock('../../conversations/conversationKeys.service', () => ({
     bootstrapConversationKey: jest.fn().mockResolvedValue({ success: true }),
+    ensureDMConversationKey: jest.fn().mockResolvedValue({ status: "OK" }),
 }));
 
 describe('Messages Service', () => {

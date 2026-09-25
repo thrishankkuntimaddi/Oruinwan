@@ -58,7 +58,7 @@ const CentralContentView = ({
     onPickEmoji,
     recording,
     setRecording,
-    muted,
+    blocked,
     setNewMessage,
 
     
@@ -155,7 +155,7 @@ const CentralContentView = ({
                             onPickEmoji={onPickEmoji}
                             recording={recording}
                             setRecording={setRecording}
-                            blocked={muted}
+                            blocked={blocked}
                             setNewMessage={setNewMessage}
                             disabled={!canInteract}
                             replyingTo={replyingTo}

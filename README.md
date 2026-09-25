@@ -121,10 +121,11 @@ Chttrix is architected as a true **multi-tenant SaaS** platform with workspace i
 - Drag-and-drop upload in channels and DMs
 
 ### 🔔 Notifications
-- Real-time **push notifications** via Socket.IO
-- Browser **Web Push** (VAPID) support
-- In-app notification center with mark-all-read and dismiss
-- Notification routing for: mentions, DMs, task assignments, reactions, channel pins, huddle starts
+- **Per-conversation unread badges** (Slack/WhatsApp style) on the DM list, channel list and icon rail, kept live over Socket.IO (`conversation:activity` / `conversation:read`) and cleared when you open the conversation
+- **Compact one-line toasts** for DMs and @mentions (sender + decrypted preview, click to jump); browser and Electron native notifications when the tab is hidden
+- **Bell / notification center** with stored notifications for: DMs, @user / @here / @channel mentions, thread replies, reactions, task assignments and status changes, shared notes, scheduled meetings, huddles, new members, "Remind me" reminders, due-soon tasks and a daily digest
+- **Per-workspace preferences** (messages, thread replies, tasks, meetings, email, push) enforced server-side before anything is stored or sent
+- **Mobile push** through Expo for every stored notification the user allows; E2EE previews are decrypted on the client only
 
 ### 📅 Meetings & Huddles
 - In-workspace **huddle/meeting** creation and management
@@ -507,12 +508,20 @@ GOOGLE_APPLICATION_CREDENTIALS=./gcs-key.json
 # ─── Gemini AI ───────────────────────────────────────────────
 GEMINI_API_KEY=<your-gemini-api-key>
 
-# ─── Email (Nodemailer) ──────────────────────────────────────
-SMTP_HOST=smtp.gmail.com
+# ─── Email ───────────────────────────────────────────────────
+# Providers are tried in order: Brevo API → SMTP_* → SMTP_FALLBACK_*
+BREVO_API_KEY=<optional-brevo-api-key>
+SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
 SMTP_USER=<your-email>
-SMTP_PASS=<your-app-password>
+SMTP_PASS=<your-smtp-key>
+SMTP_FALLBACK_HOST=smtp.gmail.com        # optional backup (Gmail app password)
+SMTP_FALLBACK_PORT=587
+SMTP_FALLBACK_USER=<your-gmail>
+SMTP_FALLBACK_PASS=<gmail-app-password>
 EMAIL_FROM=noreply@chttrix.io
+# Brevo: if the log says "unrecognised / unauthorized IP address", disable
+# Security → Authorised IPs at https://app.brevo.com/security/authorised_ips
 
 # ─── Web Push (VAPID) ────────────────────────────────────────
 VAPID_PUBLIC_KEY=<generated-vapid-public-key>

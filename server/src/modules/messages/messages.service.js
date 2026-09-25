@@ -123,70 +123,135 @@ async function createMessage(messageData, io = null) {
     
     
     
-    if (mentionText && company) {
-        (async () => {
-            try {
-                const { extractMentions } = require('../../utils/mentionParser');
-                const notificationService = require('../../features/notifications/notificationService');
-                const Channel = require('../../features/channels/channel.model.js');
-
-                const { mentionedUserIds, isHere, isChannel } = await extractMentions(
-                    mentionText,
-                    company,
-                    sender
-                );
-
-                if (mentionedUserIds.length > 0) {
-                    
-                    await Message.findByIdAndUpdate(message._id, {
-                        $set: { mentions: mentionedUserIds }
-                    });
-
-                    
-                    
-                    let channelName = 'a channel';
-                    let channelId = channel || null;
-                    if (channel) {
-                        try {
-                            const channelDoc = await Channel.findById(channel).select('name').lean();
-                            if (channelDoc) channelName = channelDoc.name;
-                        } catch (_) {  }
-                    }
-
-                    const senderDoc = message.sender;
-                    const senderUsername = senderDoc?.username || 'Someone';
-                    
-                    const snippet = mentionText.length > 60
-                        ? mentionText.slice(0, 57) + '...'
-                        : mentionText;
-
-                    await Promise.allSettled(
-                        mentionedUserIds.map(userId =>
-                            notificationService.mention(io, {
-                                mentionedUserId: userId,
-                                senderUsername,
-                                workspaceId: workspace,
-                                channelName,
-                                channelId,
-                                snippet,
-                            })
-                        )
-                    );
-
-                    logger.debug({ count: mentionedUserIds.length }, '[createMessage] Mention notifications dispatched');
-                }
-
-                
-                if (isHere || isChannel) {
-                    logger.warn({ isHere, isChannel }, '[createMessage] @here/@channel detected — bulk notify not yet implemented');
-                }
-            } catch (mentionErr) {
-                logger.error({ err: mentionErr }, '[createMessage] Mention processing error (non-fatal)');
-            }
-        })();
-    }
+    // Badges, toasts and notifications for everyone else in the conversation.
+    // Runs after the response; failures here never fail the send.
+    fanOutMessage(message, { channel, dm, workspace, sender, type, parentId, mentionText }, io)
+        .catch(err => logger.error({ err }, '[createMessage] fan-out error (non-fatal)'));
 
     return message;
+}
+
+const ATTACHMENT_LABELS = {
+    image: '📷 Photo', video: '🎬 Video', voice: '🎵 Voice note', file: '📎 File',
+    poll: '📊 Poll', contact: '👤 Contact', meeting: '📅 Meeting', checklist: '☑️ Checklist',
+};
+
+/**
+ * Tell every other participant about a new message:
+ *  - `conversation:activity` on their personal room (drives unread badges and
+ *    the compact toast; carries the ciphertext so the client can decrypt a
+ *    preview with its own conversation key);
+ *  - a stored `dm` notification for direct messages;
+ *  - `mention` notifications for @user / @here / @channel in channels.
+ * Thread replies are left to the threads module.
+ */
+async function fanOutMessage(message, { channel, dm, workspace, sender, type, parentId, mentionText }, io) {
+    if (parentId || type === 'system') return;
+
+    const Channel = require('../../features/channels/channel.model.js');
+    const notificationService = require('../../features/notifications/notificationService');
+    const senderId = String(sender);
+    const senderUsername = message.sender?.username || 'Someone';
+    const senderAvatar = message.sender?.profilePicture || null;
+
+    let recipientIds = [];
+    let channelName = null;
+    if (dm) {
+        const session = await DMSession.findById(dm).select('participants').lean();
+        recipientIds = (session?.participants || []).map(String).filter(id => id !== senderId);
+    } else if (channel) {
+        const channelDoc = await Channel.findById(channel).select('name members').lean();
+        channelName = channelDoc?.name || null;
+        recipientIds = (channelDoc?.members || [])
+            .map(m => String(m?.user?._id || m?.user || m))
+            .filter(id => id && id !== senderId);
+    }
+    if (recipientIds.length === 0) return;
+
+    const isText = type === 'message';
+    const preview = isText && message.payload?.ciphertext
+        ? { ciphertext: message.payload.ciphertext, messageIv: message.payload.messageIv }
+        : null;
+    const kindLabel = ATTACHMENT_LABELS[type] || null;
+
+    // @handles resolve against the channel's own members (works for personal
+    // workspaces without a company too); @here / @channel address everyone.
+    let mentionedUserIds = [];
+    let everyone = false;
+    if (mentionText && channel) {
+        try {
+            const { parseMentionHandles } = require('../../utils/mentionParser');
+            const { userHandles, isHere, isChannel } = parseMentionHandles(mentionText);
+            everyone = isHere || isChannel;
+            if (userHandles.length > 0) {
+                const User = require('../../../models/User');
+                const users = await User.find({
+                    _id: { $in: recipientIds },
+                    username: { $in: userHandles.map(h => new RegExp(`^${h.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i')) },
+                }).select('_id').lean();
+                mentionedUserIds = users.map(u => String(u._id));
+            }
+            if (mentionedUserIds.length > 0) {
+                await Message.findByIdAndUpdate(message._id, { $set: { mentions: mentionedUserIds } });
+            }
+        } catch (mentionErr) {
+            logger.error({ err: mentionErr }, '[fanOutMessage] mention parsing failed');
+        }
+    }
+    const mentionedSet = new Set(mentionedUserIds);
+
+    const activity = {
+        workspaceId: String(workspace),
+        conversationType: dm ? 'dm' : 'channel',
+        conversationId: String(dm || channel),
+        channelName,
+        messageId: String(message._id),
+        senderId,
+        senderUsername,
+        senderAvatar,
+        type,
+        kindLabel,
+        preview,
+        createdAt: message.createdAt,
+    };
+    for (const recipientId of recipientIds) {
+        notificationService.emitToUser(io, recipientId, 'conversation:activity', {
+            ...activity,
+            isMention: everyone || mentionedSet.has(recipientId),
+        });
+    }
+
+    if (dm) {
+        await Promise.allSettled(recipientIds.map(recipientId => notificationService.dmReceived(io, {
+            recipientId,
+            senderId,
+            senderUsername,
+            senderAvatar,
+            workspaceId: workspace,
+            dmSessionId: String(dm),
+            snippet: kindLabel || null,
+            preview,
+            kind: type,
+        })));
+        return;
+    }
+
+    const snippet = mentionText
+        ? (mentionText.length > 60 ? `${mentionText.slice(0, 57)}...` : mentionText)
+        : null;
+    const mentionTargets = everyone ? recipientIds : mentionedUserIds;
+    if (mentionTargets.length > 0) {
+        await Promise.allSettled(mentionTargets.map(userId => notificationService.mention(io, {
+            mentionedUserId: userId,
+            senderUsername,
+            workspaceId: workspace,
+            channelName: channelName || 'a channel',
+            channelId: String(channel),
+            snippet,
+            preview,
+            isEveryone: everyone && !mentionedSet.has(userId),
+        })));
+    }
 }
 
 async function fetchMessages(query, options = {}) {
@@ -460,32 +525,17 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
             }
         }
 
-        
-        
-        
-        logger.info({ dmSessionId: dmSession._id }, '[DM][E2EE] Bootstrapping conversation key for new DM session');
-
-        try {
-            await conversationKeysService.bootstrapConversationKey({
-                conversationId: dmSession._id,
-                conversationType: 'dm',
-                workspaceId: workspaceId,
-                members: sortedParticipants
-            });
-            logger.info({ dmSessionId: dmSession._id }, '[DM][E2EE] Conversation key created');
-        } catch (keyError) {
-            
-            if (keyError.message && keyError.message.includes('already exists')) {
-                logger.debug({ dmSessionId: dmSession._id }, '[DM][E2EE] Conversation key already exists (idempotent)');
-            } else {
-                logger.error({ err: keyError, dmSessionId: dmSession._id }, '[DM][E2EE] Failed to create conversation key');
-                throw new Error('Failed to initialize DM encryption: ' + keyError.message);
-            }
-        }
     } else {
-        
         dmSession.lastMessageAt = new Date();
         await dmSession.save();
+    }
+
+    // Every call (not only creation) makes sure the key exists and both
+    // participants hold it; a key hiccup must not block resolving the session.
+    try {
+        await conversationKeysService.ensureDMConversationKey(dmSession._id);
+    } catch (keyError) {
+        logger.error({ err: keyError, dmSessionId: dmSession._id }, '[DM][E2EE] Could not ensure conversation key');
     }
 
     return dmSession;
@@ -518,7 +568,10 @@ async function getUserDMSessions(userId, workspaceId) {
             const unreadCount = await Message.countDocuments({
                 dm: session._id,
                 sender: { $ne: userId },
-                'readBy.user': { $ne: userId }
+                readBy: { $ne: userId },
+                parentId: null,
+                type: { $ne: 'system' },
+                isDeleted: { $ne: true },
             });
 
             
@@ -548,6 +601,39 @@ async function getUserDMSessions(userId, workspaceId) {
     );
 
     return sessionList;
+}
+
+/**
+ * Unread top-level messages per channel for `userId`, counted from the moment
+ * they joined each channel. Returns a Map of channelId → count (only >0).
+ */
+async function getChannelUnreadCounts(userId, channels) {
+    const clauses = [];
+    for (const ch of channels || []) {
+        const me = (ch.members || []).find(m => String(m?.user?._id || m?.user || m) === String(userId));
+        if (!me) continue;
+        const clause = { channel: ch._id };
+        if (me.joinedAt) clause.createdAt = { $gte: new Date(me.joinedAt) };
+        clauses.push(clause);
+    }
+    const counts = new Map();
+    if (clauses.length === 0) return counts;
+
+    const rows = await Message.aggregate([
+        {
+            $match: {
+                $or: clauses,
+                sender: { $ne: new mongoose.Types.ObjectId(String(userId)) },
+                readBy: { $ne: new mongoose.Types.ObjectId(String(userId)) },
+                parentId: null,
+                type: { $ne: 'system' },
+                isDeleted: { $ne: true },
+            },
+        },
+        { $group: { _id: '$channel', n: { $sum: 1 } } },
+    ]);
+    for (const row of rows) counts.set(String(row._id), row.n);
+    return counts;
 }
 
 function httpError(status, message) {
@@ -786,6 +872,22 @@ async function addReaction(messageId, userId, emoji, io) {
             emoji,
             reactions: message.reactions
         });
+    }
+
+    if (message.sender && String(message.sender) !== String(userId) && message.workspace) {
+        (async () => {
+            const User = require('../../../models/User');
+            const notificationService = require('../../features/notifications/notificationService');
+            const reactor = await User.findById(userId).select('username').lean();
+            await notificationService.reaction(io, {
+                recipientId: String(message.sender),
+                reactorUsername: reactor?.username || 'Someone',
+                emoji,
+                workspaceId: message.workspace,
+                channelId: message.channel ? String(message.channel) : null,
+                dmSessionId: message.dm ? String(message.dm) : null,
+            });
+        })().catch(err => logger.warn({ err }, '[addReaction] notification failed'));
     }
 
     return message;
@@ -1046,6 +1148,7 @@ module.exports = {
     fetchMessages,
     findOrCreateDMSession,
     getUserDMSessions,
+    getChannelUnreadCounts,
     editMessage,
     deleteMessage,
     addReaction,

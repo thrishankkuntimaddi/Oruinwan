@@ -62,7 +62,9 @@ router.get('/:workspaceId/all-members', ...memberGatePersonal, workspaceControll
 
 router.get('/:workspaceId/channels', ...memberGatePersonal, workspaceController.getWorkspaceChannels);
 
-router.post('/:workspaceId/channels', ...adminGatePersonal, workspaceController.createWorkspaceChannel);
+// Any active member may create channels (public or private); the controller
+// honours workspace.settings.allowMemberChannelCreation for non-admins.
+router.post('/:workspaceId/channels', ...memberGatePersonal, workspaceController.createWorkspaceChannel);
 
 router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.getWorkspaceStats);
 

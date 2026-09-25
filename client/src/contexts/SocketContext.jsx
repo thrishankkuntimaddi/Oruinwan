@@ -28,7 +28,7 @@ const WORKSPACE_EVENTS = ['workspace-joined', 'workspace-created', 'workspace-up
 const TASK_EVENTS = ['task-created', 'task-updated', 'task-deleted', 'task-assigned', 'task-removed'];
 const NOTE_EVENTS = ['note-created', 'note-updated', 'note-deleted', 'note-shared'];
 const UPDATE_EVENTS = ['company:update:created', 'company:update:deleted', 'company:update:reacted'];
-const NOTIFICATION_EVENTS = ['notification:new', 'reminder-fired'];
+const NOTIFICATION_EVENTS = ['notification:new', 'reminder-fired', 'conversation:activity', 'conversation:read'];
 
 export const MAX_SOCKET_AUTH_RETRIES = 3;
 const AUTH_RETRY_BASE_DELAY_MS = 1000;

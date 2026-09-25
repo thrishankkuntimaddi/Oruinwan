@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
+import { useNotifications } from "../../contexts/NotificationsContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings, Puzzle, ChevronDown } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 
@@ -27,6 +28,8 @@ const IconSidebar = ({ onProfileClick }) => {
     const workspaceId = activeWorkspace?.id;
     const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false);
     const menuRef = useRef(null);
+    const unreadTotals = useNotifications()?.unreadTotals || { dm: 0, channel: 0 };
+    const badgeFor = (path) => (path === '/messages' ? unreadTotals.dm : path === '/channels' ? unreadTotals.channel : 0);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
@@ -173,6 +176,11 @@ const IconSidebar = ({ onProfileClick }) => {
                                     <div style={{ position: 'absolute', left: 0, top: '20%', height: '60%', width: '2px', background: 'var(--accent)', borderRadius: '0 2px 2px 0' }} />
                                 )}
                                 {item.icon}
+                                {badgeFor(item.path) > 0 && (
+                                    <span style={{ position: 'absolute', top: '4px', right: '4px', minWidth: '14px', height: '14px', padding: '0 3px', borderRadius: '99px', background: 'var(--accent)', color: '#0c0c0c', fontSize: '9px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font)', pointerEvents: 'none' }}>
+                                        {badgeFor(item.path) > 99 ? '99+' : badgeFor(item.path)}
+                                    </span>
+                                )}
                             </button>
                             {}
                             <div style={{

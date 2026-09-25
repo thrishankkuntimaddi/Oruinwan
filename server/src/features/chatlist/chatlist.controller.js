@@ -133,24 +133,11 @@ exports.resetUnread = async (req, res) => {
     if (!type || !id)
       return res.status(400).json({ message: "type and id required" });
 
-    if (type === "dm") {
-      await Message.updateMany(
-        {
-          senderId: id,
-          receiverId: userId,
-          'readBy.user': { $ne: userId }
-        },
-        { $addToSet: { readBy: userId } }
-      );
-    } else {
-      await Message.updateMany(
-        {
-          channelId: id,
-          'readBy.user': { $ne: userId }
-        },
-        { $addToSet: { readBy: userId } }
-      );
-    }
+    const scope = type === "dm" ? { dm: id } : { channel: id };
+    await Message.updateMany(
+      { ...scope, sender: { $ne: userId }, readBy: { $ne: userId } },
+      { $addToSet: { readBy: userId } }
+    );
 
     res.json({ success: true });
   } catch (err) {

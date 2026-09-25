@@ -578,6 +578,30 @@ async function updateTask(userId, taskId, updates, io, req) {
         }
     }
 
+    // Everyone on the task (assignees, creator, watchers) except the person
+    // who moved it hears about status changes.
+    const statusChange = changes.find(c => c.action === 'status_changed');
+    if (statusChange) {
+        (async () => {
+            const notificationService = require('../notifications/notificationService');
+            const changer = await User.findById(userId).select('username').lean();
+            const recipientIds = [...new Set([
+                ...task.assignedTo.map(String),
+                String(task.createdBy || ''),
+                ...(task.watchers || []).map(String),
+            ])].filter(id => id && id !== String(userId));
+            await notificationService.taskStatusChanged(io, {
+                recipientIds,
+                changerUsername: changer?.username || 'Someone',
+                workspaceId: task.workspace,
+                taskTitle: task.title,
+                taskId: String(task._id),
+                from: statusChange.from,
+                to: statusChange.to,
+            });
+        })().catch(err => logger.warn({ err }, '[updateTask] status notification failed'));
+    }
+
     return {
         message: "Task updated successfully",
         task: populatedTask

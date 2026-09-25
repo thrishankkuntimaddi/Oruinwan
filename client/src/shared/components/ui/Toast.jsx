@@ -32,7 +32,40 @@ const TYPES = {
     },
 };
 
-const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
+/** One-line toast for incoming messages: "[avatar] Sender  preview…". */
+const CompactToast = ({ title, message, avatar, onClick, dismiss, exiting }) => (
+    <div
+        role={onClick ? 'button' : undefined}
+        onClick={onClick}
+        style={{
+            display: 'flex', alignItems: 'center', gap: '8px',
+            maxWidth: '300px', padding: '6px 8px 6px 6px',
+            background: 'var(--bg-surface)', border: '1px solid var(--border-accent)',
+            borderRadius: '2px', boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+            fontFamily: 'Inter, system-ui, sans-serif', cursor: onClick ? 'pointer' : 'default',
+            transform: exiting ? 'translateX(320px)' : 'translateX(0)',
+            opacity: exiting ? 0 : 1,
+            transition: 'transform 200ms cubic-bezier(0.4,0,0.2,1), opacity 160ms ease',
+        }}
+    >
+        <div style={{ width: '22px', height: '22px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: 'rgba(184,149,106,0.18)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700 }}>
+            {avatar ? <img src={avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (title || '?').charAt(0).toUpperCase()}
+        </div>
+        <div style={{ minWidth: 0, flex: 1, display: 'flex', alignItems: 'baseline', gap: '6px', fontSize: '12px', lineHeight: 1.4 }}>
+            {title && <span style={{ fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap' }}>{title}</span>}
+            <span style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{message}</span>
+        </div>
+        <button
+            onClick={(e) => { e.stopPropagation(); dismiss(); }}
+            aria-label="Dismiss"
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, display: 'flex', flexShrink: 0 }}
+        >
+            <X size={12} />
+        </button>
+    </div>
+);
+
+const Toast = ({ message, type = 'success', onClose, duration = 3000, title, avatar, onClick }) => {
     const [progress, setProgress] = useState(100);
     const [exiting, setExiting] = useState(false);
 
@@ -58,6 +91,19 @@ const Toast = ({ message, type = 'success', onClose, duration = 3000 }) => {
         const t = setTimeout(dismiss, duration);
         return () => { clearInterval(iv); clearTimeout(t); };
     }, [duration, dismiss]);
+
+    if (type === 'message') {
+        return (
+            <CompactToast
+                title={title}
+                message={message}
+                avatar={avatar}
+                dismiss={dismiss}
+                exiting={exiting}
+                onClick={onClick ? () => { onClick(); dismiss(); } : undefined}
+            />
+        );
+    }
 
     return (
         <div style={{

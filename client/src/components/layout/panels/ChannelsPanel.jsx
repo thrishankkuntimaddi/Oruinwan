@@ -5,7 +5,8 @@ import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
 import api from '@services/api';
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
-import { useSocket } from "../../../contexts/SocketContext"; 
+import { useSocket } from "../../../contexts/SocketContext";
+import { useNotifications } from "../../../contexts/NotificationsContext";
 import CreateChannelModal from "../../messagesComp/CreateChannelModal";
 import logger from '../../../utils/logger';
 
@@ -14,7 +15,9 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
     const { workspaceId, id: channelId } = useParams();
     const { activeWorkspace } = useWorkspace();
     const { showToast } = useToast();
-    const { socket, addChannelListener } = useSocket(); 
+    const { socket, addChannelListener } = useSocket();
+    const notif = useNotifications();
+    const seedConversationUnread = notif?.seedConversationUnread;
 
     const [searchQuery, setSearchQuery] = useState("");
     const [showCreateChannelModal, setShowCreateChannelModal] = useState(false);
@@ -50,11 +53,12 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     isDiscoverable: ch.isDiscoverable ?? true, 
                     isMember: ch.isMember ?? false, 
                     description: ch.description || '',
-                    canDelete: !ch.isDefault, 
+                    canDelete: !ch.isDefault,
                     workspaceId: ch.workspace
                 }));
 
                 setChannels(mappedChannels);
+                seedConversationUnread?.('channel', response.data.channels.map(ch => ({ id: ch._id, unread: ch.unreadCount || 0 })));
                 setIsLoadingChannels(false);
             } catch (err) {
                 logger.error('❌ Error fetching channels:', err);
@@ -264,6 +268,8 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
     const Item = ({ item }) => {
         const isSelected = selectedItems.has(item.id);
         const isActive = channelId === item.id;
+        const unread = notif ? notif.getUnread('channel', item.id) : 0;
+        const mentioned = notif ? notif.hasMention('channel', item.id) : false;
 
         const handleClick = (e) => {
             if (isSelectionMode) {
@@ -329,7 +335,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         )}
                     </div>
 
-                    <span style={{ fontSize: '13px', fontWeight: isActive ? 600 : 400, color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                    <span style={{ fontSize: '13px', fontWeight: isActive || unread > 0 ? 600 : 400, color: isActive || unread > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
                         {(item.label || 'Unnamed Channel').replace(/^#/, '')}
                     </span>
 
@@ -339,6 +345,15 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                         </div>
                     )}
                 </div>
+
+                {unread > 0 && !isSelectionMode && (
+                    <div
+                        title={mentioned ? 'You were mentioned' : `${unread} unread`}
+                        style={{ minWidth: '18px', height: '18px', borderRadius: '9px', flexShrink: 0, background: mentioned ? 'var(--state-danger)' : '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#0c0c0c', fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', padding: '0 4px' }}
+                    >
+                        {mentioned ? '@' : ''}{unread > 99 ? '99+' : unread}
+                    </div>
+                )}
             </div>
         );
     };

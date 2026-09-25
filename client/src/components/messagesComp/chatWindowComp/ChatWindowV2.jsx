@@ -10,6 +10,7 @@ import { useContacts } from '../../../contexts/ContactsContext';
 import { useWorkspace } from '../../../contexts/WorkspaceContext';
 import api from '@services/api';
 import { useToast } from '../../../contexts/ToastContext';
+import { useNotifications } from '../../../contexts/NotificationsContext';
 
 import CentralContentView from './views/CentralContentView.jsx';
 import ErrorDisplay from './views/ErrorDisplay.jsx';
@@ -670,11 +671,32 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     
     
+    // Opening a conversation (or returning to the tab while it is open) marks
+    // it read everywhere: server readBy, this tab's badge, other tabs/devices.
+    const notifCtx = useNotifications();
+    const clearConversationUnread = notifCtx?.clearConversationUnread;
+    const lastMessageIdRef = useRef(null);
+    const latestEventId = conversation.events?.length ? conversation.events[conversation.events.length - 1]?.id : null;
     useEffect(() => {
-        if (conversationType !== 'dm') return; 
+        if (!conversationId || !conversationType || conversation.loading) return;
+        const markRead = () => {
+            if (document.visibilityState !== 'visible') return;
+            clearConversationUnread?.(conversationType, String(conversationId));
+            if (rawSocket?.connected && latestEventId !== lastMessageIdRef.current) {
+                lastMessageIdRef.current = latestEventId;
+                rawSocket.emit('mark-chat-read', { type: conversationType, id: conversationId });
+            }
+        };
+        markRead();
+        document.addEventListener('visibilitychange', markRead);
+        return () => document.removeEventListener('visibilitychange', markRead);
+    }, [conversationId, conversationType, conversation.loading, latestEventId, rawSocket, clearConversationUnread]);
+
+    useEffect(() => {
+        if (conversationType !== 'dm') return;
         if (!rawSocket || !conversationId) return;
 
-        
+
         rawSocket.emit('join-dm', { dmSessionId: conversationId });
 
         
@@ -1303,21 +1325,25 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             const { encryptMessageForSending } = await import('../../../services/messageEncryptionService');
             const results = await Promise.allSettled(
                 targets.map(async (target) => {
-                    const targetConversationId = target.id;
-                    const targetType = target.type; 
+                    const targetType = target.type;
+
+                    // DM targets are user ids: resolve the DM session first, because
+                    // the message must be encrypted with that session's key.
+                    let targetConversationId = target.id;
+                    if (targetType === 'dm') {
+                        const dmResolve = await api.get(
+                            `/api/v2/messages/workspace/${workspaceId}/dm/resolve/${target.id}`
+                        );
+                        targetConversationId = dmResolve.data.dmSessionId;
+                    }
 
                     const encrypted = await encryptMessageForSending(
                         plaintextToForward,
                         targetConversationId,
                         targetType,
-                        null 
+                        null
                     );
 
-                    if (!encrypted || encrypted.status === 'ENCRYPTION_NOT_READY') {
-                        throw new Error(`Encryption not ready for ${targetType}:${targetConversationId}`);
-                    }
-
-                    
                     if (targetType === 'channel') {
                         await api.post('/api/v2/messages/channel', {
                             channelId: targetConversationId,
@@ -1328,13 +1354,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                             forwardedFrom: forwardingMessageId
                         });
                     } else if (targetType === 'dm') {
-                        
-                        const dmResolve = await api.get(
-                            `/api/v2/messages/workspace/${workspaceId}/dm/resolve/${target.id}`
-                        );
-                        const dmSessionId = dmResolve.data.dmSessionId;
                         await api.post('/api/v2/messages/direct', {
-                            dmSessionId,
+                            dmSessionId: targetConversationId,
                             workspaceId,
                             ciphertext: encrypted.ciphertext,
                             messageIv: encrypted.messageIv,
@@ -1487,7 +1508,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
                 onPickEmoji={handleEmojiPick}
                 recording={recording}
                 setRecording={setRecording}
-                muted={muted}
+                blocked={blocked}
                 setNewMessage={setNewMessage}
 
                 

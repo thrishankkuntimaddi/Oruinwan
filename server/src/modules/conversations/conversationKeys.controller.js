@@ -36,6 +36,10 @@ exports.storeConversationKeys = async (req, res) => {
             }
         }
 
+        if (!(await conversationKeysService.isConversationMember(conversationId, conversationType, createdBy))) {
+            return res.status(403).json({ message: 'You are not a member of this conversation' });
+        }
+
         
         const conversationKey = await conversationKeysService.storeConversationKeys({
             conversationId,
@@ -82,7 +86,22 @@ exports.getConversationKey = async (req, res) => {
             });
         }
 
-        
+        // DM keys are server-managed: create a missing key and hand it to any
+        // participant who lacks it before answering, so a DM never gets stuck.
+        if (conversationType === 'dm') {
+            try {
+                const ensured = await conversationKeysService.ensureDMConversationKey(conversationId, userId);
+                if (ensured.status === 'NOT_FOUND') {
+                    return res.status(404).json({ error: 'DM_NOT_FOUND', message: 'DM session not found', conversationId, conversationType });
+                }
+                if (ensured.status === 'NOT_PARTICIPANT') {
+                    return res.status(403).json({ error: 'NOT_A_PARTICIPANT', message: 'You are not a participant in this conversation', conversationId, conversationType });
+                }
+            } catch (ensureErr) {
+                logger.error({ err: ensureErr, conversationId }, '[DM][E2EE] ensureDMConversationKey failed');
+            }
+        }
+
         const keyExists = await conversationKeysService.hasConversationKeys(
             conversationId,
             conversationType
@@ -171,10 +190,18 @@ exports.addUserKey = async (req, res) => {
         const { userId, encryptedKey, ephemeralPublicKey, algorithm, conversationType } = req.body;
         const requestingUserId = req.user.sub || req.user.userId;
 
+        if (!['channel', 'dm'].includes(conversationType) || !userId || !encryptedKey || !algorithm) {
+            return res.status(400).json({ error: 'conversationType, userId, encryptedKey and algorithm are required' });
+        }
+
         logger.info(`🔐 Adding encrypted key for user ${userId} in ${conversationType}:${conversationId}`);
 
-        
-        const requestingUserKey = await service.getUserConversationKey(
+        // Only share a key with someone who actually belongs to the conversation.
+        if (!(await conversationKeysService.isConversationMember(conversationId, conversationType, userId))) {
+            return res.status(403).json({ error: 'Target user is not a member of this conversation' });
+        }
+
+        const requestingUserKey = await conversationKeysService.getUserConversationKey(
             conversationId,
             conversationType,
             requestingUserId
@@ -187,7 +214,7 @@ exports.addUserKey = async (req, res) => {
         }
 
         
-        const added = await service.addEncryptedKeyForUser(
+        const added = await conversationKeysService.addEncryptedKeyForUser(
             conversationId,
             conversationType,
             userId,

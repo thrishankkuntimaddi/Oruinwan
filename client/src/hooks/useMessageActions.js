@@ -143,28 +143,15 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
 
         try {
             const conversationKeyService = (await import('../services/conversationKeyService')).default;
-            let key = await conversationKeyService.getConversationKey(conversationId, conversationType);
+            const key = await conversationKeyService.getConversationKey(conversationId, conversationType);
 
-            if (key && typeof key === 'object' && key.status === 'MISSING_FOR_USER') {
+            if (!(key instanceof CryptoKey)) {
                 return {
                     success: false,
-                    error: 'KEY_NOT_AVAILABLE',
-                    message: 'You do not have access to this conversation\'s encryption key. Please wait for key distribution or contact an admin.'
-                };
-            }
-
-            if (!key && conversationType === 'channel') {
-                return {
-                    success: false,
-                    error: 'CHANNEL_NOT_ENCRYPTED',
-                    message: 'This channel is not properly encrypted. Please contact an administrator.'
-                };
-            }
-
-            if (!key) {
-                return {
-                    success: false,
-                    error: 'Conversation is not encrypted yet. Please wait for encryption to be initialized.'
+                    error: key?.status || 'KEY_NOT_AVAILABLE',
+                    message: key?.message || (conversationType === 'channel'
+                        ? 'This channel\'s encryption key is not available to you yet. Please refresh and try again.'
+                        : 'This conversation\'s encryption key is not ready yet. Please try again in a moment.'),
                 };
             }
 
@@ -182,8 +169,10 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
             logger.error('❌ [E2EE] Encryption failed:', encError);
             return {
                 success: false,
-                error: 'ENCRYPTION_FAILED',
-                message: `Message encryption failed. ${encError.message.includes('not found') ? 'Conversation not yet encrypted. Please refresh and try again.' : 'Please try again.'}`
+                error: encError?.code || 'ENCRYPTION_FAILED',
+                message: /not initialized/i.test(encError?.message || '')
+                    ? 'Encryption is still unlocking. Please wait a moment and try again.'
+                    : `Message encryption failed. ${encError?.code ? encError.message : 'Please try again.'}`
             };
         }
 

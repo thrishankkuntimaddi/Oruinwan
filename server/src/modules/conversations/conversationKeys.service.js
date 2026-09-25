@@ -370,13 +370,18 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
                 continue;
             }
 
-            
-            const wrapped = cryptoUtils.wrapForUser(conversationKey, keyDoc.publicKey);
-            encryptedKeys.push({
-                userId: userId.toString(),
-                encryptedKey: wrapped.encryptedKey,
-                algorithm: wrapped.algorithm
-            });
+            // One bad public key must not stop the conversation from getting a key;
+            // that user is picked up later by distributeKeyToNewMember.
+            try {
+                const wrapped = cryptoUtils.wrapForUser(conversationKey, keyDoc.publicKey);
+                encryptedKeys.push({
+                    userId: userId.toString(),
+                    encryptedKey: wrapped.encryptedKey,
+                    algorithm: wrapped.algorithm
+                });
+            } catch (wrapErr) {
+                logger.warn(`⚠️ [Bootstrap] Could not wrap key for user ${userId}: ${wrapErr.message}`);
+            }
         }
 
         
@@ -391,18 +396,28 @@ async function bootstrapConversationKey({ conversationId, conversationType, work
         
         
         
-        const conversationKeyDoc = await ConversationKey.create({
-            conversationId,
-            conversationType,
-            workspaceId,
-            createdBy: members[0],
-            encryptedKeys, 
-            workspaceEncryptedKey: workspaceWrapped.ciphertext,
-            workspaceKeyIv: workspaceWrapped.iv,
-            workspaceKeyAuthTag: workspaceWrapped.authTag,
-            version: 1,
-            isActive: true
-        });
+        let conversationKeyDoc;
+        try {
+            conversationKeyDoc = await ConversationKey.create({
+                conversationId,
+                conversationType,
+                workspaceId,
+                createdBy: members[0],
+                encryptedKeys,
+                workspaceEncryptedKey: workspaceWrapped.ciphertext,
+                workspaceKeyIv: workspaceWrapped.iv,
+                workspaceKeyAuthTag: workspaceWrapped.authTag,
+                version: 1,
+                isActive: true
+            });
+        } catch (createErr) {
+            // Two requests bootstrapped the same conversation at once: keep the winner's key.
+            if (createErr.code === 11000) {
+                const winner = await ConversationKey.findByConversation(conversationId, conversationType);
+                if (winner) return winner;
+            }
+            throw createErr;
+        }
 
         logger.info(`✅ [Bootstrap] Conversation key created for ${conversationType}:${conversationId} (${encryptedKeys.length} users)`);
         return conversationKeyDoc;
@@ -750,10 +765,67 @@ async function repairConversationKeyForUser(channelId, userId) {
 
 }
 
+/**
+ * Make sure a DM has a conversation key and that every participant can open it.
+ * Creates the key if it is missing and distributes it (via SERVER_KEK) to any
+ * participant who is not in encryptedKeys yet, e.g. someone who had no identity
+ * key when the DM was created. Safe to call on every key fetch.
+ */
+async function ensureDMConversationKey(dmSessionId, requestingUserId = null) {
+    const mongoose = require('mongoose');
+    const DMSession = require('../../../models/DMSession');
+
+    if (!mongoose.isValidObjectId(String(dmSessionId))) return { status: 'NOT_FOUND' };
+
+    const dm = await DMSession.findById(dmSessionId).select('participants workspace').lean();
+    if (!dm) return { status: 'NOT_FOUND' };
+
+    const participants = (dm.participants || []).map(String);
+    if (requestingUserId && !participants.includes(String(requestingUserId))) {
+        return { status: 'NOT_PARTICIPANT' };
+    }
+
+    const existing = await ConversationKey.findByConversation(dm._id, 'dm');
+    if (!existing) {
+        await bootstrapConversationKey({
+            conversationId: dm._id,
+            conversationType: 'dm',
+            workspaceId: dm.workspace,
+            members: participants
+        });
+        return { status: 'CREATED' };
+    }
+
+    const missing = participants.filter(p => !existing.hasAccess(p));
+    let distributed = 0;
+    for (const userId of missing) {
+        if (await distributeKeyToNewMember(dm._id, 'dm', userId)) distributed++;
+    }
+    return { status: 'OK', missing: missing.length, distributed };
+}
+
+/** Is `userId` a member of the channel / participant of the DM? */
+async function isConversationMember(conversationId, conversationType, userId) {
+    const mongoose = require('mongoose');
+    if (!mongoose.isValidObjectId(String(conversationId)) || !userId) return false;
+    const me = String(userId);
+
+    if (conversationType === 'dm') {
+        const DMSession = require('../../../models/DMSession');
+        const dm = await DMSession.findById(conversationId).select('participants').lean();
+        return !!dm && (dm.participants || []).some(p => String(p) === me);
+    }
+
+    const Channel = require("../../features/channels/channel.model.js");
+    const channel = await Channel.findById(conversationId).select('members').lean();
+    return !!channel && (channel.members || []).some(m => String(m?.user?._id || m?.user || m) === me);
+}
+
 async function repairUserConversationAccess(userId) {
     logger.info(`🔧 [AUTO-REPAIR] Starting automatic repair for user ${userId}...`);
 
     const Channel = require("../../features/channels/channel.model.js");
+    const DMSession = require('../../../models/DMSession');
 
     try {
         
@@ -794,7 +866,19 @@ async function repairUserConversationAccess(userId) {
             }
         }
 
-        logger.info(`✅ [AUTO-REPAIR] Completed for user ${userId}: ${results.repaired} repaired, ${results.alreadyHasKey} already had keys, ${results.failed} failed`);
+        const userDMs = await DMSession.find({ participants: userId }).select('_id').lean();
+        results.dms = { total: userDMs.length, repaired: 0, failed: 0 };
+        for (const dm of userDMs) {
+            try {
+                const r = await ensureDMConversationKey(dm._id, userId);
+                if (r.status === 'CREATED' || r.distributed > 0) results.dms.repaired++;
+            } catch (dmErr) {
+                results.dms.failed++;
+                logger.warn(`⚠️ [AUTO-REPAIR] DM ${dm._id} repair failed: ${dmErr.message}`);
+            }
+        }
+
+        logger.info(`✅ [AUTO-REPAIR] Completed for user ${userId}: ${results.repaired} repaired, ${results.alreadyHasKey} already had keys, ${results.failed} failed; DMs repaired ${results.dms.repaired}/${results.dms.total}`);
         return results;
 
     } catch (error) {
@@ -814,6 +898,8 @@ module.exports = {
     distributeKeyToNewMember,
     bootstrapConversationKey,  
     generateConversationKeyServerSide,  
-    repairConversationKeyForUser,  
-    repairUserConversationAccess  
+    repairConversationKeyForUser,
+    repairUserConversationAccess,
+    ensureDMConversationKey,
+    isConversationMember
 };
