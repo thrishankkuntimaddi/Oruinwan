@@ -447,4 +447,34 @@ function ChannelMessageItem({
     );
 }
 
-export default ChannelMessageItem;
+export default React.memo(ChannelMessageItem, (prevProps, nextProps) => {
+    const p = prevProps.msg;
+    const n = nextProps.msg;
+    return (
+        p.id === n.id &&
+        p.text === n.text &&
+        p.decryptedContent === n.decryptedContent &&
+        p.editedAt === n.editedAt &&
+        p.version === n.version &&
+        p.restoredFromVersion === n.restoredFromVersion &&
+        p.isPinned === n.isPinned &&
+        p.pinnedByName === n.pinnedByName &&
+        p.isDeleted === n.isDeleted &&
+        p.isDeletedUniversally === n.isDeletedUniversally &&
+        p.sending === n.sending &&
+        p.failed === n.failed &&
+        p.replyCount === n.replyCount &&
+        p.lastReplyAt === n.lastReplyAt &&
+        p.channelId === n.channelId &&
+        prevProps.selectMode === nextProps.selectMode &&
+        prevProps.selectedIds === nextProps.selectedIds &&
+        prevProps.openMsgMenuId === nextProps.openMsgMenuId &&
+        prevProps.translationState === nextProps.translationState &&
+        prevProps.toolbar === nextProps.toolbar &&
+        (prevProps.threadCounts?.[p.id] || 0) === (nextProps.threadCounts?.[n.id] || 0) &&
+        JSON.stringify(p.bookmarkedBy) === JSON.stringify(n.bookmarkedBy) &&
+        (p.editHistory?.length || 0) === (n.editHistory?.length || 0) &&
+        JSON.stringify(p.repliedTo) === JSON.stringify(n.repliedTo) &&
+        JSON.stringify(p.reactions) === JSON.stringify(n.reactions)
+    );
+});

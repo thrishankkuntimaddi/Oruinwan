@@ -239,7 +239,7 @@ function DMMessageItem({
                 )}
 
                 {}
-                {(!msg.attachment || msg.text) && (
+                {(!msg.attachment || msg.text) && msg.type !== 'contact' && msg.type !== 'meeting' && msg.type !== 'image' && msg.type !== 'video' && msg.type !== 'file' && msg.type !== 'voice' && (
                     <div style={{ color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.65, overflowWrap: 'anywhere', wordBreak: 'break-word', maxWidth: '60%' }} className="message-content">
                         {msg.isDeleted ? (
                             <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>Message deleted</span>
@@ -261,8 +261,8 @@ function DMMessageItem({
                                             {children}
                                         </a>
                                     ),
-                                    ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside ml-1" />,
-                                    ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside ml-1" />,
+                                    ul: ({ node, ...props }) => <ul {...props} style={{ listStyleType: 'disc', paddingLeft: '18px', margin: '4px 0' }} />,
+                                    ol: ({ node, ...props }) => <ol {...props} style={{ listStyleType: 'decimal', paddingLeft: '18px', margin: '4px 0' }} />,
                                     del: mentionRenderer(msg.senderName),
                                 }}
                             >

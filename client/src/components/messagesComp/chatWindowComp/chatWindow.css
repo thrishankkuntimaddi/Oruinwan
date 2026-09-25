@@ -85,6 +85,12 @@
     animation: jumpHighlight 1.5s ease-out forwards;
 }
 
+/* Typing indicator dots */
+@keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40%            { transform: translateY(-4px); opacity: 1; }
+}
+
 /* Theme-aligned native form controls (date pickers) */
 html.dark input[type="date"] {
     color-scheme: dark;
