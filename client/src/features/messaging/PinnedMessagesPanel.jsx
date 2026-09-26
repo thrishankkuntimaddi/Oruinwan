@@ -76,6 +76,8 @@ export default function PinnedMessagesPanel({ channelId, dmSessionId, currentUse
           )}
         </div>
         <button
+          title="Close"
+          aria-label="Close pinned messages"
           onClick={onClose}
           style={{
             background: 'none', border: 'none', outline: 'none', cursor: 'pointer',

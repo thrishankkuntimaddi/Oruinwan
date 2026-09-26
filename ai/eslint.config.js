@@ -8,6 +8,7 @@ export default [
       globals: {
         process: 'readonly', __dirname: 'readonly', module: 'writable', require: 'readonly',
         console: 'readonly', Buffer: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly',
+        fetch: 'readonly', AbortController: 'readonly', URL: 'readonly', URLSearchParams: 'readonly', TextEncoder: 'readonly', TextDecoder: 'readonly',
         describe: 'readonly', test: 'readonly', expect: 'readonly', jest: 'readonly', beforeEach: 'readonly',
       },
     },
