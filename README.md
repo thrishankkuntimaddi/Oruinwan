@@ -2,7 +2,7 @@
 
 <img src="client/public/icons/oruinwan-192.png" alt="Oruinwan Logo" width="80" height="80" style="border-radius: 12px;" />
 
-# Oruinwan — AI-Augmented Collaboration Platform
+# Oruinwan
 
 **The enterprise workspace OS. Real-time messaging, AI intelligence, E2EE, and an entire operating system for teams — in a single platform.**
 
