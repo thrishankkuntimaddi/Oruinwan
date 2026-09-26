@@ -1,7 +1,7 @@
 /**
  * platform/sdk/crypto/identityKey.js
  *
- * Chttrix Platform SDK — Identity Key Façade
+ * Oruinwan Platform SDK — Identity Key Façade
  *
  * SDK interface for all identity keypair operations.
  * Delegates entirely to the existing implementation in:

@@ -82,7 +82,7 @@ const PrivacyTab = ({ privacy, setPrivacy }) => {
 
             <Card title="Discovery & Data" subtitle="How others find you and how data is used">
                 <Toggle label="Allow Discovery by Email" description="Others can find you via your email address." checked={privacy.allowDiscovery} onChange={v => update('allowDiscovery', v)} />
-                <Toggle label="Share Anonymous Usage Data" description="Help improve Chttrix with aggregated, anonymized stats." checked={privacy.dataSharing} onChange={v => update('dataSharing', v)} />
+                <Toggle label="Share Anonymous Usage Data" description="Help improve Oruinwan with aggregated, anonymized stats." checked={privacy.dataSharing} onChange={v => update('dataSharing', v)} />
                 <div style={{
                     display: 'flex',
                     alignItems: 'flex-start',

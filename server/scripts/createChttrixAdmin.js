@@ -5,7 +5,7 @@ const User = require("../models/User");
 
 const CHTTRIX_ADMIN_EMAIL = process.env.CHTTRIX_ADMIN_EMAIL || "chttrix-admin@chttrix.com";
 const CHTTRIX_ADMIN_PASSWORD = process.env.CHTTRIX_ADMIN_PASS || "xm4kcjwf89";
-const CHTTRIX_ADMIN_USERNAME = "Chttrix Admin";
+const CHTTRIX_ADMIN_USERNAME = "Oruinwan Admin";
 
 async function createChttrixAdmin() {
     try {
@@ -17,7 +17,7 @@ async function createChttrixAdmin() {
         const existingAdmin = await User.findOne({ email: CHTTRIX_ADMIN_EMAIL });
 
         if (existingAdmin) {
-            console.log("⚠️  Chttrix admin user already exists!");
+            console.log("⚠️  Oruinwan admin user already exists!");
             console.log("📧 Email:", existingAdmin.email);
             console.log("👤 Username:", existingAdmin.username);
             console.log("🔑 Roles:", existingAdmin.roles);
@@ -38,7 +38,7 @@ async function createChttrixAdmin() {
         const passwordHash = await bcrypt.hash(CHTTRIX_ADMIN_PASSWORD, 12);
 
         
-        console.log("👤 Creating Chttrix admin user...");
+        console.log("👤 Creating Oruinwan admin user...");
         const adminUser = new User({
             username: CHTTRIX_ADMIN_USERNAME,
             email: CHTTRIX_ADMIN_EMAIL,
@@ -49,14 +49,14 @@ async function createChttrixAdmin() {
             accountStatus: "active",
             profile: {
                 name: CHTTRIX_ADMIN_USERNAME,
-                about: "Chttrix Platform Administrator"
+                about: "Oruinwan Platform Administrator"
             }
         });
 
         await adminUser.save();
 
         console.log("\n" + "=".repeat(60));
-        console.log("✅ Chttrix Admin User Created Successfully!");
+        console.log("✅ Oruinwan Admin User Created Successfully!");
         console.log("=".repeat(60));
         console.log("📧 Email:", CHTTRIX_ADMIN_EMAIL);
         console.log("🔑 Password:", CHTTRIX_ADMIN_PASSWORD);
@@ -70,7 +70,7 @@ async function createChttrixAdmin() {
         console.log("🔌 Database connection closed");
 
     } catch (err) {
-        console.error("❌ Error creating Chttrix admin:", err);
+        console.error("❌ Error creating Oruinwan admin:", err);
         process.exit(1);
     }
 }

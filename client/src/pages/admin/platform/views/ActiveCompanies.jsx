@@ -107,7 +107,7 @@ const CompanyRow = ({ company, navigate }) => {
             </td>
             <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                    <IconBtn icon={MessageSquare} title="Message Admin" onClick={() => navigate(`/chttrix-admin/dm/${company._id}`)} />
+                    <IconBtn icon={MessageSquare} title="Message Admin" onClick={() => navigate(`/platform-admin/dm/${company._id}`)} />
                     <PrimaryBtn label="Manage" />
                 </div>
             </td>

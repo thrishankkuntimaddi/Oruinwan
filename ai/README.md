@@ -1,4 +1,4 @@
-# ai/ — Chttrix Intelligence
+# ai/ — Oruinwan AI
 
 Framework-free AI layer used by the server. No Express objects cross this boundary: the server's AI controller passes plain payloads to `api/ai.gateway.js` and gets plain results back. Every AI feature in the product — assistant chat, smart replies, translation, drafts, conversation summaries, task extraction, note and task helpers, Q&A, search re-ranking, command-palette intent — goes through this one gateway, so swapping or adding a model is a provider change, not a feature change.
 
@@ -53,7 +53,7 @@ Messages are end-to-end encrypted, so transcripts are **decrypted on the client*
 | `AI_RATE_LIMIT_PER_MIN` | `40` in production | Per-user limit on `/api/ai/*` |
 | `AI_MEMORY_MAX_TURNS` / `AI_MEMORY_TTL_MS` / `AI_MEMORY_MAX_CONVERSATIONS` | `20` / 30 min / `1000` | Memory bounds |
 
-A workspace can override the server default in **Settings → Chttrix AI**: choose a provider, connect its API key (sealed under `SERVER_KEK` in the `AIProvider` collection) and optionally pin a model. `server/src/features/ai/ai.provider.resolver.js` turns that into a provider instance passed as `context.provider`.
+A workspace can override the server default in **Settings → Oruinwan AI**: choose a provider, connect its API key (sealed under `SERVER_KEK` in the `AIProvider` collection) and optionally pin a model. `server/src/features/ai/ai.provider.resolver.js` turns that into a provider instance passed as `context.provider`.
 
 ### Adding a provider
 
@@ -82,7 +82,7 @@ Extend `agents/base.agent.js`, implement `run(payload, context)` using `this.gen
 
 ## Observability
 
-Every run reports `{ intent, agent, provider, model, userId, workspaceId, durationMs, ok, error }` through the orchestrator's `onUsage` hook; the server stores rows in `AIUsage` (90-day TTL) and shows them in Settings → Chttrix AI.
+Every run reports `{ intent, agent, provider, model, userId, workspaceId, durationMs, ok, error }` through the orchestrator's `onUsage` hook; the server stores rows in `AIUsage` (90-day TTL) and shows them in Settings → Oruinwan AI.
 
 ## Tests
 

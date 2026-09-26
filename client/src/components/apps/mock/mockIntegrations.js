@@ -45,7 +45,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "🦊",
     color: "from-orange-500 to-red-600",
     accentColor: "#FC6D26",
-    description: "Bring GitLab merge requests, pipelines, and issue tracking into your Chttrix workspace.",
+    description: "Bring GitLab merge requests, pipelines, and issue tracking into your Oruinwan workspace.",
     useCases: [
       "Track CI/CD pipeline status",
       "Get alerts for failed pipelines",
@@ -97,7 +97,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "🎫",
     color: "from-blue-600 to-blue-800",
     accentColor: "#0052CC",
-    description: "Track Jira tickets, sprints, and project progress directly in Chttrix channels.",
+    description: "Track Jira tickets, sprints, and project progress directly in Oruinwan channels.",
     useCases: [
       "Create Jira tickets from messages",
       "Get sprint progress updates",
@@ -129,7 +129,7 @@ export const MOCK_INTEGRATIONS = [
     description: "Share and preview Google Drive files directly in your channels without switching apps.",
     useCases: [
       "Share docs, sheets, and slides in chat",
-      "Preview files without leaving Chttrix",
+      "Preview files without leaving Oruinwan",
       "Get notified when files are shared with you",
     ],
     permissions: [
@@ -150,7 +150,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "📅",
     color: "from-blue-400 to-blue-600",
     accentColor: "#4285F4",
-    description: "See your calendar events and schedule meetings from Chttrix. Get reminders before meetings start.",
+    description: "See your calendar events and schedule meetings from Oruinwan. Get reminders before meetings start.",
     useCases: [
       "See today's schedule in your workspace",
       "Schedule meetings from chat",
@@ -179,7 +179,7 @@ export const MOCK_INTEGRATIONS = [
     useCases: [
       "Get notified of important emails",
       "Share email threads in channels",
-      "Reply to emails from Chttrix",
+      "Reply to emails from Oruinwan",
     ],
     permissions: [
       "Read email metadata and labels",
@@ -210,7 +210,7 @@ export const MOCK_INTEGRATIONS = [
       "Share page previews in channels",
     ],
     configOptions: {
-      defaultWorkspace: "Chttrix Docs",
+      defaultWorkspace: "Oruinwan Docs",
     },
     connected: false,
   },
@@ -224,7 +224,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "🎥",
     color: "from-blue-500 to-blue-700",
     accentColor: "#2D8CFF",
-    description: "Start or schedule Zoom meetings directly from Chttrix channels and DMs.",
+    description: "Start or schedule Zoom meetings directly from Oruinwan channels and DMs.",
     useCases: [
       "Start instant Zoom meetings from chat",
       "Schedule meetings and share invite links",
@@ -249,7 +249,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "🟢",
     color: "from-green-500 to-teal-600",
     accentColor: "#00897B",
-    description: "Create and join Google Meet calls directly from your Chttrix conversations.",
+    description: "Create and join Google Meet calls directly from your Oruinwan conversations.",
     useCases: [
       "Generate Meet links from chat",
       "Join meetings with one click",
@@ -271,7 +271,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "🌉",
     color: "from-purple-600 to-pink-600",
     accentColor: "#4A154B",
-    description: "Bridge messages between Chttrix channels and Slack workspaces for cross-platform collaboration.",
+    description: "Bridge messages between Oruinwan channels and Slack workspaces for cross-platform collaboration.",
     useCases: [
       "Sync messages with external Slack channels",
       "Keep external partners in the loop",
@@ -371,7 +371,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "⚡",
     color: "from-orange-500 to-red-500",
     accentColor: "#FF4A00",
-    description: "Connect Chttrix to 5000+ apps via Zapier to automate your workflows without code.",
+    description: "Connect Oruinwan to 5000+ apps via Zapier to automate your workflows without code.",
     useCases: [
       "Trigger messages when CRM deals close",
       "Post form submissions to channels",
@@ -418,7 +418,7 @@ export const MOCK_INTEGRATIONS = [
     emoji: "🛠️",
     color: "from-cyan-600 to-blue-600",
     accentColor: "#0891B2",
-    description: "Use the Chttrix REST API to build custom integrations for your specific workflow needs.",
+    description: "Use the Oruinwan REST API to build custom integrations for your specific workflow needs.",
     useCases: [
       "Build custom bots and workflows",
       "Integrate with internal tools",

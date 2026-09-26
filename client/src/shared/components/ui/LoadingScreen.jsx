@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import BrandMark from './BrandMark';
+import BRAND from '../../brand';
 
 const BOOT_LINES = [
     { text: '> Initializing workspace OS...', style: 'code', hold: 0 },
     { text: '> Connecting intelligence layer...', style: 'code', hold: 180 },
     { text: '> All systems operational.', style: 'code', hold: 120 },
-    { text: 'Hello. Welcome to Chttrix.', style: 'warm', hold: 400 },
+    { text: `Hello. Welcome to ${BRAND.name}.`, style: 'warm', hold: 400 },
 ];
 
 const CHAR_SPEED = 22; 
@@ -151,11 +153,10 @@ const LoadingScreen = ({ onComplete }) => {
                         display: 'flex', alignItems: 'center', gap: '14px',
                         animation: 'brandStamp 500ms cubic-bezier(0.16,1,0.3,1) forwards',
                     }}>
-                        <img src="/chttrix-logo.jpg" alt="Chttrix"
-                            style={{ width: '40px', height: '40px', objectFit: 'cover' }} />
+                        <BrandMark size={40} />
                         <div>
                             <div style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                                Chttrix
+                                {BRAND.name}
                             </div>
                             <div style={{ fontSize: '11px', color: 'rgba(184,149,106,0.7)', marginTop: '3px', fontFamily: 'Inter, system-ui, sans-serif', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                                 Workspace OS · 2026

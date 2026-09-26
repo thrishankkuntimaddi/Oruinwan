@@ -1,24 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
-import { Eye, EyeOff, Lock, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, AlertCircle, ArrowRight } from 'lucide-react';
+import AuthShell from '../../components/public/AuthShell';
 
 const RULES = [
-    { key: 'length',  label: '8–16 characters', test: p => p.length >= 8 && p.length <= 16 },
-    { key: 'upper',   label: 'Uppercase letter', test: p => /[A-Z]/.test(p) },
-    { key: 'number',  label: 'Number',           test: p => /[0-9]/.test(p) },
+    { key: 'length', label: '8–16 characters', test: p => p.length >= 8 && p.length <= 16 },
+    { key: 'upper', label: 'Uppercase letter', test: p => /[A-Z]/.test(p) },
+    { key: 'number', label: 'Number', test: p => /[0-9]/.test(p) },
     { key: 'special', label: 'Special character', test: p => /[^A-Za-z0-9]/.test(p) },
 ];
-
-const inputSt = (err) => ({
-    width: '100%', boxSizing: 'border-box',
-    background: 'var(--bg-input)',
-    border: `1px solid ${err ? 'var(--state-danger)' : 'var(--border-default)'}`,
-    color: 'var(--text-primary)', fontSize: '13px',
-    padding: '10px 38px 10px 38px', outline: 'none',
-    fontFamily: 'Inter, system-ui, sans-serif',
-    transition: 'border-color 150ms ease',
-});
 
 export default function ResetPassword() {
     const [params] = useSearchParams();
@@ -27,11 +18,6 @@ export default function ResetPassword() {
 
     const token = params.get('token');
     const email = params.get('email');
-
-    useEffect(() => {
-        document.documentElement.classList.add('public-scroll');
-        return () => document.documentElement.classList.remove('public-scroll');
-    }, []);
 
     const [newPassword, setNewPassword] = useState('');
     const [confirm, setConfirm] = useState('');
@@ -66,93 +52,75 @@ export default function ResetPassword() {
 
     const confirmError = confirm.length > 0 && newPassword !== confirm;
 
+    const aside = (
+        <>
+            <h1 className="orw-auth__title">Choose a new<br /><span className="orw-gloss-text">password.</span></h1>
+            <p className="orw-auth__lead">After resetting, sign in and unlock your encrypted messages with the new password.</p>
+        </>
+    );
+
+    if (!token) {
+        return (
+            <AuthShell title="Reset password" aside={aside}>
+                <span className="orw-card__icon" style={{ '--c': '#ff8f8f' }}><AlertCircle size={19} aria-hidden="true" /></span>
+                <div className="orw-auth__panel-head">
+                    <h2>This link isn’t valid</h2>
+                    <p>The reset link is missing its token. It may have been copied incompletely. Request a fresh link and open it from the email.</p>
+                </div>
+                <Link to="/forgot-password" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block">
+                    Request a new link <ArrowRight size={15} />
+                </Link>
+            </AuthShell>
+        );
+    }
+
     return (
-        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif', padding: '24px' }}>
-            {}
-            <div style={{ position: 'fixed', top: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-            <div style={{ width: '100%', maxWidth: '420px', animation: 'slideUp 300ms cubic-bezier(0.16,1,0.3,1)' }}>
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
-                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Chttrix</span>
-                </div>
-
-                {}
-                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '32px' }}>
-                    {}
-                    <div style={{ width: '44px', height: '44px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px' }}>
-                        <ShieldCheck size={22} style={{ color: 'var(--accent)' }} />
-                    </div>
-
-                    <h1 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px', letterSpacing: '-0.02em' }}>Reset Password</h1>
-                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '24px', lineHeight: '1.6' }}>
-                        Create a strong new password for <span style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>{email}</span>
-                    </p>
-
-                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                        {}
-                        <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>New Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                <input type={showPwd ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="New password" required style={inputSt(false)}
-                                    onFocus={e => e.target.style.borderColor = 'var(--border-accent)'}
-                                    onBlur={e => e.target.style.borderColor = 'var(--border-default)'} />
-                                <button type="button" onClick={() => setShowPwd(!showPwd)}
-                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
-                                    {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
-                                </button>
-                            </div>
-                        </div>
-
-                        {}
-                        {newPassword.length > 0 && (
-                            <div style={{ padding: '12px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
-                                <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '8px' }}>Requirements</p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                                    {rules.map(r => (
-                                        <div key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: r.met ? 'var(--state-success)' : 'var(--text-muted)', fontWeight: r.met ? 600 : 400 }}>
-                                            {r.met ? <CheckCircle2 size={11} /> : <div style={{ width: '11px', height: '11px', borderRadius: '50%', border: '1px solid var(--border-accent)', flexShrink: 0 }} />}
-                                            {r.label}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {}
-                        <div>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>Confirm Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <Lock size={13} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                <input type={showCfm ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="Confirm password" required style={inputSt(confirmError)}
-                                    onFocus={e => !confirmError && (e.target.style.borderColor = 'var(--border-accent)')}
-                                    onBlur={e => !confirmError && (e.target.style.borderColor = 'var(--border-default)')} />
-                                <button type="button" onClick={() => setShowCfm(!showCfm)}
-                                    style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0, lineHeight: 1 }}>
-                                    {showCfm ? <EyeOff size={14} /> : <Eye size={14} />}
-                                </button>
-                            </div>
-                            {confirm.length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px', fontSize: '11px', fontWeight: 600, color: matches ? 'var(--state-success)' : 'var(--state-danger)' }}>
-                                    {matches ? <CheckCircle2 size={11} /> : <AlertCircle size={11} />}
-                                    {matches ? 'Passwords match' : 'Passwords do not match'}
-                                </div>
-                            )}
-                        </div>
-
-                        <button type="submit" disabled={!isValid || loading}
-                            style={{ padding: '10px', background: isValid ? 'var(--accent)' : 'var(--bg-active)', border: 'none', color: isValid ? 'var(--bg-base)' : 'var(--text-muted)', fontSize: '13px', fontWeight: 700, cursor: isValid && !loading ? 'pointer' : 'not-allowed', opacity: loading ? 0.6 : 1, transition: 'all 150ms ease', letterSpacing: '0.02em', marginTop: '4px' }}>
-                            {loading ? 'Resetting...' : 'Reset Password'}
-                        </button>
-                    </form>
-                </div>
-
-                <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '32px', opacity: 0.5 }}>
-                    © 2026 Chttrix Inc.
-                </p>
+        <AuthShell title="Reset password" aside={aside}>
+            <span className="orw-card__icon"><ShieldCheck size={19} aria-hidden="true" /></span>
+            <div className="orw-auth__panel-head">
+                <h2>Set a new password</h2>
+                <p>{email ? <>For <strong style={{ color: 'var(--o-text)' }}>{email}</strong>. </> : null}Make it strong. You’ll use it to unlock encryption too.</p>
             </div>
-        </div>
+
+            <form onSubmit={handleSubmit} className="orw-form">
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="reset-new">New password</label>
+                    <div className="orw-input-wrap">
+                        <input id="reset-new" type={showPwd ? 'text' : 'password'} value={newPassword} onChange={e => setNewPassword(e.target.value)}
+                            placeholder="New password" autoComplete="new-password" required className="orw-input" aria-describedby="reset-rules" />
+                        <button type="button" className="orw-input-wrap__btn" onClick={() => setShowPwd(!showPwd)}
+                            aria-label={showPwd ? 'Hide password' : 'Show password'} aria-pressed={showPwd}>
+                            {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                    </div>
+                    <ul className="orw-pwd-rules" id="reset-rules" aria-label="Password requirements">
+                        {rules.map(r => (
+                            <li key={r.key} className={r.met ? 'is-met' : ''}>{r.label}<span className="orw-sr">{r.met ? ' (met)' : ' (not met)'}</span></li>
+                        ))}
+                    </ul>
+                </div>
+
+                <div className="orw-field">
+                    <label className="orw-label" htmlFor="reset-confirm">Confirm password</label>
+                    <div className="orw-input-wrap">
+                        <input id="reset-confirm" type={showCfm ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)}
+                            placeholder="Repeat the password" autoComplete="new-password" required className="orw-input"
+                            aria-invalid={confirmError ? 'true' : undefined} data-state={matches ? 'ok' : undefined}
+                            aria-describedby={confirmError ? 'reset-confirm-err' : undefined} />
+                        <button type="button" className="orw-input-wrap__btn" onClick={() => setShowCfm(!showCfm)}
+                            aria-label={showCfm ? 'Hide password' : 'Show password'} aria-pressed={showCfm}>
+                            {showCfm ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                    </div>
+                    {confirmError && <p className="orw-error-text" id="reset-confirm-err">Passwords don’t match</p>}
+                </div>
+
+                <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={!isValid || loading} aria-busy={loading}>
+                    {loading ? 'Resetting…' : <>Reset password <ArrowRight size={15} /></>}
+                </button>
+            </form>
+
+            <p className="orw-auth__note"><Link to="/login" className="orw-link">Back to sign in</Link></p>
+        </AuthShell>
     );
 }

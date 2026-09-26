@@ -9,7 +9,7 @@ const COMPANY_ADMIN_ROLES = ['owner', 'admin'];
  * Company-scoped admin gate. Loads the caller from the database (JWT claims are
  * not trusted for role or company) and sets:
  *   req.companyId        the caller's own company, which handlers must use
- *   req.isPlatformAdmin  Chttrix staff, who may choose a company explicitly
+ *   req.isPlatformAdmin  Oruinwan staff, who may choose a company explicitly
  *
  * Unlike requireAdmin, it never replaces req.user, so req.user.sub stays valid.
  */

@@ -136,7 +136,7 @@ export default function FooterInput({
     setPreviewCommand(cmd);
   }, [onChange]);
 
-  // Chttrix AI (assistant panel, smart replies, drafts) inserts text here.
+  // Oruinwan AI (assistant panel, smart replies, drafts) inserts text here.
   const aiCtx = useAIContext();
   const insertText = useCallback((text) => {
     if (!editableRef.current || !text) return;
@@ -218,7 +218,7 @@ export default function FooterInput({
         break;
       }
       case "ai":
-        // Open the Chttrix AI panel; it already knows which conversation is open.
+        // Open the Oruinwan AI panel; it already knows which conversation is open.
         window.dispatchEvent(new CustomEvent('chttrix-ai:open', { detail: {} }));
         break;
       default: break;
@@ -558,7 +558,7 @@ export default function FooterInput({
                   onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                   onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
                 >
-                  <img src="/assets/ChttrixAI-logo.png" alt="AI" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.7 }} />
+                  <img src="/assets/OruinwanAI-logo.png" alt="AI" style={{ width: 16, height: 16, objectFit: 'contain', opacity: 0.7 }} />
                 </button>
                 <div style={{ width: '1px', height: '14px', backgroundColor: 'var(--border-default)', margin: '0 4px' }} />
               </>

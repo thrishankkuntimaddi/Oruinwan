@@ -5,7 +5,7 @@ const config = require('../config');
 const { transcriptToText } = require('../utils/json');
 
 const DEFAULT_SYSTEM_PROMPT = [
-  'You are Chttrix Intelligence, the assistant built into the Chttrix team workspace.',
+  'You are Oruinwan AI, the assistant built into the Oruinwan team workspace.',
   'Be concise and practical. When the user asks you to do something you have a tool for,',
   'call the tool instead of describing what you would do. Never invent channel, task or user IDs;',
   'look them up with the available tools first. Only act inside the current workspace.',
@@ -77,7 +77,10 @@ class ChatAgent extends BaseAgent {
 
   /**
    * @param {{ message: string, history?: Array, workspaceId?: string, context?: object }} payload
-   * @param {{ userId: string, req?: object, provider?: object }} context
+   * @param {{ userId: string, req?: object, provider?: object,
+   *           onToken?: (text: string) => void, onEvent?: (event: object) => void, signal?: AbortSignal }} context
+   *   `onToken` receives answer text as it is generated; `onEvent` receives
+   *   `{ type: 'tool', name, args }` / `{ type: 'tool_result', name, ok }` while tools run.
    * @returns {Promise<{ text: string, actionsExecuted?: Array }>}
    */
   async run(payload, context = {}) {
@@ -91,6 +94,10 @@ class ChatAgent extends BaseAgent {
     const toolCtx = { userId: context.userId, workspaceId: workspaceId || context.workspaceId || null, req: context.req || null, io: context.io || null };
     const toolsByName = new Map(this.tools.map((t) => [t.declaration.name, t]));
     const provider = this.providerFor(context);
+    const emit = (event) => { try { context.onEvent?.(event); } catch { /* listeners never break a turn */ } };
+    // Providers without native streaming still feed onToken, once, with the final text.
+    const nativeStream = Boolean(provider.supportsStreaming);
+    const onToken = typeof context.onToken === 'function' ? context.onToken : null;
 
     let reply = await provider.chat({
       model: this.modelFor(context),
@@ -98,15 +105,20 @@ class ChatAgent extends BaseAgent {
       history: turns,
       message,
       tools: this.tools.map((t) => t.declaration),
+      onToken: nativeStream ? onToken || undefined : undefined,
+      signal: context.signal,
     });
 
     const actionsExecuted = [];
     let rounds = 0;
     while (reply.functionCalls.length && rounds < this.maxToolRounds) {
       rounds += 1;
+      if (context.signal?.aborted) break;
       const results = await Promise.all(
         reply.functionCalls.map(async (call) => {
+          emit({ type: 'tool', name: call.name, args: call.args || {} });
           const response = await this._execute(toolsByName, call, toolCtx);
+          emit({ type: 'tool_result', name: call.name, ok: response?.success !== false });
           return { name: call.name, response };
         })
       );
@@ -118,6 +130,7 @@ class ChatAgent extends BaseAgent {
       reply = await reply.continue(results);
     }
 
+    if (onToken && !nativeStream && reply.text) onToken(reply.text);
     const out = { text: reply.text };
     if (actionsExecuted.length) out.actionsExecuted = actionsExecuted;
     return out;

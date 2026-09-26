@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId, useRef } from 'react';
 import { useToast } from '../../contexts/ToastContext';
-import { Eye, EyeOff, ChevronDown, CheckCircle2, AlertCircle, ArrowRight, Loader } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle, ArrowRight, ArrowLeft, Loader, Check } from 'lucide-react';
 
 const COUNTRIES = [
     { code: 'IN', name: 'IND', dial_code: '+91', length: 10, flag: '🇮🇳' },
@@ -19,26 +19,10 @@ const PWD_RULES = [
     { key: 'special', label: 'Special character',     test: p => /[^A-Za-z0-9]/.test(p) },
 ];
 
-const inp = (focused, err) => ({
-    width: '100%', boxSizing: 'border-box',
-    padding: '10px 12px',
-    background: 'var(--bg-input)',
-    border: `1px solid ${err ? '#e05252' : focused ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`,
-    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
-    fontFamily: 'Inter, system-ui, sans-serif',
-    transition: 'border-color 150ms ease',
-});
-
-const Label = ({ children }) => (
-    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>
-        {children}
-    </label>
-);
-
 const StatusIcon = ({ s }) => {
-    if (s === 'checking') return <Loader size={13} style={{ color: '#b8956a', animation: 'spin 0.8s linear infinite' }} />;
-    if (s === 'available') return <CheckCircle2 size={13} style={{ color: '#5aba8a' }} />;
-    if (s === 'taken') return <AlertCircle size={13} style={{ color: '#e05252' }} />;
+    if (s === 'checking') return <Loader size={14} className="orw-spin" style={{ color: 'var(--o-accent)' }} aria-label="Checking" />;
+    if (s === 'available') return <CheckCircle2 size={14} style={{ color: 'var(--o-good)' }} aria-label="Available" />;
+    if (s === 'taken') return <AlertCircle size={14} style={{ color: '#ff8f8f' }} aria-label="Not available" />;
     return null;
 };
 
@@ -49,10 +33,12 @@ const SignupForm = ({ onSwitch }) => {
     const [showPwd, setShowPwd] = useState(false);
     const [showCfm, setShowCfm] = useState(false);
     const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
-    const [showCountryDd, setShowCountryDd] = useState(false);
-    const [focused, setFocused] = useState(null);
     const [loading, setLoading] = useState(false);
     const { showToast } = useToast();
+    const uid = useId();
+    const [step, setStep] = useState(1);
+    const passwordRef = useRef(null);
+    const usernameRef = useRef(null);
 
     
     useEffect(() => {
@@ -138,135 +124,163 @@ const SignupForm = ({ onSwitch }) => {
         }
     };
 
+    const fieldState = (key) => (errors[key] ? 'true' : undefined);
+    const okState = (key) => (vs[key] === 'available' ? 'ok' : undefined);
+
+    // Step 1 is done once all three identifiers are confirmed available.
+    const detailsValid = ['username', 'email', 'phone'].every(k => formData[k] && vs[k] === 'available' && !errors[k]);
+    const detailsChecking = ['username', 'email', 'phone'].some(k => vs[k] === 'checking');
+
+    const goTo = (n) => {
+        setStep(n);
+        // Move focus to the first field of the new step (after it renders).
+        setTimeout(() => (n === 2 ? passwordRef : usernameRef).current?.focus(), 0);
+    };
+
+    const onSubmit = (e) => {
+        if (step === 1) {
+            e.preventDefault();
+            if (detailsValid) goTo(2);
+            return;
+        }
+        handleSubmit(e);
+    };
+
+    const StepBar = () => (
+        <div className="orw-stepper" aria-label={`Step ${step} of 2`}>
+            {['Your details', 'Secure your account'].map((label, i) => (
+                <div key={label} className={`orw-stepper__item${step === i + 1 ? ' is-current' : ''}${step > i + 1 ? ' is-done' : ''}`}>
+                    <span className="orw-stepper__bar" aria-hidden="true" />
+                    <span className="orw-stepper__label">
+                        <b>{step > i + 1 ? <Check size={11} strokeWidth={3} aria-hidden="true" /> : i + 1}</b>{label}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+
     return (
         <div>
-            <style>{`@keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }`}</style>
-            <div style={{ marginBottom: '24px' }}>
-                <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '6px' }}>Create account</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Join thousands of teams already on Chttrix.</p>
-            </div>
+            <StepBar />
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {}
-                <div>
-                    <Label>Username</Label>
-                    <div style={{ position: 'relative' }}>
-                        <input name="username" placeholder="Choose a username"
-                            value={formData.username} onChange={handleChange}
-                            onFocus={() => setFocused('username')} onBlur={() => setFocused(null)}
-                            style={{ ...inp(focused === 'username', errors.username), paddingRight: '36px' }} />
-                        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-                            <StatusIcon s={vs.username} />
+            <form onSubmit={onSubmit} className="orw-form">
+                {step === 1 ? (
+                    <div className="orw-wizard-step" key="s1">
+                        <div className="orw-auth__panel-head">
+                            <h2>Create your account</h2>
+                            <p>Free for individuals. Let’s start with the basics.</p>
                         </div>
-                    </div>
-                    {errors.username && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.username}</p>}
-                </div>
 
-                {}
-                <div>
-                    <Label>Email</Label>
-                    <div style={{ position: 'relative' }}>
-                        <input name="email" type="email" placeholder="you@company.com"
-                            value={formData.email} onChange={handleChange}
-                            onFocus={() => setFocused('email')} onBlur={() => setFocused(null)}
-                            style={{ ...inp(focused === 'email', errors.email), paddingRight: '36px' }} />
-                        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-                            <StatusIcon s={vs.email} />
-                        </div>
-                    </div>
-                    {errors.email && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.email}</p>}
-                </div>
-
-                {}
-                <div>
-                    <Label>Phone Number</Label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        {}
-                        <div style={{ position: 'relative', width: '110px', flexShrink: 0 }}>
-                            <button type="button" onClick={() => setShowCountryDd(!showCountryDd)}
-                                style={{ width: '100%', padding: '10px 8px', background: 'var(--bg-input)', border: `1px solid ${focused === 'phone' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)'}`, color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
-                                <span>{selectedCountry.flag} {selectedCountry.dial_code}</span>
-                                <ChevronDown size={11} style={{ color: 'var(--text-muted)', transform: showCountryDd ? 'rotate(180deg)' : 'none', transition: 'transform 150ms ease' }} />
-                            </button>
-                            {showCountryDd && (
-                                <div style={{ position: 'absolute', top: '100%', left: 0, zIndex: 50, width: '180px', background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '200px', overflowY: 'auto', marginTop: '2px' }}>
-                                    {COUNTRIES.map(c => (
-                                        <button key={c.code} type="button" onClick={() => { setSelectedCountry(c); setShowCountryDd(false); }}
-                                            style={{ width: '100%', padding: '8px 12px', background: selectedCountry.code === c.code ? 'rgba(184,149,106,0.1)' : 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px', display: 'flex', gap: '8px', alignItems: 'center', textAlign: 'left' }}>
-                                            <span>{c.flag}</span><span style={{ flex: 1 }}>{c.name}</span><span style={{ color: 'var(--text-muted)' }}>{c.dial_code}</span>
-                                        </button>
-                                    ))}
+                        <div className="orw-form">
+                            <div className="orw-field">
+                                <label className="orw-label" htmlFor={`${uid}-username`}>Username</label>
+                                <div className="orw-input-wrap">
+                                    <input ref={usernameRef} id={`${uid}-username`} name="username" placeholder="Choose a username" autoComplete="username"
+                                        value={formData.username} onChange={handleChange} className="orw-input"
+                                        aria-invalid={fieldState('username')} data-state={okState('username')}
+                                        aria-describedby={errors.username ? `${uid}-username-err` : undefined} />
+                                    <span className="orw-input-wrap__status"><StatusIcon s={vs.username} /></span>
                                 </div>
-                            )}
-                        </div>
-                        {}
-                        <div style={{ flex: 1, position: 'relative' }}>
-                            <input name="phone" placeholder={`${selectedCountry.length} digits`}
-                                value={formData.phone} onChange={handleChange}
-                                onFocus={() => setFocused('phone')} onBlur={() => setFocused(null)}
-                                style={{ ...inp(focused === 'phone', errors.phone), paddingRight: '36px' }} />
-                            <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-                                <StatusIcon s={vs.phone} />
+                                {errors.username && <p className="orw-error-text" id={`${uid}-username-err`}>{errors.username}</p>}
                             </div>
+
+                            <div className="orw-field">
+                                <label className="orw-label" htmlFor={`${uid}-email`}>Work email</label>
+                                <div className="orw-input-wrap">
+                                    <input id={`${uid}-email`} name="email" type="email" placeholder="you@company.com" autoComplete="email"
+                                        value={formData.email} onChange={handleChange} className="orw-input"
+                                        aria-invalid={fieldState('email')} data-state={okState('email')}
+                                        aria-describedby={errors.email ? `${uid}-email-err` : undefined} />
+                                    <span className="orw-input-wrap__status"><StatusIcon s={vs.email} /></span>
+                                </div>
+                                {errors.email && <p className="orw-error-text" id={`${uid}-email-err`}>{errors.email}</p>}
+                            </div>
+
+                            <div className="orw-field">
+                                <label className="orw-label" htmlFor={`${uid}-phone`}>Phone number</label>
+                                <div className="orw-phone">
+                                    <select className="orw-select" aria-label="Country code" value={selectedCountry.code}
+                                        onChange={e => setSelectedCountry(COUNTRIES.find(c => c.code === e.target.value) || COUNTRIES[0])}>
+                                        {COUNTRIES.map(c => (
+                                            <option key={c.code} value={c.code}>{c.flag} {c.dial_code}</option>
+                                        ))}
+                                    </select>
+                                    <div className="orw-input-wrap">
+                                        <input id={`${uid}-phone`} name="phone" inputMode="numeric" autoComplete="tel-national"
+                                            placeholder={`${selectedCountry.length}-digit number`}
+                                            value={formData.phone} onChange={handleChange} className="orw-input"
+                                            aria-invalid={fieldState('phone')} data-state={okState('phone')}
+                                            aria-describedby={errors.phone ? `${uid}-phone-err` : undefined} />
+                                        <span className="orw-input-wrap__status"><StatusIcon s={vs.phone} /></span>
+                                    </div>
+                                </div>
+                                {errors.phone && <p className="orw-error-text" id={`${uid}-phone-err`}>{errors.phone}</p>}
+                            </div>
+
+                            <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={!detailsValid}>
+                                {detailsChecking ? 'Checking…' : <>Continue <ArrowRight size={15} /></>}
+                            </button>
                         </div>
                     </div>
-                    {errors.phone && <p style={{ fontSize: '11px', color: '#e05252', marginTop: '4px' }}>{errors.phone}</p>}
-                </div>
-
-                {}
-                <div>
-                    <Label>Password</Label>
-                    <div style={{ position: 'relative' }}>
-                        <input name="password" type={showPwd ? 'text' : 'password'} placeholder="Create a password"
-                            value={formData.password} onChange={handleChange}
-                            onFocus={() => setFocused('password')} onBlur={() => setFocused(null)}
-                            style={{ ...inp(focused === 'password'), paddingRight: '36px' }} />
-                        <button type="button" onClick={() => setShowPwd(!showPwd)}
-                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
-                            {showPwd ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                    </div>
-                    {}
-                    {formData.password.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                            {pwdRules.map(r => (
-                                <span key={r.key} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: r.met ? '#5aba8a' : 'rgba(228,228,228,0.3)', fontWeight: 600 }}>
-                                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: r.met ? '#5aba8a' : 'rgba(255,255,255,0.15)' }} />
-                                    {r.label}
-                                </span>
-                            ))}
+                ) : (
+                    <div className="orw-wizard-step" key="s2">
+                        <div className="orw-auth__panel-head">
+                            <h2>Secure your account</h2>
+                            <p>Almost there, <strong style={{ color: 'var(--o-text)' }}>{formData.username}</strong>. This password also unlocks your encrypted messages.</p>
                         </div>
-                    )}
-                </div>
 
-                {}
-                <div>
-                    <Label>Confirm Password</Label>
-                    <div style={{ position: 'relative' }}>
-                        <input name="confirmPassword" type={showCfm ? 'text' : 'password'} placeholder="Confirm your password"
-                            value={formData.confirmPassword} onChange={handleChange}
-                            onFocus={() => setFocused('confirmPassword')} onBlur={() => setFocused(null)}
-                            style={{ ...inp(focused === 'confirmPassword', passwordsDontMatch), paddingRight: '36px', borderColor: passwordsMatch ? '#5aba8a' : passwordsDontMatch ? '#e05252' : focused === 'confirmPassword' ? 'rgba(184,149,106,0.5)' : 'rgba(255,255,255,0.08)' }} />
-                        <button type="button" onClick={() => setShowCfm(!showCfm)}
-                            style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex' }}>
-                            {showCfm ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
+                        <div className="orw-form">
+                            <div className="orw-field">
+                                <label className="orw-label" htmlFor={`${uid}-password`}>Password</label>
+                                <div className="orw-input-wrap">
+                                    <input ref={passwordRef} id={`${uid}-password`} name="password" type={showPwd ? 'text' : 'password'} placeholder="Create a password"
+                                        autoComplete="new-password" value={formData.password} onChange={handleChange} className="orw-input"
+                                        aria-describedby={`${uid}-pwd-rules`} />
+                                    <button type="button" className="orw-input-wrap__btn" onClick={() => setShowPwd(!showPwd)}
+                                        aria-label={showPwd ? 'Hide password' : 'Show password'} aria-pressed={showPwd}>
+                                        {showPwd ? <EyeOff size={15} /> : <Eye size={15} />}
+                                    </button>
+                                </div>
+                                <ul className="orw-pwd-rules" id={`${uid}-pwd-rules`} aria-label="Password requirements">
+                                    {pwdRules.map(r => (
+                                        <li key={r.key} className={r.met ? 'is-met' : ''}>
+                                            <span className="orw-pwd-rules__tick" aria-hidden="true">{r.met && <Check size={10} strokeWidth={3} />}</span>
+                                            {r.label}<span className="orw-sr">{r.met ? ' (met)' : ' (not met)'}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            <div className="orw-field">
+                                <label className="orw-label" htmlFor={`${uid}-confirm`}>Confirm password</label>
+                                <div className="orw-input-wrap">
+                                    <input id={`${uid}-confirm`} name="confirmPassword" type={showCfm ? 'text' : 'password'} placeholder="Repeat your password"
+                                        autoComplete="new-password" value={formData.confirmPassword} onChange={handleChange} className="orw-input"
+                                        aria-invalid={passwordsDontMatch ? 'true' : undefined} data-state={passwordsMatch ? 'ok' : undefined}
+                                        aria-describedby={passwordsDontMatch ? `${uid}-confirm-err` : undefined} />
+                                    <button type="button" className="orw-input-wrap__btn" onClick={() => setShowCfm(!showCfm)}
+                                        aria-label={showCfm ? 'Hide password' : 'Show password'} aria-pressed={showCfm}>
+                                        {showCfm ? <EyeOff size={15} /> : <Eye size={15} />}
+                                    </button>
+                                </div>
+                                {passwordsDontMatch && <p className="orw-error-text" id={`${uid}-confirm-err`}>Passwords don’t match</p>}
+                            </div>
+
+                            <div className="orw-wizard-step__actions">
+                                <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => goTo(1)} aria-label="Back to your details">
+                                    <ArrowLeft size={15} />
+                                </button>
+                                <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={!isFormValid || loading} aria-busy={loading}>
+                                    {loading ? 'Creating account…' : <>Create account <ArrowRight size={15} /></>}
+                                </button>
+                            </div>
+                            <p className="orw-hint" style={{ textAlign: 'center', fontSize: 11.5 }}>
+                                By continuing you agree to our <a className="orw-link" style={{ fontSize: 'inherit' }} href="/terms">Terms</a> and <a className="orw-link" style={{ fontSize: 'inherit' }} href="/privacy">Privacy Policy</a>.
+                            </p>
+                        </div>
                     </div>
-                </div>
-
-                {}
-                <button type="submit" disabled={!isFormValid || loading}
-                    style={{ width: '100%', padding: '11px', background: isFormValid && !loading ? '#b8956a' : 'rgba(184,149,106,0.3)', border: 'none', color: isFormValid && !loading ? '#0c0c0c' : 'rgba(228,228,228,0.3)', fontSize: '13px', fontWeight: 700, cursor: isFormValid && !loading ? 'pointer' : 'default', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', transition: 'all 150ms ease', marginTop: '4px' }}>
-                    {loading ? 'Creating account...' : <><span>Create Account</span><ArrowRight size={13} /></>}
-                </button>
+                )}
             </form>
-
-            <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '12px', color: 'var(--text-muted)' }}>
-                Already have an account?{' '}
-                <button onClick={onSwitch} style={{ background: 'none', border: 'none', color: '#b8956a', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: '12px' }}>
-                    Sign in
-                </button>
-            </p>
         </div>
     );
 };

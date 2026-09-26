@@ -1,117 +1,128 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { BookOpen, Sparkles, Shield, Users, Clock, ArrowRight } from 'lucide-react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
-import { BookOpen, Tag, Clock, ArrowRight, Sparkles, Shield, Users } from 'lucide-react';
+import { PageHero, Block, Grid, Card, CTABand } from '../../components/public/PublicKit';
+import BRAND from '../../shared/brand';
 
 const POSTS = [
     {
-        id: 1, tag: 'Product', tagColor: '#b8956a',
-        title: 'Introducing Chttrix AI: Your workspace-aware teammate',
-        excerpt: 'Today we\'re announcing the public beta of Chttrix Intelligence — the AI layer that understands your entire workspace context, not just the message you sent.',
-        author: 'Chttrix Team', date: 'Apr 1, 2026', readTime: '4 min', featured: true,
-        icon: Sparkles,
+        id: 1, tag: 'Product', color: '#c8a274', icon: Sparkles,
+        title: `Introducing ${BRAND.ai}: your workspace-aware teammate`,
+        excerpt: `We’re opening up the beta of ${BRAND.ai}, the assistant that understands the context of your workspace, not just the message you sent.`,
+        author: `${BRAND.name} Team`, date: 'Apr 1, 2026', readTime: '4 min',
     },
     {
-        id: 2, tag: 'Security', tagColor: '#5aba8a',
-        title: 'How we built end-to-end encryption without sacrificing search',
-        excerpt: 'Building E2E encryption for a searchable, AI-powered workspace is a hard problem. Here\'s how we solved it without compromising on either.',
-        author: 'Security Team', date: 'Mar 22, 2026', readTime: '7 min', featured: false,
-        icon: Shield,
+        id: 2, tag: 'Security', color: '#5cc995', icon: Shield,
+        title: 'How we built end-to-end encryption into a real-time workspace',
+        excerpt: 'Per-conversation keys, X25519 key agreement and AES-GCM on your device: how we encrypt channels and DMs without slowing the conversation down.',
+        author: 'Security Team', date: 'Mar 22, 2026', readTime: '7 min',
     },
     {
-        id: 3, tag: 'Engineering', tagColor: '#6ea8fe',
-        title: 'The real-time architecture powering Chttrix channels',
-        excerpt: 'Inside the WebSocket infrastructure that handles sub-50ms message delivery at scale — including how we implemented presence, typing indicators, and read receipts.',
-        author: 'Platform Team', date: 'Mar 10, 2026', readTime: '10 min', featured: false,
-        icon: BookOpen,
+        id: 3, tag: 'Engineering', color: '#8ea6ff', icon: BookOpen,
+        title: `The real-time architecture powering ${BRAND.name} channels`,
+        excerpt: 'Inside the WebSocket infrastructure behind live messaging, including how we implemented presence, typing indicators and read receipts.',
+        author: 'Platform Team', date: 'Mar 10, 2026', readTime: '10 min',
     },
     {
-        id: 4, tag: 'Company', tagColor: '#a78bfa',
-        title: 'Why we built Chttrix instead of integrating with existing tools',
-        excerpt: 'The honest answer to the most common question we get: "Why not just build a Slack integration?" The answer has everything to do with context loss.',
-        author: 'Thrishank K.', date: 'Feb 28, 2026', readTime: '5 min', featured: false,
-        icon: Users,
+        id: 4, tag: 'Company', color: '#b59cff', icon: Users,
+        title: `Why we built ${BRAND.name} instead of integrating with existing tools`,
+        excerpt: 'The honest answer to the question we hear most: “Why not just build a Slack integration?” It has everything to do with context loss.',
+        author: 'Thrishank K.', date: 'Feb 28, 2026', readTime: '5 min',
     },
 ];
 
 const TAGS = ['All', 'Product', 'Engineering', 'Security', 'Company'];
 
+const PostMeta = ({ post }) => (
+    <>
+        <span className="orw-tag">{post.tag}</span>
+        <span className="orw-tag orw-tag--accent">Coming soon</span>
+    </>
+);
+
 export default function Blog() {
     const [active, setActive] = useState('All');
     const filtered = active === 'All' ? POSTS : POSTS.filter(p => p.tag === active);
     const [featured, ...rest] = filtered;
+    const FeaturedIcon = featured?.icon;
 
     return (
         <PublicPageShell title="Blog">
-            {}
-            <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '72px 0 56px' }}>
-                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
-                        <BookOpen size={11} style={{ color: '#b8956a' }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Chttrix Blog</span>
-                    </div>
-                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Ideas, updates, & engineering.</h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75', maxWidth: '520px', marginBottom: '28px' }}>
-                        Product announcements, behind-the-scenes engineering, and thoughts on the future of work.
-                    </p>
-                    {}
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        {TAGS.map(t => (
-                            <button key={t} onClick={() => setActive(t)}
-                                style={{ padding: '5px 14px', background: active === t ? '#b8956a' : 'rgba(255,255,255,0.04)', border: `1px solid ${active === t ? '#b8956a' : 'rgba(255,255,255,0.09)'}`, color: active === t ? '#0c0c0c' : 'rgba(228,228,228,0.5)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 150ms ease' }}>
-                                {t}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            <PageHero
+                crumb="Blog"
+                eyebrow={`${BRAND.name} Blog`}
+                icon={BookOpen}
+                title={<>Ideas, updates <span className="orw-gloss-text">&amp; engineering.</span></>}
+                lead="Product announcements, behind-the-scenes engineering, and thoughts on the future of work."
+            />
 
-            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px' }}>
-                {}
-                {featured && (
-                    <div style={{ background: '#111', border: '1px solid rgba(255,255,255,0.07)', padding: '36px', marginBottom: '1px', display: 'flex', gap: '40px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                        <div style={{ width: '56px', height: '56px', background: `${featured.tagColor}12`, border: `1px solid ${featured.tagColor}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <featured.icon size={26} style={{ color: featured.tagColor }} />
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' }}>
-                                <span style={{ padding: '2px 8px', background: `${featured.tagColor}14`, border: `1px solid ${featured.tagColor}30`, fontSize: '10px', fontWeight: 700, color: featured.tagColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{featured.tag}</span>
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{featured.date} · {featured.readTime} read</span>
-                            </div>
-                            <h2 style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', marginBottom: '12px', lineHeight: 1.3 }}>{featured.title}</h2>
-                            <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '20px' }}>{featured.excerpt}</p>
-                            <button style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                                Read article <ArrowRight size={13} />
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
-                    {rest.map(post => (
-                        <div key={post.id} style={{ background: '#111', padding: '24px' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '14px' }}>
-                                <span style={{ padding: '2px 8px', background: `${post.tagColor}12`, border: `1px solid ${post.tagColor}25`, fontSize: '10px', fontWeight: 700, color: post.tagColor, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{post.tag}</span>
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{post.readTime}</span>
-                            </div>
-                            <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em', marginBottom: '8px', lineHeight: 1.35 }}>{post.title}</h3>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '18px' }}>{post.excerpt}</p>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{post.date}</span>
-                                <button style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}>
-                                    Read <ArrowRight size={11} />
-                                </button>
-                            </div>
-                        </div>
+            <Block>
+                <div role="group" aria-label="Filter posts by topic" data-reveal
+                    style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 32 }}>
+                    {TAGS.map(t => (
+                        <button key={t} type="button" className="orw-prompt" aria-pressed={active === t} onClick={() => setActive(t)}>
+                            {t}
+                        </button>
                     ))}
                 </div>
 
-                {filtered.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '64px 24px', color: 'var(--text-muted)' }}>
-                        <p style={{ fontSize: '14px' }}>No posts in this category yet.</p>
-                    </div>
+                <p className="orw-sr" aria-live="polite">{filtered.length} {filtered.length === 1 ? 'post' : 'posts'} shown</p>
+
+                {featured && (
+                    <article className="orw-glass" data-reveal
+                        style={{ display: 'flex', flexWrap: 'wrap', gap: '24px 40px', padding: 'clamp(24px, 4vw, 44px)', marginBottom: 32 }}>
+                        <span className="orw-card__icon" style={{ '--c': featured.color, width: 56, height: 56, margin: 0 }}>
+                            <FeaturedIcon size={24} aria-hidden="true" />
+                        </span>
+                        <div style={{ flex: '1 1 280px', minWidth: 0 }}>
+                            <div className="orw-row__meta" style={{ marginTop: 0, alignItems: 'center' }}>
+                                <span className="orw-tag orw-tag--accent">Featured</span>
+                                <PostMeta post={featured} />
+                            </div>
+                            <h2 className="orw-h2" style={{ fontSize: 'clamp(24px, 3vw, 34px)', marginTop: 18 }}>{featured.title}</h2>
+                            <p className="orw-lead" style={{ maxWidth: 680 }}>{featured.excerpt}</p>
+                            <p className="orw-hint" style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px 14px' }}>
+                                <span>{featured.author}</span>
+                                <span>{featured.date}</span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={12} aria-hidden="true" />{featured.readTime} read</span>
+                            </p>
+                        </div>
+                    </article>
                 )}
-            </div>
+
+                {rest.length > 0 && (
+                    <Grid min={300}>
+                        {rest.map(post => (
+                            <Card key={post.id} icon={post.icon} color={post.color} title={post.title}
+                                foot={<><span>{post.author} · {post.date}</span><span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Clock size={12} aria-hidden="true" />{post.readTime}</span></>}>
+                                <div className="orw-row__meta" style={{ order: -1, marginTop: 0, marginBottom: 14 }}>
+                                    <PostMeta post={post} />
+                                </div>
+                                <p>{post.excerpt}</p>
+                            </Card>
+                        ))}
+                    </Grid>
+                )}
+
+                {filtered.length === 0 && (
+                    <p className="orw-lead" style={{ textAlign: 'center', margin: '48px auto' }}>No posts in this category yet.</p>
+                )}
+            </Block>
+
+            <CTABand
+                eyebrow="Stay in the loop"
+                title="Full articles are on the way."
+                lead={`In the meantime, explore what ${BRAND.name} can do, or try it with your team.`}
+                actions={
+                    <>
+                        <Link to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
+                            Get started free <ArrowRight size={16} aria-hidden="true" />
+                        </Link>
+                        <Link to="/features" className="orw-btn orw-btn--ghost orw-btn--lg">Explore features</Link>
+                    </>
+                }
+            />
         </PublicPageShell>
     );
 }

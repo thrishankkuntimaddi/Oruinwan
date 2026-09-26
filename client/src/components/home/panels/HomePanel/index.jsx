@@ -89,7 +89,7 @@ const HomePanel = ({ title }) => {
     const [scheduleForm, setScheduleForm] = useState({ title: '', startDate: '', startHour: '09', startMin: '00', duration: 30, meetingLink: '' });
     const [schedulingLoading, setSchedulingLoading] = useState(false);
 
-    const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Chttrix");
+    const [workspaceName, setWorkspaceName] = useState(title || localStorage.getItem("currentWorkspace") || "Oruinwan");
 
     
     React.useEffect(() => {

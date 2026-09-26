@@ -18,7 +18,7 @@ async function sendOTP(phone, otp) {
 
     try {
         const result = await client.messages.create({
-            body: `Your Chttrix verification code is ${otp}`,
+            body: `Your Oruinwan verification code is ${otp}`,
             from: process.env.TWILIO_PHONE_NUMBER,
             to: phone,
         });

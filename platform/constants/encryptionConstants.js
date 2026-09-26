@@ -1,7 +1,7 @@
 /**
  * platform/constants/encryptionConstants.js
  *
- * Chttrix Platform — Shared Encryption Parameters
+ * Oruinwan Platform — Shared Encryption Parameters
  *
  * Single source of truth for cryptographic algorithm parameters used
  * across client-side E2EE, server-side key wrapping, and any future

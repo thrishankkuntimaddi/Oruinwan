@@ -1,13 +1,13 @@
 {
-  "name": "@chttrix/sdk",
+  "name": "@oruinwan/sdk",
   "version": "1.0.0",
-  "description": "JavaScript SDK for the Chttrix collaboration platform API (Node 18+ and browsers).",
-  "main": "chttrix-sdk.js",
+  "description": "JavaScript SDK for the Oruinwan collaboration platform API (Node 18+ and browsers).",
+  "main": "oruinwan-sdk.js",
   "types": "index.d.ts",
-  "files": ["chttrix-sdk.js", "index.d.ts", "README.md"],
+  "files": ["oruinwan-sdk.js", "index.d.ts", "README.md"],
   "license": "MIT",
   "engines": { "node": ">=18" },
   "peerDependencies": { "socket.io-client": "^4.7.0" },
   "peerDependenciesMeta": { "socket.io-client": { "optional": true } },
-  "keywords": ["chttrix", "sdk", "api", "collaboration"]
+  "keywords": ["oruinwan", "sdk", "api", "collaboration"]
 }

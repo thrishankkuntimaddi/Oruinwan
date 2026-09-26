@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * HTTP transport for Chttrix Intelligence. Validates input, passes plain
+ * HTTP transport for Oruinwan Intelligence. Validates input, passes plain
  * payloads to ai/api/ai.gateway.js with the workspace's provider context, and
  * shapes errors. No model calls happen here.
  */
@@ -51,6 +51,9 @@ function sendError(res, err, label) {
   if (code === 'AI_NOT_CONFIGURED') {
     return res.status(503).json({ message: 'AI is not configured for this workspace yet. Ask an admin to connect a provider.', code });
   }
+  if (code === 'AI_ENGINE_UNAVAILABLE') {
+    return res.status(503).json({ message: 'The Oruinwan AI engine is offline right now. Please try again in a moment.', code });
+  }
   if (err?.status === 429) return res.status(429).json({ message: 'The AI provider is rate limiting requests. Try again shortly.', code: 'AI_PROVIDER_RATE_LIMITED' });
   if (/required|unknown action|is required/i.test(err?.message || '')) return res.status(400).json({ message: err.message });
   logger.error({ err }, `[AI] ${label} failed`);
@@ -73,32 +76,100 @@ function emitActivity(req, subtype, payload) {
 
 /* ── Assistant ─────────────────────────────────────────────────────────── */
 
+/** Whitelist + size-cap the client-supplied screen context (decrypted on the client). */
+function cleanChatContext(req, context) {
+  if (!context || typeof context !== 'object') return undefined;
+  return {
+    workspaceName: req.aiWorkspace?.name,
+    screen: context.screen && { route: str(context.screen.route, 200), title: str(context.screen.title, 200) },
+    conversation: context.conversation && {
+      id: str(context.conversation.id, 64), type: context.conversation.type === 'dm' ? 'dm' : 'channel',
+      name: str(context.conversation.name, 100), messages: cleanMessages(context.conversation.messages).slice(-40),
+    },
+    note: context.note && { title: str(context.note.title, 200), text: str(context.note.text, 20_000) },
+    task: context.task && { title: str(context.task.title, 200), description: str(context.task.description, 4000), status: str(context.task.status, 40) },
+    selection: str(context.selection, 8000) || undefined,
+  };
+}
+
+function chatPayload(req) {
+  const { message, history, context } = req.body || {};
+  return { message: str(message, 8000), history: arr(history, 40), workspaceId: req.aiWorkspace?.id || null, context: cleanChatContext(req, context) };
+}
+
 exports.chat = async (req, res) => {
   try {
-    const { message, history, context } = req.body;
-    if (!str(message, 1)) return res.status(400).json({ message: 'message is required' });
-    const safeContext = context && typeof context === 'object' ? {
-      workspaceName: req.aiWorkspace?.name,
-      screen: context.screen && { route: str(context.screen.route, 200), title: str(context.screen.title, 200) },
-      conversation: context.conversation && {
-        id: str(context.conversation.id, 64), type: context.conversation.type === 'dm' ? 'dm' : 'channel',
-        name: str(context.conversation.name, 100), messages: cleanMessages(context.conversation.messages).slice(-40),
-      },
-      note: context.note && { title: str(context.note.title, 200), text: str(context.note.text, 20_000) },
-      task: context.task && { title: str(context.task.title, 200), description: str(context.task.description, 4000), status: str(context.task.status, 40) },
-      selection: str(context.selection, 8000) || undefined,
-    } : undefined;
-
-    const result = await gateway.chat(
-      { message: str(message, 8000), history: arr(history, 40), workspaceId: req.aiWorkspace?.id || null, context: safeContext },
-      ctxFor(req)
-    );
-    emitActivity(req, 'chat', { prompt: str(message, 200), response: str(result.text, 200), actions: (result.actionsExecuted || []).map((a) => a.function) });
+    const payload = chatPayload(req);
+    if (!payload.message) return res.status(400).json({ message: 'message is required' });
+    const result = await gateway.chat(payload, ctxFor(req));
+    emitActivity(req, 'chat', { prompt: str(payload.message, 200), response: str(result.text, 200), actions: (result.actionsExecuted || []).map((a) => a.function) });
     return res.json({ text: result.text, actionsExecuted: result.actionsExecuted || null, provider: result.event?.payload?.provider });
   } catch (err) {
     return sendError(res, err, 'chat');
   }
 };
+
+/**
+ * Streaming chat (Server-Sent Events). Same input as `chat`; the response is a
+ * stream of events:
+ *   event: token   data: {"t":"text delta"}
+ *   event: tool    data: {"name":"create_task","status":"running"|"done"|"failed"}
+ *   event: done    data: {"text":"full answer","actionsExecuted":[...]|null}
+ *   event: error   data: {"message":"…","code":"…"}
+ * Closing the connection (Stop button, panel closed) cancels generation.
+ */
+exports.chatStream = async (req, res) => {
+  const payload = chatPayload(req);
+  if (!payload.message) return res.status(400).json({ message: 'message is required' });
+
+  res.status(200).set({
+    'Content-Type': 'text/event-stream; charset=utf-8',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no', // disable proxy buffering (nginx, Cloud Run front ends)
+  });
+  res.flushHeaders?.();
+
+  const abort = new AbortController();
+  let closed = false;
+  // `close` on the response fires when the client disconnects before we finish.
+  res.on('close', () => { closed = true; if (!res.writableEnded) abort.abort(); });
+  const send = (event, data) => {
+    if (closed || res.writableEnded) return;
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+  // Keep intermediaries from timing out while a slow local model warms up.
+  const ping = setInterval(() => { if (!closed) res.write(': ping\n\n'); }, 15_000);
+
+  try {
+    const result = await gateway.chat(payload, ctxFor(req, {
+      signal: abort.signal,
+      onToken: (t) => send('token', { t }),
+      onEvent: (e) => {
+        if (e.type === 'tool') send('tool', { name: e.name, status: 'running' });
+        else if (e.type === 'tool_result') send('tool', { name: e.name, status: e.ok ? 'done' : 'failed' });
+      },
+    }));
+    emitActivity(req, 'chat', { prompt: str(payload.message, 200), response: str(result.text, 200), actions: (result.actionsExecuted || []).map((a) => a.function) });
+    send('done', { text: result.text, actionsExecuted: result.actionsExecuted || null, provider: result.event?.payload?.provider });
+  } catch (err) {
+    if (err?.code !== 'AI_ABORTED' && !abort.signal.aborted) {
+      logger.error({ err }, '[AI] chat stream failed');
+      send('error', streamError(err));
+    }
+  } finally {
+    clearInterval(ping);
+    if (!res.writableEnded) res.end();
+  }
+};
+
+/** Map an AI failure to the `{ message, code }` shape used by the stream's error event. */
+function streamError(err) {
+  if (err?.code === 'AI_ENGINE_UNAVAILABLE') return { message: 'The Oruinwan AI engine is offline right now. Please try again in a moment.', code: err.code };
+  if (err?.code === 'AI_NOT_CONFIGURED') return { message: 'AI is not configured for this workspace yet.', code: err.code };
+  if (err?.status === 429) return { message: 'The AI is busy. Try again shortly.', code: 'AI_PROVIDER_RATE_LIMITED' };
+  return { message: 'The AI could not answer that. Please try again.', code: 'AI_FAILED', ...(isProduction ? {} : { detail: err?.message }) };
+}
 
 exports.clearMemory = async (req, res) => {
   gateway.clearMemory({ userId: req.user.sub, workspaceId: req.aiWorkspace?.id || null });
@@ -310,7 +381,7 @@ exports.updateSettings = async (req, res) => {
 
 exports.testProvider = async (req, res) => {
   try {
-    const result = await gateway.summarize({ text: 'Chttrix connection test: reply with the single word OK.', style: 'brief' }, ctxFor(req));
+    const result = await gateway.summarize({ text: 'Oruinwan connection test: reply with the single word OK.', style: 'brief' }, ctxFor(req));
     const r = await resolver.resolveForWorkspace(req.aiWorkspace.id);
     return res.json({ ok: true, provider: r.providerName, model: r.model || modelsFor(r.providerName).fast, sample: str(result.summary, 120) });
   } catch (err) {

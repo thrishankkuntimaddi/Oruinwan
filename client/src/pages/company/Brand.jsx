@@ -1,144 +1,148 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Palette, Download, Copy, CheckCircle2 } from 'lucide-react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
-import { Palette, Type, Download, Copy, CheckCircle2 } from 'lucide-react';
+import { PageHero, Block, Grid, Callout } from '../../components/public/PublicKit';
+import BrandMark from '../../shared/components/ui/BrandMark';
+import BRAND from '../../shared/brand';
 
 const COLORS = [
-    { name: 'Amber (Accent)',     hex: '#b8956a', dark: true },
-    { name: 'Background Base',    hex: '#0c0c0c', dark: true },
-    { name: 'Surface',            hex: '#111111', dark: true },
-    { name: 'Text Primary',       hex: '#e4e4e4', dark: true },
-    { name: 'Text Muted',         hex: '#404040', dark: true },
-    { name: 'Success Green',      hex: '#5aba8a', dark: true },
-    { name: 'Border Subtle',      hex: '#191919', dark: true },
-    { name: 'Border Default',     hex: '#222222', dark: true },
+    { name: 'Obsidian', role: 'Page background', hex: '#08080a' },
+    { name: 'Slab', role: 'Surfaces & panels', hex: '#101013' },
+    { name: 'Amber', role: 'Accent', hex: '#c8a274' },
+    { name: 'Amber Light', role: 'Accent highlight', hex: '#ecd6b0' },
+    { name: 'Paper', role: 'Primary text', hex: '#efefef' },
+    { name: 'Ash', role: 'Secondary text', hex: '#a6a6ad' },
 ];
 
-const CopyHex = ({ hex }) => {
-    const [copied, setCopied] = useState(false);
-    const copy = () => {
-        navigator.clipboard.writeText(hex);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+const TYPE_SCALE = [
+    { label: 'Display', style: { fontSize: 'clamp(28px, 4vw, 40px)', fontWeight: 750, letterSpacing: '-0.04em' }, sample: 'Workspace OS' },
+    { label: 'Heading 1', style: { fontSize: 'clamp(22px, 3vw, 28px)', fontWeight: 700, letterSpacing: '-0.03em' }, sample: 'One workspace. Every conversation.' },
+    { label: 'Heading 2', style: { fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em' }, sample: 'Built for teams that move fast.' },
+    { label: 'Body', style: { fontSize: 14, lineHeight: 1.8, color: 'var(--o-text-2)' }, sample: `${BRAND.name} keeps conversations, tasks and AI in one place so your team never loses context between tools.` },
+    { label: 'Caption', style: { fontSize: 11.5, letterSpacing: '0.04em', color: 'var(--o-text-3)' }, sample: `v1.0 · Workspace OS · © 2026 ${BRAND.company}` },
+];
+
+const USAGE_RULES = [
+    'Do not stretch, rotate, or alter the logo proportions',
+    `Keep clear space around the logo equal to the height of the “O” in ${BRAND.name}`,
+    'Do not use the logo on low-contrast backgrounds',
+    'Do not recreate the logo using a different font',
+    'For press use, always use the official assets below',
+];
+
+const LOGO_TILES = [
+    { id: 'dark', bg: '#08080a', fg: '#efefef', note: 'Dark background (preferred)', wordmark: true },
+    { id: 'light', bg: '#efefef', fg: '#08080a', note: 'Light backgrounds', wordmark: true },
+    { id: 'mark', bg: '#101013', fg: '#a6a6ad', note: 'Mark only (app icons, favicons)', wordmark: false },
+];
+
+const PRESS_ASSETS = ['Full logo pack (PNG + SVG)', 'Brand guidelines PDF', 'Press kit ZIP'];
+
+function Swatch({ color }) {
+    const [state, setState] = useState('idle');
+    const timer = useRef(null);
+    useEffect(() => () => clearTimeout(timer.current), []);
+
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(color.hex);
+            setState('copied');
+        } catch {
+            setState('failed');
+        }
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => setState('idle'), 2000);
     };
+
     return (
-        <button onClick={copy} style={{ background: 'none', border: 'none', cursor: 'pointer', color: copied ? '#5aba8a' : 'rgba(228,228,228,0.35)', fontFamily: 'monospace', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', padding: 0, transition: 'color 150ms ease' }}>
-            {copied ? <CheckCircle2 size={11} /> : <Copy size={11} />}
-            {hex}
-        </button>
+        <div className="orw-card" style={{ padding: 0 }}>
+            <div style={{ height: 96, background: color.hex, borderBottom: '1px solid var(--o-line)' }} aria-hidden="true" />
+            <div style={{ padding: '16px 18px 18px' }}>
+                <h3>{color.name}</h3>
+                <p style={{ marginTop: 2 }}>{color.role}</p>
+                <button type="button" className="orw-btn orw-btn--ghost" onClick={copy}
+                    aria-label={`Copy ${color.name} hex ${color.hex}`}
+                    style={{ marginTop: 14, height: 34, padding: '0 12px', fontFamily: '\'JetBrains Mono\', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', fontSize: 12 }}>
+                    {state === 'copied' ? <CheckCircle2 size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+                    {color.hex}
+                </button>
+                <span className="orw-hint" aria-live="polite" style={{ marginLeft: 10, color: state === 'copied' ? '#8fe0b8' : undefined }}>
+                    {state === 'copied' ? 'Copied' : state === 'failed' ? 'Copy failed' : ''}
+                </span>
+            </div>
+        </div>
     );
-};
+}
 
 export default function Brand() {
     return (
         <PublicPageShell title="Brand">
-            {}
-            <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 56px' }}>
-                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
-                        <Palette size={11} style={{ color: '#b8956a' }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Brand & Media</span>
-                    </div>
-                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Brand Guidelines</h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75', maxWidth: '520px' }}>
-                        Everything you need to represent Chttrix correctly — logos, colors, typography, and usage rules.
-                    </p>
-                </div>
-            </div>
+            <PageHero
+                crumb="Brand"
+                eyebrow="Brand & media"
+                icon={Palette}
+                title={<>Brand <span className="orw-gloss-text">guidelines.</span></>}
+                lead={`Everything you need to represent ${BRAND.name} correctly: logos, colours, typography and usage rules.`}
+            />
 
-            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '64px 24px' }}>
-
-                {}
-                <div style={{ marginBottom: '64px' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Logo</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
-                        {}
-                        <div style={{ background: '#111', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
-                                <span style={{ fontSize: '20px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
+            <Block eyebrow="Logo" title="The mark, on any background.">
+                <Grid min={260}>
+                    {LOGO_TILES.map(t => (
+                        <div key={t.id} className="orw-card" style={{ background: t.bg, alignItems: 'center', justifyContent: 'center', gap: 18, padding: '48px 24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                <BrandMark size={t.wordmark ? 40 : 56} title={t.wordmark ? '' : `${BRAND.name} mark`} />
+                                {t.wordmark && <span style={{ fontSize: 22, fontWeight: 750, letterSpacing: '-0.03em', color: t.fg }}>{BRAND.name}</span>}
                             </div>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Dark background (preferred)</p>
+                            <p style={{ margin: 0, fontSize: 12, color: t.fg, opacity: 0.75, textAlign: 'center' }}>{t.note}</p>
                         </div>
-                        {}
-                        <div style={{ background: '#f5f5f5', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '36px', height: '36px', objectFit: 'cover' }} />
-                                <span style={{ fontSize: '20px', fontWeight: 700, color: '#0c0c0c', letterSpacing: '-0.02em' }}>Chttrix</span>
-                            </div>
-                            <p style={{ fontSize: '11px', color: 'rgba(12,12,12,0.4)', textAlign: 'center' }}>Light backgrounds</p>
-                        </div>
-                        {}
-                        <div style={{ background: '#111', padding: '40px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-                            <img src="/chttrix-logo.jpg" alt="Chttrix mark" style={{ width: '48px', height: '48px', objectFit: 'cover' }} />
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>Mark only (app icons, favicons)</p>
-                        </div>
-                    </div>
-
-                    {}
-                    <div style={{ marginTop: '20px', padding: '18px 20px', background: 'rgba(184,149,106,0.06)', border: '1px solid rgba(184,149,106,0.15)' }}>
-                        <p style={{ fontSize: '13px', fontWeight: 700, color: '#b8956a', marginBottom: '8px' }}>Usage Rules</p>
-                        <ul style={{ paddingLeft: '0', listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {['Do not stretch, rotate, or alter the logo proportions', 'Maintain minimum clear space equal to the height of the "C" in Chttrix', 'Do not use the logo on low-contrast backgrounds', 'Do not recreate the logo using a different font', 'For press use, always download the official assets below'].map(r => (
-                                <li key={r} style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', gap: '8px' }}>
-                                    <span style={{ color: '#b8956a', flexShrink: 0 }}>·</span>{r}
-                                </li>
-                            ))}
+                    ))}
+                </Grid>
+                <div data-reveal>
+                    <Callout>
+                        <strong>Usage rules</strong>
+                        <ul style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            {USAGE_RULES.map(r => <li key={r}>· {r}</li>)}
                         </ul>
-                    </div>
+                    </Callout>
                 </div>
+            </Block>
 
-                {}
-                <div style={{ marginBottom: '64px' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Color Palette</p>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '1px', background: 'var(--bg-hover)' }}>
-                        {COLORS.map(c => (
-                            <div key={c.hex} style={{ background: '#111', padding: '0' }}>
-                                <div style={{ height: '80px', background: c.hex }} />
-                                <div style={{ padding: '12px 14px' }}>
-                                    <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>{c.name}</p>
-                                    <CopyHex hex={c.hex} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+            <Block eyebrow="Colour palette" title="Monolith Gloss." lead="Near-black slabs, warm amber light. Click a value to copy it." slab>
+                <Grid min={160}>
+                    {COLORS.map(c => <Swatch key={c.hex} color={c} />)}
+                </Grid>
+            </Block>
 
-                {}
-                <div style={{ marginBottom: '64px' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '24px' }}>Typography</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
-                        {[
-                            { label: 'Display', style: { fontSize: '40px', fontWeight: 700, letterSpacing: '-0.03em' }, sample: 'Workspace OS' },
-                            { label: 'Heading 1', style: { fontSize: '28px', fontWeight: 700, letterSpacing: '-0.025em' }, sample: 'One workspace. Every conversation.' },
-                            { label: 'Heading 2', style: { fontSize: '20px', fontWeight: 700, letterSpacing: '-0.02em' }, sample: 'Built for teams that move fast.' },
-                            { label: 'Body',    style: { fontSize: '14px', lineHeight: '1.8', color: 'var(--text-muted)' }, sample: 'Chttrix keeps conversations, tasks, and AI in one place so your team never loses context between tools.' },
-                            { label: 'Caption', style: { fontSize: '11px', color: 'var(--text-muted)', letterSpacing: '0.04em' }, sample: 'v1.0 · Workspace OS · © 2026 Chttrix Inc.' },
-                        ].map(t => (
-                            <div key={t.label} style={{ background: '#111', padding: '20px 24px', display: 'flex', gap: '20px', alignItems: 'baseline', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', width: '80px', flexShrink: 0 }}>{t.label}</span>
-                                <span style={{ ...t.style, color: t.style.color || '#e4e4e4', fontFamily: 'Inter, system-ui, sans-serif' }}>{t.sample}</span>
-                            </div>
-                        ))}
-                    </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px' }}>Primary typeface: <span style={{ color: '#b8956a', fontFamily: 'monospace' }}>Inter</span> · Monospace: <span style={{ color: '#b8956a', fontFamily: 'monospace' }}>JetBrains Mono</span></p>
-                </div>
+            <Block eyebrow="Typography" title="Inter, set tight.">
+                <ul className="orw-rows" data-reveal>
+                    {TYPE_SCALE.map(t => (
+                        <li key={t.label} className="orw-row" style={{ gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+                            <span className="orw-label" style={{ color: 'var(--o-text-3)' }}>{t.label}</span>
+                            <span style={{ color: 'var(--o-text)', overflowWrap: 'anywhere', ...t.style }}>{t.sample}</span>
+                        </li>
+                    ))}
+                </ul>
+                <p className="orw-hint" style={{ marginTop: 16, fontSize: 13 }}>
+                    Primary typeface: <span className="orw-code">Inter</span> · Monospace: <span className="orw-code">JetBrains Mono</span>
+                </p>
+            </Block>
 
-                {}
-                <div>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Media & Press Kit</p>
-                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        {['Logo Pack (PNG + SVG)', 'Brand Guidelines PDF', 'Press Kit ZIP'].map(item => (
-                            <button key={item} onClick={() => alert('Coming soon')}
-                                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.09)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 150ms ease' }}
-                                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e4e4e4'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(228,228,228,0.6)'; }}>
-                                <Download size={13} /> {item}
-                            </button>
-                        ))}
-                    </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '14px' }}>For press inquiries, email <a href="mailto:press@chttrix.io" style={{ color: '#b8956a', textDecoration: 'none' }}>press@chttrix.io</a></p>
+            <Block eyebrow="Media & press kit" title="Assets for press and partners." slab>
+                <div data-reveal style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                    <a href="/icons/oruinwan-512.png" download={`${BRAND.name.toLowerCase()}-logo-512.png`} className="orw-btn orw-btn--primary">
+                        <Download size={14} aria-hidden="true" /> Logo mark (PNG, 512px)
+                    </a>
+                    {PRESS_ASSETS.map(item => (
+                        <button key={item} type="button" className="orw-btn orw-btn--ghost" disabled>
+                            <Download size={14} aria-hidden="true" /> {item}
+                            <span className="orw-tag orw-tag--accent" style={{ marginLeft: 4 }}>Coming soon</span>
+                        </button>
+                    ))}
                 </div>
-            </div>
+                <p className="orw-lead" style={{ fontSize: 14 }}>
+                    For press inquiries, email <a href="mailto:press@oruinwan.com" style={{ color: 'var(--o-accent-hi)' }}>press@oruinwan.com</a>.
+                </p>
+            </Block>
         </PublicPageShell>
     );
 }

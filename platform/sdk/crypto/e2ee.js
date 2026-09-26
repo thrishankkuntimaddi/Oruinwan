@@ -1,7 +1,7 @@
 /**
  * platform/sdk/crypto/e2ee.js
  *
- * Chttrix Platform SDK — E2EE Message Encryption Façade
+ * Oruinwan Platform SDK — E2EE Message Encryption Façade
  *
  * SDK interface for end-to-end message encryption and decryption.
  * Delegates entirely to the existing implementations in:

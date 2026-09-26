@@ -1,30 +1,44 @@
 'use strict';
 
 /**
- * AI subsystem configuration. Everything is overridable through env vars so the
- * same code runs against Gemini in production and the mock provider in tests.
+ * AI subsystem configuration. Everything is overridable through env vars.
  *
- * Providers: 'gemini' | 'openai' | 'anthropic' | 'local_llm' (OpenAI-compatible
- * endpoint such as Ollama / LM Studio / vLLM) | 'mock'. A workspace can also
- * pick its own provider and key (see server/src/features/ai/ai.provider.resolver.js).
+ * Default engine: Oruinwan's own model served by an OpenAI-compatible runtime
+ * we control (`local_llm`): Ollama on a developer machine, vLLM / Ollama on a
+ * GPU server in the cloud. Moving to the cloud only means changing
+ * LOCAL_LLM_BASE_URL (and optionally the model names); no code changes.
+ *
+ * Third-party providers ('gemini' | 'openai' | 'anthropic') remain available
+ * only when explicitly selected with AI_PROVIDER or per workspace. 'mock' is
+ * used under test.
  */
 const env = process.env;
 
-module.exports = {
-  provider: env.AI_PROVIDER || (env.NODE_ENV === 'test' ? 'mock' : 'gemini'),
+const provider = env.AI_PROVIDER || (env.NODE_ENV === 'test' ? 'mock' : 'local_llm');
+const localChat = env.LOCAL_LLM_MODEL || 'qwen2.5:3b';
+const localFast = env.LOCAL_LLM_FAST_MODEL || localChat;
 
-  /** Default model ids per provider. `chat` drives the assistant, `fast` the one-shot helpers. */
+const byProvider = {
+  local_llm: { chat: localChat, fast: localFast },
+  gemini: { chat: env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash', fast: env.GEMINI_FAST_MODEL || 'gemini-2.5-flash' },
+  openai: { chat: env.OPENAI_CHAT_MODEL || 'gpt-4o-mini', fast: env.OPENAI_FAST_MODEL || 'gpt-4o-mini' },
+  anthropic: { chat: env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-4-5', fast: env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001' },
+  mock: { chat: 'mock', fast: 'mock' },
+};
+
+module.exports = {
+  provider,
+
+  /** Model ids. `chat` drives the assistant, `fast` the one-shot helpers. */
   models: {
-    chat: env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash',
-    fast: env.GEMINI_FAST_MODEL || 'gemini-2.5-flash',
-    byProvider: {
-      gemini: { chat: env.GEMINI_CHAT_MODEL || 'gemini-2.5-flash', fast: env.GEMINI_FAST_MODEL || 'gemini-2.5-flash' },
-      openai: { chat: env.OPENAI_CHAT_MODEL || 'gpt-4o-mini', fast: env.OPENAI_FAST_MODEL || 'gpt-4o-mini' },
-      anthropic: { chat: env.ANTHROPIC_CHAT_MODEL || 'claude-sonnet-4-5', fast: env.ANTHROPIC_FAST_MODEL || 'claude-haiku-4-5-20251001' },
-      local_llm: { chat: env.LOCAL_LLM_MODEL || 'llama3.1', fast: env.LOCAL_LLM_MODEL || 'llama3.1' },
-      mock: { chat: 'mock', fast: 'mock' },
-    },
+    ...(byProvider[provider === 'claude' ? 'anthropic' : provider] || byProvider.local_llm),
+    byProvider,
+    /** Embedding model for workspace knowledge search (served by the same local runtime). */
+    embed: env.LOCAL_EMBED_MODEL || 'nomic-embed-text',
   },
+
+  /** Human-facing engine name shown in the UI. */
+  engineName: env.AI_ENGINE_NAME || 'Oruinwan Engine',
 
   keys: {
     gemini: env.GEMINI_API_KEY || env.GOOGLE_AI_KEY || '',
@@ -37,6 +51,7 @@ module.exports = {
     openai: env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
     anthropic: env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1',
     local_llm: env.LOCAL_LLM_BASE_URL || 'http://localhost:11434/v1',
+    embed: env.LOCAL_EMBED_BASE_URL || env.LOCAL_LLM_BASE_URL || 'http://localhost:11434/v1',
   },
 
   generation: {
@@ -47,8 +62,11 @@ module.exports = {
   /** Upper bound on tool-call rounds inside a single chat turn. */
   maxToolRounds: Number(env.AI_MAX_TOOL_ROUNDS || 4),
 
-  /** Request timeout for provider HTTP calls. */
-  timeoutMs: Number(env.AI_TIMEOUT_MS || 45_000),
+  /** Request timeout for provider HTTP calls (local models on a laptop can be slow to load). */
+  timeoutMs: Number(env.AI_TIMEOUT_MS || 120_000),
+
+  /** Context window requested from the local runtime (Ollama `num_ctx`). */
+  localContextTokens: Number(env.LOCAL_LLM_CONTEXT || 8192),
 
   memory: {
     maxTurns: Number(env.AI_MEMORY_MAX_TURNS || 20),

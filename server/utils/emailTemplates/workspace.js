@@ -1,5 +1,5 @@
 const YEAR = new Date().getFullYear();
-const APP  = 'Chttrix';
+const APP  = 'Oruinwan';
 
 const T = {
   bgOuter:     '#f0ece6',
@@ -99,7 +99,7 @@ function link(text, url) {
 
 const workspaceInvitationTemplate = (workspaceName, inviterName, inviteUrl, role, expiryDays) => {
   const body = `
-    ${p('You\'ve been invited to collaborate on Chttrix!')}
+    ${p('You\'ve been invited to collaborate on Oruinwan!')}
     ${infoCard(
       row('Workspace', `<strong style="color:${T.textPrimary}">${workspaceName}</strong>`) +
       row('Invited by', inviterName) +
@@ -112,15 +112,15 @@ const workspaceInvitationTemplate = (workspaceName, inviterName, inviteUrl, role
   `;
 
   return {
-    subject: `You're invited to join "${workspaceName}" on Chttrix`,
+    subject: `You're invited to join "${workspaceName}" on Oruinwan`,
     html: shell({
       icon: '💬',
       title: `Join ${workspaceName}`,
-      subtitle: `${inviterName} has invited you to collaborate on Chttrix.`,
-      preheader: `${inviterName} invited you to join ${workspaceName} on Chttrix.`,
+      subtitle: `${inviterName} has invited you to collaborate on Oruinwan.`,
+      preheader: `${inviterName} invited you to join ${workspaceName} on Oruinwan.`,
       body,
     }),
-    text: `You've been invited to join ${workspaceName} on Chttrix!\n\nInvited by: ${inviterName}\nRole: ${role || 'Member'}\n\nJoin here: ${inviteUrl}\n\nThis link expires in ${expiryDays || 7} days.\n\n— The Chttrix Team`,
+    text: `You've been invited to join ${workspaceName} on Oruinwan!\n\nInvited by: ${inviterName}\nRole: ${role || 'Member'}\n\nJoin here: ${inviteUrl}\n\nThis link expires in ${expiryDays || 7} days.\n\n— The Oruinwan Team`,
   };
 };
 

@@ -85,7 +85,7 @@ async function checkBrevo(sender) {
     try {
       const out = await sendEmail({
         to: sendTo,
-        subject: 'Chttrix email check',
+        subject: 'Oruinwan email check',
         text: 'This is a test message from scripts/email-check.js. If you can read it, email delivery works.',
       });
       print('ok', `Test email accepted by ${out.provider} (${out.id || 'no id'}). Check the inbox and spam folder of ${sendTo}.`);

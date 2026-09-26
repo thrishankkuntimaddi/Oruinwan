@@ -13,7 +13,7 @@ const headerStyle = {
 };
 
 const TIMELINE = [
-    { date: 'NOV 2025', color: '#b8956a', title: 'Chttrix AI 2.0',  body: 'Smarter responses & context awareness.' },
+    { date: 'NOV 2025', color: '#b8956a', title: 'Oruinwan AI 2.0',  body: 'Smarter responses & context awareness.' },
     { date: 'OCT 2025', color: '#a78bfa', title: 'Dark Mode',        body: 'Pure dark surfaces across all views.' },
 ];
 

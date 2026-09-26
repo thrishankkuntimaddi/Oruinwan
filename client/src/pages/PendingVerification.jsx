@@ -79,7 +79,7 @@ const PendingVerification = () => {
 
             {}
             <div className="absolute bottom-6 text-xs text-slate-400 dark:text-slate-600 font-medium">
-                &copy; 2026 Chttrix Inc.
+                &copy; 2026 Oruinwan Inc.
             </div>
         </div>
     );

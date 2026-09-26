@@ -114,7 +114,7 @@ export default function VerifyEmail() {
         {}
         <div style={{ marginBottom: 36, textAlign: 'center' }}>
           <span style={{ fontSize: 20, fontWeight: 800, color: T.textPrimary, letterSpacing: '-0.03em' }}>
-            Chttrix
+            Oruinwan
           </span>
           <span style={{ fontSize: 10, fontWeight: 600, color: T.accent, letterSpacing: '0.18em', textTransform: 'uppercase', marginLeft: 10 }}>
             AI Collaboration
@@ -307,7 +307,7 @@ export default function VerifyEmail() {
 
         {}
         <p style={{ marginTop: 28, fontSize: 11, color: T.textMuted }}>
-          © {new Date().getFullYear()} Chttrix Inc.
+          © {new Date().getFullYear()} Oruinwan Inc.
         </p>
       </div>
     </>

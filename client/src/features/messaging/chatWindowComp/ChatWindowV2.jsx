@@ -772,7 +772,7 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     
     // Opening a conversation (or returning to the tab while it is open) marks
     // it read everywhere: server readBy, this tab's badge, other tabs/devices.
-    // Expose the open conversation (decrypted) to Chttrix AI.
+    // Expose the open conversation (decrypted) to Oruinwan AI.
     const aiCtx = useAIContext();
     const setAIConversation = aiCtx?.setConversation;
     useEffect(() => {

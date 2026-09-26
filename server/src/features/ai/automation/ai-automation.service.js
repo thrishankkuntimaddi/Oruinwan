@@ -41,7 +41,7 @@ async function parseCommand(command, userId, workspaceId, context = {}) {
         case INTENTS.SCHEDULE_MEETING:
             return { intent, result: await _handleScheduleMeeting(command, userId, workspaceId) };
         case INTENTS.SUMMARIZE_CHANNEL:
-            return { intent, result: { message: 'Open the channel and use "Summarize conversation" in Chttrix AI — messages are end-to-end encrypted, so the summary runs on what your device can read.' } };
+            return { intent, result: { message: 'Open the channel and use "Summarize conversation" in Oruinwan AI — messages are end-to-end encrypted, so the summary runs on what your device can read.' } };
         case INTENTS.ASK_QUESTION: {
             const knowledge = require('../knowledge/ai-knowledge.service');
             const answer = await knowledge.askQuestion(command, workspaceId, { userId, ...context, req: undefined });

@@ -1,17 +1,17 @@
 'use strict';
 
 /**
- * Chttrix Desktop — Electron Main Process
+ * Oruinwan Desktop — Electron Main Process
  *
  * Responsibilities:
- *  1. Create and manage the main BrowserWindow (loads the Chttrix web client)
+ *  1. Create and manage the main BrowserWindow (loads the Oruinwan web client)
  *  2. Persist and restore window state (bounds, maximized) via electron-store
  *  3. Security: navigation guard, permission handlers, CSP for local pages
  *  4. System tray integration (open, DnD, updates, quit)
  *  5. Native desktop notifications with deep-link click routing
  *  6. IPC bridge: notify, badge, settings, version, deep-link events
  *  7. Background running — closing the window hides it; quit via tray/menu
- *  8. Single instance + chttrix:// deep links + auto-update
+ *  8. Single instance + oruinwan:// (and legacy chttrix://) deep links + auto-update
  */
 
 const {
@@ -27,13 +27,14 @@ const notifications = require('./notifications');
 const IS_DEV = process.env.ELECTRON_IS_DEV === '1' ||
                process.env.NODE_ENV === 'development';
 
-const PROD_URL = 'https://app.chttrix.com';
+const PROD_URL = 'https://app.oruinwan.com';
 // Dev: the client's Vite server (client/vite.config.js → port 3000, strictPort).
 // Prod: the hosted client. Either can be overridden via CHTTRIX_WEB_URL.
 const WEB_URL = process.env.CHTTRIX_WEB_URL ||
   (IS_DEV ? 'http://localhost:3000' : PROD_URL);
 
-const PROTOCOL = 'chttrix';
+// Deep-link schemes. `chttrix://` is kept for links already in the wild.
+const PROTOCOLS = ['oruinwan', 'chttrix'];
 const OFFLINE_PAGE = path.join(__dirname, '..', 'renderer', 'index.html');
 
 function originOf(url) {
@@ -44,7 +45,7 @@ function originOf(url) {
 const DEV_ORIGINS = ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5001'];
 const ALLOWED_ORIGINS = new Set([
   PROD_URL,
-  'https://api.chttrix.com',
+  'https://api.oruinwan.com',
   originOf(WEB_URL),                       // C12: CHTTRIX_WEB_URL override
   ...(IS_DEV ? DEV_ORIGINS : []),          // C4: dev ports only in dev
 ].filter(Boolean));
@@ -210,17 +211,18 @@ const WORKSPACE_SECTIONS = new Set([
 const WORKSPACE_ITEMS = new Set(['channel', 'dm', 'notes', 'files', 'knowledge', 'meetings']);
 
 /**
- * Parse chttrix://workspace/<wsId>[/<section>[/<id>]] into a safe in-app route.
+ * Parse oruinwan://workspace/<wsId>[/<section>[/<id>]] (or the legacy chttrix://
+ * scheme) into a safe in-app route.
  * Returns null for anything unrecognised.
- *   chttrix://workspace/abc/channel/123 → { path: '/workspace/abc/channel/123', ... }
+ *   oruinwan://workspace/abc/channel/123 → { path: '/workspace/abc/channel/123', ... }
  */
 function parseDeepLink(raw) {
   if (typeof raw !== 'string' || raw.length > 2048) return null;
   let url;
   try { url = new URL(raw); } catch { return null; }
-  if (url.protocol !== `${PROTOCOL}:`) return null;
+  if (!PROTOCOLS.some((p) => url.protocol === `${p}:`)) return null;
 
-  // chttrix://workspace/abc → host "workspace", path "/abc"
+  // oruinwan://workspace/abc → host "workspace", path "/abc"
   let parts;
   try {
     parts = [url.hostname, ...url.pathname.split('/')].filter(Boolean)
@@ -260,16 +262,18 @@ function handleDeepLink(raw) {
 }
 
 function findDeepLinkArg(argv = []) {
-  return argv.find((a) => typeof a === 'string' && a.startsWith(`${PROTOCOL}://`));
+  return argv.find((a) => typeof a === 'string' && PROTOCOLS.some((p) => a.startsWith(`${p}://`)));
 }
 
 function registerProtocol() {
   try {
-    if (process.defaultApp && process.argv.length >= 2) {
-      // `electron .` in development: register the electron binary + app path
-      app.setAsDefaultProtocolClient(PROTOCOL, process.execPath, [path.resolve(process.argv[1])]);
-    } else {
-      app.setAsDefaultProtocolClient(PROTOCOL);
+    for (const protocol of PROTOCOLS) {
+      if (process.defaultApp && process.argv.length >= 2) {
+        // `electron .` in development: register the electron binary + app path
+        app.setAsDefaultProtocolClient(protocol, process.execPath, [path.resolve(process.argv[1])]);
+      } else {
+        app.setAsDefaultProtocolClient(protocol);
+      }
     }
   } catch (err) {
     console.warn('[DeepLink] Could not register protocol:', err.message);
@@ -293,7 +297,7 @@ function initAutoUpdater() {
     autoUpdater.on('update-not-available', () => {
       if (!manualUpdateCheck) return;
       manualUpdateCheck = false;
-      dialog.showMessageBox({ type: 'info', message: 'Chttrix is up to date.', detail: `Version ${app.getVersion()}` });
+      dialog.showMessageBox({ type: 'info', message: 'Oruinwan is up to date.', detail: `Version ${app.getVersion()}` });
     });
     autoUpdater.on('update-available', () => { manualUpdateCheck = false; });
     // Make sure hide-on-close doesn't block the updater's quit-and-install.
@@ -359,7 +363,7 @@ function configureSession() {
     callback({});
   });
 
-  // C4: grant only to the Chttrix web client's own origin(s).
+  // C4: grant only to the Oruinwan web client's own origin(s).
   ses.setPermissionRequestHandler((webContents, permission, callback, details) => {
     const requestingUrl = (details && details.requestingUrl) || webContents.getURL();
     callback(GRANTABLE_PERMISSIONS.has(permission) && isTrustedPermissionOrigin(requestingUrl));
@@ -381,11 +385,11 @@ function createWindow() {
     ...savedBounds,
     minWidth:  900,
     minHeight: 600,
-    title: 'Chttrix',
+    title: 'Oruinwan',
     show: false,  // show after ready-to-show to avoid blank flash
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    backgroundColor: '#0c0c0c',  // match Chttrix dark theme
+    backgroundColor: '#0c0c0c',  // match Oruinwan dark theme
     webPreferences: {
       preload:          path.join(__dirname, 'preload.js'),
       nodeIntegration:  false,   // NEVER expose Node.js to renderer
@@ -405,7 +409,7 @@ function createWindow() {
     if (IS_DEV) win.webContents.openDevTools();
   });
 
-  // ── Load the Chttrix web client (falls back to the offline page) ──────────
+  // ── Load the Oruinwan web client (falls back to the offline page) ──────────
   loadWebClient();
 
   // ── Flush a deep link that arrived before the client was ready ────────────
@@ -598,7 +602,7 @@ ipcMain.on('retry-connect', (event) => {
 // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
 if (gotLock) {
-  // Win/Linux: a second launch (incl. clicking a chttrix:// link) lands here.
+  // Win/Linux: a second launch (incl. clicking an oruinwan:// or chttrix:// link) lands here.
   app.on('second-instance', (_event, argv) => {
     const link = findDeepLinkArg(argv);
     if (link) handleDeepLink(link);

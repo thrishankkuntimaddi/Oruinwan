@@ -1,4 +1,4 @@
-// Per-user storage for ChttrixAI chat history (cleared on logout).
+// Per-user storage for OruinwanAI chat history (cleared on logout).
 export const AI_HISTORY_KEY_PREFIX = 'chttrixai_chat_history';
 const LEGACY_GLOBAL_KEY = AI_HISTORY_KEY_PREFIX;
 

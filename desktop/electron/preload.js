@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * Chttrix Desktop — Secure Preload Bridge
+ * Oruinwan Desktop — Secure Preload Bridge
  *
  * Exposes a minimal, typed API from the main process to the renderer
- * (Chttrix web client) via contextBridge.
+ * (Oruinwan web client) via contextBridge.
  *
  * Security rules:
  *  - nodeIntegration = false  → renderer cannot access Node.js APIs
@@ -122,7 +122,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   /**
-   * Called when the app is opened via a chttrix:// link.
+   * Called when the app is opened via an oruinwan:// (or legacy chttrix://) link.
    * Payload: { path, kind, workspaceId?, id? } — `path` is a validated in-app
    * route such as "/workspace/<wsId>/channel/<id>".
    * @param {function({ path: string, kind: string, workspaceId?: string, id?: string }): void} callback

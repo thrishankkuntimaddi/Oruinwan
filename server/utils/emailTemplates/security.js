@@ -1,5 +1,5 @@
 const YEAR = new Date().getFullYear();
-const APP  = 'Chttrix';
+const APP  = 'Oruinwan';
 
 const T = {
   bgOuter:     '#f0ece6',
@@ -116,7 +116,7 @@ const loginDetectionTemplate = (username, ipAddress, deviceInfo, timestamp, logi
 
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${p('We detected a new login to your Chttrix account. If this was you, no action is needed.')}
+    ${p('We detected a new login to your Oruinwan account. If this was you, no action is needed.')}
     ${infoCard(
       row('Time', formattedTime) +
       row('Device', device) +
@@ -129,15 +129,15 @@ const loginDetectionTemplate = (username, ipAddress, deviceInfo, timestamp, logi
   `;
 
   return {
-    subject: `New login detected on your Chttrix account`,
+    subject: `New login detected on your Oruinwan account`,
     html: shell({
       icon: '🔔',
       title: 'New Login Detected',
       subtitle: 'We noticed a sign-in to your account from a new location or device.',
-      preheader: `Security alert: a new login was detected on your Chttrix account, ${username}.`,
+      preheader: `Security alert: a new login was detected on your Oruinwan account, ${username}.`,
       body,
     }),
-    text: `Hi ${username},\n\nNew login detected on your Chttrix account.\n\nTime: ${formattedTime}\nDevice: ${device}\nIP: ${ipAddress}\n\nNot you? Change your password immediately: ${loginUrl}/reset-password\nManage sessions: ${loginUrl}/settings/security\n\n— The Chttrix Team`,
+    text: `Hi ${username},\n\nNew login detected on your Oruinwan account.\n\nTime: ${formattedTime}\nDevice: ${device}\nIP: ${ipAddress}\n\nNot you? Change your password immediately: ${loginUrl}/reset-password\nManage sessions: ${loginUrl}/settings/security\n\n— The Oruinwan Team`,
   };
 };
 

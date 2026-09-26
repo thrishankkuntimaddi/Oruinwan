@@ -2,7 +2,7 @@ import api from './api';
 import logger from '../utils/logger';
 
 /**
- * Chttrix Intelligence client. Every call goes to /api/ai/* which runs
+ * Oruinwan Intelligence client. Every call goes to /api/ai/* which runs
  * through the shared AI gateway on the server. Messages are E2EE, so any
  * conversation text passed here is plaintext the client decrypted itself.
  */

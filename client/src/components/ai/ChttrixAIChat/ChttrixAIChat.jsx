@@ -12,7 +12,7 @@ import {
   MessageSquare, CheckSquare, Zap, Monitor, ChevronRight, ListChecks, Languages, ArrowDownToLine, Check,
 } from "lucide-react";
 
-const WELCOME = () => ({ id: 1, sender: "ai", text: "Hi, I'm Chttrix AI. Ask me anything about your workspace, or use a quick action below.", time: now() });
+const WELCOME = () => ({ id: 1, sender: "ai", text: "Hi, I'm Oruinwan AI. Ask me anything about your workspace, or use a quick action below.", time: now() });
 function now() {
   return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -50,7 +50,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   const [showHistory, setShowHistory] = useState(false);
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [chatTitle, setChatTitle] = useState("Chttrix AI");
+  const [chatTitle, setChatTitle] = useState("Oruinwan AI");
   const [replyingTo, setReplyingTo] = useState(null);
   const [visible, setVisible] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
@@ -201,7 +201,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   const handleNewChat = () => {
     if (messages.length > 1)
       setChatHistory(p => [{ id: Date.now(), title: chatTitle, messages: [...messages], date: new Date().toLocaleDateString() }, ...p]);
-    setMessages([WELCOME()]); setChatTitle("Chttrix AI"); setShowHistory(false);
+    setMessages([WELCOME()]); setChatTitle("Oruinwan AI"); setShowHistory(false);
     aiService.clearMemory(workspaceId).catch(() => {});
   };
 
@@ -212,7 +212,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
   };
 
   const handleClose = () => {
-    if (messages.length > 1 && chatTitle !== "Chttrix AI") {
+    if (messages.length > 1 && chatTitle !== "Oruinwan AI") {
       const item = { id: Date.now(), title: chatTitle, messages: [...messages], date: new Date().toLocaleDateString() };
       if (!chatHistory.find(h => h.title === chatTitle && h.date === item.date)) setChatHistory(p => [item, ...p]);
     }
@@ -239,7 +239,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
               <div style={{ width: '40px', height: '40px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
                 <Sparkles size={18} style={{ color: 'var(--accent)' }} />
               </div>
-              <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', margin: '0 0 4px' }}>About Chttrix Intelligence</h3>
+              <h3 style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', margin: '0 0 4px' }}>About Oruinwan Intelligence</h3>
               <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: 0 }}>Workspace-aware · provider set in Settings → AI</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -307,7 +307,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
           <div style={{ minWidth: 0 }}>
             <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chatTitle}</h3>
             <span style={{ fontSize: '10px', color: contextLabel ? 'var(--accent)' : 'var(--text-muted)', display: 'block', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {contextLabel ? `Context: ${contextLabel}` : 'Chttrix Intelligence · ⌘⇧A'}
+              {contextLabel ? `Context: ${contextLabel}` : 'Oruinwan Intelligence · ⌘⇧A'}
             </span>
           </div>
         </div>
@@ -334,7 +334,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
             <div style={{ width: '52px', height: '52px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '14px' }}>
               <Sparkles size={22} style={{ color: 'var(--accent)' }} />
             </div>
-            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Chttrix Intelligence</h4>
+            <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px' }}>Oruinwan Intelligence</h4>
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '220px', lineHeight: 1.6, margin: '0 0 14px' }}>
               {contextLabel ? `I can see ${contextLabel}. Ask about it, summarize it, or draft a reply.` : 'Open a conversation, note or task and I can work on it — or just ask.'}
             </p>
@@ -457,7 +457,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
         {replyingTo && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-active)', borderLeft: '2px solid var(--accent)', padding: '6px 10px', marginBottom: '8px', borderRadius: '0 2px 2px 0' }}>
             <div style={{ overflow: 'hidden' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', display: 'block' }}>{replyingTo.sender === 'user' ? 'You' : 'Chttrix AI'}</span>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--accent)', display: 'block' }}>{replyingTo.sender === 'user' ? 'You' : 'Oruinwan AI'}</span>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>{replyingTo.text.slice(0, 60)}</span>
             </div>
             <button onClick={() => setReplyingTo(null)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', marginLeft: '8px', display: 'flex' }}><X size={12} /></button>
@@ -467,7 +467,7 @@ const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPro
           onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
           onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-default)'}>
           <textarea ref={textRef} rows={1} value={input} onChange={e => setInput(e.target.value)}
-            placeholder={contextLabel ? `Ask about ${contextLabel}…` : 'Message Chttrix AI…'}
+            placeholder={contextLabel ? `Ask about ${contextLabel}…` : 'Message Oruinwan AI…'}
             style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: '13px', color: 'var(--text-primary)', resize: 'none', padding: '1px 0', maxHeight: '112px', fontFamily: 'var(--font)' }}
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }} />
           <button onClick={() => handleSend()} disabled={!input.trim() || isTyping}

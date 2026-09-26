@@ -11,7 +11,7 @@ const FEATURES = [
     { key: 'threads', label: 'Threads', desc: 'Replies in threads' },
     { key: 'bookmarks', label: 'Bookmarks', desc: 'Save messages for later' },
     { key: 'reminders', label: 'Reminders', desc: '"Remind me" on messages' },
-    { key: 'ai', label: 'Chttrix AI', desc: 'Assistant, summaries, smart replies, translation' },
+    { key: 'ai', label: 'Oruinwan AI', desc: 'Assistant, summaries, smart replies, translation' },
 ];
 
 /** Workspace owners/admins switch features on or off for everyone in the workspace. */

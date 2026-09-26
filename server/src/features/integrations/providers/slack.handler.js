@@ -10,7 +10,7 @@ async function verify(config) {
 async function sendToSlack(webhookUrl, text, context = {}) {
   await axios.post(webhookUrl, {
     text,
-    username: 'Chttrix',
+    username: 'Oruinwan',
     icon_emoji: ':speech_balloon:',
     attachments: context.attachments || []
   }, { timeout: 8000 });

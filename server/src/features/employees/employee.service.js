@@ -72,11 +72,11 @@ async function _sendInviteEmail(email, companyName, inviteLink, name = '') {
     try {
         await sendEmail({
             to: email,
-            subject: `You're invited to join ${companyName} on Chttrix`,
+            subject: `You're invited to join ${companyName} on Oruinwan`,
             html: `
 <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
   <h2 style="color:#4f46e5">${name ? `Hi ${name},` : "You've been invited!"}</h2>
-  <p>You've been invited to join <strong>${companyName}</strong> on Chttrix.</p>
+  <p>You've been invited to join <strong>${companyName}</strong> on Oruinwan.</p>
   <p style="margin:24px 0">
     <a href="${inviteLink}"
        style="background:#4f46e5;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700">

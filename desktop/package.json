@@ -1,7 +1,7 @@
 {
   "name": "chttrix-desktop",
   "version": "1.0.0",
-  "description": "Chttrix Desktop App — Electron wrapper for the Chttrix web client",
+  "description": "Oruinwan Desktop App — Electron wrapper for the Oruinwan web client",
   "main": "electron/main.js",
   "private": true,
   "scripts": {
@@ -27,8 +27,8 @@
   },
   "build": {
     "appId": "com.chttrix.desktop",
-    "productName": "Chttrix",
-    "copyright": "Copyright © 2024 Chttrix",
+    "productName": "Oruinwan",
+    "copyright": "Copyright © 2024 Oruinwan",
     "directories": {
       "output": "dist",
       "buildResources": "assets"
@@ -41,14 +41,14 @@
     ],
     "protocols": [
       {
-        "name": "Chttrix",
-        "schemes": ["chttrix"]
+        "name": "Oruinwan",
+        "schemes": ["oruinwan", "chttrix"]
       }
     ],
     "publish": [
       {
         "provider": "generic",
-        "url": "https://downloads.chttrix.com/desktop"
+        "url": "https://downloads.oruinwan.com/desktop"
       }
     ],
     "mac": {
@@ -70,7 +70,7 @@
     "linux": {
       "icon": "assets/icon.png",
       "category": "Network",
-      "mimeTypes": ["x-scheme-handler/chttrix"],
+      "mimeTypes": ["x-scheme-handler/oruinwan", "x-scheme-handler/chttrix"],
       "target": [
         { "target": "AppImage", "arch": ["x64"] },
         { "target": "deb", "arch": ["x64"] }
@@ -81,7 +81,7 @@
       "allowToChangeInstallationDirectory": true
     }
   },
-  "keywords": ["chttrix", "electron", "desktop", "workspace"],
-  "author": "Chttrix Team",
+  "keywords": ["oruinwan", "electron", "desktop", "workspace"],
+  "author": "Oruinwan Team",
   "license": "MIT"
 }

@@ -64,15 +64,15 @@ const Overview = () => {
                         </div>
                     </div>
                 </div>
-                <ViewDetailsBtn onClick={() => navigate('/chttrix-admin/health')} />
+                <ViewDetailsBtn onClick={() => navigate('/platform-admin/health')} />
             </div>
 
             {}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
-                <StatCard icon={Building2} label="Total Companies" value={stats.totalCompanies} change={stats.companiesGrowth} trend={stats.companiesGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/chttrix-admin/companies')} />
+                <StatCard icon={Building2} label="Total Companies" value={stats.totalCompanies} change={stats.companiesGrowth} trend={stats.companiesGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/platform-admin/companies')} />
                 <StatCard icon={Users} label="Active Users" value={stats.activeUsers} change={stats.usersGrowth} trend={stats.usersGrowth >= 0 ? 'up' : 'down'} />
-                <StatCard icon={Ticket} label="Open Tickets" value={stats.openTickets} onClick={() => navigate('/chttrix-admin/tickets')} />
-                <StatCard icon={DollarSign} label="Monthly Revenue" value={`$${(stats.monthlyRevenue || 0).toLocaleString()}`} change={stats.revenueGrowth} trend={stats.revenueGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/chttrix-admin/billing')} />
+                <StatCard icon={Ticket} label="Open Tickets" value={stats.openTickets} onClick={() => navigate('/platform-admin/tickets')} />
+                <StatCard icon={DollarSign} label="Monthly Revenue" value={`$${(stats.monthlyRevenue || 0).toLocaleString()}`} change={stats.revenueGrowth} trend={stats.revenueGrowth >= 0 ? 'up' : 'down'} onClick={() => navigate('/platform-admin/billing')} />
             </div>
 
             {}
@@ -92,7 +92,7 @@ const Overview = () => {
                             <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>Companies waiting for verification</div>
                         </div>
                     </div>
-                    <ReviewBtn onClick={() => navigate('/chttrix-admin/pending')} />
+                    <ReviewBtn onClick={() => navigate('/platform-admin/pending')} />
                 </div>
             )}
 
@@ -118,10 +118,10 @@ const Overview = () => {
             <div>
                 <h2 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '12px' }}>Quick Actions</h2>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
-                    <QuickAction icon={CheckCircle} title="Review Requests" desc="Manage company verifications" onClick={() => navigate('/chttrix-admin/pending')} />
-                    <QuickAction icon={Megaphone} title="Send Broadcast" desc="Notify all companies" onClick={() => navigate('/chttrix-admin/broadcast')} />
-                    <QuickAction icon={Ticket} title="View Tickets" desc="Resolve support issues" onClick={() => navigate('/chttrix-admin/tickets')} />
-                    <QuickAction icon={Activity} title="System Health" desc="Monitor platform status" onClick={() => navigate('/chttrix-admin/health')} />
+                    <QuickAction icon={CheckCircle} title="Review Requests" desc="Manage company verifications" onClick={() => navigate('/platform-admin/pending')} />
+                    <QuickAction icon={Megaphone} title="Send Broadcast" desc="Notify all companies" onClick={() => navigate('/platform-admin/broadcast')} />
+                    <QuickAction icon={Ticket} title="View Tickets" desc="Resolve support issues" onClick={() => navigate('/platform-admin/tickets')} />
+                    <QuickAction icon={Activity} title="System Health" desc="Monitor platform status" onClick={() => navigate('/platform-admin/health')} />
                 </div>
             </div>
         </div>

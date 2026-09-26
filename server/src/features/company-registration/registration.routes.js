@@ -4,7 +4,7 @@ const registrationController = require("./registration.controller");
 const requireAuth = require("../../shared/middleware/auth");
 const User = require("../../../models/User");
 
-// Platform (Chttrix) admin only — same rule as requireSuperAdmin in admin.routes.js.
+// Platform (Oruinwan) admin only — same rule as requireSuperAdmin in admin.routes.js.
 async function requireChttrixAdmin(req, res, next) {
     try {
         const user = await User.findById(req.user.sub).select("roles").lean();

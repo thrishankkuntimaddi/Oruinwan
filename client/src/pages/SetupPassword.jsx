@@ -32,7 +32,7 @@ export default function SetupPassword() {
         setLoading(true);
         try {
             await api.post('/api/auth/setup-temp-password', { password });
-            showToast('Password set! Welcome to Chttrix 🎉', 'success');
+            showToast('Password set! Welcome to Oruinwan 🎉', 'success');
             if (setUser && user) setUser({ ...user, isTemporaryPassword: false, passwordInitialized: true });
             const dest = sessionStorage.getItem('setupPasswordDest') || '/workspaces';
             sessionStorage.removeItem('setupPasswordDest');

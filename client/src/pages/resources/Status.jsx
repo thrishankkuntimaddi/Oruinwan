@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { RefreshCw, Activity } from 'lucide-react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
-import { RefreshCw } from 'lucide-react';
+import { PageHero, Block, Callout } from '../../components/public/PublicKit';
 import { API_BASE } from '../../services/api';
 
 // Live checks run from the visitor's browser. Nothing here is recorded over time,
@@ -57,12 +58,13 @@ const CHECKS = [
     { key: 'realtime', name: 'Real-time messaging (WebSocket)' },
 ];
 
+// Maps each check state to the kit's status-dot modifier and a label.
 const STATUS_STYLE = {
-    operational: { color: '#5aba8a', label: 'Operational' },
-    degraded: { color: '#c9a87c', label: 'Degraded' },
-    outage: { color: '#e05252', label: 'Unavailable' },
-    unknown: { color: '#7a7a7a', label: 'Unknown' },
-    checking: { color: '#7a7a7a', label: 'Checking…' },
+    operational: { tone: 'ok', label: 'Operational' },
+    degraded: { tone: 'warn', label: 'Degraded' },
+    outage: { tone: 'down', label: 'Unavailable' },
+    unknown: { tone: 'idle', label: 'Unknown' },
+    checking: { tone: 'idle', label: 'Checking…' },
 };
 
 function overall(results) {
@@ -93,72 +95,66 @@ export default function Status() {
     }, [refresh]);
 
     const summary = overall(results);
-    const summaryColor = STATUS_STYLE[summary.status].color;
+    const summaryTone = STATUS_STYLE[summary.status].tone;
 
     return (
         <PublicPageShell title="Status">
-            <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '72px 0 56px' }}>
-                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
-                        <div>
-                            <div data-testid="status-summary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: `${summaryColor}14`, border: `1px solid ${summaryColor}40`, marginBottom: '20px' }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: summaryColor, animation: summary.status === 'operational' ? 'pulse 2s ease-in-out infinite' : 'none' }} />
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: summaryColor, letterSpacing: '0.03em' }}>{summary.text}</span>
-                            </div>
-                            <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '10px' }}>System Status</h1>
-                            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Live checks run from your browser, refreshed every 30 seconds</p>
-                        </div>
-                        <button onClick={refresh} disabled={spinning}
-                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 16px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: spinning ? 'default' : 'pointer', fontFamily: 'inherit' }}>
-                            <RefreshCw size={12} style={{ animation: spinning ? 'spin 0.8s linear infinite' : 'none' }} />
-                            Refresh
-                        </button>
-                    </div>
-                    <style>{`@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} } @keyframes spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }`}</style>
-                </div>
-            </div>
+            <PageHero
+                crumb="Status"
+                eyebrow="System status"
+                icon={Activity}
+                title={<>System <span className="orw-gloss-text">status.</span></>}
+                lead="Live checks run from your browser, refreshed every 30 seconds."
+                actions={
+                    <button type="button" className="orw-btn orw-btn--ghost" onClick={refresh} disabled={spinning} aria-busy={spinning}>
+                        <RefreshCw size={14} aria-hidden="true" />
+                        {spinning ? 'Checking…' : 'Refresh now'}
+                    </button>
+                }
+            />
 
-            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)' }}>Services</p>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                        {lastUpdated ? `Last checked: ${lastUpdated.toLocaleTimeString()}` : 'Checking…'}
+            <Block>
+                <div className="orw-glass" data-reveal aria-live="polite"
+                    style={{ padding: 'clamp(24px, 4vw, 40px)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 20 }}>
+                    <div>
+                        <p className="orw-eyebrow">Overall</p>
+                        <h2 className="orw-h2" style={{ fontSize: 'clamp(24px, 3.4vw, 36px)' }}>
+                            <span className={`orw-status orw-status--${summaryTone}`} style={{ font: 'inherit', gap: 14 }}>
+                                <span data-testid="status-summary">{summary.text}</span>
+                            </span>
+                        </h2>
+                    </div>
+                    <p className="orw-hint">
+                        {lastUpdated ? `Last checked ${lastUpdated.toLocaleTimeString()}` : 'Running first check…'}
                     </p>
                 </div>
+            </Block>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
+            <Block eyebrow="Services" title="Component checks" slab>
+                <div className="orw-rows" data-reveal>
                     {CHECKS.map(({ key, name }) => {
                         const r = results?.[key] || { status: 'checking' };
                         const st = STATUS_STYLE[r.status] || STATUS_STYLE.unknown;
                         return (
-                            <div key={key} data-testid={`status-${key}`} style={{ background: 'var(--bg-surface)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: st.color, flexShrink: 0, display: 'inline-block' }} />
-                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{name}</span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                            <div key={key} className="orw-row" data-testid={`status-${key}`}>
+                                <div>
+                                    <h3>{name}</h3>
+                                    {r.detail && r.status !== 'operational' && <p>{r.detail}</p>}
                                     {r.latency != null && (
-                                        <div style={{ textAlign: 'right' }}>
-                                            <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '1px' }}>Response time</p>
-                                            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{r.latency}ms</p>
+                                        <div className="orw-row__meta">
+                                            <span className="orw-tag">Response time <span className="orw-code" style={{ marginLeft: 6 }}>{r.latency}ms</span></span>
                                         </div>
                                     )}
-                                    {r.detail && r.status !== 'operational' && (
-                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.detail}</p>
-                                    )}
-                                    <div style={{ padding: '3px 8px', border: `1px solid ${st.color}40`, fontSize: '10px', fontWeight: 700, color: st.color, textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: '90px', textAlign: 'center' }}>
-                                        {st.label}
-                                    </div>
                                 </div>
+                                <span className={`orw-status orw-status--${st.tone}`}>{st.label}</span>
                             </div>
                         );
                     })}
                 </div>
-
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px', lineHeight: 1.7 }}>
-                    These checks show whether the service is reachable from where you are right now. If something looks wrong, contact support from inside the app.
-                </p>
-            </div>
+                <Callout>
+                    These checks show whether the service is reachable from where you are right now. Nothing is recorded over time, so there is no uptime history here. If something looks wrong, contact support from inside the app.
+                </Callout>
+            </Block>
         </PublicPageShell>
     );
 }

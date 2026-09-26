@@ -112,7 +112,7 @@ const NotificationsTab = ({ notifications, setNotifications }) => {
             <Card title="Email Notifications" subtitle="Delivered to your inbox">
                 <Toggle label="Security Alerts" description="Critical account security notices (recommended)." checked={notifications.securityEmails} onChange={v => update('securityEmails', v)} />
                 <Toggle label="Product Updates" description="New features and improvement announcements." checked={notifications.productUpdates} onChange={v => update('productUpdates', v)} />
-                <Toggle label="Marketing Emails" description="Tips, offers, and Chttrix news." checked={notifications.marketingEmails} onChange={v => update('marketingEmails', v)} />
+                <Toggle label="Marketing Emails" description="Tips, offers, and Oruinwan news." checked={notifications.marketingEmails} onChange={v => update('marketingEmails', v)} />
             </Card>
 
             <Card title="Sounds" subtitle="Auditory feedback">

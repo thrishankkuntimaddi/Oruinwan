@@ -2,7 +2,7 @@ import React, { createContext, useContext, useMemo, useRef, useState, useCallbac
 import { useLocation } from 'react-router-dom';
 
 /**
- * What the user is looking at, so Chttrix AI can act on it from anywhere:
+ * What the user is looking at, so Oruinwan AI can act on it from anywhere:
  * the open conversation (decrypted transcript), the open note, the open task.
  * Screens register themselves; the assistant panel reads `snapshot()`.
  *

@@ -84,7 +84,7 @@ function ApiKeysTab({ workspaceId }) {
       <div className="dp-section-header">
         <div>
           <h2>API Keys</h2>
-          <p>Use API keys to authenticate requests to the Chttrix Public API.</p>
+          <p>Use API keys to authenticate requests to the Oruinwan Public API.</p>
         </div>
         <button className="dp-btn dp-btn-primary" onClick={() => setShowCreate(true)}>+ Create Key</button>
       </div>
@@ -472,14 +472,14 @@ function AppsTab({ workspaceId }) {
 
 function DocsTab() {
   const [activeSection, setActiveSection] = useState('quickstart');
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-chttrix-instance.com';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-oruinwan-instance.com';
 
   const sections = {
     quickstart: {
       title: 'Quick Start',
       content: (
         <div>
-          <p>Get started with the Chttrix Public API in 2 minutes.</p>
+          <p>Get started with the Oruinwan Public API in 2 minutes.</p>
           <h4>1. Create an API Key</h4>
           <p>Go to the <strong>API Keys</strong> tab and create a key for your workspace.</p>
           <h4>2. Make your first request</h4>
@@ -487,8 +487,8 @@ function DocsTab() {
   "${baseUrl}/api/public/messages?workspaceId=YOUR_WORKSPACE_ID"`}</code></pre>
           <h4>3. Use the SDK</h4>
           <pre><code>{`// Node.js / Browser
-const ChttrixSDK = require('./chttrix-sdk');
-const client = new ChttrixSDK({
+const OruinwanSDK = require('./oruinwan-sdk');
+const client = new OruinwanSDK({
   apiKey: 'chx_your_key_here',
   baseUrl: '${baseUrl}'
 });
@@ -555,7 +555,7 @@ const { task } = await client.tasks.create({ title: 'New task' });`}</code></pre
       title: 'Webhook Events',
       content: (
         <div>
-          <p>When an event occurs, Chttrix POSTs a JSON payload to your endpoint with these headers:</p>
+          <p>When an event occurs, Oruinwan POSTs a JSON payload to your endpoint with these headers:</p>
           <pre><code>{`X-Chttrix-Event: message.sent
 X-Chttrix-Signature: sha256=<hmac>
 X-Chttrix-Delivery: <webhook-id>`}</code></pre>
@@ -592,10 +592,10 @@ X-Chttrix-Delivery: <webhook-id>`}</code></pre>
       content: (
         <div>
           <h4>Installation</h4>
-          <pre><code>{`# Copy sdk/js/chttrix-sdk.js into your project
+          <pre><code>{`# Copy sdk/js/oruinwan-sdk.js into your project
 # or serve it as a static file`}</code></pre>
           <h4>Initialization</h4>
-          <pre><code>{`const client = new ChttrixSDK({
+          <pre><code>{`const client = new OruinwanSDK({
   apiKey: 'chx_...',
   baseUrl: '${baseUrl}'
 });`}</code></pre>
@@ -656,7 +656,7 @@ export default function DeveloperPortalPage({ workspaceId }) {
           <div className="dp-header-icon">⚡</div>
           <div>
             <h1>Developer Platform</h1>
-            <p>Build integrations, automate workflows, and extend Chttrix for your team.</p>
+            <p>Build integrations, automate workflows, and extend Oruinwan for your team.</p>
           </div>
         </div>
       </div>

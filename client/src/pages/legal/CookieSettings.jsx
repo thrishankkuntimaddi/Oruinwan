@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Cookie } from 'lucide-react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
-import { Cookie, Shield, BarChart2, Settings, CheckCircle2 } from 'lucide-react';
+import { PageHero, Block } from '../../components/public/PublicKit';
+import BRAND from '../../shared/brand';
+
+// Stored user data: keep this key and the { analytics, preferences } shape.
+const STORAGE_KEY = 'chttrix_cookie_prefs';
+const DEFAULT_PREFS = { analytics: true, preferences: true };
 
 const COOKIE_TYPES = [
     {
         id: 'essential',
-        icon: Shield,
-        color: '#5aba8a',
         title: 'Essential Cookies',
         desc: 'Required for the platform to function. These cannot be disabled. They handle authentication, session management, and core security features.',
         examples: ['Session token', 'CSRF protection', 'Auth state persistence'],
@@ -14,17 +19,13 @@ const COOKIE_TYPES = [
     },
     {
         id: 'analytics',
-        icon: BarChart2,
-        color: '#6ea8fe',
         title: 'Analytics Cookies',
-        desc: 'Help us understand how users interact with Chttrix so we can improve the product. All data is anonymized and aggregated.',
+        desc: `Help us understand how users interact with ${BRAND.name} so we can improve the product. All data is anonymized and aggregated.`,
         examples: ['Page view counts', 'Feature usage heatmaps', 'Error frequency tracking'],
         required: false,
     },
     {
         id: 'preferences',
-        icon: Settings,
-        color: '#b8956a',
         title: 'Preference Cookies',
         desc: 'Remember your UI preferences across sessions — like sidebar state, notification settings, and display density.',
         examples: ['Sidebar collapsed state', 'Notification preferences', 'Last visited workspace'],
@@ -32,94 +33,86 @@ const COOKIE_TYPES = [
     },
 ];
 
+function loadPrefs() {
+    try {
+        const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        if (raw && typeof raw === 'object') {
+            return {
+                analytics: typeof raw.analytics === 'boolean' ? raw.analytics : DEFAULT_PREFS.analytics,
+                preferences: typeof raw.preferences === 'boolean' ? raw.preferences : DEFAULT_PREFS.preferences,
+            };
+        }
+    } catch { /* storage blocked or malformed: fall back to defaults */ }
+    return DEFAULT_PREFS;
+}
+
 export default function CookieSettings() {
-    const [prefs, setPrefs] = useState({ analytics: true, preferences: true });
+    const [prefs, setPrefs] = useState(loadPrefs);
     const [saved, setSaved] = useState(false);
+    const timer = useRef(null);
+
+    useEffect(() => () => clearTimeout(timer.current), []);
 
     const toggle = (id) => {
         setPrefs(p => ({ ...p, [id]: !p[id] }));
         setSaved(false);
     };
 
-    const save = () => {
-        
-        localStorage.setItem('chttrix_cookie_prefs', JSON.stringify(prefs));
+    const persist = (next) => {
+        setPrefs(next);
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        } catch { /* storage unavailable: preferences apply for this visit only */ }
         setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+        clearTimeout(timer.current);
+        timer.current = setTimeout(() => setSaved(false), 3000);
     };
 
     return (
         <PublicPageShell title="Cookie Settings">
-            <div style={{ maxWidth: '760px', margin: '0 auto', padding: '64px 24px' }}>
-                {}
-                <div style={{ marginBottom: '48px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
-                        <Cookie size={11} style={{ color: '#b8956a' }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Cookie Settings</span>
-                    </div>
-                    <h1 style={{ fontSize: '36px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Manage your cookie preferences.</h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75' }}>
-                        We use cookies to keep you signed in and to understand how you use Chttrix. You're in control of everything except essential, security-required cookies.
-                    </p>
-                </div>
+            <PageHero
+                crumb="Cookie settings"
+                eyebrow="Cookie Settings"
+                icon={Cookie}
+                title={<>Manage your <span className="orw-gloss-text">cookie preferences.</span></>}
+                lead={`We use cookies to keep you signed in and to understand how you use ${BRAND.name}. You’re in control of everything except essential, security-required cookies.`}
+            />
 
-                {}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)', marginBottom: '32px' }}>
+            <Block eyebrow="Categories" title="Choose what we store.">
+                <div className="orw-rows" data-reveal style={{ maxWidth: 860 }}>
                     {COOKIE_TYPES.map(c => {
-                        const Icon = c.icon;
                         const isOn = c.required || prefs[c.id];
                         return (
-                            <div key={c.id} style={{ background: '#111', padding: '28px 24px', position: 'relative' }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px' }}>
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                                            <div style={{ width: '34px', height: '34px', background: `${c.color}14`, border: `1px solid ${c.color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                <Icon size={16} style={{ color: c.color }} />
-                                            </div>
-                                            <div>
-                                                <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{c.title}</h3>
-                                                {c.required && <span style={{ fontSize: '10px', fontWeight: 700, color: '#5aba8a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Always Active</span>}
-                                            </div>
-                                        </div>
-                                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '14px' }}>{c.desc}</p>
-                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                                            {c.examples.map(e => (
-                                                <span key={e} style={{ padding: '3px 8px', background: 'var(--bg-hover)', border: '1px solid rgba(255,255,255,0.07)', fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{e}</span>
-                                            ))}
-                                        </div>
+                            <div key={c.id} className="orw-row">
+                                <div>
+                                    <h3 id={`cookie-${c.id}-title`}>{c.title}</h3>
+                                    <p id={`cookie-${c.id}-desc`}>{c.desc}</p>
+                                    <div className="orw-row__meta">
+                                        {c.required && <span className="orw-tag orw-tag--good">Always active</span>}
+                                        {c.examples.map(e => <span key={e} className="orw-tag">{e}</span>)}
                                     </div>
-
-                                    {}
-                                    <button onClick={() => !c.required && toggle(c.id)}
-                                        disabled={c.required}
-                                        style={{ width: '44px', height: '24px', borderRadius: '12px', background: isOn ? c.color : 'rgba(255,255,255,0.1)', border: 'none', cursor: c.required ? 'default' : 'pointer', position: 'relative', transition: 'background 200ms ease', flexShrink: 0, marginTop: '4px' }}>
-                                        <span style={{ position: 'absolute', top: '3px', left: isOn ? '22px' : '3px', width: '18px', height: '18px', borderRadius: '50%', background: '#fff', transition: 'left 200ms ease', boxShadow: '0 1px 3px rgba(0,0,0,0.4)' }} />
-                                    </button>
                                 </div>
+                                <button type="button" role="switch" className="orw-switch"
+                                    aria-checked={isOn} aria-labelledby={`cookie-${c.id}-title`} aria-describedby={`cookie-${c.id}-desc`}
+                                    disabled={c.required} onClick={() => !c.required && toggle(c.id)} />
                             </div>
                         );
                     })}
                 </div>
 
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <button onClick={save}
-                        style={{ padding: '10px 28px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'opacity 150ms ease' }}
-                        onMouseEnter={e => e.currentTarget.style.opacity = '0.88'}
-                        onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
-                        Save Preferences
-                    </button>
-                    {saved && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#5aba8a', fontWeight: 600 }}>
-                            <CheckCircle2 size={14} /> Saved successfully
-                        </div>
-                    )}
+                <div data-reveal style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, marginTop: 32 }}>
+                    <button type="button" className="orw-btn orw-btn--primary" onClick={() => persist(prefs)}>Save preferences</button>
+                    <button type="button" className="orw-btn orw-btn--ghost" onClick={() => persist({ analytics: true, preferences: true })}>Accept all</button>
+                    <button type="button" className="orw-btn orw-btn--ghost" onClick={() => persist({ analytics: false, preferences: false })}>Reject non-essential</button>
+                    <span role="status" aria-live="polite" className="orw-status orw-status--ok" style={{ visibility: saved ? 'visible' : 'hidden' }}>
+                        {saved ? 'Saved successfully' : ''}
+                    </span>
                 </div>
 
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '28px', lineHeight: '1.7' }}>
-                    For more details on how we use cookies and process your data, see our <button onClick={() => (window.location.href = '/privacy')} style={{ background: 'none', border: 'none', color: '#b8956a', cursor: 'pointer', fontSize: '12px', fontFamily: 'inherit', padding: 0 }}>Privacy Policy</button>. Cookie preferences are stored locally and will be remembered across sessions on this device.
+                <p className="orw-hint" style={{ marginTop: 28, maxWidth: 640 }}>
+                    For more details on how we use cookies and process your data, see our <Link className="orw-link" to="/privacy">Privacy Policy</Link>. Cookie preferences are stored locally and will be remembered across sessions on this device.
                 </p>
-            </div>
+            </Block>
         </PublicPageShell>
     );
 }

@@ -86,7 +86,7 @@ export default function SettingsScreen({ navigation }) {
   }
 
   function confirmSignOut() {
-    Alert.alert('Sign out', 'Sign out of Chttrix on this device?', [
+    Alert.alert('Sign out', 'Sign out of Oruinwan on this device?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
     ]);

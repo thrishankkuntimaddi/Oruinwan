@@ -120,7 +120,7 @@ export default function GlobalSearchBar() {
                                             ))}
                                         </>
                                     ) : (
-                                        <p className="gsb-empty">Start typing to search across Chttrix</p>
+                                        <p className="gsb-empty">Start typing to search across Oruinwan</p>
                                     )}
                                 </div>
                             )}

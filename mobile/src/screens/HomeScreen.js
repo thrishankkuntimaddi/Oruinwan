@@ -47,7 +47,7 @@ export default function HomeScreen({ navigation }) {
         <View style={styles.headerText}>
           <Text style={styles.greeting}>Hello, {user?.username || 'there'} 👋</Text>
           <Text style={styles.subGreeting}>
-            {user?.companyRole ? `${user.companyRole} · ` : ''}Chttrix Mobile
+            {user?.companyRole ? `${user.companyRole} · ` : ''}Oruinwan Mobile
           </Text>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.logoutBtn}>

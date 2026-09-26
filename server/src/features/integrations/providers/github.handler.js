@@ -8,7 +8,7 @@ async function verify(config) {
       headers: {
         Authorization: `Bearer ${config.token}`,
         Accept: 'application/vnd.github.v3+json',
-        'User-Agent': 'Chttrix-Integration'
+        'User-Agent': 'Oruinwan-Integration'
       },
       timeout: 8000
     });

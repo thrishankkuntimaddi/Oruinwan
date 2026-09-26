@@ -35,7 +35,7 @@ router.post('/setup', requireAuth, async (req, res) => {
     }
 
     const secret = authenticator.generateSecret();
-    const otpauthUrl = authenticator.keyuri(user.email, 'Chttrix', secret);
+    const otpauthUrl = authenticator.keyuri(user.email, 'Oruinwan', secret);
 
     
     await User.findByIdAndUpdate(req.user.sub, {

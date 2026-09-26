@@ -1,6 +1,6 @@
 {
-  "name": "Chttrix",
-  "short_name": "Chttrix",
+  "name": "Oruinwan",
+  "short_name": "Oruinwan",
   "description": "AI-Augmented Collaboration Platform",
   "start_url": ".",
   "display": "standalone",
@@ -9,19 +9,19 @@
   "theme_color": "#0c0c0c",
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "icons/oruinwan-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/oruinwan-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "icons/oruinwan-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

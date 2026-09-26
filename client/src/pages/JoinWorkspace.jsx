@@ -234,7 +234,7 @@ const JoinWorkspace = () => {
             <div style={styles.root}>
                 <div style={styles.bgGlow} />
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', zIndex: 1 }}>
-                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', opacity: 0.5 }} />
+                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '32px', height: '32px', opacity: 0.5 }} />
                     <div style={{ height: '2px', width: '80px', background: 'var(--accent-dim, rgba(184,149,106,0.2))', position: 'relative', overflow: 'hidden' }}>
                         <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: 'var(--accent, #b8956a)', animation: 'slideBar 1.2s ease-in-out infinite' }} />
                     </div>
@@ -250,8 +250,8 @@ const JoinWorkspace = () => {
             <div style={styles.root}>
                 <div style={styles.bgGlow} />
                 <div style={styles.topBrand} onClick={() => navigate('/workspaces')}>
-                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px' }} />
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Chttrix</span>
+                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '28px', height: '28px' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Oruinwan</span>
                 </div>
 
                 <div style={{ ...styles.card, border: '1px solid rgba(224,82,82,0.3)' }}>
@@ -280,8 +280,8 @@ const JoinWorkspace = () => {
             <div style={styles.bgGlow} />
 
             <div style={styles.topBrand} onClick={() => navigate('/workspaces')}>
-                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px' }} />
-                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Chttrix</span>
+                <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '28px', height: '28px' }} />
+                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Oruinwan</span>
             </div>
 
             <div style={styles.card}>
@@ -361,7 +361,7 @@ const JoinWorkspace = () => {
             </div>
 
             <div style={styles.footerText}>
-                © 2026 Chttrix Inc.
+                © 2026 Oruinwan Inc.
             </div>
         </div>
     );

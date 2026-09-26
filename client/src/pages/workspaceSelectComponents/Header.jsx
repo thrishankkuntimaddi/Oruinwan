@@ -150,8 +150,8 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
         }}>
             {}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '24px', height: '24px', borderRadius: '2px', objectFit: 'cover' }} />
-                <span className="psh-ws-label" style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>Chttrix</span>
+                <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '24px', height: '24px', borderRadius: '2px', objectFit: 'cover' }} />
+                <span className="psh-ws-label" style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '14px', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>Oruinwan</span>
             </div>
 
             {}
@@ -223,7 +223,7 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                                     borderRadius: '2px', zIndex: 100, overflow: 'hidden', animation: 'mfFadeIn 0.15s ease',
                                 }}>
                                     <div style={{ padding: '10px 14px', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)' }}>
-                                        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)' }}>Chttrix Support</h3>
+                                        <h3 style={{ margin: 0, fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)' }}>Oruinwan Support</h3>
                                         <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'var(--text-secondary)' }}>We're here to help you collaborate better.</p>
                                     </div>
 
@@ -277,7 +277,7 @@ const Header = ({ showHelp, setShowHelp, onHelpModalOpen, user, onProfileClick, 
                     </div>
 
                     {}
-                    <button onClick={onAIClick} style={iconBtn(showAI)} title="Chttrix AI"
+                    <button onClick={onAIClick} style={iconBtn(showAI)} title="Oruinwan AI"
                         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--accent)'; }}
                         onMouseLeave={e => { e.currentTarget.style.background = showAI ? 'var(--bg-hover)' : 'none'; e.currentTarget.style.color = showAI ? 'var(--accent)' : 'var(--text-muted)'; }}
                     ><Bot size={16} /></button>

@@ -83,8 +83,8 @@ const SetPassword = () => {
             <div style={{ width: '100%', maxWidth: '420px', animation: 'slideUp 300ms cubic-bezier(0.16,1,0.3,1)' }}>
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '40px' }}>
-                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Chttrix</span>
+                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '32px', height: '32px', objectFit: 'cover' }} />
+                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.015em' }}>Oruinwan</span>
                 </div>
 
                 {}
@@ -182,7 +182,7 @@ const SetPassword = () => {
                 </div>
 
                 <p style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', marginTop: '24px', opacity: 0.5 }}>
-                    © 2026 Chttrix Inc.
+                    © 2026 Oruinwan Inc.
                 </p>
             </div>
         </div>

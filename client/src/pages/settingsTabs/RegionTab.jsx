@@ -77,7 +77,7 @@ const RegionTab = ({ region, setRegion }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Card title="Auto-translate" subtitle="Translate other people's messages automatically (uses Chttrix AI)">
+            <Card title="Auto-translate" subtitle="Translate other people's messages automatically (uses Oruinwan AI)">
                 <label style={labelStyle}>Translate incoming messages to</label>
                 <select data-testid="auto-translate-lang" value={autoLang} style={selectStyle}
                     onChange={e => { setAutoLang(e.target.value); setAutoTranslateLang(e.target.value); }}>

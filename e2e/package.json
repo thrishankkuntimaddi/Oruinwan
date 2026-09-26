@@ -2,7 +2,7 @@
   "name": "e2e",
   "version": "1.0.0",
   "private": true,
-  "description": "Browser end-to-end tests for the Chttrix core flows (Playwright).",
+  "description": "Browser end-to-end tests for the Oruinwan core flows (Playwright).",
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",

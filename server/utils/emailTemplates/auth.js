@@ -1,5 +1,5 @@
 const YEAR = new Date().getFullYear();
-const APP = 'Chttrix';
+const APP = 'Oruinwan';
 
 const T = {
   bgOuter:     '#f0ece6',
@@ -173,41 +173,41 @@ const generateVerificationCode = () =>
 const emailVerificationTemplate = (username, code) => {
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${p('Use the verification code below to confirm your email address on Chttrix:', { mb: '4px' })}
+    ${p('Use the verification code below to confirm your email address on Oruinwan:', { mb: '4px' })}
     ${otp(code)}
     ${p(`This code expires in <strong style="color:${T.textPrimary}">15 minutes</strong>. If you didn't request this, you can safely ignore this email.`, { size: '13px', color: T.textMuted, mb: '0' })}
   `;
   return {
-    subject: `Your Chttrix Verification Code: ${code}`,
+    subject: `Your Oruinwan Verification Code: ${code}`,
     html: shell({
       icon: '✉️',
       title: 'Email Verification Code',
-      subtitle: 'Enter this code in Chttrix to verify your email address.',
-      preheader: `Your Chttrix verification code is ${code}. Expires in 15 minutes.`,
+      subtitle: 'Enter this code in Oruinwan to verify your email address.',
+      preheader: `Your Oruinwan verification code is ${code}. Expires in 15 minutes.`,
       body,
     }),
-    text: `Hi ${username},\n\nYour Chttrix email verification code is: ${code}\n\nThis code expires in 15 minutes.\n\nIf you didn't request this, please ignore this email.\n\n— The Chttrix Team`,
+    text: `Hi ${username},\n\nYour Oruinwan email verification code is: ${code}\n\nThis code expires in 15 minutes.\n\nIf you didn't request this, please ignore this email.\n\n— The Oruinwan Team`,
   };
 };
 
 const passwordResetTemplate = (username, resetUrl) => {
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${p('We received a request to reset your Chttrix account password. Click the button below to choose a new password.')}
+    ${p('We received a request to reset your Oruinwan account password. Click the button below to choose a new password.')}
     ${btn('Reset Password', resetUrl)}
     ${link('Reset your password', resetUrl)}
     ${alert('<strong>Security note:</strong> This link expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email — your account remains secure.', 'warning')}
   `;
   return {
-    subject: `Reset your Chttrix password`,
+    subject: `Reset your Oruinwan password`,
     html: shell({
       icon: '🔑',
       title: 'Reset Your Password',
       subtitle: 'A password reset was requested for your account.',
-      preheader: `Hi ${username}, click inside to reset your Chttrix password (expires in 1 hour).`,
+      preheader: `Hi ${username}, click inside to reset your Oruinwan password (expires in 1 hour).`,
       body,
     }),
-    text: `Hi ${username},\n\nReset your Chttrix password here: ${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, ignore this email.\n\n— The Chttrix Team`,
+    text: `Hi ${username},\n\nReset your Oruinwan password here: ${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, ignore this email.\n\n— The Oruinwan Team`,
   };
 };
 
@@ -217,40 +217,40 @@ const passwordSetTemplate = (username, authProvider) => {
     : 'OAuth';
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${p(`You've successfully added password login to your Chttrix account. You can now sign in with either your <strong style="color:${T.textPrimary}">${provider}</strong> account or your email and password.`)}
+    ${p(`You've successfully added password login to your Oruinwan account. You can now sign in with either your <strong style="color:${T.textPrimary}">${provider}</strong> account or your email and password.`)}
     ${alert('If you did not set a password on your account, your account may have been accessed without authorisation. Please change your password immediately and contact support.', 'danger')}
   `;
   return {
-    subject: `Password login enabled on your Chttrix account`,
+    subject: `Password login enabled on your Oruinwan account`,
     html: shell({
       icon: '🔐',
       title: 'Password Login Enabled',
       subtitle: `Password login was added to your ${provider} account.`,
-      preheader: `Password login is now enabled on your Chttrix account, ${username}.`,
+      preheader: `Password login is now enabled on your Oruinwan account, ${username}.`,
       body,
     }),
-    text: `Hi ${username},\n\nPassword login has been enabled on your Chttrix account (via ${provider}).\n\nIf this wasn't you, please contact support immediately.\n\n— The Chttrix Team`,
+    text: `Hi ${username},\n\nPassword login has been enabled on your Oruinwan account (via ${provider}).\n\nIf this wasn't you, please contact support immediately.\n\n— The Oruinwan Team`,
   };
 };
 
 const resendVerificationTemplate = (username, verificationUrl) => {
   const body = `
     ${p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${p('Your Chttrix account is almost ready! Click the button below to verify your email and activate your account.')}
+    ${p('Your Oruinwan account is almost ready! Click the button below to verify your email and activate your account.')}
     ${btn('Verify Email Address', verificationUrl)}
     ${link('Verify your email', verificationUrl)}
-    ${alert('This verification link expires in <strong>24 hours</strong>. If you did not create a Chttrix account, you can safely ignore this email.', 'info')}
+    ${alert('This verification link expires in <strong>24 hours</strong>. If you did not create a Oruinwan account, you can safely ignore this email.', 'info')}
   `;
   return {
-    subject: `Verify your Chttrix email address`,
+    subject: `Verify your Oruinwan email address`,
     html: shell({
       icon: '📬',
       title: 'Verify Your Email',
-      subtitle: 'One click to activate your Chttrix account.',
-      preheader: `Hi ${username}, please verify your email to get started on Chttrix.`,
+      subtitle: 'One click to activate your Oruinwan account.',
+      preheader: `Hi ${username}, please verify your email to get started on Oruinwan.`,
       body,
     }),
-    text: `Hi ${username},\n\nVerify your Chttrix email here: ${verificationUrl}\n\nThis link expires in 24 hours.\n\n— The Chttrix Team`,
+    text: `Hi ${username},\n\nVerify your Oruinwan email here: ${verificationUrl}\n\nThis link expires in 24 hours.\n\n— The Oruinwan Team`,
   };
 };
 

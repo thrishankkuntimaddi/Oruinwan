@@ -1,7 +1,7 @@
 /**
  * platform/sdk/api/apiClient.js
  *
- * Chttrix Platform SDK — API Client
+ * Oruinwan Platform SDK — API Client
  *
  * Minimal, framework-agnostic HTTP client built on native fetch.
  * No axios dependency — compatible with web, Electron, and React Native.

@@ -72,7 +72,7 @@ const ComplianceTab = ({ user }) => {
         try {
             const res = await api.get('/api/compliance/export-user', { responseType: 'blob' });
             const url = URL.createObjectURL(new Blob([res.data]));
-            const a = document.createElement('a'); a.href = url; a.download = `chttrix-my-data-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+            const a = document.createElement('a'); a.href = url; a.download = `oruinwan-my-data-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
             flashSuccess('Data export downloaded successfully');
         } catch (err) { flashError(err.response?.data?.message || 'Export failed'); }
         finally { setExportLoading(false); }

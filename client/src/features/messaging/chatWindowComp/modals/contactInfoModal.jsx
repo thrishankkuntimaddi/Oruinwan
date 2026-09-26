@@ -65,7 +65,7 @@ export default function ContactInfoModal({ chat, onClose }) {
     const displayName   = displayData.username || displayData.name || 'Unknown User';
     const displayEmail  = displayData.email  || 'No email provided';
     const displayPhone  = displayData.phone  || 'No phone provided';
-    const displayAbout  = displayData.profile?.about || displayData.about || "Hey there! I'm using Chttrix.";
+    const displayAbout  = displayData.profile?.about || displayData.about || "Hey there! I'm using Oruinwan.";
     const isOnline      = displayData.isOnline || chat.status === 'online';
     const statusColor   = getStatusColor(displayData.userStatus, isOnline);
     const statusLabel   = displayData.userStatus ? displayData.userStatus.toUpperCase() : (isOnline ? 'ONLINE' : 'OFFLINE');

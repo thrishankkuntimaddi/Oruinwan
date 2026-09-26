@@ -1,4 +1,4 @@
-# Chttrix API server image.
+# Oruinwan API server image.
 #
 # Build from the REPOSITORY ROOT so the sibling ai/ and platform/ folders that
 # the server requires at runtime are included:

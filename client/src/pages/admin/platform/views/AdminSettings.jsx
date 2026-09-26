@@ -5,7 +5,7 @@ import { useToast } from '../../../../contexts/ToastContext';
 const AdminSettings = () => {
     const { showToast } = useToast();
     const [profile, setProfile] = useState({
-        displayName: 'Chttrix Super Admin',
+        displayName: 'Oruinwan Super Admin',
         email: 'chttrixchat@gmail.com',
         phone: '+1 (555) 123-4567',
         bio: 'We are here to help you collaborate better.',
@@ -95,7 +95,7 @@ const AdminSettings = () => {
                 <div>
                     <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>Super Admin Access</h3>
                     <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px', lineHeight: '1.6' }}>
-                        You have full control over the Chttrix Platform. Your contact details serve as the primary truth for all active companies.
+                        You have full control over the Oruinwan Platform. Your contact details serve as the primary truth for all active companies.
                     </p>
                     <button style={{
                         padding: '7px 14px', background: 'none',

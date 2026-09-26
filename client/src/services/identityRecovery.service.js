@@ -3,7 +3,7 @@ import logger from '../utils/logger';
 
 const RECOVERY_BUNDLE_VERSION = 1;
 const PBKDF2_ITERATIONS = 150000; 
-const RECOVERY_FILENAME = 'chttrix-identity-recovery.json';
+const RECOVERY_FILENAME = 'oruinwan-identity-recovery.json';
 
 export async function exportIdentityRecoveryBundle(recoveryPassphrase) {
     try {

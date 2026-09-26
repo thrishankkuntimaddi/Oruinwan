@@ -278,7 +278,7 @@ export default function AppsPage() {
               </div>
               <div>
                 <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', margin: 0 }}>Apps &amp; Integrations</h1>
-                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '3px 0 0' }}>Connect your favourite tools to Chttrix</p>
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '3px 0 0' }}>Connect your favourite tools to Oruinwan</p>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

@@ -12,6 +12,7 @@ class MockProvider {
     this.name = 'mock';
     this.isConfigured = true;
     this.models = { chat: 'mock', fast: 'mock' };
+    this.supportsStreaming = true;
     this.calls = [];
     this.handler = handler || (({ kind, prompt, message }) =>
       kind === 'text' ? `mock:${prompt}` : `mock:${message}`);
@@ -20,7 +21,15 @@ class MockProvider {
   async generateText(request) {
     this.calls.push({ kind: 'text', ...request });
     const out = await this.handler({ kind: 'text', ...request });
-    return typeof out === 'string' ? out : out.text || '';
+    const text = typeof out === 'string' ? out : out.text || '';
+    MockProvider.emit(text, request.onToken);
+    return text;
+  }
+
+  /** Stream `text` word by word to `onToken`, like a real streaming provider. */
+  static emit(text, onToken) {
+    if (typeof onToken !== 'function' || !text) return;
+    for (const piece of text.match(/\S+\s*|\s+/g) || []) onToken(piece);
   }
 
   async chat(request) {
@@ -31,6 +40,7 @@ class MockProvider {
 
   _wrap(out, request) {
     const shaped = typeof out === 'string' ? { text: out } : out || {};
+    MockProvider.emit(shaped.text || '', request.onToken);
     return {
       text: shaped.text || '',
       functionCalls: shaped.functionCalls || [],

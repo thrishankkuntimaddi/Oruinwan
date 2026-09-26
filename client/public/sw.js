@@ -1,10 +1,11 @@
-const CACHE_NAME = 'chttrix-cache-v2';
+// Bump the version whenever caching rules change so old caches are purged.
+const CACHE_NAME = 'oruinwan-cache-v3';
 
 const PRECACHE_ASSETS = [
   '/',
   '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
+  '/icons/oruinwan-192.png',
+  '/icons/oruinwan-512.png',
 ];
 
 // Install: cache critical assets and skip waiting immediately
@@ -42,6 +43,23 @@ self.addEventListener('fetch', (event) => {
     url.origin !== self.location.origin
   ) {
     return; // Fall through to the network
+  }
+
+  // Page navigations are network-first: a cached index.html would point at
+  // hashed bundles from an older deploy and render a blank page.
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response && response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put('/', clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match('/'))
+    );
+    return;
   }
 
   event.respondWith(

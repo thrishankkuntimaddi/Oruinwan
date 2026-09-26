@@ -566,7 +566,7 @@ exports.login = async (req, res) => {
 
     
     if (user.roles && user.roles.includes('chttrix_admin')) {
-      redirectTo = "/chttrix-admin";
+      redirectTo = "/platform-admin";
     }
 
     

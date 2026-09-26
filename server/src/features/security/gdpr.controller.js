@@ -50,7 +50,7 @@ exports.exportUser = async (req, res) => {
     });
 
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="chttrix-data-export-${Date.now()}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="oruinwan-data-export-${Date.now()}.json"`);
     return res.json(exportData);
   } catch (err) {
     logger.error('[GDPR] export-user error:', err);

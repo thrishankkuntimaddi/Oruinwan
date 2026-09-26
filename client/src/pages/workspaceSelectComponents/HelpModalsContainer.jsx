@@ -47,9 +47,9 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                 {}
                 {activeModal === 'academy' && (
                     <>
-                        {modalHeader(<BookOpen size={16} />, 'Chttrix Academy', 'Master your workflow with these guides')}
+                        {modalHeader(<BookOpen size={16} />, 'Oruinwan Academy', 'Master your workflow with these guides')}
                         <div style={{ padding: '16px 20px', overflowY: 'auto', maxHeight: '60vh', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <a href="/chttrix-docs" target="_blank" rel="noopener noreferrer"
+                            <a href="/docs" target="_blank" rel="noopener noreferrer"
                                 style={{ display: 'block', padding: '12px 14px', border: '1px solid var(--border-accent)', borderRadius: '2px', background: 'var(--bg-surface)', textDecoration: 'none', transition: '150ms ease' }}
                                 onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
                                 onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
@@ -115,7 +115,7 @@ const HelpModalsContainer = ({ activeModal, onClose }) => {
                         {modalHeader(<Sparkles size={16} />, "What's New", 'Latest updates and improvements')}
                         <div style={{ padding: '16px 20px', overflowY: 'auto', maxHeight: '60vh', display: 'flex', flexDirection: 'column', gap: '0' }}>
                             {[
-                                { date: 'Nov 2025', title: 'Chttrix AI 2.0', body: 'Smarter responses, faster generation, and context-aware suggestions.' },
+                                { date: 'Nov 2025', title: 'Oruinwan AI 2.0', body: 'Smarter responses, faster generation, and context-aware suggestions.' },
                                 { date: 'Oct 2025', title: 'Dark Mode Beta', body: 'Easy on the eyes. Try it out in settings.' },
                             ].map(({ date, title, body }) => (
                                 <div key={date} style={{ display: 'flex', gap: '14px', paddingBottom: '16px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>

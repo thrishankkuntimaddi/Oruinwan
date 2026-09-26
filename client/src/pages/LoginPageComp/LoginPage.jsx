@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Sparkles, Shield, MessageSquare, Zap } from 'lucide-react';
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import LoginForm from '../../components/loginpage/LoginForm';
 import SignupForm from '../../components/loginpage/SignupForm';
-
-const FEATURES = [
-    { icon: MessageSquare, color: '#b8956a', text: 'Channels, DMs & threads' },
-    { icon: Zap,           color: '#6ea8fe', text: 'One-click voice huddles' },
-    { icon: Sparkles,      color: '#a78bfa', text: 'Chttrix AI — workspace aware' },
-    { icon: Shield,        color: '#5aba8a', text: 'End-to-end encrypted' },
-];
+import AuthShell from '../../components/public/AuthShell';
+import BrandMark from '../../shared/components/ui/BrandMark';
 
 const LoginPage = () => {
-    const [searchParams] = useSearchParams();
+    const [searchParams, setSearchParams] = useSearchParams();
     const mode = searchParams.get('mode');
     const [isSignup, setIsSignup] = useState(mode === 'signup');
     const { user, loading } = useAuth();
@@ -22,15 +17,17 @@ const LoginPage = () => {
     const registrationMessage = location.state?.message;
     const prefilledEmail = location.state?.email;
 
-    
-    useEffect(() => {
-        document.documentElement.classList.add('public-scroll');
-        return () => document.documentElement.classList.remove('public-scroll');
-    }, []);
-
     useEffect(() => {
         setIsSignup(mode === 'signup');
     }, [mode]);
+
+    // Keep ?mode in the URL in sync so the tab survives a refresh or a shared link.
+    const switchTo = (signup) => {
+        setIsSignup(signup);
+        const next = new URLSearchParams(searchParams);
+        if (signup) next.set('mode', 'signup'); else next.delete('mode');
+        setSearchParams(next, { replace: true, state: location.state });
+    };
 
     // Only someone who arrives here already signed in is redirected from this page.
     // A sign-in made on this page is routed by LoginForm (invites, pending companies,
@@ -46,7 +43,7 @@ const LoginPage = () => {
             if (user.isTemporaryPassword === true && user.passwordInitialized === false) return;
             const isChttrixAdmin = user.roles?.includes('chttrix_admin');
             const isOwner = user.companyRole === 'owner';
-            if (isChttrixAdmin) navigate('/chttrix-admin', { replace: true });
+            if (isChttrixAdmin) navigate('/platform-admin', { replace: true });
             else if (isOwner) navigate('/owner/dashboard', { replace: true });
             else navigate('/workspaces', { replace: true });
         }
@@ -54,14 +51,14 @@ const LoginPage = () => {
 
     if (loading) {
         return (
-            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-base)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                    <img src="/chttrix-logo.jpg" alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', opacity: 0.4 }} />
-                    <div style={{ height: '2px', width: '80px', background: 'rgba(184,149,106,0.2)', position: 'relative', overflow: 'hidden' }}>
-                        <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: '#b8956a', animation: 'slideBar 1.2s ease-in-out infinite' }} />
+            <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', background: '#08080a' }} aria-busy="true" aria-label="Loading">
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px' }}>
+                    <BrandMark size={36} title="" style={{ opacity: 0.6 }} />
+                    <div style={{ height: '2px', width: '80px', background: 'rgba(200,162,116,0.2)', position: 'relative', overflow: 'hidden' }}>
+                        <div style={{ position: 'absolute', left: '-40px', height: '2px', width: '40px', background: '#c8a274', animation: 'slideBar 1.2s ease-in-out infinite' }} />
                     </div>
                 </div>
-                <style>{`@keyframes slideBar { from{left:-40px} to{left:100%} }`}</style>
+                <style>{'@keyframes slideBar { from{left:-40px} to{left:100%} }'}</style>
             </div>
         );
     }
@@ -69,116 +66,37 @@ const LoginPage = () => {
     if (user) return null;
 
     return (
-        <div className="login-root" style={{ minHeight: '100vh', display: 'flex', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            <style>{`
-                * { box-sizing: border-box; }
-                ::selection { background: rgba(184,149,106,0.3); color: #e4e4e4; }
-                @media (max-width: 768px) {
-                    .login-brand-panel { display: none !important; }
-                    .login-form-panel { padding: 32px 20px !important; flex: 1 1 100% !important; }
-                    .login-root { display: block !important; }
-                }
-                @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-            `}</style>
-
-            {}
-            <div className="login-brand-panel" style={{ flex: '1 1 50%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '48px', background: 'var(--bg-base)', borderRight: '1px solid rgba(255,255,255,0.05)', position: 'relative', overflow: 'hidden', minHeight: '100vh' }}>
-                {}
-                <div style={{ position: 'absolute', top: '20%', left: '30%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(184,149,106,0.06) 0%, transparent 70%)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', bottom: '10%', right: '10%', width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(110,168,254,0.04) 0%, transparent 70%)', pointerEvents: 'none' }} />
-
-                {}
-                <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', position: 'relative', zIndex: 1 }}>
-                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
-                </div>
-
-                {}
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                    <h1 style={{ fontSize: 'clamp(32px,3.5vw,52px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: '18px' }}>
-                        Work where<br />
-                        <span style={{ color: '#b8956a' }}>the future happens.</span>
-                    </h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.8', marginBottom: '40px', maxWidth: '400px' }}>
-                        The operating system for high-performance teams. Channels, AI, tasks — all in one place.
-                    </p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {FEATURES.map(f => {
-                            const Icon = f.icon;
-                            return (
-                                <div key={f.text} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <div style={{ width: '30px', height: '30px', background: `${f.color}14`, border: `1px solid ${f.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        <Icon size={13} style={{ color: f.color }} />
-                                    </div>
-                                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: 500 }}>{f.text}</span>
-                                </div>
-                            );
-                        })}
+        <AuthShell title={isSignup ? 'Create account' : 'Sign in'}>
+            {registrationMessage && (
+                <div className="orw-auth__alert orw-auth__alert--good" role="status" style={{ marginBottom: 22 }}>
+                    <CheckCircle2 size={16} aria-hidden="true" />
+                    <div>
+                        <strong style={{ display: 'block', color: '#c9f5dd' }}>Account created</strong>
+                        {registrationMessage}
+                        {prefilledEmail && <div className="orw-code" style={{ display: 'inline-block', marginTop: 6 }}>{prefilledEmail}</div>}
                     </div>
                 </div>
+            )}
 
-                {}
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                    <div style={{ borderLeft: '2px solid rgba(184,149,106,0.3)', paddingLeft: '14px', marginBottom: '16px' }}>
-                        <p style={{ fontSize: '13px', color: 'var(--text-muted)', fontStyle: 'italic', lineHeight: '1.7' }}>
-                            "Chttrix replaced Slack, Notion, and Jira for our team. We haven't looked back."
-                        </p>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>Maya H. — CTO at Fluxio</p>
-                    </div>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>© 2026 Chttrix Inc.</p>
-                </div>
+            <div className="orw-auth__tabs" role="tablist" aria-label="Account">
+                {[{ label: 'Sign in', val: false }, { label: 'Create account', val: true }].map(tab => (
+                    <button key={tab.label} type="button" role="tab" className="orw-auth__tab"
+                        aria-selected={isSignup === tab.val} onClick={() => switchTo(tab.val)}>
+                        {tab.label}
+                    </button>
+                ))}
             </div>
 
-            {}
-            <div className="login-form-panel" style={{ flex: '1 1 50%', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '48px 32px', overflowY: 'auto' }}>
-                <div style={{ width: '100%', maxWidth: '420px' }}>
-                    {}
-                    {registrationMessage && (
-                        <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', padding: '14px 16px', background: 'rgba(90,186,138,0.07)', border: '1px solid rgba(90,186,138,0.25)', marginBottom: '24px', animation: 'fadeIn 300ms ease' }}>
-                            <CheckCircle2 size={16} style={{ color: '#5aba8a', flexShrink: 0, marginTop: '1px' }} />
-                            <div>
-                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#5aba8a', marginBottom: '2px' }}>Account Created</p>
-                                <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{registrationMessage}</p>
-                                {prefilledEmail && <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace', marginTop: '4px' }}>{prefilledEmail}</p>}
-                            </div>
-                        </div>
-                    )}
-                    <style>{`@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }`}</style>
-
-                    {}
-                    <div style={{ display: 'flex', marginBottom: '32px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-                        {[{ label: 'Sign In', val: false }, { label: 'Create Account', val: true }].map(tab => (
-                            <button key={tab.label} onClick={() => setIsSignup(tab.val)}
-                                style={{ flex: 1, padding: '10px', background: 'none', border: 'none', borderBottom: `2px solid ${isSignup === tab.val ? '#b8956a' : 'transparent'}`, color: isSignup === tab.val ? '#e4e4e4' : 'rgba(228,228,228,0.4)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 200ms ease', marginBottom: '-1px' }}>
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-
-                    {}
-                    {isSignup
-                        ? <SignupForm onSwitch={() => setIsSignup(false)} />
-                        : <LoginForm onSwitch={() => setIsSignup(true)} initialEmail={prefilledEmail} />
-                    }
-
-                    {}
-                    <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', gap: '16px' }}>
-                        {[
-                            { label: 'Privacy', path: '/privacy' },
-                            { label: 'Terms', path: '/terms' },
-                            { label: 'Register Company', path: '/register-company' },
-                        ].map(l => (
-                            <button key={l.label} onClick={() => navigate(l.path)}
-                                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '11px', cursor: 'pointer', fontFamily: 'inherit', transition: 'color 150ms ease' }}
-                                onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.25)'}>
-                                {l.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+            <div role="tabpanel" aria-label={isSignup ? 'Create account' : 'Sign in'}>
+                {isSignup
+                    ? <SignupForm onSwitch={() => switchTo(false)} />
+                    : <LoginForm onSwitch={() => switchTo(true)} initialEmail={prefilledEmail} />}
             </div>
-        </div>
+
+            <p className="orw-auth__note">
+                Setting up for an organisation? <Link className="orw-link" to="/register-company">Register your company</Link>
+            </p>
+        </AuthShell>
     );
 };
 

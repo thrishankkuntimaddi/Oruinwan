@@ -117,7 +117,7 @@ function Splash() {
       <View style={{ width: 72, height: 72, borderRadius: 16, backgroundColor: T.accent, alignItems: 'center', justifyContent: 'center', marginBottom: 14 }}>
         <Text style={{ color: T.bgBase, fontSize: 32, fontWeight: '800' }}>C</Text>
       </View>
-      <Text style={{ color: T.textMuted, fontSize: 12, letterSpacing: 2, fontWeight: '600' }}>CHTTRIX</Text>
+      <Text style={{ color: T.textMuted, fontSize: 12, letterSpacing: 2, fontWeight: '600' }}>ORUINWAN</Text>
     </View>
   );
 }

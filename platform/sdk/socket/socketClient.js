@@ -1,7 +1,7 @@
 /**
  * platform/sdk/socket/socketClient.js
  *
- * Chttrix Platform SDK — Socket Client
+ * Oruinwan Platform SDK — Socket Client
  *
  * Minimal, framework-agnostic Socket.IO client factory.
  * Returns a configured socket instance without connecting automatically.
@@ -50,10 +50,10 @@ const DEFAULT_OPTIONS = {
  */
 export function createSocket(serverUrl, token, options = {}) {
   if (!serverUrl) {
-    throw new Error('[ChttrixSDK] createSocket: serverUrl is required');
+    throw new Error('[OruinwanSDK] createSocket: serverUrl is required');
   }
   if (!token) {
-    throw new Error('[ChttrixSDK] createSocket: token is required');
+    throw new Error('[OruinwanSDK] createSocket: token is required');
   }
 
   const socket = io(serverUrl, {

@@ -9,7 +9,7 @@ describe('local upload storage', () => {
   let dir;
   let svc;
   beforeAll(() => {
-    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'chttrix-uploads-'));
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'oruinwan-uploads-'));
     process.env.STORAGE_DRIVER = 'local';
     process.env.LOCAL_UPLOAD_DIR = dir;
     jest.resetModules();

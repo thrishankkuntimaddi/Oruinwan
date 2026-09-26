@@ -64,7 +64,7 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
         emitToUser(io, recipient, 'notification:new', { notification: notif.toObject() });
 
         if (push !== false && (!prefs || prefs.push !== false)) {
-            getPush().sendToUser(String(recipient), title, body || 'Chttrix', {
+            getPush().sendToUser(String(recipient), title, body || 'Oruinwan', {
                 type,
                 workspaceId: String(workspaceId),
                 link,

@@ -28,16 +28,16 @@ function listProviders() {
   return [...factories.keys()].filter((n) => n !== 'claude');
 }
 
-/** Build the provider named by AI_PROVIDER (gemini by default, mock under test). */
+/** Build the provider named by AI_PROVIDER (local engine by default, mock under test). */
 function createProvider(name = config.provider, options = {}) {
   const factory = factories.get(name);
   if (!factory) throw new Error(`Unknown AI provider: ${name}`);
   return factory(options);
 }
 
-/** Default model ids for a provider name (falls back to gemini's). */
+/** Default model ids for a provider name (falls back to the local engine's). */
 function modelsFor(name) {
-  return config.models.byProvider[name === 'claude' ? 'anthropic' : name] || config.models.byProvider.gemini;
+  return config.models.byProvider[name === 'claude' ? 'anthropic' : name] || config.models.byProvider.local_llm;
 }
 
 module.exports = { createProvider, registerProvider, listProviders, modelsFor, GeminiProvider, OpenAIProvider, AnthropicProvider, MockProvider };

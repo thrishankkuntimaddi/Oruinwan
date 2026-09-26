@@ -1,7 +1,7 @@
 /**
  * platform/constants/apiVersions.js
  *
- * Chttrix Platform — API Version Constants
+ * Oruinwan Platform — API Version Constants
  *
  * Defines the canonical API version identifiers used across the platform.
  * All clients (web, desktop, mobile) and server routing should reference

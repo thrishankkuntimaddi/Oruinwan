@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { X, Loader2, CheckCircle2, TicketCheck } from "lucide-react";
 
-const MOCK_PROJECTS = ["CHT – Chttrix", "MOB – Mobile App", "INF – Infrastructure", "DES – Design System"];
+const MOCK_PROJECTS = ["ORU – Oruinwan", "MOB – Mobile App", "INF – Infrastructure", "DES – Design System"];
 const ISSUE_TYPES = ["Bug", "Task", "Story", "Epic", "Subtask"];
 const PRIORITIES = [
   { value: "urgent", label: "🔴 Urgent" },

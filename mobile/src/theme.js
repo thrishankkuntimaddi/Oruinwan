@@ -1,5 +1,5 @@
 /**
- * Chttrix "Monolith Flow" Design Tokens for React Native
+ * Oruinwan "Monolith Flow" Design Tokens for React Native
  * Mirrors the web/desktop design system exactly.
  */
 

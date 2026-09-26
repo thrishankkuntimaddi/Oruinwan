@@ -124,10 +124,10 @@ const ChttrixAdminDashboard = () => {
                     borderBottom: '1px solid var(--border-subtle)',
                     flexShrink: 0
                 }}>
-                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover', flexShrink: 0 }} />
+                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '28px', height: '28px', objectFit: 'cover', flexShrink: 0 }} />
                     <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                         <span style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', lineHeight: 1.2 }}>
-                            Chttrix
+                            Oruinwan
                         </span>
                         <span style={{
                             fontSize: '10px', fontWeight: 700,
@@ -184,7 +184,7 @@ const ChttrixAdminDashboard = () => {
                             <MenuActionBtn
                                 icon={Settings}
                                 label="Settings"
-                                onClick={() => { setShowUserMenu(false); navigate('/chttrix-admin/settings'); }}
+                                onClick={() => { setShowUserMenu(false); navigate('/platform-admin/settings'); }}
                             />
                             <div style={{ height: '1px', background: 'var(--border-subtle)' }} />
                             <LogoutBtnItem onClick={handleLogout} />
@@ -229,7 +229,7 @@ const ChttrixAdminDashboard = () => {
                         </button>
                         <div>
                             <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', margin: 0 }}>Platform Admin</p>
-                            <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>Chttrix Console</p>
+                            <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', margin: 0, letterSpacing: '-0.02em' }}>Oruinwan Console</p>
                         </div>
                     </div>
                 )}
@@ -246,7 +246,7 @@ const ChttrixAdminDashboard = () => {
                         <Route path="health" element={<SystemHealth />} />
                         <Route path="settings" element={<AdminSettings />} />
                         <Route path="logs" element={<AuditLogs />} />
-                        <Route path="*" element={<Navigate to="/chttrix-admin" replace />} />
+                        <Route path="*" element={<Navigate to="/platform-admin" replace />} />
                     </Routes>
                 </div>
             </main>
@@ -256,7 +256,7 @@ const ChttrixAdminDashboard = () => {
 
 const SidebarNavLink = ({ item, onClose }) => (
     <NavLink
-        to={`/chttrix-admin/${item.path}`}
+        to={`/platform-admin/${item.path}`}
         end={item.path === ""}
         onClick={onClose}
         style={({ isActive }) => ({

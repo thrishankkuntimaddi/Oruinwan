@@ -1,6 +1,6 @@
 const YEAR = new Date().getFullYear();
-const APP  = 'Chttrix';
-const APP_URL = process.env.FRONTEND_URL || 'https://chttrix.com';
+const APP  = 'Oruinwan';
+const APP_URL = process.env.FRONTEND_URL || 'https://oruinwan.com';
 
 const T = {
   bgOuter:     '#f0ece6',
@@ -141,15 +141,15 @@ const companyApprovedTemplate = (username, companyName, loginUrl, customMessage)
   `;
 
   return {
-    subject: `🎉 You're In! ${companyName} is Verified — Chttrix`,
+    subject: `🎉 You're In! ${companyName} is Verified — Oruinwan`,
     html: shell({
       icon: '🚀',
       title: "You're Ready to Launch",
       subtitle: `${companyName} has been approved. Let's build something great.`,
-      preheader: `${username}, your Chttrix workspace for ${companyName} is live and ready.`,
+      preheader: `${username}, your Oruinwan workspace for ${companyName} is live and ready.`,
       body,
     }),
-    text: `Hi ${username},\n\nGreat news! ${companyName} has been verified on Chttrix.\n\nGo to your workspace: ${loginUrl}\n\n— The Chttrix Team`,
+    text: `Hi ${username},\n\nGreat news! ${companyName} has been verified on Oruinwan.\n\nGo to your workspace: ${loginUrl}\n\n— The Oruinwan Team`,
   };
 };
 
@@ -157,22 +157,22 @@ const companyRejectedTemplate = (username, companyName, reason, customMessage) =
   const reasonText = customMessage || reason || 'Application criteria not met.';
   const body = `
     ${p(`Dear <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${p(`Thank you for your interest in Chttrix. We've reviewed your application for <strong style="color:${T.textPrimary}">${companyName}</strong>.`)}
+    ${p(`Thank you for your interest in Oruinwan. We've reviewed your application for <strong style="color:${T.textPrimary}">${companyName}</strong>.`)}
     ${p('Unfortunately, we are unable to proceed with your verification at this time.')}
     ${alert(`<strong>Reason:</strong> ${reasonText}`, 'danger')}
     ${p('If you believe this decision was made in error, please reply to this email or contact our support team.', { size: '13px', color: T.textMuted, mb: '0' })}
   `;
 
   return {
-    subject: `Update on your Chttrix Application — ${companyName}`,
+    subject: `Update on your Oruinwan Application — ${companyName}`,
     html: shell({
       icon: '📋',
       title: 'Application Update',
-      subtitle: `Regarding your Chttrix verification request for ${companyName}.`,
-      preheader: `${username}, we have an update on your Chttrix application for ${companyName}.`,
+      subtitle: `Regarding your Oruinwan verification request for ${companyName}.`,
+      preheader: `${username}, we have an update on your Oruinwan application for ${companyName}.`,
       body,
     }),
-    text: `Dear ${username},\n\nYour application for ${companyName} on Chttrix could not be approved.\n\nReason: ${reasonText}\n\nPlease contact support if you believe this is in error.\n\n— The Chttrix Team`,
+    text: `Dear ${username},\n\nYour application for ${companyName} on Oruinwan could not be approved.\n\nReason: ${reasonText}\n\nPlease contact support if you believe this is in error.\n\n— The Oruinwan Team`,
   };
 };
 
@@ -180,27 +180,27 @@ const companyRejectedTemplate = (username, companyName, reason, customMessage) =
 const employeeCredentialsTemplate = (fullName, companyName, companyEmail, temporaryPassword, loginUrl) => {
   const body = `
     ${p(`Hello <strong style="color:${T.textPrimary}">${fullName}</strong>,`)}
-    ${p(`Your administrator has created a Chttrix account for you at <strong style="color:${T.textPrimary}">${companyName}</strong>. Here are your login credentials:`)}
+    ${p(`Your administrator has created a Oruinwan account for you at <strong style="color:${T.textPrimary}">${companyName}</strong>. Here are your login credentials:`)}
     ${infoCard(
       row('Company Email', companyEmail) +
       row('Temporary Password', temporaryPassword, true)
     )}
     ${alert('<strong>Important:</strong> You will be prompted to change your password on first login. Choose a strong, unique password.', 'warning')}
-    ${btn('Log in to Chttrix', loginUrl)}
+    ${btn('Log in to Oruinwan', loginUrl)}
     ${link('Log in here', loginUrl)}
     ${p('If you have any questions, please contact your administrator.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
   `;
 
   return {
-    subject: `Welcome to ${companyName} — Your Chttrix Account`,
+    subject: `Welcome to ${companyName} — Your Oruinwan Account`,
     html: shell({
       icon: '👋',
       title: `Welcome to ${companyName}`,
-      subtitle: 'Your Chttrix account is ready. Sign in to start collaborating.',
-      preheader: `${fullName}, your Chttrix workspace account for ${companyName} is ready.`,
+      subtitle: 'Your Oruinwan account is ready. Sign in to start collaborating.',
+      preheader: `${fullName}, your Oruinwan workspace account for ${companyName} is ready.`,
       body,
     }),
-    text: `Hello ${fullName},\n\nYour Chttrix account for ${companyName} has been created.\n\nEmail: ${companyEmail}\nPassword: ${temporaryPassword}\n\nLogin: ${loginUrl}\n\nPlease change your password after first login.\n\n— The Chttrix Team`,
+    text: `Hello ${fullName},\n\nYour Oruinwan account for ${companyName} has been created.\n\nEmail: ${companyEmail}\nPassword: ${temporaryPassword}\n\nLogin: ${loginUrl}\n\nPlease change your password after first login.\n\n— The Oruinwan Team`,
   };
 };
 

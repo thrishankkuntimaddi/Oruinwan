@@ -1,4 +1,4 @@
-/** Jest configuration for the Chttrix server (CommonJS, Node). */
+/** Jest configuration for the Oruinwan server (CommonJS, Node). */
 module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/src', '<rootDir>/../ai', '<rootDir>/../sdk'],

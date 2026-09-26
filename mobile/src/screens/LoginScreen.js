@@ -55,7 +55,7 @@ export default function LoginScreen({ navigation }) {
           <View style={s.logo}>
             <Text style={s.logoText}>C</Text>
           </View>
-          <Text style={s.appName}>Chttrix</Text>
+          <Text style={s.appName}>Oruinwan</Text>
           <Text style={s.tagline}>Company Workspace OS</Text>
         </View>
 
@@ -121,7 +121,7 @@ export default function LoginScreen({ navigation }) {
             activeOpacity={0.7}
           >
             <Text style={s.switchText}>
-              New to Chttrix?{' '}
+              New to Oruinwan?{' '}
               <Text style={s.switchLink}>Create an account</Text>
             </Text>
           </TouchableOpacity>

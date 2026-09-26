@@ -1,7 +1,7 @@
 {
   "name": "chttrix-mobile",
   "version": "1.0.0",
-  "description": "Chttrix Mobile App — React Native (Expo) client",
+  "description": "Oruinwan Mobile App — React Native (Expo) client",
   "main": "index.js",
   "private": true,
   "scripts": {

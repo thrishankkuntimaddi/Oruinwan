@@ -311,7 +311,7 @@ exports.downloadTemplate = async (req, res) => {
         XLSX.utils.book_append_sheet(wb, ws, 'Employees');
         const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-        res.setHeader('Content-Disposition', 'attachment; filename="chttrix_team_template.xlsx"');
+        res.setHeader('Content-Disposition', 'attachment; filename="oruinwan_team_template.xlsx"');
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         return res.send(buffer);
     } catch (err) {

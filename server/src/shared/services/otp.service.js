@@ -54,7 +54,7 @@ function deleteOTP(target) {
 }
 
 async function sendOTPEmail(email, otp, options = {}) {
-  const subject = options.subject || 'Chttrix Verification Code';
+  const subject = options.subject || 'Oruinwan Verification Code';
   const message = options.message || 'Your verification code is:';
 
   await sendEmail({

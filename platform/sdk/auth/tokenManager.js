@@ -1,7 +1,7 @@
 /**
  * platform/sdk/auth/tokenManager.js
  *
- * Chttrix Platform SDK — Token Manager
+ * Oruinwan Platform SDK — Token Manager
  *
  * Centralized, framework-agnostic token management utilities.
  * Designed for use across web (localStorage), desktop (electron-store),

@@ -268,7 +268,7 @@ export function NotificationsProvider({ children }) {
                 });
             }
             if (document.visibilityState !== 'visible') {
-                notifyNative(notification.title, notification.body || 'Chttrix', {
+                notifyNative(notification.title, notification.body || 'Oruinwan', {
                     type: notification.type.startsWith('task') ? 'task' : 'system',
                     workspaceId: String(notification.workspaceId),
                     channelId: meta.channelId ? String(meta.channelId) : undefined,

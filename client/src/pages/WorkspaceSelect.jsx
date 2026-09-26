@@ -25,7 +25,7 @@ const WorkspaceSelect = () => {
     
     React.useEffect(() => {
         if (user?.roles?.includes('chttrix_admin')) {
-            navigate('/chttrix-admin', { replace: true });
+            navigate('/platform-admin', { replace: true });
         }
     }, [user, navigate]);
 

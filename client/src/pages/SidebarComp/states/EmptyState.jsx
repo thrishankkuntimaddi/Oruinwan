@@ -23,7 +23,7 @@ function EmptyState({ onNavigateChannels, onNavigateDMs }) {
                 </div>
 
                 <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 8px', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-                    Welcome to Chttrix
+                    Welcome to Oruinwan
                 </h1>
 
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 28px', lineHeight: 1.7, maxWidth: '280px' }}>

@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * /api/ai — Chttrix Intelligence.
+ * /api/ai — Oruinwan Intelligence.
  *
  * Every route: JWT auth → per-user rate limit → workspace membership + AI
  * enabled (requireAIAccess) → controller → ai gateway. Routes marked
@@ -21,6 +21,7 @@ const admin = requireAIAccess({ adminOnly: true });
 
 // Assistant
 router.post('/chat', optional, c.chat);
+router.post('/chat/stream', optional, c.chatStream);
 router.post('/memory/clear', optional, c.clearMemory);
 
 // In-app actions (plaintext is decrypted by the client and sent here)

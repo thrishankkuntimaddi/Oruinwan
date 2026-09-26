@@ -97,7 +97,7 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
   }
 });
 
-// Platform-wide audit trail for the Chttrix admin console. Newest first.
+// Platform-wide audit trail for the Oruinwan admin console. Newest first.
 router.get('/audit-logs', requireSuperAdmin, async (req, res) => {
   try {
     const AuditLog = require('../../../models/AuditLog');

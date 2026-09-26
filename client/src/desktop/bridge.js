@@ -1,5 +1,5 @@
 /**
- * Chttrix Desktop bridge.
+ * Oruinwan Desktop bridge.
  *
  * Runs only inside the Electron desktop app (window.electronAPI is exposed by
  * desktop/electron/preload.js). In a normal browser this module is a no-op.

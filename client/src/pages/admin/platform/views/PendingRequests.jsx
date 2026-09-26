@@ -166,7 +166,7 @@ const ReviewModal = ({ company, reason, setReason, onClose, onApprove, onReject 
                 <textarea
                     value={reason}
                     onChange={e => setReason(e.target.value)}
-                    placeholder="e.g. 'Congratulations! Welcome to Chttrix.' or 'Please upload a valid business license.'"
+                    placeholder="e.g. 'Congratulations! Welcome to Oruinwan.' or 'Please upload a valid business license.'"
                     rows={4}
                     style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
                 />

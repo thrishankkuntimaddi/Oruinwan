@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
 import ContactsProvider from "./contexts/ContactsContext";
@@ -45,7 +45,7 @@ import FileLibrary from "./pages/SidebarComp/FileLibrary";
 import KnowledgePage from "./pages/SidebarComp/KnowledgePage";
 import KnowledgeGraph from "./pages/SidebarComp/KnowledgeGraph";
 import WorkspaceSelect from "./pages/WorkspaceSelect";
-import FeatureShowcase from "./pages/FeatureShowcase";
+import Landing from "./pages/landing/Landing";
 
 import LoginPage from "./pages/LoginPageComp/LoginPage";
 import ForgotPassword from "./pages/LoginPageComp/ForgotPassword";
@@ -144,6 +144,12 @@ import ScrollToTop from "./components/ScrollToTop";
 import PasswordUnlockModal from "./components/security/PasswordUnlockModal";
 import { useAuth } from "./contexts/AuthContext";
 import AppErrorBoundary from "./shared/components/ui/AppErrorBoundary";
+
+// Old Oruinwan-era URLs (bookmarks, emails) keep working after the rename.
+function LegacyRedirect({ from, to }) {
+  const { pathname, search, hash } = useLocation();
+  return <Navigate to={`${to}${pathname.slice(from.length)}${search}${hash}`} replace />;
+}
 
 function DeveloperPortalWrapper() {
   const { workspaceId } = useParams();
@@ -651,9 +657,10 @@ function App() {
                           />
 
                           {}
-                          <Route path="/" element={<FeatureShowcase />} />
-                          <Route path="/features" element={<FeatureShowcase />} />
-                          <Route path="/chttrix-docs" element={<ChttrixDocs />} />
+                          <Route path="/" element={<Landing />} />
+                          <Route path="/features" element={<Landing />} />
+                          <Route path="/docs" element={<ChttrixDocs />} />
+                          <Route path="/chttrix-docs" element={<LegacyRedirect from="/chttrix-docs" to="/docs" />} />
 
                           {}
                           <Route path="/about" element={<About />} />
@@ -871,13 +878,14 @@ function App() {
 
                           {}
                           <Route
-                            path="/chttrix-admin/*"
+                            path="/platform-admin/*"
                             element={
                               <RequireChttrixAdmin>
                                 <ChttrixAdminDashboard />
                               </RequireChttrixAdmin>
                             }
                           />
+                          <Route path="/chttrix-admin/*" element={<LegacyRedirect from="/chttrix-admin" to="/platform-admin" />} />
 
                             </Routes>
                           </AppErrorBoundary>

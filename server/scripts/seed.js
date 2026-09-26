@@ -22,12 +22,12 @@ const seedData = async () => {
         
         console.log('🏢 Creating company...');
         const company = await Company.create({
-            name: 'Chttrix Technologies',
-            domain: 'chttrix.com',
+            name: 'Oruinwan Technologies',
+            domain: 'oruinwan.com',
             isActive: true,
             domainVerified: true,
             autoJoinByDomain: true,
-            allowedEmails: ['admin@chttrix.com', 'employee@chttrix.com'],
+            allowedEmails: ['admin@oruinwan.com', 'employee@oruinwan.com'],
             settings: {
                 allowSelfRegistration: true,
                 requireEmailVerification: false, 
@@ -41,7 +41,7 @@ const seedData = async () => {
         const adminPassword = await bcrypt.hash('admin123', 12);
         const adminUser = await User.create({
             username: 'Admin User',
-            email: 'admin@chttrix.com',
+            email: 'admin@oruinwan.com',
             passwordHash: adminPassword,
             verified: true,
             userType: 'company',
@@ -54,7 +54,7 @@ const seedData = async () => {
             }
         });
         console.log(`✅ Admin user created: ${adminUser.email}`);
-        console.log(`   📧 Email: admin@chttrix.com`);
+        console.log(`   📧 Email: admin@oruinwan.com`);
         console.log(`   🔑 Password: admin123`);
         console.log(`   👑 Role: ${adminUser.companyRole}`);
 
@@ -92,7 +92,7 @@ const seedData = async () => {
         const employeePassword = await bcrypt.hash('employee123', 12);
         const employeeUser = await User.create({
             username: 'John Employee',
-            email: 'employee@chttrix.com',
+            email: 'employee@oruinwan.com',
             passwordHash: employeePassword,
             verified: true,
             userType: 'company',
@@ -109,7 +109,7 @@ const seedData = async () => {
             }
         });
         console.log(`✅ Employee created: ${employeeUser.email}`);
-        console.log(`   📧 Email: employee@chttrix.com`);
+        console.log(`   📧 Email: employee@oruinwan.com`);
         console.log(`   🔑 Password: employee123`);
         console.log(`   👤 Role: ${employeeUser.companyRole}`);
 
@@ -118,7 +118,7 @@ const seedData = async () => {
         const admin2Password = await bcrypt.hash('admin456', 12);
         const admin2User = await User.create({
             username: 'Jane Admin',
-            email: 'jane@chttrix.com',
+            email: 'jane@oruinwan.com',
             passwordHash: admin2Password,
             verified: true,
             userType: 'company',
@@ -135,7 +135,7 @@ const seedData = async () => {
             }
         });
         console.log(`✅ Admin created: ${admin2User.email}`);
-        console.log(`   📧 Email: jane@chttrix.com`);
+        console.log(`   📧 Email: jane@oruinwan.com`);
         console.log(`   🔑 Password: admin456`);
         console.log(`   👤 Role: ${admin2User.companyRole}`);
 
@@ -158,24 +158,24 @@ const seedData = async () => {
 
         console.log('\n🔐 Login Credentials:');
         console.log('\n   👑 OWNER (Full Admin Access):');
-        console.log(`      Email: admin@chttrix.com`);
+        console.log(`      Email: admin@oruinwan.com`);
         console.log(`      Password: admin123`);
         console.log(`      Can access: /admin/company ✅`);
 
         console.log('\n   🛡️  ADMIN (Admin Access):');
-        console.log(`      Email: jane@chttrix.com`);
+        console.log(`      Email: jane@oruinwan.com`);
         console.log(`      Password: admin456`);
         console.log(`      Can access: /admin/company ✅`);
 
         console.log('\n   👤 EMPLOYEE (Regular User):');
-        console.log(`      Email: employee@chttrix.com`);
+        console.log(`      Email: employee@oruinwan.com`);
         console.log(`      Password: employee123`);
         console.log(`      Can access: /admin/company ❌ (Will be redirected)`);
 
         console.log('\n🚀 Next Steps:');
         console.log('   1. Start server: npm start');
         console.log('   2. Start client: cd client && npm start');
-        console.log('   3. Login with admin@chttrix.com / admin123');
+        console.log('   3. Login with admin@oruinwan.com / admin123');
         console.log('   4. Visit: http://localhost:3000/admin/company');
         console.log('='.repeat(60) + '\n');
 

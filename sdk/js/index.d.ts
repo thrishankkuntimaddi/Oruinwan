@@ -1,7 +1,7 @@
-// Type definitions for @chttrix/sdk
+// Type definitions for @oruinwan/sdk
 
-export interface ChttrixSDKOptions {
-  /** Origin of the Chttrix API, e.g. https://api.example.com. Defaults to window.location.origin in browsers. */
+export interface OruinwanSDKOptions {
+  /** Origin of the Oruinwan API, e.g. https://api.example.com. Defaults to window.location.origin in browsers. */
   baseUrl?: string;
   /** Public API key (chx_...) for /api/public/* resources. */
   apiKey?: string;
@@ -32,7 +32,7 @@ export interface RequestOptions {
   raw?: boolean;
 }
 
-export declare class ChttrixError extends Error {
+export declare class OruinwanError extends Error {
   status: number;
   code?: string;
   response?: unknown;
@@ -107,10 +107,10 @@ export interface RealtimeResource {
   disconnect(): void;
 }
 
-export declare class ChttrixSDK {
-  constructor(options?: ChttrixSDKOptions);
+export declare class OruinwanSDK {
+  constructor(options?: OruinwanSDKOptions);
   static readonly version: string;
-  static create(options?: ChttrixSDKOptions): ChttrixSDK;
+  static create(options?: OruinwanSDKOptions): OruinwanSDK;
 
   baseUrl: string;
   apiKey: string | null;
@@ -131,4 +131,16 @@ export declare class ChttrixSDK {
 }
 
 export declare const VERSION: string;
-export default ChttrixSDK;
+
+/** @deprecated use OruinwanSDK */
+export declare const ChttrixSDK: typeof OruinwanSDK;
+/** @deprecated use OruinwanSDK */
+export type ChttrixSDK = OruinwanSDK;
+/** @deprecated use OruinwanError */
+export declare const ChttrixError: typeof OruinwanError;
+/** @deprecated use OruinwanError */
+export type ChttrixError = OruinwanError;
+/** @deprecated use OruinwanSDKOptions */
+export type ChttrixSDKOptions = OruinwanSDKOptions;
+
+export default OruinwanSDK;

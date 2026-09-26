@@ -94,7 +94,7 @@ const ContactAdmin = () => {
         } catch { showToast('Failed to send reply', 'error'); }
     };
 
-    // Live replies and status changes from the Chttrix support team.
+    // Live replies and status changes from the Oruinwan support team.
     useEffect(() => {
         if (!socket || activeTab !== 'tickets') return undefined;
         const onSupportMessage = ({ ticketId, message }) => {
@@ -140,7 +140,7 @@ const ContactAdmin = () => {
             <div style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
                     <h1 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>Contact Platform Admin</h1>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Get support from the Chttrix team</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Get support from the Oruinwan team</p>
                 </div>
                 <div style={{ display: 'flex', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', padding: '2px' }}>
                     {[{ id: 'chat', icon: MessageSquare, label: 'Live Chat' }, { id: 'tickets', icon: Ticket, label: 'Support Tickets' }].map(t => {
@@ -183,7 +183,7 @@ const ContactAdmin = () => {
                                         <MessageSquare size={24} style={{ color: 'var(--accent)' }} />
                                     </div>
                                     <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>How can we help?</h3>
-                                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '320px', lineHeight: '1.6' }}>Start a conversation with the Chttrix platform team.</p>
+                                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '320px', lineHeight: '1.6' }}>Start a conversation with the Oruinwan platform team.</p>
                                 </div>
                             ) : (
                                 <>
@@ -200,7 +200,7 @@ const ContactAdmin = () => {
                                                 {}
                                                 <div style={{ maxWidth: '60%', display: 'flex', flexDirection: 'column', alignItems: isOwn ? 'flex-end' : 'flex-start', gap: '3px' }}>
                                                     <p style={{ fontSize: '10px', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                                        {isOwn ? senderName : 'Chttrix Support'}
+                                                        {isOwn ? senderName : 'Oruinwan Support'}
                                                     </p>
                                                     <div style={{ padding: '10px 14px', background: isOwn ? 'var(--accent)' : 'var(--bg-surface)', border: `1px solid ${isOwn ? 'var(--accent)' : 'var(--border-default)'}`, borderRadius: isOwn ? '12px 12px 2px 12px' : '12px 12px 12px 2px' }}>
                                                         <p style={{ fontSize: '13px', color: isOwn ? 'var(--bg-base)' : 'var(--text-primary)', lineHeight: '1.5' }}>{msg.content}</p>
@@ -302,7 +302,7 @@ const ContactAdmin = () => {
                                                         return (
                                                             <div key={m._id} style={{ alignSelf: fromSupport ? 'flex-start' : 'flex-end', maxWidth: '85%', padding: '8px 10px', background: fromSupport ? 'var(--bg-active)' : 'var(--bg-hover)', border: `1px solid ${fromSupport ? 'var(--border-accent)' : 'var(--border-subtle)'}` }}>
                                                                 <p style={{ fontSize: '10px', fontWeight: 700, color: fromSupport ? 'var(--accent)' : 'var(--text-muted)', marginBottom: '3px' }}>
-                                                                    {fromSupport ? 'Chttrix Support' : (m.sender?.username || 'You')} · {new Date(m.createdAt).toLocaleString()}
+                                                                    {fromSupport ? 'Oruinwan Support' : (m.sender?.username || 'You')} · {new Date(m.createdAt).toLocaleString()}
                                                                 </p>
                                                                 <p style={{ fontSize: '12px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>{m.content}</p>
                                                             </div>

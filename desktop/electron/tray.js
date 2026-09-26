@@ -1,10 +1,10 @@
 'use strict';
 
 /**
- * Chttrix Desktop — System Tray
+ * Oruinwan Desktop — System Tray
  *
  * Menu:
- *  - Open Chttrix (recreates the window if it was destroyed)
+ *  - Open Oruinwan (recreates the window if it was destroyed)
  *  - Do Not Disturb / Enable-Disable Notifications
  *  - Check for updates
  *  - About + Quit
@@ -35,7 +35,7 @@ function buildContextMenu() {
   const version      = app.getVersion();
 
   return Menu.buildFromTemplate([
-    { label: 'Open Chttrix', click: () => handlers.openWindow() },
+    { label: 'Open Oruinwan', click: () => handlers.openWindow() },
     { type: 'separator' },
     {
       label: 'Do Not Disturb',
@@ -49,10 +49,10 @@ function buildContextMenu() {
     },
     { type: 'separator' },
     { label: 'Check for Updates…', click: () => handlers.checkForUpdates() },
-    { label: `About Chttrix v${version}`, enabled: false },
+    { label: `About Oruinwan v${version}`, enabled: false },
     { type: 'separator' },
     {
-      label: 'Quit Chttrix',
+      label: 'Quit Oruinwan',
       accelerator: process.platform === 'darwin' ? 'Cmd+Q' : 'Ctrl+Q',
       click: () => handlers.quit(),
     },
@@ -90,7 +90,7 @@ function createTray(opts = {}) {
   }
 
   tray = new Tray(icon);
-  tray.setToolTip('Chttrix — Company Workspace OS');
+  tray.setToolTip('Oruinwan — Company Workspace OS');
   tray.setContextMenu(buildContextMenu());
 
   // Single click: show/hide window (Windows/Linux; macOS opens the menu)
@@ -111,7 +111,7 @@ function setUnreadCount(count) {
   }
   if (!tray) return;
   const label = count > 0 ? `${count} unread message${count === 1 ? '' : 's'}` : 'No new messages';
-  tray.setToolTip(`Chttrix — ${label}`);
+  tray.setToolTip(`Oruinwan — ${label}`);
 }
 
 module.exports = { createTray, setUnreadCount, refreshTrayMenu };

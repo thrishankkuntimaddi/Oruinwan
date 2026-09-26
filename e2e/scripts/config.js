@@ -20,15 +20,15 @@ const E2E = {
   password: 'E2e-Passw0rd!',
   workspaceName: 'E2E Workspace',
   users: {
-    alice: { username: 'alice', email: 'alice@e2e.chttrix.test' },
+    alice: { username: 'alice', email: 'alice@e2e.oruinwan.test' },
     // A tiny inline image stands in for an uploaded photo (no network needed).
     bob: {
       username: 'bob',
-      email: 'bob@e2e.chttrix.test',
+      email: 'bob@e2e.oruinwan.test',
       profilePicture: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxyZWN0IHdpZHRoPSIxIiBoZWlnaHQ9IjEiIGZpbGw9IiMzYjgyZjYiLz48L3N2Zz4=',
     },
     // Not a member of the seeded workspace: used for access-control checks.
-    carol: { username: 'carol', email: 'carol@e2e.chttrix.test' },
+    carol: { username: 'carol', email: 'carol@e2e.oruinwan.test' },
   },
 };
 

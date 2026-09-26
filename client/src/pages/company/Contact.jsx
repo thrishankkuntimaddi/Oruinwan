@@ -1,133 +1,136 @@
 import React, { useState } from 'react';
+import { Mail, MessageSquare, Building2, Shield, ArrowRight } from 'lucide-react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
-import { Mail, MessageSquare, Building2, Shield, CheckCircle2, ArrowRight } from 'lucide-react';
+import { PageHero, Block, Callout } from '../../components/public/PublicKit';
+import BRAND from '../../shared/brand';
 
 const TOPICS = [
-    { id: 'general',   label: 'General Inquiry' },
-    { id: 'sales',     label: 'Sales & Pricing' },
-    { id: 'support',   label: 'Technical Support' },
-    { id: 'security',  label: 'Security / Bug Report' },
-    { id: 'press',     label: 'Press & Media' },
-    { id: 'other',     label: 'Other' },
+    { id: 'general', label: 'General inquiry', email: 'hello@oruinwan.com' },
+    { id: 'sales', label: 'Sales & pricing', email: 'sales@oruinwan.com' },
+    { id: 'support', label: 'Technical support', email: 'support@oruinwan.com' },
+    { id: 'security', label: 'Security / bug report', email: 'security@oruinwan.com' },
+    { id: 'press', label: 'Press & media', email: 'press@oruinwan.com' },
+    { id: 'other', label: 'Other', email: 'hello@oruinwan.com' },
 ];
 
 const CONTACTS = [
-    { icon: Mail,         color: '#6ea8fe', title: 'General',  email: 'hello@chttrix.io',    desc: 'Questions, partnerships, or just a hello.' },
-    { icon: MessageSquare,color: '#b8956a', title: 'Support',  email: 'support@chttrix.io',  desc: 'Technical issues and account help.' },
-    { icon: Shield,       color: '#5aba8a', title: 'Security', email: 'security@chttrix.io', desc: 'Vulnerability reports (24h SLA).' },
-    { icon: Building2,    color: '#a78bfa', title: 'Sales',    email: 'sales@chttrix.io',    desc: 'Enterprise plans and custom pricing.' },
+    { icon: Mail, color: '#8ea6ff', title: 'General', email: 'hello@oruinwan.com', desc: 'Questions, partnerships, or just a hello.' },
+    { icon: MessageSquare, color: '#c8a274', title: 'Support', email: 'support@oruinwan.com', desc: 'Technical issues and account help.' },
+    { icon: Shield, color: '#5cc995', title: 'Security', email: 'security@oruinwan.com', desc: 'Vulnerability reports and security concerns.' },
+    { icon: Building2, color: '#b59cff', title: 'Sales', email: 'sales@oruinwan.com', desc: 'Plans and custom pricing.' },
 ];
 
-const inp = { width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'Inter, system-ui, sans-serif', outline: 'none', boxSizing: 'border-box', transition: 'border-color 150ms ease' };
+const EMPTY = { name: '', email: '', topic: 'general', message: '' };
 
 export default function Contact() {
-    const [form, setForm] = useState({ name: '', email: '', topic: 'general', message: '' });
-    const [sent, setSent] = useState(false);
-    const [loading, setLoading] = useState(false);
+    const [form, setForm] = useState(EMPTY);
+    const [status, setStatus] = useState('idle'); // idle | sending | sent | error
+    const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
+    const topic = TOPICS.find(t => t.id === form.topic) || TOPICS[0];
 
+    // There is no contact API: the message is handed to the visitor's email
+    // app, addressed to the right team, so it is actually delivered.
     const handleSubmit = (e) => {
         e.preventDefault();
-        setLoading(true);
-        setTimeout(() => { setLoading(false); setSent(true); }, 1200);
+        setStatus('sending');
+        try {
+            const subject = `[${topic.label}] Message from ${form.name}`;
+            const body = `${form.message}\n\n— ${form.name} <${form.email}>`;
+            window.location.href = `mailto:${topic.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            setStatus('sent');
+        } catch {
+            setStatus('error');
+        }
     };
+
+    const reset = () => { setForm(EMPTY); setStatus('idle'); };
 
     return (
         <PublicPageShell title="Contact">
-            {}
-            <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '80px 0 64px' }}>
-                <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', border: '1px solid rgba(184,149,106,0.3)', background: 'rgba(184,149,106,0.07)', marginBottom: '20px' }}>
-                        <Mail size={11} style={{ color: '#b8956a' }} />
-                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b8956a' }}>Contact Us</span>
+            <PageHero
+                crumb="Contact"
+                eyebrow="Contact us"
+                icon={Mail}
+                title={<>Let’s <span className="orw-gloss-text">talk.</span></>}
+                lead="Whether it’s a sales question, a bug report, or just a hello, we read every message."
+            />
+
+            <Block>
+                <div className="orw-split" data-reveal>
+                    <div>
+                        <p className="orw-eyebrow">Direct contacts</p>
+                        <ul className="orw-rows">
+                            {CONTACTS.map(c => {
+                                const Icon = c.icon;
+                                return (
+                                    <li key={c.title} className="orw-row" style={{ gridTemplateColumns: 'auto minmax(0, 1fr)', gap: 16, alignItems: 'start', padding: '18px 4px' }}>
+                                        <span className="orw-card__icon" style={{ '--c': c.color, width: 36, height: 36, margin: 0 }}>
+                                            <Icon size={16} aria-hidden="true" />
+                                        </span>
+                                        <div style={{ minWidth: 0 }}>
+                                            <h3 style={{ fontSize: 15 }}>{c.title}</h3>
+                                            <a href={`mailto:${c.email}`} className="orw-link" style={{ fontFamily: '\'JetBrains Mono\', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace', overflowWrap: 'anywhere' }}>{c.email}</a>
+                                            <p style={{ marginTop: 4 }}>{c.desc}</p>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                        <p className="orw-hint" style={{ marginTop: 20, fontSize: 13 }}>
+                            We typically respond within one business day, and we prioritise security reports.
+                        </p>
                     </div>
-                    <h1 style={{ fontSize: 'clamp(28px,4vw,48px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '12px' }}>Let's talk.</h1>
-                    <p style={{ fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.75', maxWidth: '500px' }}>
-                        Whether it's a sales question, a bug report, or just a hello — we read every message and respond to everything.
-                    </p>
-                </div>
-            </div>
 
-            <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '72px 24px', display: 'flex', gap: '72px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                    <div className="orw-glass" style={{ padding: 'clamp(22px, 4vw, 36px)', minWidth: 0 }}>
+                        <h2 className="orw-h2" style={{ fontSize: 24, marginBottom: 8 }}>Send a message</h2>
+                        <p className="orw-hint" style={{ marginBottom: 22 }}>
+                            Sending opens your email app with the message addressed to the right {BRAND.name} team.
+                        </p>
 
-                {}
-                <div style={{ flex: '1 1 300px' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Direct Contacts</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)', marginBottom: '32px' }}>
-                        {CONTACTS.map(c => {
-                            const Icon = c.icon;
-                            return (
-                                <div key={c.title} style={{ background: '#111', padding: '18px 20px', display: 'flex', gap: '14px', alignItems: 'flex-start' }}>
-                                    <div style={{ width: '34px', height: '34px', background: `${c.color}12`, border: `1px solid ${c.color}25`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        <Icon size={15} style={{ color: c.color }} />
+                        {status === 'sent' ? (
+                            <div role="status">
+                                <Callout type="good">
+                                    <strong>Your email is ready to send.</strong> We’ve opened a draft to <strong>{topic.email}</strong> in your email app; hit send there and we’ll reply to <strong>{form.email}</strong>. If nothing opened, email us directly at <a href={`mailto:${topic.email}`} className="orw-link">{topic.email}</a>.
+                                </Callout>
+                                <button type="button" className="orw-btn orw-btn--ghost" onClick={reset}>Write another message</button>
+                            </div>
+                        ) : (
+                            <form className="orw-form" onSubmit={handleSubmit}>
+                                <div className="orw-form__row">
+                                    <div className="orw-field">
+                                        <label className="orw-label" htmlFor="contact-name">Name</label>
+                                        <input id="contact-name" className="orw-input" value={form.name} onChange={set('name')} required autoComplete="name" placeholder="Your name" />
                                     </div>
-                                    <div>
-                                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '2px' }}>{c.title}</p>
-                                        <a href={`mailto:${c.email}`} style={{ fontSize: '12px', color: '#b8956a', textDecoration: 'none', fontFamily: 'monospace' }}>{c.email}</a>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '3px' }}>{c.desc}</p>
+                                    <div className="orw-field">
+                                        <label className="orw-label" htmlFor="contact-email">Email</label>
+                                        <input id="contact-email" type="email" className="orw-input" value={form.email} onChange={set('email')} required autoComplete="email" placeholder="you@company.com" />
                                     </div>
                                 </div>
-                            );
-                        })}
+                                <div className="orw-field">
+                                    <label className="orw-label" htmlFor="contact-topic">Topic</label>
+                                    <select id="contact-topic" className="orw-select" value={form.topic} onChange={set('topic')}>
+                                        {TOPICS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="orw-field">
+                                    <label className="orw-label" htmlFor="contact-message">Message</label>
+                                    <textarea id="contact-message" className="orw-textarea" value={form.message} onChange={set('message')} required rows={6} placeholder="Tell us what’s on your mind…" />
+                                </div>
+                                {status === 'error' && (
+                                    <div role="alert">
+                                        <Callout type="warn">
+                                            We couldn’t open your email app. Please email <a href={`mailto:${topic.email}`} className="orw-link">{topic.email}</a> directly.
+                                        </Callout>
+                                    </div>
+                                )}
+                                <button type="submit" className="orw-btn orw-btn--primary orw-btn--lg orw-btn--block" disabled={status === 'sending'}>
+                                    {status === 'sending' ? 'Opening email…' : <>Send message <ArrowRight size={16} aria-hidden="true" /></>}
+                                </button>
+                            </form>
+                        )}
                     </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.7' }}>
-                        We typically respond within 1 business day. For urgent security issues, response within 24 hours is guaranteed.
-                    </p>
                 </div>
-
-                {}
-                <div style={{ flex: '2 1 400px' }}>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Send a Message</p>
-
-                    {sent ? (
-                        <div style={{ padding: '32px', background: 'rgba(90,186,138,0.06)', border: '1px solid rgba(90,186,138,0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', textAlign: 'center' }}>
-                            <CheckCircle2 size={32} style={{ color: '#5aba8a' }} />
-                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Message sent!</h3>
-                            <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>We'll get back to you at <strong style={{ color: 'var(--text-primary)' }}>{form.email}</strong> within 1 business day.</p>
-                            <button onClick={() => { setSent(false); setForm({ name: '', email: '', topic: 'general', message: '' }); }}
-                                style={{ marginTop: '8px', fontSize: '12px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
-                                Send another message →
-                            </button>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                <div>
-                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Name</label>
-                                    <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} required placeholder="Your name"
-                                        style={inp}
-                                        onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
-                                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Email</label>
-                                    <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required placeholder="you@company.com"
-                                        style={inp}
-                                        onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
-                                        onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
-                                </div>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Topic</label>
-                                <select value={form.topic} onChange={e => setForm(f => ({ ...f, topic: e.target.value }))}
-                                    style={{ ...inp, cursor: 'pointer' }}>
-                                    {TOPICS.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' }}>Message</label>
-                                <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} required rows={6} placeholder="Tell us what's on your mind..."
-                                    style={{ ...inp, resize: 'vertical', minHeight: '140px' }}
-                                    onFocus={e => e.target.style.borderColor = 'rgba(184,149,106,0.5)'}
-                                    onBlur={e => e.target.style.borderColor = 'rgba(255,255,255,0.08)'} />
-                            </div>
-                            <button type="submit" disabled={loading}
-                                style={{ padding: '11px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: loading ? 'wait' : 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: loading ? 0.7 : 1, transition: 'opacity 150ms ease' }}>
-                                {loading ? 'Sending...' : <><span>Send Message</span><ArrowRight size={14} /></>}
-                            </button>
-                        </form>
-                    )}
-                </div>
-            </div>
+            </Block>
         </PublicPageShell>
     );
 }

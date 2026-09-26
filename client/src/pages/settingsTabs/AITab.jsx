@@ -138,7 +138,7 @@ export default function AITab({ workspaceId }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 32, height: 32, background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Sparkles size={15} style={{ color: 'var(--accent)' }} /></div>
                         <div>
-                            <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0, ...S.font }}>Chttrix Intelligence</h3>
+                            <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', margin: 0, ...S.font }}>Oruinwan Intelligence</h3>
                             <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: '2px 0 0', ...S.font }}>
                                 Using <strong style={{ color: 'var(--text-secondary)' }}>{PROVIDER_META[effective.provider]?.label || effective.provider}</strong> · {effective.model} · {effective.source === 'workspace' ? 'workspace key' : 'server default'}
                             </p>

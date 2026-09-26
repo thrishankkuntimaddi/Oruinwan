@@ -90,7 +90,7 @@ export default function RegisterScreen({ navigation }) {
             <Text style={s.logoText}>C</Text>
           </View>
           <Text style={s.appName}>Create Account</Text>
-          <Text style={s.tagline}>Join your team on Chttrix</Text>
+          <Text style={s.tagline}>Join your team on Oruinwan</Text>
         </View>
 
         {/* ── Card ── */}

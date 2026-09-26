@@ -29,8 +29,8 @@ const RegisterLayout = ({
             {}
             <nav style={{ position: 'relative', zIndex: 10, padding: '18px 32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                 <div onClick={() => onNavigate('/')} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-                    <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
-                    <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Chttrix</span>
+                    <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '28px', height: '28px', objectFit: 'cover' }} />
+                    <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Oruinwan</span>
                     <span style={{ color: 'rgba(255,255,255,0.2)', margin: '0 4px' }}>/</span>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Register Company</span>
                 </div>

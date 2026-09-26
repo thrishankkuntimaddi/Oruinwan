@@ -98,8 +98,8 @@ const OwnerSidebar = ({ onNavigate }) => {
                 flexShrink: 0
             }}>
                 <img
-                    src="/chttrix-logo.jpg"
-                    alt="Chttrix Logo"
+                    src="/icons/oruinwan-128.png"
+                    alt="Oruinwan Logo"
                     style={{ width: '28px', height: '28px', objectFit: 'cover', flexShrink: 0 }}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
@@ -109,7 +109,7 @@ const OwnerSidebar = ({ onNavigate }) => {
                         letterSpacing: '-0.015em',
                         lineHeight: 1.2
                     }}>
-                        Chttrix
+                        Oruinwan
                     </span>
                     <span style={{
                         fontSize: '10px', fontWeight: 700,

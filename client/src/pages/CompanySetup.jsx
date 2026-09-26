@@ -133,7 +133,7 @@ const CompanySetup = () => {
             );
             const url = URL.createObjectURL(res.data);
             const a = document.createElement('a');
-            a.href = url; a.download = 'chttrix_team_template.xlsx'; a.click();
+            a.href = url; a.download = 'oruinwan_team_template.xlsx'; a.click();
             URL.revokeObjectURL(url);
         } catch { showToast('Failed to download template', 'error'); }
     };
@@ -208,12 +208,12 @@ const CompanySetup = () => {
                         {}
                         <div className="flex items-center gap-2.5 mb-8">
                             <img
-                                src="/chttrix-logo.jpg"
-                                alt="Chttrix"
+                                src="/icons/oruinwan-128.png"
+                                alt="Oruinwan"
                                 className="h-9 w-9 rounded-xl object-cover"
                                 onError={e => { e.target.style.display = 'none'; }}
                             />
-                            <span className="font-black text-xl text-white tracking-tight">Chttrix</span>
+                            <span className="font-black text-xl text-white tracking-tight">Oruinwan</span>
                         </div>
 
                         {}

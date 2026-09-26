@@ -51,7 +51,7 @@ const WorkspaceModals = ({
                         type="text" value={newName}
                         onChange={e => setNewName(e.target.value)}
                         style={{ ...inputStyle, marginBottom: '20px' }}
-                        placeholder="e.g. Chttrix" autoFocus
+                        placeholder="e.g. Acme Inc" autoFocus
                         onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
                         onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                     />

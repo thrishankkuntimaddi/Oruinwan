@@ -24,13 +24,13 @@ const PROVIDER_CATALOGUE = [
         { type: 'confluence',   label: 'Confluence',   icon: '📚', desc: 'Attach Confluence pages',         fields: [{ key: 'token',       label: 'API Token',           type: 'password' }, { key: 'baseUrl', label: 'Base URL', type: 'text' }] },
     ]},
     { category: 'Communication', providers: [
-        { type: 'slack',        label: 'Slack',             icon: '💬', desc: 'Bridge messages Slack ↔ Chttrix',       fields: [{ key: 'webhookUrl', label: 'Incoming Webhook URL', type: 'text' }] },
-        { type: 'zoom',         label: 'Zoom',              icon: '📹', desc: 'Create Zoom meetings from Chttrix',     fields: [{ key: 'apiKey',     label: 'API Key',              type: 'password' }, { key: 'apiSecret', label: 'API Secret', type: 'password' }] },
-        { type: 'google_meet',  label: 'Google Meet',       icon: '🎥', desc: 'Create Meet links from Chttrix',       fields: [{ key: 'accessToken', label: 'OAuth Access Token', type: 'password' }] },
+        { type: 'slack',        label: 'Slack',             icon: '💬', desc: 'Bridge messages Slack ↔ Oruinwan',       fields: [{ key: 'webhookUrl', label: 'Incoming Webhook URL', type: 'text' }] },
+        { type: 'zoom',         label: 'Zoom',              icon: '📹', desc: 'Create Zoom meetings from Oruinwan',     fields: [{ key: 'apiKey',     label: 'API Key',              type: 'password' }, { key: 'apiSecret', label: 'API Secret', type: 'password' }] },
+        { type: 'google_meet',  label: 'Google Meet',       icon: '🎥', desc: 'Create Meet links from Oruinwan',       fields: [{ key: 'accessToken', label: 'OAuth Access Token', type: 'password' }] },
         { type: 'teams',        label: 'Microsoft Teams',   icon: '💼', desc: 'Bridge messages via Teams webhooks',   fields: [{ key: 'webhookUrl',  label: 'Incoming Webhook URL', type: 'text' }] },
     ]},
     { category: 'Automation', providers: [
-        { type: 'zapier', label: 'Zapier',            icon: '⚡', desc: 'Trigger Zapier zaps from Chttrix events', fields: [{ key: 'webhookUrl', label: 'Zapier Webhook URL', type: 'text' }] },
+        { type: 'zapier', label: 'Zapier',            icon: '⚡', desc: 'Trigger Zapier zaps from Oruinwan events', fields: [{ key: 'webhookUrl', label: 'Zapier Webhook URL', type: 'text' }] },
         { type: 'make',   label: 'Make (Integromat)', icon: '🔗', desc: 'Connect Make.com scenarios',             fields: [{ key: 'webhookUrl', label: 'Make Webhook URL',   type: 'text' }] },
         { type: 'n8n',    label: 'n8n',               icon: '🔄', desc: 'Trigger n8n workflows',                  fields: [{ key: 'webhookUrl', label: 'n8n Webhook URL',    type: 'text' }] },
     ]},
@@ -39,7 +39,7 @@ const PROVIDER_CATALOGUE = [
 const WEBHOOK_EVENTS = ['task.created', 'task.updated', 'task.completed', 'message.sent', 'file.uploaded', 'meeting.started', 'meeting.completed', 'integration.connected', 'integration.disconnected', '*'];
 
 const AI_PROVIDERS = [
-    { id: 'gemini',    label: 'Gemini',    icon: '✨', desc: 'Google Gemini (default for Chttrix)' },
+    { id: 'gemini',    label: 'Gemini',    icon: '✨', desc: 'Google Gemini (default for Oruinwan)' },
     { id: 'openai',    label: 'ChatGPT',   icon: '🤖', desc: 'OpenAI GPT-4 / GPT-3.5' },
     { id: 'claude',    label: 'Claude',    icon: '🎭', desc: 'Anthropic Claude 3' },
     { id: 'local_llm', label: 'Local LLM', icon: '🖥️', desc: 'Ollama or custom endpoint' },
@@ -327,7 +327,7 @@ function AIProvidersPanel({ workspaceId }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
                 <h3 style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', margin: 0, ...S.font }}>AI Providers</h3>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, marginBottom: 0, ...S.font }}>Connect and switch AI providers — Chttrix will fallback through the chain automatically</p>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3, marginBottom: 0, ...S.font }}>Connect and switch AI providers — Oruinwan will fallback through the chain automatically</p>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {AI_PROVIDERS.map(p => {
@@ -454,7 +454,7 @@ const IntegrationsTab = ({ workspaceId }) => {
             <div>
                 <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px', letterSpacing: '-0.01em', ...S.font }}>Integration Ecosystem</h2>
                 <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0, ...S.font }}>
-                    Connect Chttrix to your favourite tools. All integrations are workspace-level and event-driven.
+                    Connect Oruinwan to your favourite tools. All integrations are workspace-level and event-driven.
                 </p>
             </div>
 

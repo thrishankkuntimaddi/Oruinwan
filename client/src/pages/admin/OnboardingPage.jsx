@@ -50,7 +50,7 @@ const BulkImportModal = ({ onClose }) => {
         try {
             const res = await api.get(`/api/companies/${companyId}/setup/template`, { responseType: 'blob' });
             const url = URL.createObjectURL(res.data);
-            Object.assign(document.createElement('a'), { href: url, download: 'chttrix_team_template.xlsx' }).click();
+            Object.assign(document.createElement('a'), { href: url, download: 'oruinwan_team_template.xlsx' }).click();
             URL.revokeObjectURL(url);
         } catch { showToast('Failed to download template', 'error'); }
     };

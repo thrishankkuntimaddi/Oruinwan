@@ -19,12 +19,12 @@ async function sendInviteEmail({ to, name, companyName, tempPassword }) {
 
         await sendEmail({
             to,
-            subject: `You've been invited to join ${companyName} on Chttrix`,
+            subject: `You've been invited to join ${companyName} on Oruinwan`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #f8fafc;">
                     <div style="background: white; border-radius: 16px; padding: 40px; border: 1px solid #e2e8f0;">
                         <h1 style="color: #1e293b; font-size: 24px; margin-bottom: 8px;">Welcome to ${companyName}! 🎉</h1>
-                        <p style="color: #64748b; margin-bottom: 24px;">Hi ${name}, you've been invited to collaborate on Chttrix.</p>
+                        <p style="color: #64748b; margin-bottom: 24px;">Hi ${name}, you've been invited to collaborate on Oruinwan.</p>
 
                         <div style="background: #f1f5f9; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
                             <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase;">Your Login Details</p>

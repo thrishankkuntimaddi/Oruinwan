@@ -1,6 +1,6 @@
 const YEAR = new Date().getFullYear();
-const APP_NAME = 'Chttrix';
-const APP_URL = process.env.FRONTEND_URL || 'https://chttrix.com';
+const APP_NAME = 'Oruinwan';
+const APP_URL = process.env.FRONTEND_URL || 'https://oruinwan.com';
 
 const T = {
   bgOuter:       '#f0ece6',
@@ -178,19 +178,19 @@ function _p(text, opts = {}) {
 function verifyEmailTemplate(username, verifyUrl) {
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${_p('Welcome to Chttrix! Please verify your email address to activate your account and start collaborating with your team.', { mb: '0' })}
+    ${_p('Welcome to Oruinwan! Please verify your email address to activate your account and start collaborating with your team.', { mb: '0' })}
     ${_btn('Verify Email Address', verifyUrl)}
     ${_link('Verify your email', verifyUrl)}
-    ${_p('This verification link expires in <strong style="color:${T.textPrimary}">24 hours</strong>. If you did not create a Chttrix account, you can safely ignore this email.', { size: '13px', color: T.textMuted, mt: '24px', mb: '0' })}
+    ${_p('This verification link expires in <strong style="color:${T.textPrimary}">24 hours</strong>. If you did not create a Oruinwan account, you can safely ignore this email.', { size: '13px', color: T.textMuted, mt: '24px', mb: '0' })}
   `;
   return {
-    subject: `Verify your Chttrix email address`,
-    text: `Hi ${username}, verify your Chttrix email: ${verifyUrl}`,
+    subject: `Verify your Oruinwan email address`,
+    text: `Hi ${username}, verify your Oruinwan email: ${verifyUrl}`,
     html: _shell({
       icon: '✉️',
       title: 'Verify Your Email',
-      subtitle: 'One click to activate your Chttrix account.',
-      preheader: `Hi ${username}, please verify your email to get started on Chttrix.`,
+      subtitle: 'One click to activate your Oruinwan account.',
+      preheader: `Hi ${username}, please verify your email to get started on Oruinwan.`,
       body,
     }),
   };
@@ -199,19 +199,19 @@ function verifyEmailTemplate(username, verifyUrl) {
 function passwordResetTemplate(username, resetUrl) {
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${_p('We received a request to reset your Chttrix account password. Click the button below to choose a new password.')}
+    ${_p('We received a request to reset your Oruinwan account password. Click the button below to choose a new password.')}
     ${_btn('Reset Password', resetUrl)}
     ${_link('Reset your password', resetUrl)}
     ${_alert('<strong>Security note:</strong> This link expires in <strong>1 hour</strong>. If you did not request a password reset, please ignore this email — your account remains secure.', 'warning')}
   `;
   return {
-    subject: `Reset your Chttrix password`,
+    subject: `Reset your Oruinwan password`,
     text: `Hi ${username}, reset your password here: ${resetUrl} (expires in 1 hour)`,
     html: _shell({
       icon: '🔑',
       title: 'Reset Your Password',
       subtitle: 'A password reset was requested for your account.',
-      preheader: `Hi ${username}, reset your Chttrix password using the link inside.`,
+      preheader: `Hi ${username}, reset your Oruinwan password using the link inside.`,
       body,
     }),
   };
@@ -221,18 +221,18 @@ function passwordSetTemplate(username, provider) {
   const providerLabel = provider ? provider.charAt(0).toUpperCase() + provider.slice(1) : 'OAuth';
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${_p(`You've successfully added password login to your Chttrix account. You can now sign in with either your <strong style="color:${T.textPrimary}">${providerLabel}</strong> account or your email and password.`)}
+    ${_p(`You've successfully added password login to your Oruinwan account. You can now sign in with either your <strong style="color:${T.textPrimary}">${providerLabel}</strong> account or your email and password.`)}
     ${_alert('If you did not set a password on your account, your account may have been accessed without authorization. Please change your password immediately and contact support.', 'danger')}
-    ${_btn('Go to Chttrix', APP_URL)}
+    ${_btn('Go to Oruinwan', APP_URL)}
   `;
   return {
-    subject: `Password login enabled on your Chttrix account`,
-    text: `Hi ${username}, password login has been enabled on your Chttrix account.`,
+    subject: `Password login enabled on your Oruinwan account`,
+    text: `Hi ${username}, password login has been enabled on your Oruinwan account.`,
     html: _shell({
       icon: '🔐',
       title: 'Password Login Enabled',
       subtitle: `Password login was added to your ${providerLabel} account.`,
-      preheader: `Password login is now enabled on your Chttrix account, ${username}.`,
+      preheader: `Password login is now enabled on your Oruinwan account, ${username}.`,
       body,
     }),
   };
@@ -246,19 +246,19 @@ function passwordSetTemplate(username, provider) {
 function reactivateAccountTemplate(username, otpCode) {
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${_p('A sign-in attempt was made on your deactivated Chttrix account. Use the verification code below to reactivate it:')}
+    ${_p('A sign-in attempt was made on your deactivated Oruinwan account. Use the verification code below to reactivate it:')}
     ${_otp(otpCode)}
     ${_p('This code expires in <strong style="color:${T.textPrimary}">10 minutes</strong>. After entering this code you\'ll complete reactivation with your password.', { size: '13px', color: T.textMuted, mb: '0' })}
     ${_alert('If you did not attempt to log in, someone else may have your credentials. Your account remains deactivated — no action is needed unless you want to reactivate it.', 'warning')}
   `;
   return {
-    subject: `Reactivate your Chttrix account`,
-    text: `Hi ${username}, your Chttrix reactivation code is: ${otpCode} (expires in 10 minutes)`,
+    subject: `Reactivate your Oruinwan account`,
+    text: `Hi ${username}, your Oruinwan reactivation code is: ${otpCode} (expires in 10 minutes)`,
     html: _shell({
       icon: '🔓',
       title: 'Reactivate Your Account',
-      subtitle: 'Enter this code to restore access to your Chttrix account.',
-      preheader: `Your Chttrix reactivation code is ${otpCode}.`,
+      subtitle: 'Enter this code to restore access to your Oruinwan account.',
+      preheader: `Your Oruinwan reactivation code is ${otpCode}.`,
       body,
     }),
   };
@@ -272,18 +272,18 @@ function reactivateAccountTemplate(username, otpCode) {
 function emailVerificationTemplate(username, code) {
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${username}</strong>,`)}
-    ${_p('Use the verification code below to confirm your new email address on Chttrix:')}
+    ${_p('Use the verification code below to confirm your new email address on Oruinwan:')}
     ${_otp(code)}
     ${_p('This code expires in <strong style="color:${T.textPrimary}">15 minutes</strong>. If you didn\'t request this, you can safely ignore this email.', { size: '13px', color: T.textMuted, mb: '0' })}
   `;
   return {
-    subject: `Your Chttrix verification code`,
-    text: `Hi ${username}, your Chttrix email verification code is: ${code} (expires in 15 minutes)`,
+    subject: `Your Oruinwan verification code`,
+    text: `Hi ${username}, your Oruinwan email verification code is: ${code} (expires in 15 minutes)`,
     html: _shell({
       icon: '✉️',
       title: 'Email Verification Code',
-      subtitle: 'Enter this code in Chttrix to verify your email address.',
-      preheader: `Your Chttrix verification code is ${code}.`,
+      subtitle: 'Enter this code in Oruinwan to verify your email address.',
+      preheader: `Your Oruinwan verification code is ${code}.`,
       body,
     }),
   };
@@ -300,25 +300,25 @@ function emailVerificationTemplate(username, code) {
  */
 function inviteTemplate(name, companyName, inviteLink, opts = {}) {
   const { jobTitle = '', isResend = false } = opts;
-  const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : `You've been invited to Chttrix.`;
+  const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : `You've been invited to Oruinwan.`;
   const roleRow = jobTitle ? _card(_row('Your role', jobTitle)) : '';
   const badge = isResend ? `<span style="font-size:11px;font-weight:700;color:${T.accent};letter-spacing:0.1em;text-transform:uppercase;margin-left:8px">(Resent)</span>` : '';
   const body = `
     ${_p(greeting)}
-    ${_p(`You've been invited to join <strong style="color:${T.textPrimary}">${companyName}</strong> on Chttrix — the AI-augmented collaboration platform.${badge}`)}
+    ${_p(`You've been invited to join <strong style="color:${T.textPrimary}">${companyName}</strong> on Oruinwan — the AI-augmented collaboration platform.${badge}`)}
     ${roleRow}
     ${_btn('Accept Invitation & Set Password', inviteLink)}
     ${_link('Accept invitation', inviteLink)}
     ${_p('This invitation expires in <strong style="color:${T.textPrimary}">72 hours</strong>. If you didn\'t expect this email, you can safely ignore it.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
   `;
   return {
-    subject: `You're invited to join ${companyName} on Chttrix`,
-    text: `Hi ${name}, you've been invited to join ${companyName} on Chttrix. Accept here: ${inviteLink}`,
+    subject: `You're invited to join ${companyName} on Oruinwan`,
+    text: `Hi ${name}, you've been invited to join ${companyName} on Oruinwan. Accept here: ${inviteLink}`,
     html: _shell({
       icon: '👋',
-      title: `Join ${companyName} on Chttrix`,
+      title: `Join ${companyName} on Oruinwan`,
       subtitle: `You've been invited to collaborate with ${companyName}.`,
-      preheader: `${name || 'You'} — accept your invitation to join ${companyName} on Chttrix.`,
+      preheader: `${name || 'You'} — accept your invitation to join ${companyName} on Oruinwan.`,
       body,
     }),
   };
@@ -328,23 +328,23 @@ function bulkWelcomeTemplate(name, workEmail, tempPassword, companyName) {
   const loginUrl = `${APP_URL}/login`;
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${name}</strong>,`)}
-    ${_p(`Your Chttrix account for <strong style="color:${T.textPrimary}">${companyName}</strong> has been created. Use the credentials below to sign in:`)}
+    ${_p(`Your Oruinwan account for <strong style="color:${T.textPrimary}">${companyName}</strong> has been created. Use the credentials below to sign in:`)}
     ${_card(
       _row('Work Email', workEmail) +
       _row('Temporary Password', tempPassword, true)
     )}
-    ${_btn('Log In to Chttrix', loginUrl)}
+    ${_btn('Log In to Oruinwan', loginUrl)}
     ${_alert('<strong>Important:</strong> Please change your password immediately after your first login. Your temporary password will be flagged until you set a permanent one.', 'warning')}
     ${_p('If you didn\'t expect this email, please contact your company administrator.', { size: '13px', color: T.textMuted, mb: '0' })}
   `;
   return {
-    subject: `Your Chttrix login credentials — ${companyName}`,
-    text: `Hi ${name}, your Chttrix credentials for ${companyName}: Email: ${workEmail} | Password: ${tempPassword} | Login: ${loginUrl}`,
+    subject: `Your Oruinwan login credentials — ${companyName}`,
+    text: `Hi ${name}, your Oruinwan credentials for ${companyName}: Email: ${workEmail} | Password: ${tempPassword} | Login: ${loginUrl}`,
     html: _shell({
       icon: '🎉',
       title: `Welcome to ${companyName}`,
-      subtitle: 'Your Chttrix account is ready. Sign in below.',
-      preheader: `${name}, your Chttrix account for ${companyName} is active. Here are your credentials.`,
+      subtitle: 'Your Oruinwan account is ready. Sign in below.',
+      preheader: `${name}, your Oruinwan account for ${companyName} is active. Here are your credentials.`,
       body,
     }),
   };
@@ -354,19 +354,19 @@ function workspaceInviteTemplate(name, workspaceName, inviteLink) {
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'You\'ve been invited!';
   const body = `
     ${_p(greeting)}
-    ${_p(`You've been invited to join the workspace <strong style="color:${T.textPrimary}">${workspaceName}</strong> on Chttrix.`)}
+    ${_p(`You've been invited to join the workspace <strong style="color:${T.textPrimary}">${workspaceName}</strong> on Oruinwan.`)}
     ${_btn('Join Workspace', inviteLink)}
     ${_link('Join workspace', inviteLink)}
     ${_p('If you didn\'t expect this email, you can safely ignore it.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
   `;
   return {
-    subject: `You're invited to join "${workspaceName}" on Chttrix`,
-    text: `Hi ${name}, you've been invited to join ${workspaceName} on Chttrix. Join here: ${inviteLink}`,
+    subject: `You're invited to join "${workspaceName}" on Oruinwan`,
+    text: `Hi ${name}, you've been invited to join ${workspaceName} on Oruinwan. Join here: ${inviteLink}`,
     html: _shell({
       icon: '💬',
       title: `Join ${workspaceName}`,
-      subtitle: 'A workspace invitation is waiting for you on Chttrix.',
-      preheader: `You've been invited to join the ${workspaceName} workspace on Chttrix.`,
+      subtitle: 'A workspace invitation is waiting for you on Oruinwan.',
+      preheader: `You've been invited to join the ${workspaceName} workspace on Oruinwan.`,
       body,
     }),
   };
@@ -376,19 +376,19 @@ function workspaceInviteReminderTemplate(name, workspaceName, inviteLink) {
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Just a reminder!';
   const body = `
     ${_p(greeting)}
-    ${_p(`This is a reminder that you have a pending invitation to join <strong style="color:${T.textPrimary}">${workspaceName}</strong> on Chttrix. Your team is waiting!`)}
+    ${_p(`This is a reminder that you have a pending invitation to join <strong style="color:${T.textPrimary}">${workspaceName}</strong> on Oruinwan. Your team is waiting!`)}
     ${_btn('Accept Invitation', inviteLink)}
     ${_link('Accept invitation', inviteLink)}
     ${_p('If you\'ve already joined or don\'t wish to join, you can ignore this message.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
   `;
   return {
-    subject: `Reminder: Join ${workspaceName} on Chttrix`,
-    text: `Hi ${name}, reminder: join ${workspaceName} on Chttrix here: ${inviteLink}`,
+    subject: `Reminder: Join ${workspaceName} on Oruinwan`,
+    text: `Hi ${name}, reminder: join ${workspaceName} on Oruinwan here: ${inviteLink}`,
     html: _shell({
       icon: '🔔',
       title: 'Workspace Invite Reminder',
       subtitle: `Your invitation to join ${workspaceName} is still pending.`,
-      preheader: `Reminder: you have a pending invitation to join ${workspaceName} on Chttrix.`,
+      preheader: `Reminder: you have a pending invitation to join ${workspaceName} on Oruinwan.`,
       body,
     }),
   };
@@ -399,7 +399,7 @@ function taskAssignedTemplate(name, taskTitle, assignedBy, taskUrl) {
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Hi there,';
   const body = `
     ${_p(greeting)}
-    ${_p(`<strong style="color:${T.textPrimary}">${assignedBy}</strong> has assigned you a new task on Chttrix:`)}
+    ${_p(`<strong style="color:${T.textPrimary}">${assignedBy}</strong> has assigned you a new task on Oruinwan:`)}
     ${_card(_row('Task', `<strong style="color:${T.textPrimary}">${taskTitle}</strong>`) + _row('Assigned By', assignedBy))}
     ${_btn('View Task', url)}
   `;
@@ -410,7 +410,7 @@ function taskAssignedTemplate(name, taskTitle, assignedBy, taskUrl) {
       icon: '✅',
       title: 'New Task Assigned',
       subtitle: `${assignedBy} has assigned you a task.`,
-      preheader: `${assignedBy} assigned you "${taskTitle}" on Chttrix.`,
+      preheader: `${assignedBy} assigned you "${taskTitle}" on Oruinwan.`,
       body,
     }),
   };
@@ -422,7 +422,7 @@ function meetingScheduledTemplate(name, meetingTitle, formattedTime, meetingUrl)
   const timeRow = formattedTime ? _row('Time', formattedTime) : '';
   const body = `
     ${_p(greeting)}
-    ${_p('A new meeting has been scheduled on Chttrix. You\'re invited to attend:')}
+    ${_p('A new meeting has been scheduled on Oruinwan. You\'re invited to attend:')}
     ${_card(_row('Meeting', `<strong style="color:${T.textPrimary}">${meetingTitle}</strong>`) + timeRow)}
     ${_btn('View Meeting', url)}
   `;
@@ -432,7 +432,7 @@ function meetingScheduledTemplate(name, meetingTitle, formattedTime, meetingUrl)
     html: _shell({
       icon: '📅',
       title: 'Meeting Scheduled',
-      subtitle: 'You have a new meeting invitation on Chttrix.',
+      subtitle: 'You have a new meeting invitation on Oruinwan.',
       preheader: `New meeting: ${meetingTitle}${formattedTime ? ` — ${formattedTime}` : ''}.`,
       body,
     }),
@@ -445,7 +445,7 @@ function newDeviceSignInTemplate(name, deviceName, platform, location, formatted
   const locationRow = location ? _row('Location', location) : '';
   const body = `
     ${_p(greeting)}
-    ${_p('A new device was used to sign in to your Chttrix account:')}
+    ${_p('A new device was used to sign in to your Oruinwan account:')}
     ${_card(
       _row('Device', deviceName) +
       _row('Platform', platform) +
@@ -456,13 +456,13 @@ function newDeviceSignInTemplate(name, deviceName, platform, location, formatted
     ${_btn('Review Security Settings', securityUrl)}
   `;
   return {
-    subject: `New device signed in to your Chttrix account`,
-    text: `Hi ${name}, a new device (${deviceName}, ${platform}) signed in to your Chttrix account at ${formattedTime}. If this wasn't you, visit ${securityUrl}.`,
+    subject: `New device signed in to your Oruinwan account`,
+    text: `Hi ${name}, a new device (${deviceName}, ${platform}) signed in to your Oruinwan account at ${formattedTime}. If this wasn't you, visit ${securityUrl}.`,
     html: _shell({
       icon: '🔒',
       title: 'New Device Sign-In',
       subtitle: 'We detected a sign-in from a new device on your account.',
-      preheader: `New sign-in detected on your Chttrix account from ${deviceName}.`,
+      preheader: `New sign-in detected on your Oruinwan account from ${deviceName}.`,
       body,
     }),
   };
@@ -473,7 +473,7 @@ function passwordChangedTemplate(name, deviceName, formattedTime) {
   const greeting = name ? `Hi <strong style="color:${T.textPrimary}">${name}</strong>,` : 'Hi there,';
   const body = `
     ${_p(greeting)}
-    ${_p('Your Chttrix account password was successfully changed.')}
+    ${_p('Your Oruinwan account password was successfully changed.')}
     ${_card(
       _row('Device', deviceName) +
       _row('Time', formattedTime)
@@ -482,13 +482,13 @@ function passwordChangedTemplate(name, deviceName, formattedTime) {
     ${_btn('Reset Password (if needed)', resetUrl)}
   `;
   return {
-    subject: `Your Chttrix password was changed`,
-    text: `Hi ${name}, your Chttrix password was changed at ${formattedTime} from ${deviceName}. If this wasn't you, reset your password at ${resetUrl}.`,
+    subject: `Your Oruinwan password was changed`,
+    text: `Hi ${name}, your Oruinwan password was changed at ${formattedTime} from ${deviceName}. If this wasn't you, reset your password at ${resetUrl}.`,
     html: _shell({
       icon: '🔐',
       title: 'Password Changed',
-      subtitle: 'Your Chttrix account password has been updated.',
-      preheader: `Your Chttrix password was changed at ${formattedTime}.`,
+      subtitle: 'Your Oruinwan account password has been updated.',
+      preheader: `Your Oruinwan password was changed at ${formattedTime}.`,
       body,
     }),
   };
@@ -500,7 +500,7 @@ function allDevicesRevokedTemplate(name, revokedCount, deviceName, formattedTime
   const countLabel = revokedCount === 1 ? '1 device' : `${revokedCount} devices`;
   const body = `
     ${_p(greeting)}
-    ${_p(`All other sessions (${countLabel}) have been signed out of your Chttrix account.`)}
+    ${_p(`All other sessions (${countLabel}) have been signed out of your Oruinwan account.`)}
     ${_card(
       _row('Initiated from', deviceName) +
       _row('Sessions revoked', String(revokedCount)) +
@@ -510,13 +510,13 @@ function allDevicesRevokedTemplate(name, revokedCount, deviceName, formattedTime
     ${_btn('Review Security Settings', securityUrl)}
   `;
   return {
-    subject: `All other devices signed out of your Chttrix account`,
-    text: `Hi ${name}, all other devices (${countLabel}) were signed out of your Chttrix account at ${formattedTime}. Review at ${securityUrl}.`,
+    subject: `All other devices signed out of your Oruinwan account`,
+    text: `Hi ${name}, all other devices (${countLabel}) were signed out of your Oruinwan account at ${formattedTime}. Review at ${securityUrl}.`,
     html: _shell({
       icon: '🚪',
       title: 'All Devices Signed Out',
       subtitle: 'All other active sessions have been terminated for your account.',
-      preheader: `${countLabel} signed out of your Chttrix account at ${formattedTime}.`,
+      preheader: `${countLabel} signed out of your Oruinwan account at ${formattedTime}.`,
       body,
     }),
   };
@@ -525,19 +525,19 @@ function allDevicesRevokedTemplate(name, revokedCount, deviceName, formattedTime
 function companyApprovedTemplate(name, companyName, loginUrl, note) {
   const body = `
     ${_p(`Hi <strong style="color:${T.textPrimary}">${name}</strong>,`)}
-    ${_p(`Great news: <strong style="color:${T.textPrimary}">${companyName}</strong> has been approved on Chttrix. Your company workspace is ready and your team can start collaborating.`)}
+    ${_p(`Great news: <strong style="color:${T.textPrimary}">${companyName}</strong> has been approved on Oruinwan. Your company workspace is ready and your team can start collaborating.`)}
     ${note ? _alert(note, 'info') : ''}
-    ${_btn('Sign in to Chttrix', loginUrl)}
+    ${_btn('Sign in to Oruinwan', loginUrl)}
     ${_link('Sign in', loginUrl)}
     ${_p('Next steps: complete your company setup, invite your team, and create your first workspace.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
   `;
   return {
-    subject: `${companyName} has been approved on Chttrix`,
-    text: `Hi ${name}, ${companyName} has been approved on Chttrix. Sign in: ${loginUrl}${note ? `\n\nNote from the Chttrix team: ${note}` : ''}`,
+    subject: `${companyName} has been approved on Oruinwan`,
+    text: `Hi ${name}, ${companyName} has been approved on Oruinwan. Sign in: ${loginUrl}${note ? `\n\nNote from the Oruinwan team: ${note}` : ''}`,
     html: _shell({
       icon: '✅',
       title: 'Company approved',
-      subtitle: `${companyName} is live on Chttrix.`,
+      subtitle: `${companyName} is live on Oruinwan.`,
       preheader: `${companyName} has been approved. Sign in to get started.`,
       body,
     }),
@@ -553,13 +553,13 @@ function companyRejectedTemplate(name, companyName, reason, note) {
     ${_p('You can update your details and submit the registration again, or reply to this email if you believe this was a mistake.', { size: '13px', color: T.textMuted, mt: '20px', mb: '0' })}
   `;
   return {
-    subject: `Update on your Chttrix registration for ${companyName}`,
+    subject: `Update on your Oruinwan registration for ${companyName}`,
     text: `Hi ${name}, the registration for ${companyName} was not approved. Reason: ${reason || 'The submitted details could not be verified.'}${note ? `\n\n${note}` : ''}`,
     html: _shell({
       icon: '🔍',
       title: 'Registration not approved',
       subtitle: `We could not approve ${companyName} yet.`,
-      preheader: `Your Chttrix registration for ${companyName} needs attention.`,
+      preheader: `Your Oruinwan registration for ${companyName} needs attention.`,
       body,
     }),
   };

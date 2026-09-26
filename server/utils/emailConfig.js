@@ -5,7 +5,7 @@
  * startup log and scripts/email-check.js.
  */
 
-const DEFAULT_FROM_NAME = 'Chttrix';
+const DEFAULT_FROM_NAME = 'Oruinwan';
 
 // Mailbox providers that publish a strict DMARC policy: mail "from" these
 // domains relayed through Brevo fails DMARC and is rejected or spam-foldered.
@@ -66,7 +66,7 @@ function diagnoseEmailConfig(env = process.env) {
   }
 
   if (env.EMAIL_FROM && !parseFrom(env.EMAIL_FROM)) {
-    issues.push({ level: 'error', message: 'EMAIL_FROM is not a valid address. Use "noreply@yourdomain.com" or "Chttrix <noreply@yourdomain.com>".' });
+    issues.push({ level: 'error', message: 'EMAIL_FROM is not a valid address. Use "noreply@yourdomain.com" or "Oruinwan <noreply@yourdomain.com>".' });
   }
 
   const sender = resolveSender(env);

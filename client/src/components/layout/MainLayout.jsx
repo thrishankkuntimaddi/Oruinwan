@@ -223,7 +223,7 @@ const MainLayout = ({ children, sidePanel }) => {
 
     
     const getMobileSectionTitle = () => {
-        if (!workspaceId) return activeWorkspace?.name || 'Chttrix';
+        if (!workspaceId) return activeWorkspace?.name || 'Oruinwan';
         const p = currentPath;
         if (p.includes('/channels') || p.includes('/channel/')) return 'Channels';
         if (p.includes('/messages') || p.includes('/dm/'))      return 'Messages';
@@ -237,7 +237,7 @@ const MainLayout = ({ children, sidePanel }) => {
         if (p.includes('/settings'))                            return 'Settings';
         if (p.includes('/admin'))                               return 'Admin';
         if (p.includes('/manager'))                             return 'Manager';
-        return activeWorkspace?.name || 'Chttrix';
+        return activeWorkspace?.name || 'Oruinwan';
     };
 
     
@@ -364,7 +364,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                 <div style={{ padding: '20px 24px', backgroundColor: 'var(--bg-active)', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                     <BookOpen size={20} style={{ color: 'var(--accent)', flexShrink: 0 }} />
                                     <div>
-                                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Chttrix Academy</h2>
+                                        <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>Oruinwan Academy</h2>
                                         <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>Master your workflow with these guides.</p>
                                     </div>
                                 </div>
@@ -439,7 +439,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                     </div>
                                 </div>
                                 <div style={{ padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    {[{ date: 'Nov 2025', color: 'var(--accent)', title: 'Chttrix AI 2.0', body: 'Smarter responses, faster generation, and context-aware suggestions.' }, { date: 'Oct 2025', color: '#9c7fd4', title: 'Dark Mode Beta', body: 'Easy on the eyes. Now the default theme across the app.' }].map(item => (
+                                    {[{ date: 'Nov 2025', color: 'var(--accent)', title: 'Oruinwan AI 2.0', body: 'Smarter responses, faster generation, and context-aware suggestions.' }, { date: 'Oct 2025', color: '#9c7fd4', title: 'Dark Mode Beta', body: 'Easy on the eyes. Now the default theme across the app.' }].map(item => (
                                         <div key={item.date} style={{ paddingLeft: '14px', borderLeft: `2px solid ${item.color}`, position: 'relative' }}>
                                             <span style={{ fontSize: '10px', fontWeight: 700, color: item.color, textTransform: 'uppercase', letterSpacing: '0.1em' }}>{item.date}</span>
                                             <h3 style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)', margin: '3px 0 4px' }}>{item.title}</h3>
@@ -593,7 +593,7 @@ const MainLayout = ({ children, sidePanel }) => {
                     {!isMobile && <button
                         onClick={() => setShowAI(!showAI)}
                         style={{ padding: '6px', borderRadius: '2px', background: showAI ? 'var(--bg-hover)' : 'none', border: 'none', cursor: 'pointer', color: showAI ? 'var(--accent)' : 'var(--text-muted)', display: 'flex', transition: '150ms ease' }}
-                        title="Toggle Chttrix AI"
+                        title="Toggle Oruinwan AI"
                         onMouseEnter={e => { if (!showAI) e.currentTarget.style.color = 'var(--text-primary)'; }}
                         onMouseLeave={e => { if (!showAI) e.currentTarget.style.color = 'var(--text-muted)'; }}
                     >

@@ -63,7 +63,7 @@ const Step5ReviewForm = ({ formData, onEdit, theme }) => (
 
         <div style={{ marginTop: '20px', padding: '14px 16px', background: 'rgba(184,149,106,0.05)', border: '1px solid rgba(184,149,106,0.15)' }}>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.7' }}>
-                By submitting, you confirm all information is accurate and you agree to Chttrix's{' '}
+                By submitting, you confirm all information is accurate and you agree to Oruinwan's{' '}
                 <span style={{ color: '#b8956a', fontWeight: 600 }}>Terms of Service</span> and{' '}
                 <span style={{ color: '#b8956a', fontWeight: 600 }}>Privacy Policy</span>.
             </p>

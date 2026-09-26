@@ -30,7 +30,7 @@ async function nukeDbPreserveAdmin() {
         const adminUser = await User.findOne({ email: CHTTRIX_ADMIN_EMAIL });
 
         if (!adminUser) {
-            console.warn("⚠️  Warning: Chttrix admin not found! Database will be completely cleared.");
+            console.warn("⚠️  Warning: Oruinwan admin not found! Database will be completely cleared.");
             console.log("   Run createChttrixAdmin.js after this script to recreate the admin.");
         }
 

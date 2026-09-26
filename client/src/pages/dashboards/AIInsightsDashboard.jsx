@@ -129,7 +129,7 @@ export default function AIInsightsDashboard({ workspaceId, token }) {
                         AI Insights
                     </h1>
                     <p style={{ margin:'4px 0 0 0', fontSize:13, color:'#64748b' }}>
-                        Workspace analytics powered by Chttrix AI
+                        Workspace analytics powered by Oruinwan AI
                     </p>
                 </div>
                 <div style={{ display:'flex', alignItems:'center', gap:8 }}>

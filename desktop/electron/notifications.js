@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Chttrix Desktop — Native Notifications
+ * Oruinwan Desktop — Native Notifications
  *
  * Uses Electron's built-in Notification API.
  * Supports: messages, mentions, task reminders, system alerts.
@@ -40,7 +40,7 @@ const activeNotifications = new Set();
  * @param {Function}  [options.onClick] - called with { type } on notification click
  */
 function showNotification({
-  title = 'Chttrix',
+  title = 'Oruinwan',
   body  = '',
   type  = 'system',
   silent = !soundEnabled,

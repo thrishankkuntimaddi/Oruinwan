@@ -74,12 +74,12 @@ const CompanyConfirmation = () => {
                     {}
                     <div className="flex items-center gap-3 mb-8">
                         <img
-                            src="/chttrix-logo.jpg"
-                            alt="Chttrix"
+                            src="/icons/oruinwan-128.png"
+                            alt="Oruinwan"
                             className="h-10 w-10 object-contain rounded-xl"
                             onError={e => { e.target.style.display = 'none'; }}
                         />
-                        <span className="text-2xl font-black text-white tracking-tight">Chttrix</span>
+                        <span className="text-2xl font-black text-white tracking-tight">Oruinwan</span>
                     </div>
 
                     {}
@@ -140,7 +140,7 @@ const CompanyConfirmation = () => {
 
                     {}
                     <div className="flex items-center gap-2 mb-6 lg:hidden">
-                        <img src="/chttrix-logo.jpg" alt="Chttrix" className="h-8 rounded-md" onError={e => e.target.style.display = 'none'} />
+                        <img src="/icons/oruinwan-128.png" alt="Oruinwan" className="h-8 rounded-md" onError={e => e.target.style.display = 'none'} />
                     </div>
 
                     {}
@@ -163,11 +163,11 @@ const CompanyConfirmation = () => {
                         </div>
                         <div className="h-36 overflow-y-auto px-4 py-3 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed space-y-2.5">
                             {[
-                                ['1. Acceptance of Terms', 'By accessing and using Chttrix, you agree to be bound by these Terms. Continued use after any modifications constitutes acceptance of the revised terms.'],
-                                ['2. User Responsibilities', 'You are responsible for maintaining the confidentiality of your account credentials and must notify Chttrix immediately of any unauthorized use.'],
+                                ['1. Acceptance of Terms', 'By accessing and using Oruinwan, you agree to be bound by these Terms. Continued use after any modifications constitutes acceptance of the revised terms.'],
+                                ['2. User Responsibilities', 'You are responsible for maintaining the confidentiality of your account credentials and must notify Oruinwan immediately of any unauthorized use.'],
                                 ['3. Data Privacy', 'We collect and use your data as described in our Privacy Policy. We employ industry-standard encryption and do not sell your personal data.'],
                                 ['4. Enterprise Trial', 'Your 14-day Enterprise Trial gives full feature access. After the trial, your workspace continues on the free tier unless upgraded.'],
-                                ['5. Intellectual Property', 'Chttrix trademarks belong to Chttrix Inc. You retain ownership of all content you upload to the platform.'],
+                                ['5. Intellectual Property', 'Oruinwan trademarks belong to Oruinwan Inc. You retain ownership of all content you upload to the platform.'],
                             ].map(([title, body]) => (
                                 <div key={title}>
                                     <p className="font-bold text-slate-700 dark:text-slate-300 mb-0.5">{title}</p>
@@ -222,7 +222,7 @@ const CompanyConfirmation = () => {
                     </button>
 
                     <p className="text-center text-[10px] text-slate-400 dark:text-slate-600 mt-4">
-                        © 2026 Chttrix Inc. · By proceeding you accept our terms
+                        © 2026 Oruinwan Inc. · By proceeding you accept our terms
                     </p>
                 </div>
             </div>

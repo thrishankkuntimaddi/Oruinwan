@@ -1,30 +1,36 @@
 /**
- * Chttrix SDK — JavaScript client for the Chttrix API.
+ * Oruinwan SDK — JavaScript client for the Oruinwan API.
  *
  * Works in Node 18+ and modern browsers (uses global fetch). No dependencies.
  * Realtime is optional: pass a socket.io-client `io` function to enable it.
  *
- *   const { ChttrixSDK } = require('@chttrix/sdk');           // CommonJS
- *   import { ChttrixSDK } from '@chttrix/sdk';                 // ESM (via bundler)
- *   <script src="chttrix-sdk.js"></script> → window.ChttrixSDK // Browser
+ *   const { OruinwanSDK } = require('@oruinwan/sdk');           // CommonJS
+ *   import { OruinwanSDK } from '@oruinwan/sdk';                 // ESM (via bundler)
+ *   <script src="oruinwan-sdk.js"></script> → window.OruinwanSDK // Browser
+ *
+ *   ChttrixSDK / ChttrixError (and window.ChttrixSDK) remain as deprecated aliases.
+ *   Requests carry the legacy-named `X-Chttrix-SDK` header (wire contract, unchanged).
  *
  *   // Server-to-server with an API key (Developer Portal → API keys)
- *   const chttrix = new ChttrixSDK({ baseUrl: 'https://api.example.com', apiKey: 'chx_...' });
- *   const { tasks } = await chttrix.tasks.list({ status: 'todo' });
+ *   const oruinwan = new OruinwanSDK({ baseUrl: 'https://api.example.com', apiKey: 'chx_...' });
+ *   const { tasks } = await oruinwan.tasks.list({ status: 'todo' });
  *
  *   // On behalf of a user with a JWT
- *   const chttrix = new ChttrixSDK({ baseUrl, accessToken });
- *   await chttrix.webhooks.subscribe({ workspaceId, event: 'task.created', url });
+ *   const oruinwan = new OruinwanSDK({ baseUrl, accessToken });
+ *   await oruinwan.webhooks.subscribe({ workspaceId, event: 'task.created', url });
  */
 
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = factory();
-    module.exports.default = module.exports.ChttrixSDK;
+    module.exports.default = module.exports.OruinwanSDK;
   } else if (typeof define === 'function' && define.amd) {
     define(factory);
   } else {
-    root.ChttrixSDK = factory().ChttrixSDK;
+    const api = factory();
+    root.OruinwanSDK = api.OruinwanSDK;
+    /** @deprecated use window.OruinwanSDK */
+    root.ChttrixSDK = api.OruinwanSDK;
   }
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
@@ -32,10 +38,10 @@
   const VERSION = '1.0.0';
   const RETRYABLE = new Set([408, 425, 429, 500, 502, 503, 504]);
 
-  class ChttrixError extends Error {
+  class OruinwanError extends Error {
     constructor(message, { status = 0, code, response, request } = {}) {
       super(message);
-      this.name = 'ChttrixError';
+      this.name = 'OruinwanError';
       this.status = status;
       this.code = code;
       this.response = response;
@@ -52,10 +58,10 @@
     return '?' + entries.map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&');
   }
 
-  class ChttrixSDK {
+  class OruinwanSDK {
     /**
      * @param {object} options
-     * @param {string} [options.baseUrl]       Origin of the Chttrix API (no trailing slash). Defaults to window.location.origin in browsers.
+     * @param {string} [options.baseUrl]       Origin of the Oruinwan API (no trailing slash). Defaults to window.location.origin in browsers.
      * @param {string} [options.apiKey]        Public API key (chx_...). Used for /api/public/* resources.
      * @param {string} [options.accessToken]   User JWT for user-scoped endpoints.
      * @param {string} [options.refreshToken]  Refresh token (native/SDK clients only).
@@ -74,7 +80,7 @@
 
       const defaultOrigin = typeof window !== 'undefined' && window.location ? window.location.origin : '';
       this.baseUrl = String(baseUrl || defaultOrigin).replace(/\/+$/, '');
-      if (!this.baseUrl) throw new ChttrixError('ChttrixSDK: baseUrl is required outside a browser');
+      if (!this.baseUrl) throw new OruinwanError('OruinwanSDK: baseUrl is required outside a browser');
 
       this.apiKey = apiKey || null;
       this.accessToken = accessToken || null;
@@ -84,7 +90,7 @@
       this.retries = retries;
       this.onTokens = typeof onTokens === 'function' ? onTokens : null;
       this._fetch = fetchImpl || (typeof fetch === 'function' ? fetch.bind(globalThis) : null);
-      if (!this._fetch) throw new ChttrixError('ChttrixSDK: no fetch available; pass options.fetch');
+      if (!this._fetch) throw new OruinwanError('OruinwanSDK: no fetch available; pass options.fetch');
       this._io = io || null;
       this._socket = null;
       this._refreshing = null;
@@ -101,7 +107,7 @@
     }
 
     static get version() { return VERSION; }
-    static create(options) { return new ChttrixSDK(options); }
+    static create(options) { return new OruinwanSDK(options); }
 
     // ── Core request ──────────────────────────────────────────────────────────
 
@@ -128,10 +134,10 @@
 
       const mode = auth === 'auto' ? (path.startsWith('/api/public/') && this.apiKey ? 'apiKey' : this.accessToken ? 'bearer' : this.apiKey ? 'apiKey' : 'none') : auth;
       if (mode === 'apiKey') {
-        if (!this.apiKey) throw new ChttrixError('ChttrixSDK: apiKey is required for this call', { code: 'NO_API_KEY' });
+        if (!this.apiKey) throw new OruinwanError('OruinwanSDK: apiKey is required for this call', { code: 'NO_API_KEY' });
         reqHeaders['X-Api-Key'] = this.apiKey;
       } else if (mode === 'bearer') {
-        if (!this.accessToken) throw new ChttrixError('ChttrixSDK: accessToken is required for this call', { code: 'NO_ACCESS_TOKEN' });
+        if (!this.accessToken) throw new OruinwanError('OruinwanSDK: accessToken is required for this call', { code: 'NO_ACCESS_TOKEN' });
         reqHeaders.Authorization = `Bearer ${this.accessToken}`;
       }
 
@@ -153,7 +159,7 @@
           if (timer) clearTimeout(timer);
           const timedOut = err && err.name === 'AbortError';
           if (attempt < this.retries) { attempt += 1; await sleep(250 * 2 ** attempt); continue; }
-          throw new ChttrixError(timedOut ? `Request timed out after ${this.timeoutMs}ms` : `Network error: ${err.message}`, {
+          throw new OruinwanError(timedOut ? `Request timed out after ${this.timeoutMs}ms` : `Network error: ${err.message}`, {
             code: timedOut ? 'TIMEOUT' : 'NETWORK', request: { method, url },
           });
         }
@@ -179,7 +185,7 @@
         const data = await parseBody(res);
         if (!res.ok) {
           const message = (data && (data.message || data.error)) || res.statusText || `HTTP ${res.status}`;
-          throw new ChttrixError(message, { status: res.status, code: data && data.code, response: data, request: { method, url } });
+          throw new OruinwanError(message, { status: res.status, code: data && data.code, response: data, request: { method, url } });
         }
         return data;
       }
@@ -254,7 +260,7 @@
          */
         async subscribe({ workspaceId, url, event, events }) {
           const list = events && events.length ? events : [event];
-          if (!list[0]) throw new ChttrixError('webhooks.subscribe: event is required', { code: 'BAD_REQUEST' });
+          if (!list[0]) throw new OruinwanError('webhooks.subscribe: event is required', { code: 'BAD_REQUEST' });
           const created = [];
           for (const ev of list) {
             const out = await sdk.request(base, { method: 'POST', body: { workspaceId, url, event: ev }, auth: 'bearer' });
@@ -298,8 +304,8 @@
          */
         connect(opts = {}) {
           const io = opts.io || sdk._io;
-          if (!io) throw new ChttrixError('realtime.connect: pass socket.io-client\'s io() via options.io', { code: 'NO_IO' });
-          if (!sdk.accessToken) throw new ChttrixError('realtime.connect: accessToken is required', { code: 'NO_ACCESS_TOKEN' });
+          if (!io) throw new OruinwanError('realtime.connect: pass socket.io-client\'s io() via options.io', { code: 'NO_IO' });
+          if (!sdk.accessToken) throw new OruinwanError('realtime.connect: accessToken is required', { code: 'NO_ACCESS_TOKEN' });
           if (sdk._socket) return sdk._socket;
           sdk._socket = io(opts.url || sdk.baseUrl, {
             auth: { token: sdk.accessToken },
@@ -330,5 +336,13 @@
     try { const text = await res.text(); return text ? { message: text } : null; } catch { return null; }
   }
 
-  return { ChttrixSDK, ChttrixError, VERSION };
+  return {
+    OruinwanSDK,
+    OruinwanError,
+    VERSION,
+    /** @deprecated use OruinwanSDK */
+    ChttrixSDK: OruinwanSDK,
+    /** @deprecated use OruinwanError */
+    ChttrixError: OruinwanError,
+  };
 }));

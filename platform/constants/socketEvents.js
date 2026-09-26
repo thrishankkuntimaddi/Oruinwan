@@ -1,7 +1,7 @@
 /**
  * platform/constants/socketEvents.js
  *
- * Chttrix Platform — Centralized Socket Event Registry
+ * Oruinwan Platform — Centralized Socket Event Registry
  *
  * Single source of truth for all Socket.IO event names used across the
  * platform. All platforms (web, desktop, mobile) and the server should

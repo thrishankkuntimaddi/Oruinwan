@@ -58,7 +58,7 @@ async function fetchLinkPreview(url) {
         url,
         timeout: 5000,
         fetchOptions: {
-            headers: { 'User-Agent': 'Chttrix-LinkPreviewBot/1.0 (+https://chttrix.app)' },
+            headers: { 'User-Agent': 'Oruinwan-LinkPreviewBot/1.0 (+https://oruinwan.com)' },
         },
         onlyGetOpenGraphInfo: false,
     };

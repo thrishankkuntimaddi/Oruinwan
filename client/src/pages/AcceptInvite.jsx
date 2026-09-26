@@ -225,8 +225,8 @@ const AcceptInvite = () => {
             <div style={styles.bgGlow} />
 
             <div style={styles.topBrand} onClick={() => navigate('/')}>
-                <img src="/chttrix-logo.jpg" alt="Chttrix" style={{ width: '28px', height: '28px' }} />
-                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Chttrix</span>
+                <img src="/icons/oruinwan-128.png" alt="Oruinwan" style={{ width: '28px', height: '28px' }} />
+                <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>Oruinwan</span>
             </div>
 
             <div style={styles.card}>

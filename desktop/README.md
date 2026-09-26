@@ -1,6 +1,6 @@
-# Chttrix Desktop App
+# Oruinwan Desktop App
 
-Electron wrapper for the hosted Chttrix web client (Electron 28, electron-builder 24).
+Electron wrapper for the hosted Oruinwan web client (Electron 28, electron-builder 24).
 
 ## Quick start
 
@@ -8,7 +8,7 @@ Electron wrapper for the hosted Chttrix web client (Electron 28, electron-builde
 cd desktop
 npm install
 npm start            # dev: loads http://localhost:3000 (start the client first: cd client && npm run dev)
-npm run start:prod   # prod: loads https://app.chttrix.com
+npm run start:prod   # prod: loads https://app.oruinwan.com
 ```
 
 `npm start` and `npm run start:win` both use `cross-env`, so they work on macOS, Linux and Windows.
@@ -19,16 +19,16 @@ npm run start:prod   # prod: loads https://app.chttrix.com
 |---|---|---|
 | `ELECTRON_IS_DEV` | unset | `1` = dev mode: loads the dev URL, opens DevTools, trusts localhost origins |
 | `NODE_ENV` | unset | `development` works the same as `ELECTRON_IS_DEV=1` |
-| `CHTTRIX_WEB_URL` | dev `http://localhost:3000`, prod `https://app.chttrix.com` | URL the window loads. Its origin is added to the navigation and permission allowlists automatically |
+| `CHTTRIX_WEB_URL` | dev `http://localhost:3000`, prod `https://app.oruinwan.com` | URL the window loads. Its origin is added to the navigation and permission allowlists automatically |
 
 The localhost origins (3000, 5173, 5001) are trusted **only** in dev mode.
 
 ## Behaviour
 
 - **Offline fallback**: if the web client can't be reached, `renderer/index.html` is shown. It retries every 15s and has a Retry button (IPC `retry-connect`).
-- **Background running**: closing the window hides it on every platform. To quit, use the tray menu "Quit Chttrix", the app menu, or Cmd/Ctrl+Q. Tray "Open Chttrix" (or the dock icon on macOS) brings the window back, and recreates it if needed.
+- **Background running**: closing the window hides it on every platform. To quit, use the tray menu "Quit Oruinwan", the app menu, or Cmd/Ctrl+Q. Tray "Open Oruinwan" (or the dock icon on macOS) brings the window back, and recreates it if needed.
 - **Single instance**: launching the app a second time focuses the window that is already open.
-- **Security**: only allowlisted origins can load inside the app. Other links open in the system browser, but only `http:`, `https:` and `mailto:` ones; any other scheme is dropped. Media, notification and clipboard permissions are granted only to the Chttrix origin. Local `file://` pages get a strict CSP.
+- **Security**: only allowlisted origins can load inside the app. Other links open in the system browser, but only `http:`, `https:` and `mailto:` ones; any other scheme is dropped. Media, notification and clipboard permissions are granted only to the Oruinwan origin. Local `file://` pages get a strict CSP.
 - **Tray**: Open, Do Not Disturb, Enable/Disable Notifications, Check for Updates, Quit.
 - **Badge**: unread count on the dock (macOS) or launcher (Linux), and in the tray tooltip.
 
@@ -45,14 +45,14 @@ handles navigation when a notification is clicked or a deep link is opened.
 
 ## Deep links
 
-The app registers the `chttrix://` protocol. Supported links:
+The app registers the `oruinwan://` protocol, plus the legacy `chttrix://` protocol so existing links keep working (both accept the same paths). Supported links:
 
 ```
-chttrix://workspaces
-chttrix://workspace/<workspaceId>                    → /workspace/<id>/home
-chttrix://workspace/<workspaceId>/<section>          → tasks, notes, files, messages, channels, ...
-chttrix://workspace/<workspaceId>/channel/<channelId>
-chttrix://workspace/<workspaceId>/dm/<dmId>
+oruinwan://workspaces
+oruinwan://workspace/<workspaceId>                    → /workspace/<id>/home
+oruinwan://workspace/<workspaceId>/<section>          → tasks, notes, files, messages, channels, ...
+oruinwan://workspace/<workspaceId>/channel/<channelId>
+oruinwan://workspace/<workspaceId>/dm/<dmId>
 ```
 
 IDs must match `[A-Za-z0-9_-]{1,64}`, and any other link is ignored. On macOS links arrive through `open-url`. On Windows and Linux they arrive in the argv of the second instance. Registering the protocol only works fully in a packaged build (in dev it registers the local electron binary).
@@ -85,7 +85,7 @@ Packaged builds call `electron-updater`'s `checkForUpdatesAndNotify()` at startu
 `build.publish` in `package.json` uses a **placeholder** generic provider:
 
 ```json
-"publish": [{ "provider": "generic", "url": "https://downloads.chttrix.com/desktop" }]
+"publish": [{ "provider": "generic", "url": "https://downloads.oruinwan.com/desktop" }]
 ```
 
 Replace the URL with your real update host, and upload each build's artifacts together with `latest.yml`, `latest-mac.yml` and `latest-linux.yml` to it. You can also switch to the `github` or `s3` provider. macOS auto-update needs a signed build and the `zip` target.

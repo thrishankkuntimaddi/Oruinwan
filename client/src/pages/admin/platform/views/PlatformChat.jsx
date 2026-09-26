@@ -61,7 +61,7 @@ const PlatformChat = () => {
         setSelectedUser(user);
         setMessages([]);
         fetchMessages(user._id);
-        navigate(`/chttrix-admin/dm/user/${user._id}`, { replace: true });
+        navigate(`/platform-admin/dm/user/${user._id}`, { replace: true });
     };
 
     const sendMessage = async (e) => {

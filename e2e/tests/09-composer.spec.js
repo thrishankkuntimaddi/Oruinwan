@@ -111,9 +111,9 @@ test.describe('composer', () => {
     await expect(overlay).toBeHidden();
   });
 
-  test('the AI button opens the Chttrix AI panel', async () => {
+  test('the AI button opens the Oruinwan AI panel', async () => {
     await alice.locator('button[title="AI"]').click();
-    await expect(alice.getByPlaceholder(/ask|message chttrix ai|type/i).last()).toBeVisible();
+    await expect(alice.getByPlaceholder(/ask|message (oruinwan|chttrix) ai|type/i).last()).toBeVisible();
   });
 
   test('voice recorder can be cancelled', async () => {

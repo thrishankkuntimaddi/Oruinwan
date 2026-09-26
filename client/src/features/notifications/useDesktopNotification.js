@@ -28,7 +28,7 @@ export function useDesktopNotification() {
             const notif = new Notification(title, {
                 body,
                 icon,
-                tag: `chttrix-${Date.now()}`, 
+                tag: `oruinwan-${Date.now()}`, 
                 silent: false,
             });
 

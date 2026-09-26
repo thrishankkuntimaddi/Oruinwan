@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Generates the Chttrix desktop icons as real PNG files using only Node's zlib.
+ * Generates the Oruinwan desktop icons as real PNG files using only Node's zlib.
  *
  *   assets/icon.png       512x512  amber rounded square with a dark "C"
  *   assets/tray-icon.png   32x32   same mark, scaled

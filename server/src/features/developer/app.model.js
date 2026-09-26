@@ -37,7 +37,7 @@ const appSchema = new mongoose.Schema({
   },
   developer: {
     type: String,
-    default: 'Chttrix'
+    default: 'Oruinwan'
   },
   version: {
     type: String,

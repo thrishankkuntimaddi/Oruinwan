@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { X, Loader2, CheckCircle2, GitBranch } from "lucide-react";
 
 const MOCK_REPOS = [
-  "chttrix/frontend",
-  "chttrix/backend",
-  "chttrix/mobile",
-  "chttrix/design-system",
-  "chttrix/infra",
+  "oruinwan/frontend",
+  "oruinwan/backend",
+  "oruinwan/mobile",
+  "oruinwan/design-system",
+  "oruinwan/infra",
 ];
 
 const MOCK_LABELS = ["bug", "enhancement", "feature", "documentation", "question", "help wanted"];

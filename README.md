@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="client/public/chttrix-logo.jpg" alt="Chttrix Logo" width="80" height="80" style="border-radius: 12px;" />
+<img src="client/public/icons/oruinwan-192.png" alt="Oruinwan Logo" width="80" height="80" style="border-radius: 12px;" />
 
-# Chttrix — AI-Augmented Collaboration Platform
+# Oruinwan — AI-Augmented Collaboration Platform
 
 **The enterprise workspace OS. Real-time messaging, AI intelligence, E2EE, and an entire operating system for teams — in a single platform.**
 
@@ -14,7 +14,7 @@
 [![Socket.IO](https://img.shields.io/badge/Socket.IO-4-black.svg)](https://socket.io/)
 [![Redis](https://img.shields.io/badge/Redis-7-red.svg)](https://redis.io/)
 
-[Live Demo](https://chttrix.vercel.app) · [Documentation](https://chttrix.vercel.app/chttrix-docs) · [Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
+[Live Demo](https://chttrix.vercel.app) · [Documentation](https://chttrix.vercel.app/docs) · [Report Bug](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues) · [Feature Request](https://github.com/thrishankkuntimaddi/Chttrix-AI-Augmented-Collaboration-Platform/issues)
 
 </div>
 
@@ -22,7 +22,7 @@
 
 ## 📖 Table of Contents
 
-- [What is Chttrix?](#-what-is-chttrix)
+- [What is Oruinwan?](#-what-is-oruinwan)
 - [Feature Overview](#-feature-overview)
 - [Architecture](#-architecture)
 - [Tech Stack](#-tech-stack)
@@ -44,12 +44,12 @@
 
 ---
 
-## 🚀 What is Chttrix?
+## 🚀 What is Oruinwan?
 
-Chttrix is a **production-grade, full-stack collaboration platform** built for modern teams. It goes beyond simple messaging — it is a complete **Workspace Operating System** that consolidates:
+Oruinwan is a **production-grade, full-stack collaboration platform** built for modern teams. It goes beyond simple messaging — it is a complete **Workspace Operating System** that consolidates:
 
 - Team messaging (channels, threads, DMs) with full E2EE
-- AI-powered assistance (Chttrix Intelligence, powered by Gemini AI)
+- AI-powered assistance (Oruinwan AI, powered by Gemini AI)
 - Task & project management with sprints, milestones, and boards
 - Document collaboration with a rich note-taking system
 - Knowledge base management
@@ -60,7 +60,7 @@ Chttrix is a **production-grade, full-stack collaboration platform** built for m
 - Enterprise-grade admin, compliance, and audit infrastructure
 - Cross-platform: Web, Electron Desktop, React Native Mobile, and SDK
 
-Chttrix is architected as a true **multi-tenant SaaS** platform with workspace isolation, company-level administration, and deep role-based access control.
+Oruinwan is architected as a true **multi-tenant SaaS** platform with workspace isolation, company-level administration, and deep role-based access control.
 
 ---
 
@@ -87,7 +87,7 @@ Chttrix is architected as a true **multi-tenant SaaS** platform with workspace i
 - Encrypted DMs using X25519 identity keys
 - Compliance with zero-knowledge architecture
 
-### 🤖 AI — Chttrix Intelligence
+### 🤖 AI — Oruinwan AI
 - **Gemini AI** integration (Google `@google/generative-ai`)
 - Context-aware chat assistant embedded in workspace
 - **Screen Context** — AI reads current page to answer contextually
@@ -158,9 +158,9 @@ Chttrix is architected as a true **multi-tenant SaaS** platform with workspace i
 
 ### 🔌 Integrations & Developer Platform
 - GitHub, Slack, and more via **Integrations** panel
-- **Developer Portal** — build OAuth apps on top of Chttrix
+- **Developer Portal** — build OAuth apps on top of Oruinwan
 - Webhook registration and delivery
-- Platform SDK (`/sdk`) — React Native and web SDK for embedding Chttrix
+- Platform SDK (`/sdk`) — React Native and web SDK for embedding Oruinwan
 - REST API + Socket.IO real-time API
 
 ---
@@ -287,7 +287,7 @@ ChttrixCollab/
 │   │   │   │       ├── KnowledgePanel.jsx
 │   │   │   │       ├── MeetingsPanel.jsx
 │   │   │   │       └── UpdatesPanel.jsx
-│   │   │   ├── ai/                 # Chttrix AI components
+│   │   │   ├── ai/                 # Oruinwan AI components
 │   │   │   │   └── ChttrixAIChat/  # Full AI chat panel
 │   │   │   ├── chat/               # Message composer, rich editor, slash commands
 │   │   │   ├── home/               # Home panel, workspace header
@@ -372,7 +372,7 @@ ChttrixCollab/
 │   │   ├── shared/                 # Shared middleware, validators
 │   │   └── utils/                  # Server-side utilities
 │
-├── ai/                             # Chttrix Intelligence (framework-free, see ai/README.md)
+├── ai/                             # Oruinwan AI (framework-free, see ai/README.md)
 │   ├── api/ai.gateway.js           # Boundary the server calls: chat / summarize / generateTask
 │   ├── orchestrator/               # Intent → agent routing, memory, activity events
 │   ├── agents/                     # ChatAgent (tool calling), SummarizeAgent, TaskAgent
@@ -393,8 +393,8 @@ ChttrixCollab/
 │   ├── renderer/                   # Offline fallback page
 │   └── assets/                     # App and tray icons
 │
-├── sdk/                            # @chttrix/sdk — JavaScript client (see sdk/js/README.md)
-│   ├── js/chttrix-sdk.js           # UMD client: API keys, user tokens, webhooks, AI, realtime
+├── sdk/                            # @oruinwan/sdk — JavaScript client (see sdk/js/README.md)
+│   ├── js/oruinwan-sdk.js          # UMD client: API keys, user tokens, webhooks, AI, realtime
 │   ├── js/index.d.ts               # TypeScript definitions
 │   └── __tests__/                  # Jest suite (mocked fetch)
 │
@@ -535,7 +535,7 @@ SMTP_FALLBACK_HOST=smtp.gmail.com        # optional backup (Gmail app password)
 SMTP_FALLBACK_PORT=587
 SMTP_FALLBACK_USER=<your-gmail>
 SMTP_FALLBACK_PASS=<gmail-app-password>
-EMAIL_FROM=noreply@chttrix.io
+EMAIL_FROM=noreply@oruinwan.com
 # Brevo: if the log says "unrecognised / unauthorized IP address", disable
 # Security → Authorised IPs at https://app.brevo.com/security/authorised_ips
 
@@ -653,7 +653,7 @@ The backend exposes a versioned REST API at `/api/`. All protected routes requir
 
 ## ⚡ Real-time System
 
-Chttrix uses **Socket.IO 4** with the `@socket.io/redis-adapter` for horizontal scaling across multiple server instances.
+Oruinwan uses **Socket.IO 4** with the `@socket.io/redis-adapter` for horizontal scaling across multiple server instances.
 
 ### Key Socket Events
 
@@ -688,7 +688,7 @@ The Redis adapter ensures that Socket.IO events broadcast correctly across all s
 
 ## 🤖 AI System
 
-Chttrix Intelligence is one AI layer (`/ai`) that every feature calls through a single gateway. The server default is **Google Gemini** (`gemini-2.5-flash`); each workspace can switch to **OpenAI**, **Anthropic Claude** or a **local / self-hosted OpenAI-compatible model** (Ollama, LM Studio, vLLM) from **Settings → Chttrix AI**, with its own API key sealed under the server key. Tests run against a mock provider.
+Oruinwan AI is one AI layer (`/ai`) that every feature calls through a single gateway. The server default is **Google Gemini** (`gemini-2.5-flash`); each workspace can switch to **OpenAI**, **Anthropic Claude** or a **local / self-hosted OpenAI-compatible model** (Ollama, LM Studio, vLLM) from **Settings → Oruinwan AI**, with its own API key sealed under the server key. Tests run against a mock provider.
 
 ### Where it shows up
 | Surface | What it does |
@@ -699,7 +699,7 @@ Chttrix Intelligence is one AI layer (`/ai`) that every feature calls through a 
 | **Notes** | Summarize, extract action items (→ tasks), expand, rewrite, structure, proofread, shorten, continue, or free-form instructions |
 | **Tasks** | Write description, suggest subtasks, acceptance criteria, effort estimate |
 | **Command palette** (⌘/) | Natural-language commands: create task, schedule meeting, ask the knowledge base |
-| **Settings → Chttrix AI** | Turn AI / smart replies on or off, pick provider & model, connect keys, test the connection, see usage |
+| **Settings → Oruinwan AI** | Turn AI / smart replies on or off, pick provider & model, connect keys, test the connection, see usage |
 
 Messages are end-to-end encrypted: the client decrypts and sends only the text it can read; the server never feeds stored message content to a model.
 
@@ -788,7 +788,7 @@ The permission matrix provides **capability-level control** beyond roles:
 
 ## 📱 Mobile Experience
 
-Chttrix has a **fully responsive mobile web UI** built into the main React app, plus a dedicated **React Native (Expo)** app.
+Oruinwan has a **fully responsive mobile web UI** built into the main React app, plus a dedicated **React Native (Expo)** app.
 
 ### Mobile Web (Responsive)
 The mobile web view uses a dedicated 5-tab bottom navigation bar:
@@ -798,7 +798,7 @@ The mobile web view uses a dedicated 5-tab bottom navigation bar:
 | **Home** | 🏠 | `/workspace/:id/home` — workspace grid |
 | **Notes** | 📄 | `/workspace/:id/notes` — notes list |
 | **Tasks** | ✅ | `/workspace/:id/tasks` — task manager |
-| **AI** | 🤖 | Opens Chttrix AI full-screen panel |
+| **AI** | 🤖 | Opens Oruinwan AI full-screen panel |
 | **Settings** | ⚙️ | `/settings` — user settings |
 
 **Mobile navigation patterns:**
@@ -827,11 +827,11 @@ npx expo export --platform android   # verifies the bundle compiles
 
 ## 🖥 Desktop App
 
-The Electron desktop app (`/desktop`) wraps the hosted Chttrix web client in a hardened Chromium shell. Details in [`desktop/README.md`](desktop/README.md).
+The Electron desktop app (`/desktop`) wraps the hosted Oruinwan web client in a hardened Chromium shell. Details in [`desktop/README.md`](desktop/README.md).
 
 - **Native notifications** with click-to-navigate, dock and tray unread badge, Do Not Disturb, and a bridge the web client calls through `window.chttrixDesktop`
 - **System tray** with open, notifications, DnD, check-for-updates and quit; closing the window hides it on every platform
-- **Deep links** via `chttrix://workspace/<id>/channel/<id>`, single-instance lock, auto-update through `electron-updater`
+- **Deep links** via `oruinwan://workspace/<id>/channel/<id>` (legacy `chttrix://` links still work), single-instance lock, auto-update through `electron-updater`
 - **Security** — context isolation and sandbox, origin-checked permissions, CSP on the offline page, only http/https/mailto links open externally, OAuth popups confined to a preload-free window
 - **Offline fallback** page with automatic retry when the web client is unreachable
 
@@ -847,30 +847,30 @@ npm run build:mac    # or build:win / build:linux
 
 ## 🔧 SDK & Developer Platform
 
-### Chttrix SDK (`/sdk/js`)
+### Oruinwan SDK (`/sdk/js`)
 Zero-dependency JavaScript client for Node 18+ and browsers. Full docs in [`sdk/js/README.md`](sdk/js/README.md).
 
 ```bash
-npm install ./sdk/js            # or, once published: npm install @chttrix/sdk
+npm install ./sdk/js            # or, once published: npm install @oruinwan/sdk
 ```
 
 ```js
-const { ChttrixSDK } = require('@chttrix/sdk');
+const { OruinwanSDK } = require('@oruinwan/sdk');
 
 // Server-to-server with a workspace API key from the Developer Portal
-const chttrix = new ChttrixSDK({ baseUrl: 'https://api.example.com', apiKey: 'chx_...' });
-const { tasks } = await chttrix.tasks.list({ status: 'todo' });
-await chttrix.tasks.create({ title: 'Rotate credentials', priority: 'high' });
+const oruinwan = new OruinwanSDK({ baseUrl: 'https://api.example.com', apiKey: 'chx_...' });
+const { tasks } = await oruinwan.tasks.list({ status: 'todo' });
+await oruinwan.tasks.create({ title: 'Rotate credentials', priority: 'high' });
 
 // On behalf of a user
-await chttrix.auth.login(email, password);
-await chttrix.webhooks.subscribe({ workspaceId, url, events: ['task.created', 'message.sent'] });
-const { text } = await chttrix.ai.chat({ message: 'Summarise #general', workspaceId });
+await oruinwan.auth.login(email, password);
+await oruinwan.webhooks.subscribe({ workspaceId, url, events: ['task.created', 'message.sent'] });
+const { text } = await oruinwan.ai.chat({ message: 'Summarise #general', workspaceId });
 
 // Realtime (optional socket.io-client)
 const { io } = require('socket.io-client');
-chttrix.realtime.connect({ io });
-chttrix.realtime.on('new-message', console.log);
+oruinwan.realtime.connect({ io });
+oruinwan.realtime.on('new-message', console.log);
 ```
 
 ### Developer Portal (In-App)
@@ -934,7 +934,7 @@ Set `VITE_API_URL` to your deployed server URL.
 
 ## 🎨 Design System
 
-Chttrix uses a custom design system called **Monolith Flow** — a dark-first, border-based, flat aesthetic inspired by tools like Linear and Raycast.
+Oruinwan uses a custom design system called **Monolith Flow** — a dark-first, border-based, flat aesthetic inspired by tools like Linear and Raycast.
 
 ### Core Design Principles
 - **Dark-first** — deep charcoal backgrounds, no harsh blacks
@@ -976,7 +976,7 @@ Chttrix uses a custom design system called **Monolith Flow** — a dark-first, b
 
 > *Before you fork, star, or scroll past — I want to be honest with you.*
 
-I built Chttrix **alone, for 5 months straight.**
+I built Oruinwan **alone, for 5 months straight.**
 
 No co-founder. No team. No one to rubber-duck debug with at 2am. Just me, a blank editor, and an idea that felt enormous every single morning and impossible every single night.
 
@@ -1068,6 +1068,6 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 Built with ❤️ by [Thrishank Kuntimaddi](https://github.com/thrishankkuntimaddi)
 
-**Chttrix** — *Collaborate Smarter. Build Faster. Together.*
+**Oruinwan** — *Collaborate Smarter. Build Faster. Together.*
 
 </div>

@@ -37,7 +37,7 @@ const NAV_SECTIONS = [
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & 2FA' },
     { id: 'sessions', label: 'Sessions', icon: Laptop, description: 'Active devices' },
     { id: 'integrations', label: 'Integrations', icon: Plug, description: 'Webhooks & AI providers' },
-    { id: 'ai', label: 'Chttrix AI', icon: Sparkles, description: 'Provider, model, usage' },
+    { id: 'ai', label: 'Oruinwan AI', icon: Sparkles, description: 'Provider, model, usage' },
     { id: 'compliance', label: 'Compliance & Privacy', icon: Shield, description: 'GDPR, audit logs, retention' },
     { id: 'advanced', label: 'Advanced', icon: SettingsIcon, description: 'Account & data' },
 ];
@@ -217,8 +217,8 @@ const Settings = () => {
                     >
                         <ArrowLeft size={16} />
                     </button>
-                    <img src="/chttrix-logo.jpg" alt="Logo" style={{ width: 20, height: 20, borderRadius: 2 }} />
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Chttrix</span>
+                    <img src="/icons/oruinwan-128.png" alt="Logo" style={{ width: 20, height: 20, borderRadius: 2 }} />
+                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Oruinwan</span>
                     <span style={{
                         marginLeft: 'auto',
                         fontSize: 9,

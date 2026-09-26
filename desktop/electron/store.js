@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Chttrix Desktop — Persistent Settings Store
+ * Oruinwan Desktop — Persistent Settings Store
  *
  * Wraps electron-store to provide typed, schema-validated persistence
  * for user preferences (notification settings, window state, etc.)

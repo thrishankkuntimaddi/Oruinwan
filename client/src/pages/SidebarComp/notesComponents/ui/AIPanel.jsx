@@ -77,7 +77,7 @@ const AIPanel = ({ blocks, title, workspaceId, onInsertBlock, onClose }) => {
             <Sparkles size={13} style={{ color: 'var(--accent)' }} />
           </div>
           <div>
-            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font)', margin: 0 }}>Chttrix AI</h3>
+            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', fontFamily: 'var(--font)', margin: 0 }}>Oruinwan AI</h3>
             <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>Works on this note</p>
           </div>
         </div>

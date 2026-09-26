@@ -66,7 +66,7 @@ export const exportAnalytics = async (format = 'csv', period = 30) => {
 };
 
 const convertToCSV = (data) => {
-    let csv = 'ChttrixCollab Analytics Export\n';
+    let csv = 'Oruinwan Analytics Export\n';
     csv += `Exported: ${new Date().toLocaleString()}\n`;
     csv += `Period: ${data.period} days\n\n`;
 

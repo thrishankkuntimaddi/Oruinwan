@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * Support tickets as the platform (Chttrix) admins see them.
+ * Support tickets as the platform (Oruinwan) admins see them.
  *
  * Company users create tickets through /api/platform/support, which stores the
  * ticket in SupportTicket and every message in SupportMessage. The admin views

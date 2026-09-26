@@ -422,7 +422,7 @@ ${blockHtml}
     }, [id, updateNote]);
 
     
-    // Let Chttrix AI (⌘⇧A) see the open note.
+    // Let Oruinwan AI (⌘⇧A) see the open note.
     const aiCtx = useAIContext();
     const setAINote = aiCtx?.setNote;
     const blocksRef = useRef(blocks);

@@ -425,12 +425,12 @@ async function sendWelcomeEmail({ to, name, companyName, companyEmail, loginEmai
     try {
         await sendEmail({
             to,
-            subject: `You're invited to join ${companyName} on Chttrix`,
+            subject: `You're invited to join ${companyName} on Oruinwan`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; background: #f8fafc;">
                     <div style="background: white; border-radius: 16px; padding: 40px; border: 1px solid #e2e8f0;">
                         <h1 style="color: #1e293b; font-size: 24px; margin-bottom: 8px;">Welcome to ${companyName}! 🎉</h1>
-                        <p style="color: #64748b; margin-bottom: 24px;">Hi ${name}, your account has been set up on Chttrix.</p>
+                        <p style="color: #64748b; margin-bottom: 24px;">Hi ${name}, your account has been set up on Oruinwan.</p>
 
                         <div style="background: #f1f5f9; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
                             <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; font-weight: bold; letter-spacing: 0.05em; text-transform: uppercase;">Your Login Details</p>
@@ -443,7 +443,7 @@ async function sendWelcomeEmail({ to, name, companyName, companyEmail, loginEmai
 
                         <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/login" 
                            style="display: inline-block; margin-top: 20px; background: #4f46e5; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                            Login to Chttrix →
+                            Login to Oruinwan →
                         </a>
 
                         <p style="margin-top: 32px; font-size: 12px; color: #94a3b8;">This invitation was sent by ${companyName}. If you believe this was a mistake, please ignore this email.</p>
