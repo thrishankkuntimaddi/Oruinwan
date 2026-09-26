@@ -12,7 +12,8 @@ export function normalizeMessage(msg) {
                 : msg.pollId ? 'poll'
                     : msg.type === 'contact' ? 'contact'
                         : msg.type === 'meeting' ? 'meeting'
-                            : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
+                            : msg.type === 'checklist' ? 'checklist'
+                                : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
                                 : 'message',
         payload: {
             ...msg,
@@ -27,6 +28,7 @@ export function normalizeMessage(msg) {
         },
         ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
         ...(msg.type === 'contact' && { contact: msg.contact }),
+        ...(msg.type === 'checklist' && { checklist: msg.checklist || [] }),
         ...(msg.type === 'system' && {
             systemEvent: msg.systemEvent,
             systemData: msg.systemData,

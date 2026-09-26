@@ -4,10 +4,10 @@ import {
     Users, MessageSquare, Grid, Signal, Settings, Hand,
     Radio, Plus, Play, Calendar,
 } from 'lucide-react';
-import { useHuddleContext } from '../../contexts/HuddleContext';
+import { useHuddleContext } from '../../features/huddles/HuddleContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
-import ScheduleMeetingModal from '../../components/messagesComp/chatWindowComp/modals/ScheduleMeetingModal';
+import ScheduleMeetingModal from '../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal';
 import { useParams } from 'react-router-dom';
 
 function formatTime(seconds) {

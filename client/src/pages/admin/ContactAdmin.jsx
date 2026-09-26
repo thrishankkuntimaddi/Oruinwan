@@ -29,6 +29,10 @@ const ContactAdmin = () => {
     const [loadingTickets, setLoadingTickets] = useState(false);
     const [isCreateTicketOpen, setIsCreateTicketOpen] = useState(false);
     const [newTicket, setNewTicket] = useState({ subject: '', priority: 'medium', description: '' });
+    const [openTicketId, setOpenTicketId] = useState(null);
+    const [thread, setThread] = useState([]);
+    const [loadingThread, setLoadingThread] = useState(false);
+    const [threadReply, setThreadReply] = useState('');
 
     useEffect(() => {
         if (!socket || !user || activeTab !== 'chat') return undefined;
@@ -66,6 +70,47 @@ const ContactAdmin = () => {
     }, [activeTab, user, fetchMessages]);
 
     useEffect(() => { if (activeTab === 'tickets' && company?._id) fetchTickets(); }, [activeTab, company?._id, fetchTickets]);
+
+    const toggleThread = useCallback(async (ticketId) => {
+        if (openTicketId === ticketId) { setOpenTicketId(null); return; }
+        setOpenTicketId(ticketId);
+        setThread([]);
+        setThreadReply('');
+        try {
+            setLoadingThread(true);
+            const response = await api.get(`/api/platform/support/tickets/${ticketId}/messages`);
+            setThread(response.data.messages || []);
+        } catch { showToast('Failed to load conversation', 'error'); } finally { setLoadingThread(false); }
+    }, [openTicketId, showToast]);
+
+    const sendThreadReply = async () => {
+        const content = threadReply.trim();
+        if (!content || !openTicketId) return;
+        try {
+            const response = await api.post(`/api/platform/support/tickets/${openTicketId}/messages`, { content });
+            const message = response.data.message;
+            setThread(prev => prev.some(m => m._id === message._id) ? prev : [...prev, message]);
+            setThreadReply('');
+        } catch { showToast('Failed to send reply', 'error'); }
+    };
+
+    // Live replies and status changes from the Chttrix support team.
+    useEffect(() => {
+        if (!socket || activeTab !== 'tickets') return undefined;
+        const onSupportMessage = ({ ticketId, message }) => {
+            if (ticketId !== openTicketId || !message) return;
+            setThread(prev => prev.some(m => m._id === message._id) ? prev : [...prev, message]);
+        };
+        const onTicketUpdated = ({ ticketId, status }) => {
+            setTickets(prev => prev.map(t => t._id === ticketId ? { ...t, status } : t));
+        };
+        socket.on('support-message', onSupportMessage);
+        socket.on('support-ticket-updated', onTicketUpdated);
+        return () => {
+            socket.off('support-message', onSupportMessage);
+            socket.off('support-ticket-updated', onTicketUpdated);
+        };
+    }, [socket, activeTab, openTicketId]);
     useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
     const handleSendMessage = async (e) => {
@@ -241,7 +286,41 @@ const ContactAdmin = () => {
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                     <Clock size={11} /> {new Date(ticket.createdAt).toLocaleDateString()}
                                                 </span>
+                                                <button onClick={() => toggleThread(ticket._id)}
+                                                    style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--accent)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <MessageSquare size={11} /> {openTicketId === ticket._id ? 'Hide conversation' : 'View conversation'}
+                                                </button>
                                             </div>
+                                            {openTicketId === ticket._id && (
+                                                <div data-testid="ticket-thread" style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    {loadingThread ? (
+                                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Loading…</p>
+                                                    ) : thread.length === 0 ? (
+                                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No replies yet.</p>
+                                                    ) : thread.map(m => {
+                                                        const fromSupport = m.senderRole === 'platform';
+                                                        return (
+                                                            <div key={m._id} style={{ alignSelf: fromSupport ? 'flex-start' : 'flex-end', maxWidth: '85%', padding: '8px 10px', background: fromSupport ? 'var(--bg-active)' : 'var(--bg-hover)', border: `1px solid ${fromSupport ? 'var(--border-accent)' : 'var(--border-subtle)'}` }}>
+                                                                <p style={{ fontSize: '10px', fontWeight: 700, color: fromSupport ? 'var(--accent)' : 'var(--text-muted)', marginBottom: '3px' }}>
+                                                                    {fromSupport ? 'Chttrix Support' : (m.sender?.username || 'You')} · {new Date(m.createdAt).toLocaleString()}
+                                                                </p>
+                                                                <p style={{ fontSize: '12px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', margin: 0 }}>{m.content}</p>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    {ticket.status !== 'closed' && (
+                                                        <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                                                            <input value={threadReply} onChange={e => setThreadReply(e.target.value)}
+                                                                onKeyDown={e => { if (e.key === 'Enter') sendThreadReply(); }}
+                                                                placeholder="Reply to support…" style={inputSt} />
+                                                            <button onClick={sendThreadReply} disabled={!threadReply.trim()} aria-label="Send reply"
+                                                                style={{ background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', padding: '0 12px', cursor: threadReply.trim() ? 'pointer' : 'not-allowed', opacity: threadReply.trim() ? 1 : 0.5 }}>
+                                                                <Send size={13} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

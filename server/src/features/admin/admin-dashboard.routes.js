@@ -96,7 +96,7 @@ router.get('/workspaces-access', requireAuth, requireAdmin, async (req, res) => 
             .lean();
 
         
-        const Message = require("../messages/message.model.js");
+        const Message = require("../../modules/messages/message.model.js");
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
         for (const workspace of workspaces) {

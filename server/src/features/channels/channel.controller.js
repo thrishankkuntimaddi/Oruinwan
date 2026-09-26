@@ -1,9 +1,10 @@
 'use strict';
 
 const Channel = require('./channel.model.js');
+const { recordAdminAction } = require("../../shared/adminAudit");
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
-const Message = require('../messages/message.model.js');
+const Message = require('../../modules/messages/message.model.js');
 const { saveWithRetry } = require('../../../utils/mongooseRetry');
 const { handleError, badRequest, forbidden } = require('../../../utils/responseHelpers');
 const { isMember, normalizeMemberFormat } = require('../../../utils/memberHelpers');
@@ -799,6 +800,11 @@ exports.assignAdmin = async (req, res) => {
       });
     }
 
+    await recordAdminAction({
+      userId, companyId: channel.company, action: 'channel.admin_assigned', category: 'permissions', severity: 'info',
+      resourceType: 'Channel', resourceId: channel._id, resourceName: channel.name, details: { targetUserId }, req,
+    });
+
     return res.json({
       message: "Admin assigned successfully",
       systemMessage
@@ -849,6 +855,11 @@ exports.deleteChannel = async (req, res) => {
       });
     }
 
+    await recordAdminAction({
+      userId, companyId: channel.company, action: 'channel.deleted', category: 'permissions', severity: 'critical',
+      resourceType: 'Channel', resourceId: channel._id, resourceName: channel.name, details: { deletedMessages: deletedMessages?.deletedCount ?? 0 }, req,
+    });
+
     return res.json({
       message: "Channel deleted successfully",
       deletedMessages: deletedMessages.deletedCount
@@ -895,6 +906,8 @@ exports.getChannelDetails = async (req, res) => {
       creatorName: channel.createdBy?.username || channel.createdBy?.firstName || 'Unknown',
       memberCount: channel.members.length,
       admins: channel.admins || [],
+      broadcastMentions: channel.broadcastMentions || 'everyone',
+      postingPolicy: channel.postingPolicy || 'everyone',
       members: channel.members.map(m => ({
         user: m.user,
         joinedAt: m.joinedAt
@@ -1082,6 +1095,11 @@ exports.demoteAdmin = async (req, res) => {
       });
     }
 
+    await recordAdminAction({
+      userId, companyId: channel.company, action: 'channel.admin_demoted', category: 'permissions', severity: 'info',
+      resourceType: 'Channel', resourceId: channel._id, resourceName: channel.name, details: { targetUserId }, req,
+    });
+
     return res.json({
       message: "Admin demoted successfully",
       systemMessage
@@ -1184,6 +1202,11 @@ exports.removeMember = async (req, res) => {
         removedBy: removerName
       });
     }
+
+    await recordAdminAction({
+      userId, companyId: channel.company, action: 'channel.member_removed', category: 'permissions', severity: 'warning',
+      resourceType: 'Channel', resourceId: channel._id, resourceName: channel.name, details: { targetUserId }, req,
+    });
 
     return res.json({
       message: "Member removed successfully",

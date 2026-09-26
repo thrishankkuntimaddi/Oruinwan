@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getAvatarUrl } from '../../../utils/avatarUtils';
+import { getAvatarUrl, rememberAvatar } from '../../../utils/avatarUtils';
 
 const Avatar = ({ src, username, alt, fallback, size = "md", className = "", status, ...props }) => {
     const [error, setError] = useState(false);
@@ -30,6 +30,7 @@ const Avatar = ({ src, username, alt, fallback, size = "md", className = "", sta
     
     
     const seed = username || alt || fallback;
+    if (src && seed) rememberAvatar({ username: seed, profilePicture: src });
     const autoAvatarSrc = seed ? getAvatarUrl({ username: seed }) : null;
     const effectiveSrc = (!error && src) ? src : (!error && autoAvatarSrc ? null : null);
     const imgSrc = src && !error ? src : (autoAvatarSrc && !error ? autoAvatarSrc : null);

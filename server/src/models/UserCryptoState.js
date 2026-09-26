@@ -54,7 +54,7 @@ const UserCryptoStateSchema = new mongoose.Schema(
     
     algorithm: {
       type: String,
-      default: 'X25519'
+      default: 'RSA-2048'
     },
 
     

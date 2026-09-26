@@ -4,7 +4,7 @@ const router = express.Router();
 const mongoose = require('mongoose');
 const User = require('../../../models/User');
 const Company = require('../../../models/Company');
-const Ticket = require('../../../models/Ticket');
+const supportTickets = require('../support/supportTickets.service');
 const Broadcast = require('../../../models/Broadcast');
 const Billing = require('../../../models/Billing');
 const sendEmail = require('../../../utils/sendEmail');
@@ -13,7 +13,7 @@ const AuditLog = require('../../../models/AuditLog');
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
-const Message = require("../messages/message.model.js");
+const Message = require("../../modules/messages/message.model.js");
 const Task = require('../../../models/Task');
 const Note = require('../../../models/Note');
 const requireAuth = require('../../shared/middleware/auth');
@@ -60,9 +60,7 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
     });
 
     
-    const openTickets = await Ticket.countDocuments({
-      status: { $in: ['open', 'in-progress'] }
-    });
+    const openTickets = await supportTickets.countOpenTickets();
 
     
     const billings = await Billing.find({ status: 'active' });
@@ -284,22 +282,12 @@ router.get('/active-companies', requireSuperAdmin, async (req, res) => {
   }
 });
 
+// Tickets live in SupportTicket/SupportMessage, the same records company users write
+// through /api/platform/support (the old Ticket model was never written to).
 router.get('/tickets', requireSuperAdmin, async (req, res) => {
   try {
     const { status, priority, companyId } = req.query;
-    const filter = {};
-
-    if (status) filter.status = status;
-    if (priority) filter.priority = priority;
-    if (companyId) filter.companyId = companyId;
-
-    const tickets = await Ticket.find(filter)
-      .populate('companyId', 'name domain')
-      .populate('creatorId', 'username email')
-      .populate('messages.sender', 'username roles')
-      .sort({ createdAt: -1 });
-
-    res.json(tickets);
+    res.json(await supportTickets.listTickets({ status, priority, companyId }));
   } catch (err) {
     logger.error('Error fetching tickets:', err);
     res.status(500).json({ message: 'Server Error' });
@@ -308,15 +296,10 @@ router.get('/tickets', requireSuperAdmin, async (req, res) => {
 
 router.get('/tickets/:id', requireSuperAdmin, async (req, res) => {
   try {
-    const ticket = await Ticket.findById(req.params.id)
-      .populate('companyId', 'name domain')
-      .populate('creatorId', 'username email')
-      .populate('messages.sender', 'username roles');
-
+    const ticket = await supportTickets.getTicket(req.params.id);
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-
     res.json(ticket);
   } catch (err) {
     logger.error('Error fetching ticket:', err);
@@ -327,53 +310,38 @@ router.get('/tickets/:id', requireSuperAdmin, async (req, res) => {
 router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { status, message } = req.body;
-    const ticket = await Ticket.findById(req.params.id);
-
+    const ticket = await supportTickets.adminUpdate(req.params.id, {
+      status,
+      message,
+      adminId: req.user.sub,
+      io: req.app.get('io'),
+    });
     if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
 
-    
     if (status) {
-      ticket.status = status;
-
-      
       await AuditLog.create({
         userId: req.user.sub,
         action: 'ticket_status_updated',
-        resource: 'Ticket',
+        resource: 'SupportTicket',
         resourceId: ticket._id,
         description: `Ticket ${ticket._id} status updated to ${status}`
       });
     }
-
-    
-    if (message) {
-      ticket.messages.push({
-        sender: req.user.sub,
-        message,
-        createdAt: new Date()
-      });
-
-      
+    if (typeof message === 'string' && message.trim()) {
       await AuditLog.create({
         userId: req.user.sub,
         action: 'ticket_reply_added',
-        resource: 'Ticket',
+        resource: 'SupportTicket',
         resourceId: ticket._id,
         description: `Reply added to ticket ${ticket._id}`
       });
     }
 
-    await ticket.save();
-
-    const updatedTicket = await Ticket.findById(ticket._id)
-      .populate('companyId', 'name domain')
-      .populate('creatorId', 'username email')
-      .populate('messages.sender', 'username roles');
-
-    res.json(updatedTicket);
+    res.json(ticket);
   } catch (err) {
+    if (err.statusCode === 400) return res.status(400).json({ message: err.message });
     logger.error('Error updating ticket:', err);
     res.status(500).json({ message: 'Server Error' });
   }

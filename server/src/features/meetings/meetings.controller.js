@@ -2,7 +2,7 @@
 
 const meetingsService = require('./meetings.service');
 const logger = require('../../../utils/logger');
-const notifEmitter = require('../notifications/notificationEventEmitter');
+const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
 
 async function resolveCompanyId(req) {
     const User = require('../../../models/User');

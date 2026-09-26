@@ -20,6 +20,7 @@ const NAV_GROUPS = [
             { path: '/admin/departments', label: 'Departments', icon: Building },
             { path: '/admin/workspaces', label: 'Workspaces', icon: Globe },
             { path: '/admin/users', label: 'People', icon: Users },
+            { path: '/admin/employees', label: 'Employee Directory', icon: Users },
             { path: '/admin/onboard', label: 'Onboard', icon: UserPlus },
         ]
     },
@@ -36,6 +37,9 @@ const NAV_GROUPS = [
         group: 'SYSTEM',
         items: [
             { path: '/admin/security', label: 'Audit & Security', icon: Shield },
+            { path: '/admin/permission-matrix', label: 'Permission Matrix', icon: Lock },
+            { path: '/admin/audit-logs', label: 'Audit Logs', icon: Shield },
+            { path: '/admin/compliance-logs', label: 'Compliance Logs', icon: Shield },
             { path: '/admin/settings', label: 'Settings', icon: Settings },
             { path: '/manager/dashboard/overview', label: 'Cross Visibility', icon: LayoutDashboard },
             { path: '/contact-admin', label: 'Contact Admin', icon: HelpCircle },

@@ -6,12 +6,13 @@ const User = require('../../../models/User');
 const Company = require('../../../models/Company');
 const Workspace = require('../../../models/Workspace');
 const Department = require('../../../models/Department');
-const Message = require("../messages/message.model.js");
+const Message = require("../../modules/messages/message.model.js");
 const UserSession = require('../../../models/UserSession');
 const Invoice = require('../../../models/Invoice');
 const AuditLog = require('../../../models/AuditLog');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireOwner } = require('../../shared/middleware/permissionMiddleware');
+const { requireFlag } = require('../../shared/featureFlags');
 
 function sinceDate(timeRange) {
     const now = new Date();
@@ -131,7 +132,7 @@ router.get('/activity-health', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-router.get('/billing-summary', requireAuth, requireOwner, async (req, res) => {
+router.get('/billing-summary', requireFlag('billing'), requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
@@ -339,7 +340,7 @@ router.get('/security-events', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-router.get('/invoices', requireAuth, requireOwner, async (req, res) => {
+router.get('/invoices', requireFlag('billing'), requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
@@ -364,7 +365,7 @@ router.get('/invoices', requireAuth, requireOwner, async (req, res) => {
     }
 });
 
-router.get('/payment-methods', requireAuth, requireOwner, async (req, res) => {
+router.get('/payment-methods', requireFlag('billing'), requireAuth, requireOwner, async (req, res) => {
     try {
         const userId = req.user.sub || req.user._id;
         const user = await User.findById(userId);
@@ -376,19 +377,8 @@ router.get('/payment-methods', requireAuth, requireOwner, async (req, res) => {
             .select('paymentMethod')
             .lean();
 
-        const paymentMethod = latestInvoice?.paymentMethod || {
-            type: 'card',
-            last4: '4242',
-            brand: 'visa'
-        };
-
-        res.json({
-            paymentMethod: {
-                ...paymentMethod,
-                expiryMonth: 12,
-                expiryYear: 2027
-            }
-        });
+        // No payment provider is wired up yet: report what the invoices say, never a placeholder card.
+        res.json({ paymentMethod: latestInvoice?.paymentMethod?.last4 ? latestInvoice.paymentMethod : null });
     } catch (error) {
         logger.error('Payment Methods Error:', error);
         res.status(500).json({ message: 'Server error', error: error.message });

@@ -51,7 +51,8 @@ function requireAIAccess({ optional = false, adminOnly = false } = {}) {
             if (adminOnly && !isAdmin) return res.status(403).json({ message: 'Workspace admin required', code: 'INSUFFICIENT_WORKSPACE_ROLE' });
 
             const aiSettings = ws.settings?.ai || {};
-            if (aiSettings.enabled === false && !adminOnly) {
+            const { isFeatureEnabled } = require('../../shared/workspaceFeatures');
+            if ((aiSettings.enabled === false || !(await isFeatureEnabled(ws._id, 'ai'))) && !adminOnly) {
                 return res.status(403).json({ message: 'AI features are turned off for this workspace', code: 'AI_DISABLED' });
             }
 

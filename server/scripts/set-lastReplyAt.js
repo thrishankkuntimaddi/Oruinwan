@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Message = require("../src/features/messages/message.model.js");
+const Message = require("../src/modules/messages/message.model.js");
 require('dotenv').config();
 
 async function setLastReplyAt() {

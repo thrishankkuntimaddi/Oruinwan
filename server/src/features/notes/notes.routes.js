@@ -1,4 +1,5 @@
 const express = require('express');
+const { requireWorkspaceFeature, resolvers } = require('../../shared/workspaceFeatures');
 const router = express.Router();
 const notesController = require('./notes.controller');
 const requireAuth = require('../../shared/middleware/auth');
@@ -7,7 +8,7 @@ router.use(requireAuth);
 
 router.get('/', notesController.getNotes);
 
-router.post('/', notesController.createNote);
+router.post('/', requireWorkspaceFeature('notes'), notesController.createNote);
 
 router.put('/:id', notesController.updateNote);
 

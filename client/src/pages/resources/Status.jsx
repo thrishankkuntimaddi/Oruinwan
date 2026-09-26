@@ -1,64 +1,115 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
-import { CheckCircle2, AlertTriangle, XCircle, Activity, Clock, RefreshCw } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
+import { API_BASE } from '../../services/api';
 
-const SERVICES = [
-    { name: 'Web Application',            status: 'operational',  uptime: '99.98%', latency: '142ms' },
-    { name: 'Real-time Messaging (WS)',   status: 'operational',  uptime: '99.97%', latency: '38ms' },
-    { name: 'File Storage & Uploads',     status: 'operational',  uptime: '99.99%', latency: '210ms' },
-    { name: 'Chttrix AI (Intelligence)',  status: 'operational',  uptime: '99.92%', latency: '680ms' },
-    { name: 'Video Huddles',              status: 'operational',  uptime: '99.91%', latency: '55ms' },
-    { name: 'Authentication & Sessions',  status: 'operational',  uptime: '100%',   latency: '95ms' },
-    { name: 'Notifications (Email/Push)', status: 'operational',  uptime: '99.95%', latency: '320ms' },
-    { name: 'Search & Indexing',          status: 'operational',  uptime: '99.89%', latency: '180ms' },
-    { name: 'Admin Dashboard API',        status: 'operational',  uptime: '99.96%', latency: '115ms' },
-    { name: 'Third-party Integrations',   status: 'operational',  uptime: '99.80%', latency: '490ms' },
+// Live checks run from the visitor's browser. Nothing here is recorded over time,
+// so the page shows current state and measured response time only (no uptime
+// history or incident log until a real monitor feeds them).
+
+const TIMEOUT_MS = 8000;
+const AUTO_REFRESH_MS = 30000;
+
+async function timed(url) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+    const started = performance.now();
+    try {
+        const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+        const ms = Math.round(performance.now() - started);
+        return { res, ms };
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+async function runChecks() {
+    const results = {};
+
+    try {
+        const { res, ms } = await timed(`${API_BASE}/api/health`);
+        const body = await res.json().catch(() => ({}));
+        results.api = { status: res.status < 500 ? 'operational' : 'outage', latency: ms };
+        results.database = {
+            status: body.mongodb === 'connected' ? 'operational' : body.mongodb ? 'degraded' : 'outage',
+            detail: body.mongodb || 'unknown',
+        };
+    } catch {
+        results.api = { status: 'outage' };
+        results.database = { status: 'unknown', detail: 'API unreachable' };
+    }
+
+    try {
+        // The Socket.IO handshake answers before authentication, so it shows the
+        // real-time endpoint is accepting connections.
+        const { res, ms } = await timed(`${API_BASE}/socket.io/?EIO=4&transport=polling&t=${Date.now()}`);
+        results.realtime = { status: res.ok ? 'operational' : 'outage', latency: ms };
+    } catch {
+        results.realtime = { status: 'outage' };
+    }
+
+    return results;
+}
+
+const CHECKS = [
+    { key: 'api', name: 'Web API' },
+    { key: 'database', name: 'Database' },
+    { key: 'realtime', name: 'Real-time messaging (WebSocket)' },
 ];
 
-const INCIDENTS = [
-    { date: 'Apr 3, 2026', title: 'Elevated latency — AI (resolved)', status: 'resolved', duration: '14 min', desc: 'Chttrix AI responses experienced elevated latency due to a traffic spike. Auto-scaling resolved the issue.' },
-    { date: 'Mar 28, 2026', title: 'Delayed email notifications (resolved)', status: 'resolved', duration: '38 min', desc: 'A provider-side queue backlog caused email notifications to be delayed by up to 40 minutes.' },
-    { date: 'Mar 15, 2026', title: 'Scheduled maintenance — Database', status: 'maintenance', duration: '2 hr', desc: 'Planned zero-downtime database migration completed successfully.' },
-];
-
-const StatusDot = ({ s }) => {
-    const map = { operational: '#5aba8a', degraded: '#c9a87c', outage: '#e05252', maintenance: '#6ea8fe' };
-    return <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: map[s] || '#5aba8a', flexShrink: 0, display: 'inline-block' }} />;
+const STATUS_STYLE = {
+    operational: { color: '#5aba8a', label: 'Operational' },
+    degraded: { color: '#c9a87c', label: 'Degraded' },
+    outage: { color: '#e05252', label: 'Unavailable' },
+    unknown: { color: '#7a7a7a', label: 'Unknown' },
+    checking: { color: '#7a7a7a', label: 'Checking…' },
 };
 
-const IncidentIcon = ({ s }) => {
-    if (s === 'resolved') return <CheckCircle2 size={14} style={{ color: '#5aba8a' }} />;
-    if (s === 'maintenance') return <Clock size={14} style={{ color: '#6ea8fe' }} />;
-    return <AlertTriangle size={14} style={{ color: '#c9a87c' }} />;
-};
+function overall(results) {
+    if (!results) return { status: 'checking', text: 'Checking systems…' };
+    const states = CHECKS.map(c => results[c.key]?.status);
+    if (states.every(s => s === 'operational')) return { status: 'operational', text: 'All Systems Operational' };
+    if (states.includes('outage')) return { status: 'outage', text: 'Service Disruption' };
+    return { status: 'degraded', text: 'Partial Degradation' };
+}
 
 export default function Status() {
-    const [lastUpdated, setLastUpdated] = useState(new Date());
+    const [results, setResults] = useState(null);
+    const [lastUpdated, setLastUpdated] = useState(null);
     const [spinning, setSpinning] = useState(false);
 
-    const refresh = () => {
+    const refresh = useCallback(async () => {
         setSpinning(true);
-        setTimeout(() => { setLastUpdated(new Date()); setSpinning(false); }, 800);
-    };
+        const next = await runChecks();
+        setResults(next);
+        setLastUpdated(new Date());
+        setSpinning(false);
+    }, []);
+
+    useEffect(() => {
+        refresh();
+        const t = setInterval(refresh, AUTO_REFRESH_MS);
+        return () => clearInterval(t);
+    }, [refresh]);
+
+    const summary = overall(results);
+    const summaryColor = STATUS_STYLE[summary.status].color;
 
     return (
         <PublicPageShell title="Status">
-            {}
             <div style={{ borderBottom: '1px solid var(--border-subtle)', padding: '72px 0 56px' }}>
                 <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '0 24px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
                         <div>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: 'rgba(90,186,138,0.08)', border: '1px solid rgba(90,186,138,0.25)', marginBottom: '20px' }}>
-                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#5aba8a', animation: 'pulse 2s ease-in-out infinite' }} />
-                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#5aba8a', letterSpacing: '0.03em' }}>All Systems Operational</span>
+                            <div data-testid="status-summary" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', background: `${summaryColor}14`, border: `1px solid ${summaryColor}40`, marginBottom: '20px' }}>
+                                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: summaryColor, animation: summary.status === 'operational' ? 'pulse 2s ease-in-out infinite' : 'none' }} />
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: summaryColor, letterSpacing: '0.03em' }}>{summary.text}</span>
                             </div>
                             <h1 style={{ fontSize: 'clamp(28px,4vw,44px)', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.03em', marginBottom: '10px' }}>System Status</h1>
-                            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Real-time status for all Chttrix services</p>
+                            <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Live checks run from your browser, refreshed every 30 seconds</p>
                         </div>
-                        <button onClick={refresh}
-                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 16px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 150ms ease' }}
-                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#e4e4e4'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(228,228,228,0.5)'; }}>
+                        <button onClick={refresh} disabled={spinning}
+                            style={{ display: 'flex', alignItems: 'center', gap: '7px', padding: '8px 16px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', fontSize: '12px', fontWeight: 600, cursor: spinning ? 'default' : 'pointer', fontFamily: 'inherit' }}>
                             <RefreshCw size={12} style={{ animation: spinning ? 'spin 0.8s linear infinite' : 'none' }} />
                             Refresh
                         </button>
@@ -68,66 +119,45 @@ export default function Status() {
             </div>
 
             <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '56px 24px' }}>
-                {}
-                <div style={{ marginBottom: '56px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-                        <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)' }}>Services</p>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
-                            Last updated: {lastUpdated.toLocaleTimeString()}
-                        </p>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
-                        {SERVICES.map(svc => (
-                            <div key={svc.name} style={{ background: '#111', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <StatusDot s={svc.status} />
-                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{svc.name}</span>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '1px' }}>30d uptime</p>
-                                        <p style={{ fontSize: '12px', fontWeight: 700, color: '#5aba8a', fontFamily: 'monospace' }}>{svc.uptime}</p>
-                                    </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '1px' }}>Latency</p>
-                                        <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{svc.latency}</p>
-                                    </div>
-                                    <div style={{ padding: '3px 8px', background: 'rgba(90,186,138,0.08)', border: '1px solid rgba(90,186,138,0.2)', fontSize: '10px', fontWeight: 700, color: '#5aba8a', textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: '90px', textAlign: 'center' }}>
-                                        Operational
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {}
-                <div>
-                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)', marginBottom: '20px' }}>Recent Incidents & Maintenance</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
-                        {INCIDENTS.map(inc => (
-                            <div key={inc.title} style={{ background: '#111', padding: '20px 24px' }}>
-                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                                    <IncidentIcon s={inc.status} />
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '6px' }}>
-                                            <h3 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)' }}>{inc.title}</h3>
-                                            <div style={{ display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                                                <span>{inc.date}</span>
-                                                <span>Duration: {inc.duration}</span>
-                                            </div>
-                                        </div>
-                                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.7' }}>{inc.desc}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>
-                        No incidents currently active. Subscribe to status updates at <span style={{ color: 'rgba(184,149,106,0.6)', fontFamily: 'monospace' }}>status@chttrix.io</span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(184,149,106,0.7)' }}>Services</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                        {lastUpdated ? `Last checked: ${lastUpdated.toLocaleTimeString()}` : 'Checking…'}
                     </p>
                 </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--bg-hover)' }}>
+                    {CHECKS.map(({ key, name }) => {
+                        const r = results?.[key] || { status: 'checking' };
+                        const st = STATUS_STYLE[r.status] || STATUS_STYLE.unknown;
+                        return (
+                            <div key={key} data-testid={`status-${key}`} style={{ background: 'var(--bg-surface)', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: st.color, flexShrink: 0, display: 'inline-block' }} />
+                                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{name}</span>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                                    {r.latency != null && (
+                                        <div style={{ textAlign: 'right' }}>
+                                            <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '1px' }}>Response time</p>
+                                            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{r.latency}ms</p>
+                                        </div>
+                                    )}
+                                    {r.detail && r.status !== 'operational' && (
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.detail}</p>
+                                    )}
+                                    <div style={{ padding: '3px 8px', border: `1px solid ${st.color}40`, fontSize: '10px', fontWeight: 700, color: st.color, textTransform: 'uppercase', letterSpacing: '0.06em', minWidth: '90px', textAlign: 'center' }}>
+                                        {st.label}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px', lineHeight: 1.7 }}>
+                    These checks show whether the service is reachable from where you are right now. If something looks wrong, contact support from inside the app.
+                </p>
             </div>
         </PublicPageShell>
     );

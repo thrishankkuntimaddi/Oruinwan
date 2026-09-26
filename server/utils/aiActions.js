@@ -249,7 +249,7 @@ async function scheduleMeeting({ title, startsAt, durationMinutes = 30, particip
     const io = ioFrom(ctx);
     if (io) io.to(`workspace:${ctx.workspaceId}`).emit('schedule:created', { meeting });
     try {
-        const notificationService = require('../src/features/notifications/notificationService');
+        const notificationService = require('../src/modules/notifications/notificationService');
         await notificationService.scheduleCreated(io, {
             recipientIds: (participants.length ? participants : [...memberIds]).filter(id => id !== String(ctx.userId)),
             workspaceId: ctx.workspaceId, title: meeting.title, scheduledMeetingId: meeting._id,

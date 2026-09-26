@@ -1,6 +1,31 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Shield, AlertTriangle, CheckCircle, XCircle, Clock, Download, Filter, Search, Calendar } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
+import api from '@services/api';
+
+// AuditLog documents -> the rows this page shows.
+function toRow(log) {
+    const category = String(log.category || '').toLowerCase();
+    const action = String(log.action || '');
+    const type = category === 'security' || /fail|suspicious|blocked/i.test(action) ? 'security'
+        : /login|logout|session|auth/i.test(action) || category === 'auth' ? 'login'
+            : /role|permission|admin|access/i.test(action) || category === 'permissions' ? 'access'
+                : 'changes';
+    const severity = String(log.severity || '').toLowerCase();
+    const status = log.status === 'failure' || severity === 'critical' || severity === 'error' ? 'error'
+        : severity === 'warning' ? 'warning' : log.status === 'success' ? 'success' : 'info';
+    return {
+        _id: log._id,
+        type,
+        action: action.replace(/[._]/g, ' '),
+        user: { username: log.userId?.username || log.user?.username || 'system' },
+        details: log.description || (log.details ? JSON.stringify(log.details) : ''),
+        status,
+        timestamp: log.createdAt || log.timestamp,
+        ipAddress: log.ipAddress || '',
+        device: log.userAgent || '',
+    };
+}
 
 const inputSt = {
     background: 'var(--bg-input)', border: '1px solid var(--border-default)',
@@ -16,27 +41,21 @@ const AuditSecurityPage = () => {
     const [filterType, setFilterType] = useState('all');
     const [dateRange, setDateRange] = useState('7days');
 
+    // Real entries from this company's audit log (company-scoped on the server).
     const fetchAuditLogs = useCallback(async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/admin/audit-logs', { headers: { 'Content-Type': 'application/json' } });
-            if (response.ok) {
-                const data = await response.json();
-                setAuditLogs(data.logs || []);
-            } else {
-                setAuditLogs([
-                    { _id: '1', type: 'login', action: 'User Login', user: { username: 'john.doe' }, details: 'Successful login from 192.168.1.100', status: 'success', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), ipAddress: '192.168.1.100', device: 'Chrome on MacOS' },
-                    { _id: '2', type: 'security', action: 'Failed Login Attempt', user: { username: 'unknown' }, details: 'Multiple failed login attempts detected', status: 'warning', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), ipAddress: '192.168.1.101', device: 'Firefox on Windows' },
-                    { _id: '3', type: 'access', action: 'Admin Role Assigned', user: { username: 'jane.smith' }, details: 'User promoted to admin by owner', status: 'info', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), ipAddress: '192.168.1.102', device: 'Safari on iOS' },
-                    { _id: '4', type: 'changes', action: 'Department Created', user: { username: 'admin.user' }, details: 'New department "Marketing" created', status: 'success', timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(), ipAddress: '192.168.1.103', device: 'Chrome on Linux' },
-                ]);
-            }
+            const days = { '24hours': 1, '7days': 7, '30days': 30, '90days': 90 }[dateRange] || 7;
+            const from = new Date(Date.now() - days * 86400000).toISOString();
+            const { data } = await api.get('/api/permissions/audit-logs', { params: { from, limit: 200 } });
+            setAuditLogs((data.logs || []).map(toRow));
         } catch (error) {
-            showToast('Failed to load audit logs', 'error');
+            setAuditLogs([]);
+            showToast(error.response?.data?.message || 'Failed to load audit logs', 'error');
         } finally {
             setLoading(false);
         }
-    }, [showToast]);
+    }, [showToast, dateRange]);
 
     useEffect(() => { fetchAuditLogs(); }, [fetchAuditLogs]);
 
@@ -58,10 +77,19 @@ const AuditSecurityPage = () => {
         return matchesSearch && matchesFilter;
     });
 
-    const exportLogs = () => showToast('Exporting audit logs...', 'info');
+    const exportLogs = () => {
+        const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const lines = [['time', 'type', 'action', 'user', 'status', 'details', 'ip'].join(',')]
+            .concat(filteredLogs.map(l => [l.timestamp, l.type, l.action, l.user.username, l.status, l.details, l.ipAddress].map(esc).join(',')));
+        const url = URL.createObjectURL(new Blob([lines.join('\n')], { type: 'text/csv' }));
+        const a = document.createElement('a');
+        a.href = url; a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
 
     const stats = [
-        { label: 'Total Events', value: auditLogs.length, icon: Shield, note: 'Last 7 days' },
+        { label: 'Total Events', value: auditLogs.length, icon: Shield, note: 'In the selected range' },
         { label: 'Logins', value: auditLogs.filter(l => l.type === 'login').length, icon: CheckCircle, note: 'Successful attempts' },
         { label: 'Security Alerts', value: auditLogs.filter(l => l.status === 'warning' || l.status === 'error').length, icon: AlertTriangle, note: 'Requires attention' },
         { label: 'Access Changes', value: auditLogs.filter(l => l.type === 'access').length, icon: Clock, note: 'Role modifications' },

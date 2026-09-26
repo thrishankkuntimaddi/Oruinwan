@@ -61,7 +61,7 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
     const proxyUrl = `/api/v2/uploads/file?path=${encodeURIComponent(gcsPath)}`;
 
     // Chat attachments — must be able to read the conversation that carries them.
-    const Message = require('../../features/messages/message.model.js');
+    const Message = require('../messages/message.model.js');
     const messages = await Message.find({
         $or: [{ 'attachments.url': proxyUrl }, { 'payload.attachments.url': proxyUrl }],
     }).select('sender dm channel workspace').limit(20).lean();

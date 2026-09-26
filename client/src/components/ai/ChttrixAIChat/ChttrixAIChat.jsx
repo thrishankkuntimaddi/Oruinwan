@@ -24,7 +24,7 @@ const ACTION_LABELS = {
   search_workspace: 'searched workspace', schedule_meeting: 'scheduled meeting',
 };
 
-const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
+const ChttrixAIChat = ({ onClose, isSidebar = false, initialPrompt = null, onPromptConsumed }) => {
   const { activeWorkspace } = useWorkspace();
   const aiCtx = useAIContext();
   const { showToast } = useToast();
@@ -90,6 +90,15 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
     return userMsg;
   };
 
+  // A question handed over from elsewhere (the composer's /ai command) is asked once.
+  const handleSendRef = useRef(null);
+  useEffect(() => {
+    if (!initialPrompt) return;
+    onPromptConsumed?.();
+    handleSendRef.current?.(initialPrompt);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
+
   const handleSend = async (text = input) => {
     if (!text.trim()) return;
     const userMsg = pushUser(text);
@@ -106,7 +115,8 @@ const ChttrixAIChat = ({ onClose, isSidebar = false }) => {
       setIsTyping(false);
       pushAI({ text: aiErrorMessage(err, "Sorry, I'm having trouble connecting. Please try again."), isError: true });
     }
-  };
+  };  handleSendRef.current = handleSend;
+
 
   /* ── Quick actions: real endpoints, not canned prompts ────────────── */
   const runQuick = async (label, fn) => {

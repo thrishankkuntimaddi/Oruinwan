@@ -1,9 +1,10 @@
 const express = require("express");
+const { requireCompanyPermission } = require('../../shared/companyPermissions');
 const router = express.Router();
 const requireAuth = require("../../shared/middleware/auth");
 const channelCtrl = require("./channel.controller");
 
-router.post("/", requireAuth, channelCtrl.createChannel);
+router.post("/", requireAuth, requireCompanyPermission("createChannel"), channelCtrl.createChannel);
 
 router.get("/public", channelCtrl.getPublicChannelList);
 
@@ -50,6 +51,13 @@ router.post("/:id/join-discoverable", requireAuth, channelCtrl.joinDiscoverableC
 router.delete("/:id", requireAuth, channelCtrl.deleteChannel);
 
 router.get("/:id/tabs", requireAuth, channelCtrl.getTabs);
+const channelMute = require("./channelMute.controller");
+router.get("/:id/mute", requireAuth, channelMute.getMute);
+router.post("/:id/mute", requireAuth, channelMute.mute);
+router.delete("/:id/mute", requireAuth, channelMute.unmute);
+router.patch("/:id/mention-policy", requireAuth, channelMute.setMentionPolicy);
+router.patch("/:id/posting-policy", requireAuth, channelMute.setPostingPolicy);
+
 router.post("/:id/tabs", requireAuth, channelCtrl.addTab);
 router.put("/:id/tabs/:tabId", requireAuth, channelCtrl.updateTab);
 router.delete("/:id/tabs/:tabId", requireAuth, channelCtrl.deleteTab);

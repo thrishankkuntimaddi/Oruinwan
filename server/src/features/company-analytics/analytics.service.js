@@ -1,7 +1,7 @@
 const User = require('../../../models/User');
 const Department = require('../../../models/Department');
 const Workspace = require('../../../models/Workspace');
-const Message = require('../../features/messages/message.model');
+const Message = require('../../modules/messages/message.model');
 const Task = require('../../../models/Task');
 
 function since(range) {

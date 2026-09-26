@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import api from '../../services/api';
 import { Rocket, X, CheckCircle2, ArrowRight, AlertCircle, Zap, Shield, Check } from 'lucide-react';
 
 const s = {
@@ -9,6 +10,36 @@ const s = {
     h2: { fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 6px', letterSpacing: '-0.015em', lineHeight: 1.25 },
     sub: { fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 },
 };
+
+/** Optional starting template: its channels, settings and feature toggles are applied on create. */
+function TemplatePicker({ value, onChange }) {
+    const [templates, setTemplates] = useState([]);
+    useEffect(() => {
+        let cancelled = false;
+        api.get('/api/workspace-templates')
+            .then(({ data }) => { if (!cancelled) setTemplates(data.templates || []); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, []);
+    if (templates.length === 0) return null;
+    const selected = templates.find(t => t._id === value);
+    return (
+        <div>
+            <label style={s.label}>Start from a template (Optional)</label>
+            <select data-testid="workspace-template" value={value || ''} onChange={e => onChange(e.target.value || null)} style={s.input}>
+                <option value="">Blank workspace</option>
+                {templates.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+            </select>
+            {selected && (
+                <p style={{ ...s.sub, fontSize: '11px', marginTop: '6px' }}>
+                    {selected.description ? `${selected.description} · ` : ''}
+                    {(selected.defaultChannels || []).length} channel(s)
+                    {(selected.defaultChannels || []).length > 0 ? `: ${selected.defaultChannels.map(c => `#${c.name}`).join(', ')}` : ''}
+                </p>
+            )}
+        </div>
+    );
+}
 
 const CreateWorkspaceModal = ({
     isOpen, onClose, createStep, setCreateStep, createData, setCreateData,
@@ -137,6 +168,10 @@ const CreateWorkspaceModal = ({
                                                     onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
                                                 />
                                             </div>
+                                            <TemplatePicker
+                                                value={createData.templateId}
+                                                onChange={templateId => setCreateData({ ...createData, templateId })}
+                                            />
                                         </div>
 
                                         <div>

@@ -2,7 +2,7 @@ const axios = require('axios');
 const crypto = require('crypto');
 const Webhook = require('./webhook.model');
 const logger = require('../../../utils/logger');
-const notifEmitter = require('../notifications/notificationEventEmitter');
+const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
 
 const MAX_RETRIES = 3;
 const RETRY_DELAYS_MS = [1000, 3000, 9000]; 

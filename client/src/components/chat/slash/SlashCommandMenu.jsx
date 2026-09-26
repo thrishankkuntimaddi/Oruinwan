@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { SLASH_COMMANDS, SLASH_COMMAND_CATEGORIES, filterSlashCommands } from "./mockSlashCommands";
+import { SLASH_COMMAND_CATEGORIES, filterSlashCommands } from "./slashCommands";
+import { useFeatureFlags } from "../../../contexts/FeatureFlagsContext";
 import SlashCommandItem from "./SlashCommandItem";
 
 export default function SlashCommandMenu({ query, onSelect, onClose, onPreviewChange }) {
-  const filtered = filterSlashCommands(query);
+  const { flags } = useFeatureFlags();
+  const filtered = filterSlashCommands(query, flags);
   const [activeIdx, setActiveIdx] = useState(0);
   const listRef = useRef(null);
   const activeItemRef = useRef(null);

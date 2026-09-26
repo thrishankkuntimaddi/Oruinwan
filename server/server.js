@@ -205,6 +205,9 @@ app.use((req, res, next) => {
   next();
 });
 
+const { requireFlag } = require("./src/shared/featureFlags");
+app.use("/api/flags", require("./src/shared/featureFlags/routes"));
+
 app.use("/api/auth", require("./src/features/auth/auth.routes"));
 app.use("/api/admin", require("./src/shared/middleware/auth"), require("./src/features/admin/admin.routes"));
 
@@ -285,15 +288,14 @@ app.use("/api/sprints", require("./src/features/sprints/sprints.routes"));
 app.use("/api/milestones", require("./src/features/milestones/milestones.routes"));
 app.use("/api/task-templates", require("./src/features/task-templates/task-templates.routes"));
 
-app.use("/api/v2/messages", require("./src/modules/messages/messages.routes"));
+// Domains that have moved to src/modules/<name> mount themselves (see src/modules/index.js).
+const serverModules = require("./src/modules");
+serverModules.registerModules({ app, io, requireAuth });
 
-app.use("/api/v2/dm", require("./src/modules/messages/dmActions.routes"));
 
 app.use("/api/v2/encryption", require("./src/modules/encryption/encryption.routes"));
 
-app.use("/api/threads", require("./src/modules/threads/threads.routes"));
 
-app.use("/api/threads/v2", requireAuth, require("./src/modules/threads/threadsV2.routes"));
 
 app.use("/api/v2/identity", require("./src/modules/identity/identity.routes"));
 
@@ -305,7 +307,6 @@ app.use("/api/v2/devices", require("./src/features/devices/devices.routes"));
 
 // security.routes is mounted once at /api/company (see above); the /api/v2/security duplicate was removed.
 
-app.use('/api/notifications', require('./src/features/notifications/notifications.routes'));
 
 app.use("/api/v2/tasks", require("./src/features/tasks/tasks.routes"));
 
@@ -315,7 +316,6 @@ app.use("/api/v2/favorites", require("./src/features/favorites/favorites.routes"
 
 app.use('/api/public', require('./src/features/developer/publicApi.routes'));
 
-app.use("/api/messages", requireAuth, require("./src/features/messages/bookmark.routes"));
 // No blanket requireAuth here: every reminders route applies requireAuth itself, and a
 // blanket middleware on "/api" would force auth on every later /api/* route.
 app.use("/api", require("./src/features/reminders/reminders.routes"));
@@ -341,7 +341,7 @@ app.use("/api/v2/automations", requireAuth, require("./src/features/automations/
 
 app.use("/api/v2/integrations", require("./src/features/integrations/integrations.routes"));
 
-app.use("/api/auth/sso", require("./src/features/security/sso.routes"));
+app.use("/api/auth/sso", requireFlag("sso"), require("./src/features/security/sso.routes"));
 
 app.use("/api/auth/2fa", require("./src/features/security/twoFactor.routes"));
 
@@ -385,8 +385,7 @@ mongoose
     startRecurringTasksCron();
 
     
-    const { startNotificationsCron } = require('./src/features/notifications/notifications.cron');
-    startNotificationsCron(io);
+    serverModules.startModules({ io });
 
     
     const { startRetentionCron } = require('./src/features/security/retention.cron');
@@ -410,6 +409,7 @@ mongoose
       logger.success(`Server (Express + Socket.IO) running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
+      require('./utils/sendEmail').logEmailConfigWarnings();
 
       
       

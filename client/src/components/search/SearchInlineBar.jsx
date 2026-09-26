@@ -38,7 +38,7 @@ function getLabel(item) {
   return item.text || item.displayName || item.name || item.title || item.content || '';
 }
 function getMeta(item) {
-  if (item._type === 'message')  return item.channelName ? `#${item.channelName}` : '';
+  if (item._type === 'message')  return item.channelName ? `#${item.channelName}` : (item.dmName ? `DM · ${item.dmName}` : '');
   if (item._type === 'channel')  return item.description || '';
   if (item._type === 'user')     return item.email || item.role || '';
   if (item._type === 'file')     return item.type || '';
@@ -138,7 +138,7 @@ export default function SearchInlineBar({ workspaceId: propWsId }) {
     
     const base = `/workspace/${wsId}`;
     if (item._type === 'channel') navigate(`${base}/channel/${item._id}`);
-    else if (item._type === 'message') navigate(`${base}/channel/${item.channelId || item.channel}`);
+    else if (item._type === 'message') navigate(item.dmId ? `${base}/dm/${item.dmId}` : `${base}/channel/${item.channelId || item.channel}`);
     else if (item._type === 'user') navigate(`${base}/messages`);
     else if (item._type === 'task') navigate(`${base}/tasks`);
     else if (item._type === 'file') navigate(`${base}/files`);

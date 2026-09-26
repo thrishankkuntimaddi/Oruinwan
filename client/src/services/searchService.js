@@ -1,4 +1,5 @@
 import api from './api';
+import { searchLocalMessages } from '../utils/localMessageIndex';
 
 const RECENT_SEARCHES_KEY = 'chttrix_recent_searches';
 const MAX_RECENT = 8;
@@ -19,6 +20,17 @@ export async function searchAll(query, filters = {}, workspaceId) {
     if (filters.semantic != null) params.append('semantic', String(filters.semantic));
 
     const { data } = await api.get(`/api/search?${params.toString()}`);
+
+    // Encrypted message text is only readable here: add matches from conversations
+    // decrypted in this session to whatever the server found.
+    if (!filters.type || filters.type === 'messages' || filters.type === 'all') {
+        const local = searchLocalMessages(query, workspaceId, filters.limit || 20);
+        if (local.length) {
+            const seen = new Set((data.messages || []).map(m => String(m._id)));
+            data.messages = [...local.filter(m => !seen.has(String(m._id))), ...(data.messages || [])];
+            data.total = (data.total || 0) + local.length;
+        }
+    }
     return data;
 }
 

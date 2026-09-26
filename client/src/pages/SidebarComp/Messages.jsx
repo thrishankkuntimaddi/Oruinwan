@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import ChatWindowV2 from "../../components/messagesComp/chatWindowComp/ChatWindowV2";
-import BroadcastChatWindow from "../../components/messagesComp/BroadcastChatWindow";
+import ChatWindowV2 from "../../features/messaging/chatWindowComp/ChatWindowV2";
+import BroadcastChatWindow from "../../features/messaging/BroadcastChatWindow";
 import { useContacts } from "../../contexts/ContactsContext";
 import api from '@services/api';
 import { MessageSquarePlus } from "lucide-react";
-import NewDMModal from "../../components/messagesComp/NewDMModal";
+import NewDMModal from "../../features/messaging/NewDMModal";
 import { useParams } from "react-router-dom";
 import logger from '../../utils/logger';
 

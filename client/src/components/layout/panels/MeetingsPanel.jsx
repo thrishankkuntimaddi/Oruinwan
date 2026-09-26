@@ -5,10 +5,10 @@ import {
     Plus, Mic, PhoneOutgoing, MoreHorizontal, Radio, History,
     ExternalLink,
 } from "lucide-react";
-import { useHuddleContext } from "../../../contexts/HuddleContext";
+import { useHuddleContext } from "../../../features/huddles/HuddleContext";
 import { useToast } from "../../../contexts/ToastContext";
 import { useScheduledMeetings } from "../../../hooks/useScheduledMeetings";
-import ScheduleMeetingModal from "../../messagesComp/chatWindowComp/modals/ScheduleMeetingModal";
+import ScheduleMeetingModal from "../../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal";
 
 const SectionHeader = ({ label, isOpen, onClick, count }) => (
     <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 16px', cursor: 'pointer', marginTop: '8px', transition: 'background 150ms ease' }}
@@ -140,7 +140,7 @@ const MeetingsPanel = () => {
 
             {}
             <div style={{ height: '56px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0 }}>
-                <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Video Huddles</h2>
+                <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Voice Huddles</h2>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <button onClick={handleStartInstant} disabled={starting || active} title="Start Instant Huddle"
                         style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: starting || active ? 'not-allowed' : 'pointer', opacity: starting || active ? 0.5 : 1, transition: 'all 150ms ease' }}

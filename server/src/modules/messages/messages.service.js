@@ -1,6 +1,6 @@
 'use strict';
 
-const Message = require('../../features/messages/message.model.js');
+const Message = require('./message.model.js');
 const DMSession = require('../../../models/DMSession');
 const _Channel = require('../../features/channels/channel.model.js');
 const Workspace = require('../../../models/Workspace');
@@ -28,6 +28,7 @@ async function createMessage(messageData, io = null) {
         poll = null,
         contact = null,
         meeting = null,
+        checklistCount = 0,
         linkPreview = null,
         
         mentionText = '',
@@ -39,7 +40,8 @@ async function createMessage(messageData, io = null) {
     
     
     
-    const TEXT_TYPES = ['message'];
+    // Checklists are encrypted too: their title and items live in the ciphertext.
+    const TEXT_TYPES = ['message', 'checklist'];
     if (TEXT_TYPES.includes(type) && (!ciphertext || !messageIv)) {
         throw new Error('E2EE required for text messages: missing ciphertext or messageIv');
     }
@@ -55,7 +57,7 @@ async function createMessage(messageData, io = null) {
         parentId,
         quotedMessageId: quotedMessageId || null,
         
-        payload: type === 'message' ? {
+        payload: TEXT_TYPES.includes(type) ? {
             ciphertext,
             messageIv,
             isEncrypted: true,
@@ -68,6 +70,12 @@ async function createMessage(messageData, io = null) {
     if (poll) messageDoc.poll = poll;
     if (contact) messageDoc.contact = contact;
     if (meeting) messageDoc.meeting = meeting;
+    // Checklist item text is inside the encrypted body; the server keeps only the
+    // checked state of each item.
+    if (messageDoc.type === 'checklist') {
+        const n = Math.min(Math.max(parseInt(checklistCount, 10) || 0, 1), 50);
+        messageDoc.checklist = Array.from({ length: n }, (_, order) => ({ order, checked: false }));
+    }
     if (linkPreview) messageDoc.linkPreview = linkPreview;
 
     logger.debug({ type }, `Creating message${type === 'message' ? ' 🔐' : ''}`);
@@ -149,22 +157,27 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
     if (parentId || type === 'system') return;
 
     const Channel = require('../../features/channels/channel.model.js');
-    const notificationService = require('../../features/notifications/notificationService');
+    const notificationService = require('../notifications/notificationService');
     const senderId = String(sender);
     const senderUsername = message.sender?.username || 'Someone';
     const senderAvatar = message.sender?.profilePicture || null;
 
     let recipientIds = [];
     let channelName = null;
+    let mutedIds = new Set();
+    let channelPolicy = null;
     if (dm) {
-        const session = await DMSession.findById(dm).select('participants').lean();
+        const session = await DMSession.findById(dm).select('participants mutedBy').lean();
         recipientIds = (session?.participants || []).map(String).filter(id => id !== senderId);
+        mutedIds = new Set((session?.mutedBy || []).map(m => String(m.user)));
     } else if (channel) {
-        const channelDoc = await Channel.findById(channel).select('name members').lean();
+        const channelDoc = await Channel.findById(channel).select('name members mutedBy broadcastMentions admins workspace').lean();
+        channelPolicy = channelDoc;
         channelName = channelDoc?.name || null;
         recipientIds = (channelDoc?.members || [])
             .map(m => String(m?.user?._id || m?.user || m))
             .filter(id => id && id !== senderId);
+        mutedIds = new Set((channelDoc?.mutedBy || []).map(m => String(m.user)));
     }
     if (recipientIds.length === 0) return;
 
@@ -178,11 +191,24 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
     // workspaces without a company too); @here / @channel address everyone.
     let mentionedUserIds = [];
     let everyone = false;
+    let hereIds = null;
     if (mentionText && channel) {
         try {
             const { parseMentionHandles } = require('../../utils/mentionParser');
             const { userHandles, isHere, isChannel } = parseMentionHandles(mentionText);
-            everyone = isHere || isChannel;
+            // @channel / @here may be limited to channel admins.
+            let broadcastAllowed = isHere || isChannel;
+            if (broadcastAllowed && channelPolicy?.broadcastMentions === 'admins') {
+                const { canManageChannel } = require('../../features/channels/channelMute.controller');
+                broadcastAllowed = await canManageChannel(channelPolicy, senderId);
+            }
+            if (broadcastAllowed && isChannel) {
+                everyone = true;
+            } else if (broadcastAllowed && isHere) {
+                // @here reaches only people who are online right now.
+                const { getPresence } = require('../../features/presence/presence.service');
+                hereIds = new Set(recipientIds.filter(id => getPresence(id)));
+            }
             if (userHandles.length > 0) {
                 const User = require('../../../models/User');
                 const users = await User.find({
@@ -199,6 +225,7 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
         }
     }
     const mentionedSet = new Set(mentionedUserIds);
+    const broadcastTo = (id) => everyone || (hereIds ? hereIds.has(id) : false);
 
     const activity = {
         workspaceId: String(workspace),
@@ -215,14 +242,17 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
         createdAt: message.createdAt,
     };
     for (const recipientId of recipientIds) {
+        // Unread counts still update for muted conversations; the flag tells the
+        // client not to alert.
         notificationService.emitToUser(io, recipientId, 'conversation:activity', {
             ...activity,
-            isMention: everyone || mentionedSet.has(recipientId),
+            isMention: broadcastTo(recipientId) || mentionedSet.has(recipientId),
+            muted: mutedIds.has(recipientId),
         });
     }
 
     if (dm) {
-        await Promise.allSettled(recipientIds.map(recipientId => notificationService.dmReceived(io, {
+        await Promise.allSettled(recipientIds.filter(id => !mutedIds.has(id)).map(recipientId => notificationService.dmReceived(io, {
             recipientId,
             senderId,
             senderUsername,
@@ -239,7 +269,9 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
     const snippet = mentionText
         ? (mentionText.length > 60 ? `${mentionText.slice(0, 57)}...` : mentionText)
         : null;
-    const mentionTargets = everyone ? recipientIds : mentionedUserIds;
+    // A muted channel still notifies for a direct @mention, never for @channel/@here.
+    const mentionTargets = recipientIds
+        .filter(id => mentionedSet.has(id) || (broadcastTo(id) && !mutedIds.has(id)));
     if (mentionTargets.length > 0) {
         await Promise.allSettled(mentionTargets.map(userId => notificationService.mention(io, {
             mentionedUserId: userId,
@@ -249,7 +281,7 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
             channelId: String(channel),
             snippet,
             preview,
-            isEveryone: everyone && !mentionedSet.has(userId),
+            isEveryone: broadcastTo(userId) && !mentionedSet.has(userId),
         })));
     }
 }
@@ -542,16 +574,21 @@ async function findOrCreateDMSession(userId1, userId2, workspaceId) {
 }
 
 async function getUserDMSessions(userId, workspaceId) {
+    // Conversations this user deleted stay out of their list until a new message arrives.
     const sessions = await DMSession.find({
         workspace: workspaceId,
-        participants: { $in: [userId] }
+        participants: { $in: [userId] },
+        'hiddenFor.user': { $ne: userId },
     }).populate('participants', 'username email profilePicture isOnline userStatus');
 
     
     const sessionList = await Promise.all(
         sessions.map(async (session) => {
-            
-            const lastMsg = await Message.findOne({ dm: session._id })
+            const cleared = (session.clearedAt || []).find(c => String(c.user) === String(userId));
+            const lastMsg = await Message.findOne({
+                dm: session._id,
+                ...(cleared?.clearedAt ? { createdAt: { $gt: cleared.clearedAt } } : {}),
+            })
                 .sort({ createdAt: -1 })
                 .select('payload type text createdAt sender')
                 .populate('sender', 'username');
@@ -584,6 +621,7 @@ async function getUserDMSessions(userId, workspaceId) {
                 else if (lastMsg.type === 'poll') lastMessageText = '📊 Poll';
                 else if (lastMsg.type === 'contact') lastMessageText = '👤 Contact';
                 else if (lastMsg.type === 'meeting') lastMessageText = '📅 Meeting';
+                else if (lastMsg.type === 'checklist') lastMessageText = '☑️ Checklist';
                 else if (lastMsg.text) lastMessageText = lastMsg.text; 
                 else if (lastMsg.payload?.isEncrypted || lastMsg.payload?.ciphertext) lastMessageText = '🔒 Encrypted message';
                 else lastMessageText = 'Message';
@@ -594,6 +632,11 @@ async function getUserDMSessions(userId, workspaceId) {
                 otherUser: otherUser || { username: 'Self' },
                 otherUserId: otherUser?._id || otherUser,
                 lastMessage: lastMessageText,
+                // Encrypted text can only be read by the participants: hand the client
+                // the ciphertext so it can show a real preview.
+                lastMessagePreview: lastMsg?.type === 'message' && lastMsg.payload?.ciphertext
+                    ? { ciphertext: lastMsg.payload.ciphertext, messageIv: lastMsg.payload.messageIv }
+                    : null,
                 lastMessageAt: lastMsg?.createdAt || session.createdAt,
                 unreadCount
             };
@@ -877,7 +920,7 @@ async function addReaction(messageId, userId, emoji, io) {
     if (message.sender && String(message.sender) !== String(userId) && message.workspace) {
         (async () => {
             const User = require('../../../models/User');
-            const notificationService = require('../../features/notifications/notificationService');
+            const notificationService = require('../notifications/notificationService');
             const reactor = await User.findById(userId).select('username').lean();
             await notificationService.reaction(io, {
                 recipientId: String(message.sender),
@@ -921,6 +964,10 @@ async function removeReaction(messageId, userId, emoji, io) {
 async function checklistToggle(messageId, itemIndex, userId, io) {
     const message = await Message.findById(messageId);
     if (!message) throw Object.assign(new Error('Message not found'), { status: 404 });
+    // Only people in the conversation may tick items (this had no access check).
+    const { checkConversationAccess } = require('../threads/threadAccess');
+    const access = await checkConversationAccess({ channel: message.channel, dm: message.dm }, userId, { forWrite: true });
+    if (!access.ok) throw Object.assign(new Error(access.error), { status: access.status });
     if (message.type !== 'checklist') throw Object.assign(new Error('Message is not a checklist'), { status: 400 });
 
     const item = message.checklist[itemIndex];

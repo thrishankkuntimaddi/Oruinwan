@@ -6,13 +6,13 @@
  * mocked Channel / DMSession / Workspace models.
  */
 
-const Message = require('../../../features/messages/message.model.js');
+const Message = require('../message.model.js');
 const Channel = require('../../../features/channels/channel.model.js');
 const DMSession = require('../../../../models/DMSession');
 const Workspace = require('../../../../models/Workspace');
 const Task = require('../../../../models/Task');
 
-jest.mock('../../../features/messages/message.model.js');
+jest.mock('../message.model.js');
 jest.mock('../../../features/channels/channel.model.js');
 jest.mock('../../../../models/DMSession');
 jest.mock('../../../../models/Workspace');

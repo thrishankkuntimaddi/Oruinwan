@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
-const Message = require('../../features/messages/message.model');
+const Message = require('../messages/message.model');
 const logger = require('../../../utils/logger');
 
 const Channel = require('../../features/channels/channel.model');

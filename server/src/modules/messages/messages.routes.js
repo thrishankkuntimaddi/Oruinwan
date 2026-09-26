@@ -1,10 +1,12 @@
 const logger = require('../../../utils/logger');
+const { requireCompanyPermission } = require('../../shared/companyPermissions');
+const { requireWorkspaceFeature, resolvers } = require('../../shared/workspaceFeatures');
 const express = require('express');
 const router = express.Router();
 const messagesController = require('./messages.controller');
 const threadsController = require('../threads/threads.controller');
 const requireAuth = require('../../shared/middleware/auth');
-const Message = require('../../features/messages/message.model');
+const Message = require('./message.model');
 const Channel = require('../../features/channels/channel.model');
 const DMSession = require('../../../models/DMSession');
 const mongoose = require('mongoose');
@@ -16,6 +18,7 @@ router.post('/ai/translate',      messagesController.translateMessage);
 router.post('/ai/thread-summary', messagesController.getThreadSummary);
 
 router.get('/bookmarks',                messagesController.getBookmarks);
+router.get('/pinned',                   messagesController.getPinnedMessages);
 
 router.get('/reminders',                messagesController.getUserReminders);
 router.delete('/reminders/:reminderId', messagesController.cancelReminder);
@@ -48,7 +51,7 @@ router.get(
 
 router.post('/channel', messagesController.sendChannelMessage);
 
-router.post('/poll', messagesController.createPollMessage);
+router.post('/poll', requireWorkspaceFeature('polls', resolvers.fromBodyConversation), messagesController.createPollMessage);
 
 router.get('/channel/:channelId/jump-anchor', messagesController.getJumpAnchor);
 
@@ -56,7 +59,7 @@ router.get('/channel/:channelId', messagesController.getChannelMessages);
 
 router.get('/thread/:messageId', threadsController.getThread);
 
-router.post('/thread/:messageId', threadsController.postThreadReply);
+router.post('/thread/:messageId', requireWorkspaceFeature('threads', resolvers.fromMessageParam), threadsController.postThreadReply);
 
 router.get('/:messageId/thread-count', threadsController.getThreadCount);
 
@@ -141,15 +144,15 @@ router.patch('/:messageId', messagesController.editMessage);
 
 router.delete('/:messageId', messagesController.deleteMessage);
 
-router.post('/:messageId/react', messagesController.addReaction);
+router.post('/:messageId/react', requireWorkspaceFeature('reactions', resolvers.fromMessageParam), messagesController.addReaction);
 
 router.delete('/:messageId/react', messagesController.removeReaction);
 
-router.post('/:messageId/pin', messagesController.pinMessage);
+router.post('/:messageId/pin', requireCompanyPermission('pinMessages'), messagesController.pinMessage);
 
 router.post('/forward', messagesController.forwardMessage);
 
-router.post('/:messageId/reminder', messagesController.scheduleReminder);
+router.post('/:messageId/reminder', requireWorkspaceFeature('reminders', resolvers.fromMessageParam), messagesController.scheduleReminder);
 
 router.post('/:messageId/checklist/:itemIdx', messagesController.checklistToggle);
 
@@ -159,7 +162,7 @@ router.get('/:messageId/versions', messagesController.getMessageVersions);
 
 router.post('/:messageId/restore', messagesController.restoreMessageVersion);
 
-router.post('/:messageId/bookmark', messagesController.toggleBookmark);
+router.post('/:messageId/bookmark', requireWorkspaceFeature('bookmarks', resolvers.fromMessageParam), messagesController.toggleBookmark);
 
 router.post('/:messageId/convert-task', messagesController.convertToTask);
 

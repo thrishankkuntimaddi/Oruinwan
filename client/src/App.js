@@ -23,8 +23,8 @@ import FilesPanel from "./components/layout/panels/FilesPanel";
 import KnowledgePanel from "./components/layout/panels/KnowledgePanel";
 
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
-import { HuddleProvider } from "./contexts/HuddleContext";
-import { NotificationsProvider } from "./contexts/NotificationsContext";
+import { HuddleProvider } from "./features/huddles/HuddleContext";
+import { NotificationsProvider } from "./features/notifications/NotificationsContext";
 import { AIProvider } from "./contexts/AIContext";
 import NotificationsPage from "./pages/NotificationsPage";
 
@@ -36,6 +36,7 @@ import Updates from "./pages/SidebarComp/Updates";
 import Meetings from "./pages/SidebarComp/Meetings";
 import MeetingDetailPage from "./pages/SidebarComp/MeetingDetailPage";
 import AppsPage from "./pages/apps/AppsPage";
+import { FeatureFlagsProvider, FeatureRoute } from "./contexts/FeatureFlagsContext";
 import AutomationsPage from "./pages/workspace/AutomationsPage";
 import AutomationBuilderPage from "./pages/workspace/AutomationBuilderPage";
 import TemplateMarketplacePage from "./pages/workspace/TemplateMarketplacePage";
@@ -154,6 +155,7 @@ function App() {
   return (
     <ToastProvider>
       <ThemeProvider>
+        <FeatureFlagsProvider>
         <Router>
           <ScrollToTop />
           <SocketProvider>
@@ -594,22 +596,6 @@ function App() {
                               }
                             />
 
-                           {}
-                          <Route
-                            path="/workspace/:workspaceId/apps"
-                            element={
-                              <RequireAuth>
-                                <WorkspaceScope>
-                                  <RequireWorkspace>
-                                    <MainLayout>
-                                      <AppsPage />
-                                    </MainLayout>
-                                  </RequireWorkspace>
-                                </WorkspaceScope>
-                              </RequireAuth>
-                            }
-                          />
-
                           {}
                           <Route
                             path="/workspace/:workspaceId/huddles"
@@ -678,7 +664,7 @@ function App() {
                           <Route path="/careers" element={<Careers />} />
 
                           <Route path="/help" element={<HelpCenter />} />
-                          <Route path="/community" element={<Community />} />
+                          <Route path="/community" element={<FeatureRoute flag="community"><Community /></FeatureRoute>} />
                           <Route path="/partners" element={<Partners />} />
                           <Route path="/status" element={<Status />} />
 
@@ -772,7 +758,7 @@ function App() {
                             <Route path="/owner/dashboard" element={<OwnerDashboard />} />
                             <Route path="/owner/analytics" element={<OwnerAnalytics />} />
                             <Route path="/owner/insights" element={<InsightsDashboard />} />
-                            <Route path="/owner/billing" element={<OwnerBilling />} />
+                            <Route path="/owner/billing" element={<FeatureRoute flag="billing" redirectTo="/owner/dashboard"><OwnerBilling /></FeatureRoute>} />
                             <Route path="/owner/security" element={<OwnerSecurity />} />
 
                             <Route path="/owner/admins" element={<AdminsManagement />} />
@@ -824,6 +810,10 @@ function App() {
                             <Route path="/admin/org-chart" element={<OrgChartPage />} />
                             <Route path="/admin/workspace-templates" element={<WorkspaceTemplates />} />
                             <Route path="/admin/workspace-permissions" element={<WorkspacePermissions />} />
+                            <Route path="/admin/employees" element={<EmployeeDirectoryPage />} />
+                            <Route path="/admin/permission-matrix" element={<PermissionMatrixPage />} />
+                            <Route path="/admin/audit-logs" element={<AuditLogViewer />} />
+                            <Route path="/admin/compliance-logs" element={<ComplianceLogViewer />} />
                           </Route>
 
                           {}
@@ -904,6 +894,7 @@ function App() {
             </ContactsProvider>
           </SocketProvider>
         </Router>
+        </FeatureFlagsProvider>
       </ThemeProvider>
     </ToastProvider>
   );

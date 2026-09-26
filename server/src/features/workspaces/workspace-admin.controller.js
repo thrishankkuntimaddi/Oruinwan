@@ -2,6 +2,7 @@ const logger = require('../../../utils/logger');
 const Workspace = require("../../../models/Workspace");
 const _User = require("../../../models/User");
 const Channel = require("../channels/channel.model.js");
+const { recordAdminAction } = require("../../shared/adminAudit");
 
 exports.revokeInvite = async (req, res) => {
     try {
@@ -303,6 +304,12 @@ exports.suspendMember = async (req, res) => {
         targetMember.suspendedBy = adminId;
         await workspace.save();
 
+        await recordAdminAction({
+            userId: adminId, companyId: workspace.company, action: 'workspace.member_suspended', category: 'permissions', severity: 'warning',
+            resourceType: 'Workspace', resourceId: workspace._id, resourceName: workspace.name,
+            details: { targetUserId }, req,
+        });
+
         return res.json({
             message: "Member suspended successfully",
             userId: targetUserId
@@ -346,6 +353,12 @@ exports.restoreMember = async (req, res) => {
         targetMember.suspendedAt = null;
         targetMember.suspendedBy = null;
         await workspace.save();
+
+        await recordAdminAction({
+            userId: adminId, companyId: workspace.company, action: 'workspace.member_restored', category: 'permissions', severity: 'info',
+            resourceType: 'Workspace', resourceId: workspace._id, resourceName: workspace.name,
+            details: { targetUserId }, req,
+        });
 
         return res.json({
             message: "Member restored successfully",
@@ -402,8 +415,15 @@ exports.changeRole = async (req, res) => {
         }
 
         
+        const previousRole = targetMember.role;
         targetMember.role = newRole;
         await workspace.save();
+
+        await recordAdminAction({
+            userId: adminId, companyId: workspace.company, action: 'workspace.member_role_changed', category: 'permissions', severity: 'warning',
+            resourceType: 'Workspace', resourceId: workspace._id, resourceName: workspace.name,
+            details: { targetUserId, previousRole, newRole }, req,
+        });
 
         return res.json({
             message: "Member role updated successfully",
@@ -474,6 +494,12 @@ exports.removeMember = async (req, res) => {
         const User = require("../../../models/User");
         await User.findByIdAndUpdate(targetUserId, {
             $pull: { workspaces: { workspace: workspaceId } }
+        });
+
+        await recordAdminAction({
+            userId: adminId, companyId: workspace.company, action: 'workspace.member_removed', category: 'permissions', severity: 'warning',
+            resourceType: 'Workspace', resourceId: workspace._id, resourceName: workspace.name,
+            details: { targetUserId }, req,
         });
 
         return res.json({

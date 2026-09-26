@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from './Card';
+import { SUPPORTED_LANGS } from '../../features/messaging/chatWindowComp/messages/TranslatePopover';
+import { getAutoTranslateLang, setAutoTranslateLang } from '../../utils/autoTranslate';
 import api from '@services/api';
 import { Check, Globe2 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
@@ -32,6 +34,7 @@ const labelStyle = {
 };
 
 const RegionTab = ({ region, setRegion }) => {
+    const [autoLang, setAutoLang] = useState(getAutoTranslateLang());
     const { showToast } = useToast();
     const [saving, setSaving] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
@@ -74,6 +77,17 @@ const RegionTab = ({ region, setRegion }) => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Card title="Auto-translate" subtitle="Translate other people's messages automatically (uses Chttrix AI)">
+                <label style={labelStyle}>Translate incoming messages to</label>
+                <select data-testid="auto-translate-lang" value={autoLang} style={selectStyle}
+                    onChange={e => { setAutoLang(e.target.value); setAutoTranslateLang(e.target.value); }}>
+                    <option value="">Off</option>
+                    {[{ code: 'en', label: 'English', flag: '🇬🇧' }, ...SUPPORTED_LANGS].map(l => (
+                        <option key={l.code} value={l.code}>{l.flag} {l.label}</option>
+                    ))}
+                </select>
+            </Card>
+
             <Card title="Language" subtitle="Display language for the interface">
                 <label style={labelStyle}>Display Language</label>
                 <select

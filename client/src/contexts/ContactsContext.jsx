@@ -4,6 +4,7 @@ import { messageService } from "../services/messageService";
 import api from '@services/api';
 import { useSocket } from "./SocketContext";
 import logger from '../utils/logger';
+import { rememberAvatars } from '../utils/avatarUtils';
 
 const ContactsContext = createContext();
 export const useContacts = () => useContext(ContactsContext);
@@ -130,6 +131,8 @@ export default function ContactsProvider({ children }) {
         profilePicture: member.user?.profilePicture || member.profilePicture,
         role: member.role
       }));
+      // Seed the shared avatar cache so every screen shows each member's stored picture.
+      rememberAvatars(membersData);
 
       setChannels(filteredChannels);
       setDms(dmsData);

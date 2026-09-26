@@ -1,7 +1,7 @@
 const logger = require('../../../utils/logger');
 const messagesService = require('./messages.service');
 const Channel = require("../../features/channels/channel.model.js");
-const Message = require("../../features/messages/message.model.js");
+const Message = require("./message.model.js");
 const User = require('../../../models/User');
 const DMSession = require('../../../models/DMSession');
 const { handleError } = require('../../../utils/responseHelpers');
@@ -36,6 +36,7 @@ exports.sendDirectMessage = async (req, res) => {
             poll = null,
             contact = null,
             meeting = null,
+            checklistCount = 0,
             linkPreview = null,
         } = req.body;
 
@@ -111,7 +112,20 @@ exports.sendDirectMessage = async (req, res) => {
             });
         }
 
-        
+        // Either side having blocked the other stops the conversation.
+        const blocks = dmSession.blockedBy || [];
+        if (blocks.some(b => String(b.user) === String(senderId))) {
+            return res.status(403).json({ code: 'YOU_BLOCKED', message: 'You blocked this person. Unblock them to send messages.' });
+        }
+        if (blocks.length > 0) {
+            return res.status(403).json({ code: 'BLOCKED', message: "You can't send messages to this person." });
+        }
+
+        // A new message brings a deleted (hidden) conversation back for both people.
+        if ((dmSession.hiddenFor || []).length > 0) {
+            await DMSession.updateOne({ _id: dmSession._id }, { $set: { hiddenFor: [] } });
+        }
+
         const message = await messagesService.createMessage(
             {
                 type,
@@ -131,6 +145,7 @@ exports.sendDirectMessage = async (req, res) => {
                 poll,
                 contact,
                 meeting,
+                checklistCount,
                 linkPreview,
             },
             req.io
@@ -208,6 +223,9 @@ exports.getDMs = async (req, res) => {
         }
 
         
+        // "Clear chat" hides everything before this user's clear time, for them only.
+        const cleared = (dmSession.clearedAt || []).find(c => String(c.user) === String(userId));
+
         const result = await messagesService.fetchMessages(
             { dm: dmSession._id },  
             {
@@ -216,7 +234,8 @@ exports.getDMs = async (req, res) => {
                 after,
                 around,
                 populateReplies: true,
-                userId   
+                userId,
+                userJoinedAt: cleared?.clearedAt || null,
             }
         );
 
@@ -360,6 +379,7 @@ exports.sendChannelMessage = async (req, res) => {
             poll = null,
             contact = null,
             meeting = null,
+            checklistCount = 0,
             linkPreview = null,
         } = req.body;
 
@@ -389,7 +409,14 @@ exports.sendChannelMessage = async (req, res) => {
             return res.status(403).json({ message: 'Not a channel member' });
         }
 
-        
+        // Announcement channels: only channel admins (or workspace owners/admins) start messages.
+        if (channel.postingPolicy === 'admins') {
+            const { canManageChannel } = require('../../features/channels/channelMute.controller');
+            if (!(await canManageChannel(channel, senderId))) {
+                return res.status(403).json({ code: 'POSTING_RESTRICTED', message: 'Only channel admins can post in this channel.' });
+            }
+        }
+
         const message = await messagesService.createMessage(
             {
                 type,
@@ -409,6 +436,7 @@ exports.sendChannelMessage = async (req, res) => {
                 poll,
                 contact,
                 meeting,
+                checklistCount,
                 linkPreview,
             },
             req.io
@@ -496,7 +524,7 @@ exports.forwardMessage = async (req, res) => {
         }
 
         
-        const Message = require('../../features/messages/message.model');
+        const Message = require('./message.model');
         const originalMessage = await Message.findById(messageId);
 
         if (!originalMessage) {
@@ -870,6 +898,12 @@ exports.createPollMessage = async (req, res) => {
             if (!channel.isMember(senderId)) {
                 return res.status(403).json({ message: 'Not a channel member' });
             }
+            if (channel.postingPolicy === 'admins') {
+                const { canManageChannel } = require('../../features/channels/channelMute.controller');
+                if (!(await canManageChannel(channel, senderId))) {
+                    return res.status(403).json({ code: 'POSTING_RESTRICTED', message: 'Only channel admins can post in this channel.' });
+                }
+            }
 
             messagePayload = {
                 type: 'poll',
@@ -947,7 +981,7 @@ function broadcastPollUpdate(req, message, poll) {
 exports.closePoll = async (req, res) => {
     try {
         const userId = req.user.sub;
-        const Message = require('../../features/messages/message.model');
+        const Message = require('./message.model');
         const message = await Message.findById(req.params.messageId);
         if (!message || message.type !== 'poll' || !message.poll) {
             return res.status(404).json({ message: 'Poll not found' });
@@ -983,7 +1017,7 @@ exports.voteOnPoll = async (req, res) => {
             return res.status(400).json({ message: 'optionIndices must be an array' });
         }
 
-        const Message = require('../../features/messages/message.model');
+        const Message = require('./message.model');
         const message = await Message.findById(messageId);
         if (!message) return res.status(404).json({ message: 'Message not found' });
         if (message.type !== 'poll') {
@@ -1137,7 +1171,7 @@ exports.getMessageInfo = async (req, res) => {
     }
 };
 
-const reminderService = require('../../features/messages/reminder.service');
+const reminderService = require('./messageReminder.service');
 
 exports.scheduleReminder = async (req, res) => {
     try {
@@ -1401,5 +1435,32 @@ exports.getJumpAnchor = async (req, res) => {
 
     } catch (err) {
         return handleError(res, err, 'GET JUMP ANCHOR ERROR');
+    }
+};
+
+/** Pinned messages of one channel or DM, newest pin first (ciphertext; the client decrypts). */
+exports.getPinnedMessages = async (req, res) => {
+    try {
+        const { channelId, dmId } = req.query;
+        if (!channelId && !dmId) return res.status(400).json({ message: 'channelId or dmId required' });
+        const { checkConversationAccess } = require('../threads/threadAccess');
+        const access = await checkConversationAccess({ channel: channelId, dm: channelId ? null : dmId }, req.user.sub);
+        if (!access.ok) return res.status(access.status).json({ message: access.error });
+
+        const Message = require('./message.model');
+        const messages = await Message.find({
+            ...(channelId ? { channel: channelId } : { dm: dmId }),
+            isPinned: true,
+            isDeletedUniversally: { $ne: true },
+            hiddenFor: { $nin: [req.user.sub] },
+        })
+            .sort({ pinnedAt: -1 })
+            .limit(100)
+            .populate('sender', 'username profilePicture')
+            .populate('pinnedBy', 'username')
+            .lean();
+        return res.json({ messages });
+    } catch (err) {
+        return handleError(res, err, 'GET PINNED MESSAGES ERROR');
     }
 };

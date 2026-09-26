@@ -4,52 +4,22 @@ const logger = require('../../../utils/logger');
 const mongoose = require('mongoose');
 const Workspace = require('../../../models/Workspace');
 const Channel = require('../channels/channel.model');
-const Message = require('../messages/message.model');
+const Message = require('../../modules/messages/message.model');
 const Task = require('../../../models/Task');
 const User = require('../../../models/User');
 const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
-const AuditLog = require('../../../models/AuditLog');
-const ComplianceLog = require('../../../models/ComplianceLog');
+const WorkspacePermission = require('../../models/WorkspacePermission');
+const { invalidateWorkspaceFeatures } = require('../../shared/workspaceFeatures');
 const conversationKeysService = require('../../modules/conversations/conversationKeys.service');
 
-async function logAction(opts) {
-    const { userId, companyId, action, category, severity = 'info', resourceType, resourceId, resourceName, details, ipAddress, userAgent } = opts;
-    try {
-        const actor = await User.findById(userId).select('email companyRole').lean();
-        await Promise.all([
-            AuditLog.create({
-                companyId: companyId || null,
-                userId,
-                action,
-                resource: resourceType,
-                resourceId,
-                details,
-                ipAddress,
-                userAgent,
-                severity,
-                category,
-                status: 'success'
-            }),
-            companyId ? ComplianceLog.create({
-                companyId,
-                actorId: userId,
-                actorEmail: actor?.email,
-                actorRole: actor?.companyRole,
-                action,
-                category,
-                severity,
-                resourceType,
-                resourceId,
-                resourceName,
-                details,
-                ipAddress,
-                userAgent,
-                createdAt: new Date()
-            }) : Promise.resolve()
-        ]);
-    } catch (err) {
-        
-        logger.error('[WorkspaceOS] audit log write failed (non-fatal):', err.message);
+const { recordAdminAction: logAction } = require('../../shared/adminAudit');
+
+// Same free-plan cap createWorkspace applies to personal accounts.
+const PERSONAL_WORKSPACE_LIMIT = 3;
+async function assertPersonalWorkspaceLimit(companyId, userId) {
+    if (companyId) return;
+    if (await Workspace.countDocuments({ createdBy: userId }) >= PERSONAL_WORKSPACE_LIMIT) {
+        throw Object.assign(new Error(`Free plan limit reached. You can only create up to ${PERSONAL_WORKSPACE_LIMIT} workspaces.`), { status: 403, isLimitReached: true });
     }
 }
 
@@ -64,6 +34,7 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
 
     const user = await User.findById(userId).select('companyId companyRole').lean();
     const resolvedCompanyId = user?.companyId || companyId || null;
+    await assertPersonalWorkspaceLimit(resolvedCompanyId, userId);
 
     const cloneName = name || `${source.name} (Clone)`;
 
@@ -99,6 +70,8 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
             isPrivate: ch.isPrivate,
             isDefault: ch.isDefault,
             isDiscoverable: ch.isDiscoverable !== false,
+            postingPolicy: ch.postingPolicy === 'admins' ? 'admins' : 'everyone',
+            broadcastMentions: ch.broadcastMentions === 'admins' ? 'admins' : 'everyone',
             createdBy: userId,
             members: [{ user: userId, joinedAt: creationDate }],
             systemEvents: [{ type: 'channel_created', userId, timestamp: creationDate }]
@@ -126,6 +99,20 @@ exports.cloneWorkspace = async function ({ sourceId, userId, name, includeMember
         await cloned.save();
     }
 
+    // Feature toggles and workspace permissions come along; channel rules are remapped.
+    const sourcePerms = await WorkspacePermission.findOne({ workspace: sourceId }).lean();
+    if (sourcePerms) {
+        const { _id, workspace: _ws, createdAt: _c, updatedAt: _u, __v, channelPermissions = [], ...rest } = sourcePerms;
+        await WorkspacePermission.create({
+            ...rest,
+            workspace: cloned._id,
+            company: resolvedCompanyId,
+            channelPermissions: channelPermissions
+                .filter(cp => channelIdMap[String(cp.channel)])
+                .map(({ _id: _cpId, ...cp }) => ({ ...cp, channel: channelIdMap[String(cp.channel)] })),
+            updatedBy: userId,
+        });
+    }
     
     await User.findByIdAndUpdate(userId, {
         $push: { workspaces: { workspace: cloned._id, role: 'owner' } }
@@ -151,7 +138,7 @@ exports.exportWorkspace = async function ({ workspaceId, userId, companyId, ipAd
     if (!workspace) throw Object.assign(new Error('Workspace not found'), { status: 404 });
 
     const channels = await Channel.find({ workspace: workspaceId })
-        .select('name description isPrivate isDefault isDiscoverable settings')
+        .select('name description isPrivate isDefault isDiscoverable postingPolicy broadcastMentions settings')
         .lean();
 
     const bundle = {
@@ -173,9 +160,12 @@ exports.exportWorkspace = async function ({ workspaceId, userId, companyId, ipAd
             isPrivate: ch.isPrivate,
             isDefault: ch.isDefault,
             isDiscoverable: ch.isDiscoverable !== false,
+            postingPolicy: ch.postingPolicy === 'admins' ? 'admins' : 'everyone',
+            broadcastMentions: ch.broadcastMentions === 'admins' ? 'admins' : 'everyone',
         })),
         memberCount: workspace.members?.length || 0,
-        templateId: workspace.templateId?.toString() || null
+        templateId: workspace.templateId?.toString() || null,
+        featureToggles: (await WorkspacePermission.findOne({ workspace: workspaceId }).select('featureToggles').lean())?.featureToggles || null
     };
 
     
@@ -201,8 +191,9 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
 
     const user = await User.findById(userId).select('companyId companyRole').lean();
     const resolvedCompanyId = user?.companyId || companyId || null;
+    await assertPersonalWorkspaceLimit(resolvedCompanyId, userId);
 
-    const { workspace: wsData, channels = [] } = bundle;
+    const { workspace: wsData, channels = [], featureToggles = null } = bundle;
 
     
     const existingNames = await Workspace.distinct('name', { createdBy: userId });
@@ -236,6 +227,8 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
             isPrivate: ch.isPrivate || false,
             isDefault: ch.isDefault || false,
             isDiscoverable: ch.isDiscoverable !== false,
+            postingPolicy: ch.postingPolicy === 'admins' ? 'admins' : 'everyone',
+            broadcastMentions: ch.broadcastMentions === 'admins' ? 'admins' : 'everyone',
             createdBy: userId,
             members: [{ user: userId, joinedAt: creationDate }],
             systemEvents: [{ type: 'channel_created', userId, timestamp: creationDate }]
@@ -256,6 +249,18 @@ exports.importWorkspace = async function ({ bundle, userId, companyId, ipAddress
 
     imported.defaultChannels = defaultChannelIds;
     await imported.save();
+
+    if (featureToggles && typeof featureToggles === 'object') {
+        const toggles = {};
+        for (const [key, value] of Object.entries(featureToggles)) {
+            if (typeof value === 'boolean') toggles[`featureToggles.${key}`] = value;
+        }
+        await WorkspacePermission.findOneAndUpdate(
+            { workspace: imported._id },
+            { $set: { ...toggles, company: resolvedCompanyId || null, updatedBy: userId } },
+            { upsert: true, setDefaultsOnInsert: true, strict: true }
+        );
+    }
 
     await User.findByIdAndUpdate(userId, {
         $push: { workspaces: { workspace: imported._id, role: 'owner' } }
@@ -350,4 +355,68 @@ exports.getWorkspaceAnalytics = async function ({ workspaceId, companyId, range 
         range,
         computedAt: new Date().toISOString()
     };
+};
+
+/**
+ * Apply a workspace template to a freshly created workspace: its settings, its
+ * feature toggles and any channels it defines beyond the ones already present.
+ * The template must be public, belong to the user's company, or be the user's own.
+ */
+exports.applyTemplate = async function ({ workspace, templateId, userId, companyId }) {
+    const template = await WorkspaceTemplate.findOne({ _id: templateId, isActive: true }).lean();
+    if (!template) throw Object.assign(new Error('Template not found'), { status: 404 });
+    const allowed = template.isPublic
+        || String(template.createdBy) === String(userId)
+        || (template.company && companyId && String(template.company) === String(companyId));
+    if (!allowed) throw Object.assign(new Error('Template not available'), { status: 403 });
+
+    const existing = new Set((await Channel.find({ workspace: workspace._id }).select('name').lean()).map(c => c.name));
+    const creationDate = new Date();
+    for (const ch of template.defaultChannels || []) {
+        const name = String(ch.name || '').trim().toLowerCase().replace(/\s+/g, '-');
+        if (!name || existing.has(name)) continue;
+        existing.add(name);
+        const channel = await Channel.create({
+            workspace: workspace._id,
+            company: workspace.company || null,
+            name,
+            description: ch.description || '',
+            isPrivate: !!ch.isPrivate,
+            isDefault: !!ch.isDefault,
+            isDiscoverable: !ch.isPrivate,
+            createdBy: userId,
+            admins: [userId],
+            members: [{ user: userId, joinedAt: creationDate }],
+            systemEvents: [{ type: 'channel_created', userId, timestamp: creationDate }],
+        });
+        if (ch.isDefault) await Workspace.updateOne({ _id: workspace._id }, { $addToSet: { defaultChannels: channel._id } });
+        try {
+            await conversationKeysService.bootstrapConversationKey({
+                conversationId: channel._id.toString(),
+                conversationType: 'channel',
+                workspaceId: workspace._id.toString(),
+                members: [userId],
+            });
+        } catch (keyErr) {
+            logger.warn('[WorkspaceOS] Key bootstrap failed for template channel (non-fatal):', keyErr.message);
+        }
+    }
+
+    const settings = {};
+    for (const [key, value] of Object.entries(template.settings || {})) settings[`settings.${key}`] = value;
+    await Workspace.updateOne({ _id: workspace._id }, { $set: { ...settings, templateId: template._id } });
+
+    if (template.featureToggles) {
+        const toggles = {};
+        for (const [key, value] of Object.entries(template.featureToggles)) toggles[`featureToggles.${key}`] = value;
+        await WorkspacePermission.findOneAndUpdate(
+            { workspace: workspace._id },
+            { $set: { ...toggles, company: workspace.company || null, updatedBy: userId } },
+            { upsert: true, setDefaultsOnInsert: true }
+        );
+        invalidateWorkspaceFeatures(workspace._id);
+    }
+
+    await WorkspaceTemplate.updateOne({ _id: template._id }, { $inc: { usageCount: 1 } });
+    return template;
 };

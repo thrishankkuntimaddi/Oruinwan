@@ -11,20 +11,22 @@ import BillingPlan from './sections/BillingPlan';
 import UserDefaults from './sections/UserDefaults';
 import Branding from './sections/Branding';
 import DataPrivacy from './sections/DataPrivacy';
+import { useFeatureFlags } from '../../../contexts/FeatureFlagsContext';
 
 const CompanySettings = () => {
     const [activeSection, setActiveSection] = useState('profile');
+    const { flags } = useFeatureFlags();
 
     const sections = [
         { id: 'profile', label: 'Company Profile', icon: Building, component: CompanyProfile },
         { id: 'security', label: 'Security', icon: Shield, component: Security },
-        { id: 'domain-sso', label: 'Domain & SSO', icon: Globe, component: DomainSSO },
+        { id: 'domain-sso', label: 'Domain & SSO', icon: Globe, component: DomainSSO, flag: 'sso' },
         { id: 'notifications', label: 'Notifications', icon: Bell, component: Notifications },
-        { id: 'billing', label: 'Billing & Plan', icon: CreditCard, component: BillingPlan },
+        { id: 'billing', label: 'Billing & Plan', icon: CreditCard, component: BillingPlan, flag: 'billing' },
         { id: 'user-defaults', label: 'User Defaults', icon: UsersIcon, component: UserDefaults },
         { id: 'branding', label: 'Branding', icon: Palette, component: Branding },
         { id: 'data-privacy', label: 'Data & Privacy', icon: Database, component: DataPrivacy },
-    ];
+    ].filter(s => !s.flag || flags[s.flag] === true);
 
     const ActiveComponent = sections.find(s => s.id === activeSection)?.component;
 

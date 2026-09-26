@@ -13,10 +13,11 @@ const axios = require('axios');
  * so callers decide what to do (in development they log the link instead).
  */
 
-const FROM_NAME = 'Chttrix';
+const { resolveSender, diagnoseEmailConfig } = require('./emailConfig');
 
-function fromAddress() {
-  return process.env.EMAIL_FROM || process.env.SMTP_USER || process.env.SMTP_FALLBACK_USER || 'no-reply@chttrix.local';
+function smtpFrom() {
+  const { name, email } = resolveSender();
+  return `"${name.replace(/"/g, '')}" <${email}>`;
 }
 
 function smtpConfig(prefix) {
@@ -52,7 +53,7 @@ async function sendViaBrevo({ to, subject, text, html }) {
   const response = await axios.post(
     'https://api.brevo.com/v3/smtp/email',
     {
-      sender: { name: FROM_NAME, email: fromAddress() },
+      sender: resolveSender(),
       to: [{ email: to }],
       subject,
       htmlContent: html || text,
@@ -75,7 +76,7 @@ function smtpTransporter(prefix) {
 async function sendViaSmtp(prefix, { to, subject, text, html }) {
   try {
     const info = await smtpTransporter(prefix).sendMail({
-      from: `"${FROM_NAME}" <${fromAddress()}>`,
+      from: smtpFrom(),
       to,
       subject,
       text,
@@ -137,3 +138,10 @@ async function sendEmail({ to, subject, text, html }) {
 
 module.exports = sendEmail;
 module.exports.isEmailConfigured = isEmailConfigured;
+
+/** Log static config problems once at startup so a broken sender is visible before the first send. */
+module.exports.logEmailConfigWarnings = function logEmailConfigWarnings() {
+  for (const { level, message } of diagnoseEmailConfig()) {
+    (level === 'error' ? logger.error : logger.warn)(`📧 Email config: ${message}`);
+  }
+};

@@ -1,5 +1,5 @@
-const MessageReminder = require('../messages/MessageReminder');
-const Message = require('../messages/message.model');
+const MessageReminder = require('../../modules/messages/messageReminder.model');
+const Message = require('../../modules/messages/message.model');
 const logger = require('../../../utils/logger');
 
 function startRemindersCron(io) {

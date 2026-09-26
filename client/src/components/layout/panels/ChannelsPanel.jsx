@@ -6,8 +6,8 @@ import { useToast } from "../../../contexts/ToastContext";
 import api from '@services/api';
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import { useSocket } from "../../../contexts/SocketContext";
-import { useNotifications } from "../../../contexts/NotificationsContext";
-import CreateChannelModal from "../../messagesComp/CreateChannelModal";
+import { useNotifications } from "../../../features/notifications/NotificationsContext";
+import CreateChannelModal from "../../../features/messaging/CreateChannelModal";
 import logger from '../../../utils/logger';
 
 const ChannelsPanel = ({ title, isMobile = false }) => {

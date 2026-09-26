@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 
 function HighlightText({ text, highlight }) {
     if (!text) return null;
@@ -79,6 +79,7 @@ function formatBytes(bytes) {
 
 export default function SearchResultItem({ result, query, onClick, compact = false }) {
     const navigate = useNavigate();
+    const { workspaceId } = useParams();
 
     if (!result) return null;
 
@@ -89,11 +90,19 @@ export default function SearchResultItem({ result, query, onClick, compact = fal
     const handleClick = () => {
         if (onClick) return onClick(result);
         
+        // Open the result inside the current workspace (the old /workspace?x= links had no route).
+        const base = `/workspace/${workspaceId}`;
+        const id = result.id || result._id;
         switch (type) {
-            case 'channel':   navigate(`/workspace?channel=${result.id}`); break;
-            case 'task':      navigate(`/workspace?task=${result.id}`);    break;
-            case 'note':      navigate(`/workspace?note=${result.id}`);    break;
-            case 'knowledge': navigate(`/workspace?kb=${result.id}`);      break;
+            case 'channel':   navigate(`${base}/channel/${id}`); break;
+            case 'message':
+                if (result.dmId || result.dm) navigate(`${base}/dm/${result.dmId || result.dm}`);
+                else if (result.channelId || result.channel) navigate(`${base}/channel/${result.channelId || result.channel?._id || result.channel}`);
+                break;
+            case 'user':      navigate(`${base}/messages`); break;
+            case 'task':      navigate(`${base}/tasks`);    break;
+            case 'note':      navigate(`${base}/notes`);    break;
+            case 'knowledge': navigate(`${base}/knowledge`); break;
             case 'file':      if (result.url) window.open(result.url, '_blank'); break;
             default: break;
         }

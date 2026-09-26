@@ -6,7 +6,7 @@ const searchSvc  = require('./search.service');
 
 const Channel       = require('../channels/channel.model.js');
 const User          = require('../../../models/User');
-const Message       = require('../messages/message.model.js');
+const Message       = require('../../modules/messages/message.model.js');
 const Task          = require('../../../models/Task');
 const Note          = require('../../../models/Note');
 const WorkspaceFile = require('../files/WorkspaceFile');

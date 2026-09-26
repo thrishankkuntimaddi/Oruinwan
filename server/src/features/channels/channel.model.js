@@ -29,6 +29,19 @@ const ChannelSchema = new mongoose.Schema({
   
   admins: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
+  // Who may start new messages: everyone, or channel admins only (announcement
+  // channels; anyone can still reply in threads).
+  postingPolicy: { type: String, enum: ["everyone", "admins"], default: "everyone" },
+
+  // Who may notify the whole channel with @channel / @here.
+  broadcastMentions: { type: String, enum: ["everyone", "admins"], default: "everyone" },
+
+  // Members who muted this channel: no notifications except direct @mentions.
+  mutedBy: [{
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    mutedAt: { type: Date, default: Date.now }
+  }],
+
   
   lastMessageAt: { type: Date, default: null },
   messageCount: { type: Number, default: 0 },

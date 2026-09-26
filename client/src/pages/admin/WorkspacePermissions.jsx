@@ -8,7 +8,7 @@ const FEATURES = [
     { key: 'notes',       label: 'Notes',         desc: 'Collaborative notes' },
     { key: 'polls',       label: 'Polls',         desc: 'Create channel polls' },
     { key: 'ai',          label: 'AI Assistant',  desc: 'Smart replies & AI tools' },
-    { key: 'huddles',     label: 'Huddles',       desc: 'Voice & video huddles' },
+    { key: 'huddles',     label: 'Huddles',       desc: 'Voice huddles' },
     { key: 'fileUploads', label: 'File Uploads',  desc: 'Share files in channels' },
     { key: 'reactions',   label: 'Reactions',     desc: 'Message emoji reactions' },
     { key: 'threads',     label: 'Threads',       desc: 'Message thread replies' },

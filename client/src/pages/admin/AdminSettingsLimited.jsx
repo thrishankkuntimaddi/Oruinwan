@@ -30,6 +30,7 @@ const inputSt = {
 
 const AdminSettingsLimited = () => {
     const [activeTab, setActiveTab] = useState('notifications');
+    const [hoveredTab, setHoveredTab] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [settings, setSettings] = useState({
         emailOnNewUser: true,
@@ -70,10 +71,10 @@ const AdminSettingsLimited = () => {
                     <nav style={{ padding: '8px' }}>
                         {tabs.map(tab => {
                             const active = activeTab === tab.id;
-                            const [hov, setHov] = React.useState(false);
+                            const hov = hoveredTab === tab.id;
                             return (
                                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                                    onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+                                    onMouseEnter={() => setHoveredTab(tab.id)} onMouseLeave={() => setHoveredTab(null)}
                                     style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '9px 12px', background: active ? 'var(--bg-active)' : hov ? 'var(--bg-hover)' : 'transparent', border: active ? '1px solid var(--border-accent)' : '1px solid transparent', borderLeft: active ? '2px solid var(--accent)' : '2px solid transparent', color: active ? 'var(--accent)' : hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: active ? 600 : 400, cursor: 'pointer', textAlign: 'left', marginBottom: '2px', borderRadius: '2px', transition: 'all 150ms ease' }}>
                                     <tab.icon size={13} style={{ flexShrink: 0 }} /> {tab.label}
                                 </button>

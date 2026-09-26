@@ -1,4 +1,3 @@
-const logger = require('../../../utils/logger');
 const WorkspaceTemplate = require('../../models/WorkspaceTemplate');
 const Workspace = require('../../../models/Workspace');
 const Channel = require('../channels/channel.model');
@@ -214,42 +213,13 @@ exports.importTemplate = async (req, res) => {
       return res.status(403).json({ message: 'Template is not publicly available' });
     }
 
-    
-    const Workspace = require('../../../models/Workspace');
     const ws = await Workspace.findOne({ _id: workspaceId, 'members.user': userId }).lean();
     if (!ws) return res.status(403).json({ message: 'You are not a member of the target workspace' });
 
-    
-    let createdCount = 0;
-    if (template.defaultChannels && template.defaultChannels.length > 0) {
-      const workspaceCompanyId = ws.company || null;
-      for (const ch of template.defaultChannels) {
-        try {
-          const exists = await Channel.findOne({ workspace: workspaceId, name: ch.name }).lean();
-          if (!exists) {
-            await Channel.create({
-              workspace: workspaceId,
-              company: workspaceCompanyId,
-              name: ch.name,
-              description: ch.description || '',
-              isPrivate: ch.isPrivate || false,
-              isDefault: ch.isDefault || false,
-              isDiscoverable: !ch.isPrivate,
-              createdBy: userId,
-              members: [{ user: userId, joinedAt: new Date() }],
-              admins: [userId]
-            });
-            createdCount++;
-          }
-        } catch (chErr) {
-          
-          logger.error('[TEMPLATE IMPORT] Channel create error:', chErr.message);
-        }
-      }
-    }
-
-    
-    WorkspaceTemplate.findByIdAndUpdate(template._id, { $inc: { usageCount: 1 } }).catch(() => {});
+    // Channels (with encryption keys), settings and feature toggles.
+    const before = await Channel.countDocuments({ workspace: workspaceId });
+    await require('../workspace-os/workspace-os.service').applyTemplate({ workspace: ws, templateId: template._id, userId, companyId });
+    const createdCount = (await Channel.countDocuments({ workspace: workspaceId })) - before;
 
     return res.json({
       message: `Template imported. ${createdCount} channel(s) created.`,

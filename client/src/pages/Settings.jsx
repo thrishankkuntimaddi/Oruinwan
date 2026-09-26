@@ -36,7 +36,7 @@ const NAV_SECTIONS = [
     { id: 'appearance', label: 'Appearance', icon: Palette, description: 'Theme & font size' },
     { id: 'security', label: 'Security', icon: Shield, description: 'Password & 2FA' },
     { id: 'sessions', label: 'Sessions', icon: Laptop, description: 'Active devices' },
-    { id: 'integrations', label: 'Integrations', icon: Plug, description: 'GitHub, Slack & more' },
+    { id: 'integrations', label: 'Integrations', icon: Plug, description: 'Webhooks & AI providers' },
     { id: 'ai', label: 'Chttrix AI', icon: Sparkles, description: 'Provider, model, usage' },
     { id: 'compliance', label: 'Compliance & Privacy', icon: Shield, description: 'GDPR, audit logs, retention' },
     { id: 'advanced', label: 'Advanced', icon: SettingsIcon, description: 'Account & data' },

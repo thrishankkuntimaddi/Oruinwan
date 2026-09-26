@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useToast } from "../../contexts/ToastContext";
 import { useAuth } from "../../contexts/AuthContext";
-import CreateChannelModal from "../messagesComp/CreateChannelModal";
+import CreateChannelModal from "../../features/messaging/CreateChannelModal";
 import logger from '../../utils/logger';
 
 const API_BASE = import.meta.env.VITE_BACKEND_URL || '';
@@ -57,7 +57,7 @@ export const ChannelList = () => {
                 setLoading(true);
                 const res = await fetch(`${API_BASE}/api/workspaces/${workspaceId}/channels`, {
                     headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
                     }
                 });
                 const data = await res.json();

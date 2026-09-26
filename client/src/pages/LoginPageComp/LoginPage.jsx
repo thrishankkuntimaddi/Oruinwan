@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Sparkles, Shield, MessageSquare, Zap } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -7,7 +7,7 @@ import SignupForm from '../../components/loginpage/SignupForm';
 
 const FEATURES = [
     { icon: MessageSquare, color: '#b8956a', text: 'Channels, DMs & threads' },
-    { icon: Zap,           color: '#6ea8fe', text: 'One-click video huddles' },
+    { icon: Zap,           color: '#6ea8fe', text: 'One-click voice huddles' },
     { icon: Sparkles,      color: '#a78bfa', text: 'Chttrix AI — workspace aware' },
     { icon: Shield,        color: '#5aba8a', text: 'End-to-end encrypted' },
 ];
@@ -32,8 +32,15 @@ const LoginPage = () => {
         setIsSignup(mode === 'signup');
     }, [mode]);
 
+    // Only someone who arrives here already signed in is redirected from this page.
+    // A sign-in made on this page is routed by LoginForm (invites, pending companies,
+    // admin roles); redirecting here as well raced it and could bounce the user back
+    // to /workspaces after they had already opened a workspace.
+    const arrivalCheckedRef = useRef(false);
     useEffect(() => {
-        if (!loading && user) {
+        if (loading || arrivalCheckedRef.current) return;
+        arrivalCheckedRef.current = true;
+        if (user) {
             const needsPasswordSetup = localStorage.getItem('oauthPasswordSetupRequired') === 'true';
             if (needsPasswordSetup) return;
             if (user.isTemporaryPassword === true && user.passwordInitialized === false) return;

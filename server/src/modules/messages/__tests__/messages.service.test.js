@@ -1,9 +1,12 @@
 const messagesService = require('../messages.service');
-const Message = require('../../../features/messages/message.model.js');
+const Message = require('../message.model.js');
 const DMSession = require('../../../../models/DMSession');
 const Workspace = require('../../../../models/Workspace');
 
-jest.mock('../../../features/messages/message.model.js');
+jest.mock('../message.model.js');
+jest.mock('../../threads/threadAccess', () => ({
+    checkConversationAccess: jest.fn(async () => ({ ok: true })),
+}));
 jest.mock('../../../../models/DMSession');
 jest.mock('../../../../models/Workspace');
 
@@ -184,6 +187,13 @@ describe('Messages Service', () => {
     });
 
     describe('checklistToggle', () => {
+        it('refuses users outside the conversation', async () => {
+            const { checkConversationAccess } = require('../../threads/threadAccess');
+            checkConversationAccess.mockResolvedValueOnce({ ok: false, status: 404, error: 'Conversation not found' });
+            Message.findById = jest.fn().mockResolvedValue({ _id: 'msg1', type: 'checklist', channel: 'ch1', checklist: [{ checked: false }], save: jest.fn(), markModified: jest.fn() });
+            await expect(messagesService.checklistToggle('msg1', 0, 'intruder', null)).rejects.toMatchObject({ status: 404 });
+        });
+
         it('should throw if message type is not checklist', async () => {
             const mockMsg = {
                 _id: 'msg1',

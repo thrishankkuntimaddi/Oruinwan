@@ -1,6 +1,6 @@
 'use strict';
 
-jest.mock('../../features/messages/message.model', () => ({ findById: jest.fn(), create: jest.fn(), findByIdAndUpdate: jest.fn() }));
+jest.mock('../../modules/messages/message.model', () => ({ findById: jest.fn(), create: jest.fn(), findByIdAndUpdate: jest.fn() }));
 jest.mock('../../features/channels/channel.model', () => ({ findById: jest.fn(), find: jest.fn() }));
 jest.mock('../../../models/DMSession', () => ({ findById: jest.fn(), find: jest.fn() }));
 jest.mock('../../../models/Workspace', () => ({ findById: jest.fn() }));
@@ -9,7 +9,7 @@ jest.mock('../../modules/messages/messages.service', () => ({
   createMessage: jest.fn(),
   findOrCreateDMSession: jest.fn(),
 }));
-jest.mock('../handlers/huddles.socket', () => jest.fn());
+jest.mock('../../modules/huddles/huddles.socket', () => jest.fn());
 jest.mock('../../features/activity/activity.service', () => ({ emitWithIo: jest.fn().mockResolvedValue() }));
 
 const Channel = require('../../features/channels/channel.model');

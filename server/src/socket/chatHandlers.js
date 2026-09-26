@@ -1,4 +1,4 @@
-const Message = require("../features/messages/message.model");
+const Message = require("../modules/messages/message.model");
 const Channel = require("../features/channels/channel.model");
 const DMSession = require("../../models/DMSession");
 const Workspace = require("../../models/Workspace");
@@ -8,7 +8,6 @@ const messagesService = require("../modules/messages/messages.service");
 const ROOMS = require("../shared/utils/rooms");
 const { extractMemberId } = require("../../utils/memberHelpers");
 
-const registerHuddleHandlers = require("./handlers/huddles.socket");
 
 const activityService = require("../features/activity/activity.service");
 const { ACTIVITY_TYPES, ACTIVITY_SUBTYPES } = require("../../../platform/sdk/events/activityEvents");
@@ -58,7 +57,8 @@ module.exports = function registerChatHandlers(io, socket) {
   const userId = socket.user.id; 
 
   
-  registerHuddleHandlers(io, socket);
+  // Socket handlers owned by src/modules (huddles today).
+  require("../modules").registerModuleSockets(io, socket);
 
   
   socket.join(`user_${userId}`);

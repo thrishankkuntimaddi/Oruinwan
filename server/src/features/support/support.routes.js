@@ -3,15 +3,31 @@ const router = express.Router();
 const SupportTicket = require('../../../models/SupportTicket');
 const logger = require('../../../utils/logger');
 
+const User = require('../../../models/User');
 const requireAuth = require('../../shared/middleware/auth');
 
 router.use(requireAuth);
+
+// Access tokens do not carry the company, so resolve it from the user record.
+// Support tickets belong to a company; personal accounts get a clear 403.
+router.use(async (req, res, next) => {
+    try {
+        const user = await User.findById(req.user.sub).select('companyId').lean();
+        if (!user?.companyId) {
+            return res.status(403).json({ message: "Support tickets are available to company accounts" });
+        }
+        req.supportCompanyId = user.companyId;
+        next();
+    } catch (err) {
+        next(err);
+    }
+});
 
 router.post('/tickets', async (req, res) => {
     try {
         const { subject, description, priority } = req.body;
         const userId = req.user.sub;
-        const companyId = req.user.companyId;
+        const companyId = req.supportCompanyId;
 
         if (!subject || !description) {
             return res.status(400).json({ message: "Subject and description are required" });
@@ -38,7 +54,7 @@ router.post('/tickets', async (req, res) => {
 
 router.get('/tickets', async (req, res) => {
     try {
-        const companyId = req.user.companyId;
+        const companyId = req.supportCompanyId;
         const tickets = await SupportTicket.find({ companyId })
             .sort({ createdAt: -1 })
             .populate('creatorId', 'username email');
@@ -52,7 +68,7 @@ router.get('/tickets', async (req, res) => {
 
 router.get('/tickets/:id', async (req, res) => {
     try {
-        const companyId = req.user.companyId;
+        const companyId = req.supportCompanyId;
         const ticket = await SupportTicket.findOne({ _id: req.params.id, companyId })
             .populate('creatorId', 'username email')
             .populate('messages.sender', 'username email profilePicture');
@@ -71,7 +87,7 @@ router.get('/tickets/:id', async (req, res) => {
 router.post('/tickets/:id/message', async (req, res) => {
     try {
         const { message } = req.body;
-        const companyId = req.user.companyId;
+        const companyId = req.supportCompanyId;
         const userId = req.user.sub;
 
         if (!message) {
@@ -85,7 +101,8 @@ router.post('/tickets/:id/message', async (req, res) => {
 
         ticket.messages.push({
             sender: userId,
-            message,
+            content: message,
+            isFromAdmin: false,
             createdAt: new Date()
         });
 

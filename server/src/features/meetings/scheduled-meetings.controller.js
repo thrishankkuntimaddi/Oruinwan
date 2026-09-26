@@ -93,7 +93,7 @@ async function createScheduledMeeting(req, res) {
 
     
     try {
-      const notifService = require('../notifications/notificationService');
+      const notifService = require('../../modules/notifications/notificationService');
       if (ws && ws.members) {
         const recipientIds = ws.members
           .map(m => (m.user || m).toString())

@@ -4,7 +4,8 @@
   "private": true,
   "workspaces": [
     "client",
-    "server"
+    "server",
+    "e2e"
   ],
   "scripts": {
     "start": "npm run dev",
@@ -16,7 +17,8 @@
     "test": "npm test --workspace=server && npm test --workspace=client",
     "build": "npm run build --workspace=client",
     "lint:ai": "cd ai && eslint .",
-    "lint:sdk": "cd sdk && eslint ."
+    "lint:sdk": "cd sdk && eslint .",
+    "test:e2e": "npm test --workspace=e2e"
   },
   "engines": {
     "node": ">=20"

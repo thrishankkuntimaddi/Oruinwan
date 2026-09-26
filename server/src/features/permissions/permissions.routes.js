@@ -6,16 +6,17 @@ const ctrl = require('./permissions.controller');
 const requireAuth = require('../../shared/middleware/auth');
 const requireCompanyMember = require('../../shared/middleware/requireCompanyMember');
 const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
-const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
+const requireCompanyAdmin = require('../../shared/middleware/requireCompanyAdmin');
+const requireWorkspaceAdmin = require('../../shared/middleware/requireWorkspaceAdmin');
 
 router.get('/matrix', requireAuth, requireCompanyMember, ctrl.getMatrix);
 
-router.put('/matrix', requireAuth, requireAdmin, ctrl.updateMatrix);
+router.put('/matrix', requireAuth, requireCompanyAdmin, ctrl.updateMatrix);
 
 router.get('/workspace/:workspaceId/features', requireAuth, requireWorkspaceMember, ctrl.getFeatureToggles);
 
-router.put('/workspace/:workspaceId/features', requireAuth, requireWorkspaceMember, ctrl.updateFeatureToggles);
+router.put('/workspace/:workspaceId/features', requireAuth, requireWorkspaceMember, requireWorkspaceAdmin, ctrl.updateFeatureToggles);
 
-router.get('/audit-logs', requireAuth, requireAdmin, ctrl.getAuditLogs);
+router.get('/audit-logs', requireAuth, requireCompanyAdmin, ctrl.getAuditLogs);
 
 module.exports = router;

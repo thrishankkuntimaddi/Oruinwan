@@ -2,7 +2,7 @@ const logger = require('../../../utils/logger');
 const Workspace = require("../../../models/Workspace");
 const Channel = require("../channels/channel.model.js");
 const User = require("../../../models/User");
-const Message = require("../messages/message.model.js");
+const Message = require("../../modules/messages/message.model.js");
 const DMSession = require("../../../models/DMSession");
 const Task = require("../../../models/Task");
 const Note = require("../../../models/Note");
@@ -24,7 +24,8 @@ exports.createWorkspace = async (req, res) => {
       description,
       icon,
       color,
-      rules
+      rules,
+      templateId
     } = req.body;
     const userId = req.user?.sub;
 
@@ -48,7 +49,10 @@ exports.createWorkspace = async (req, res) => {
     
     if (isCompanyWorkspace) {
       const role = user.companyRole;
-      if (!role || (role !== "admin" && role !== "owner" && role !== "manager")) {
+      // The company's permission matrix decides when it has been configured for this role.
+      const { companyPermission } = require('../../shared/companyPermissions');
+      const matrix = await companyPermission(userId, 'createWorkspace');
+      if (matrix === false || (matrix === null && (!role || (role !== "admin" && role !== "owner" && role !== "manager")))) {
         return res.status(403).json({ message: "Only company admins/managers may create workspaces" });
       }
     }
@@ -163,6 +167,19 @@ exports.createWorkspace = async (req, res) => {
     workspace.defaultChannels = [generalChannel._id, announcementsChannel._id];
     await workspace.save();
 
+    let templateError = null;
+    if (templateId) {
+      try {
+        await require("../workspace-os/workspace-os.service").applyTemplate({
+          workspace, templateId, userId, companyId: resolvedCompanyId,
+        });
+      } catch (err) {
+        // The workspace exists either way; tell the client the template was skipped.
+        logger.warn({ err, templateId }, "Workspace template could not be applied");
+        templateError = err.message;
+      }
+    }
+
     
     user.workspaces.push({
       workspace: workspace._id,
@@ -187,7 +204,8 @@ exports.createWorkspace = async (req, res) => {
         icon: workspace.icon,
         color: workspace.color || "#2563eb",
         defaultChannels: workspace.defaultChannels
-      }
+      },
+      ...(templateError ? { templateError } : {})
     });
   } catch (err) {
     return handleError(res, err, "CREATE WORKSPACE ERROR");
@@ -255,45 +273,7 @@ exports.listWorkspaces = async (req, res) => {
   }
 };
 
-exports.getWorkspaceMembers = async (req, res) => {
-  try {
-    
-    const workspaceId = req.params.workspaceId || req.params.id;
-    const userId = req.user.sub;
-
-    const workspace = await Workspace.findById(workspaceId)
-      .populate('members.user', 'username email phone profilePicture isOnline userStatus profile');
-
-    if (!workspace) {
-      return res.status(404).json({ message: "Workspace not found" });
-    }
-
-    
-    const isMember = workspace.members.some(m => String(m.user._id) === String(userId));
-    if (!isMember) {
-      return res.status(403).json({ message: "Not a workspace member" });
-    }
-
-    
-    const formattedMembers = workspace.members.map(m => ({
-      _id: m.user._id,
-      username: m.user.username,
-      email: m.user.email,
-      phone: m.user.phone,
-      profilePicture: m.user.profilePicture,
-      isOnline: m.user.isOnline,
-      profile: m.user.profile,
-      role: m.role,
-      status: m.status || 'active',
-      joinedAt: m.joinedAt
-    }));
-
-    return res.json({ members: formattedMembers });
-  } catch (err) {
-    return handleError(res, err, "GET WORKSPACE MEMBERS ERROR");
-  }
-};
-
+// getWorkspaceMembers is defined once, below (an older duplicate here was always overridden).
 exports.deleteWorkspace = async (req, res) => {
   try {
     const workspaceId = req.params.id;
@@ -570,7 +550,7 @@ exports.joinWorkspace = async (req, res) => {
     await workspace.save();
 
     {
-      const notificationService = require('../notifications/notificationService');
+      const notificationService = require('../../modules/notifications/notificationService');
       notificationService.memberJoined(req.app?.get('io'), {
         newUserId: String(userId),
         newUsername: user.username || user.email,
@@ -708,6 +688,8 @@ exports.getWorkspaceMembers = async (req, res) => {
         profilePicture: m.user.profilePicture,  
         userStatus: m.user.userStatus,  
         profile: m.user.profile,  
+        // Presence: isOnline is what the clients read; status mirrors it for older callers.
+        isOnline: !!m.user.isOnline,
         status: m.user.isOnline ? 'online' : 'offline',
         lastSeen: m.user.lastLoginAt,
         role: m.role

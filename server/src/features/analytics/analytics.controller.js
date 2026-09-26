@@ -2,7 +2,7 @@ const logger = require('../../../utils/logger');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const _Department = require('../../../models/Department');
-const Message = require("../messages/message.model.js");
+const Message = require("../../modules/messages/message.model.js");
 const Channel = require("../channels/channel.model.js");
 const _DMSession = require('../../../models/DMSession');
 

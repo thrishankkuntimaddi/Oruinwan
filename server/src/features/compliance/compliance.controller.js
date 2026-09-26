@@ -3,17 +3,21 @@
 const ComplianceLog = require('../../../models/ComplianceLog');
 const crypto = require('crypto');
 const { handleError } = require('../../../utils/responseHelpers');
+const { scopedCompanyId } = require('../../shared/middleware/requireCompanyAdmin');
 
 exports.getComplianceLogs = async (req, res) => {
     try {
         const {
-            companyId, category, severity, actorId,
+            category, severity, actorId,
             page = 1, limit = 50, from, to, verify = false
         } = req.query;
+        const companyId = scopedCompanyId(req, res, req.query.companyId);
+        if (res.headersSent) return undefined;
 
+        // Always scoped to one company (platform admins may pick which).
         const filter = {};
         if (companyId) filter.companyId = companyId;
-        else if (req.user?._dbUser?.companyId) filter.companyId = req.user._dbUser.companyId;
+        else if (!req.isPlatformAdmin) return res.json({ logs: [], total: 0, page: 1, pages: 0 });
 
         if (category) filter.category = category;
         if (severity) filter.severity = severity;
@@ -71,7 +75,10 @@ exports.getComplianceLog = async (req, res) => {
             .populate('actorId', 'username email')
             .lean();
 
-        if (!log) return res.status(404).json({ message: 'Compliance log not found' });
+        // Another company's entry looks the same as a missing one.
+        if (!log || (!req.isPlatformAdmin && String(log.companyId) !== req.companyId)) {
+            return res.status(404).json({ message: 'Compliance log not found' });
+        }
 
         const ts = log.createdAt instanceof Date ? log.createdAt.getTime() : new Date(log.createdAt).getTime();
         const raw = `${log.companyId}|${log.actorId?._id || log.actorId}|${log.action}|${String(log.resourceId || '')}|${ts}`;

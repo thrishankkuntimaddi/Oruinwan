@@ -54,8 +54,7 @@ export async function generateX25519KeyPair() {
     try {
         const keyPair = await crypto.subtle.generateKey(
             {
-                name: 'ECDH',
-                namedCurve: 'X25519'
+                name: 'X25519'
             },
             true, 
             ['deriveKey']
@@ -98,18 +97,11 @@ export async function generateIdentityKeyPair() {
     let keyPair;
     let algorithm;
 
-    
-    if (support.x25519) {
-        try {
-            keyPair = await generateX25519KeyPair();
-            algorithm = 'X25519';
-        } catch (error) {
-            logger.warn('X25519 generation failed, falling back to RSA:', error);
-        }
-    }
-
-    
-    if (!keyPair && support.rsa) {
+    // Identity keys are RSA-2048. The server wraps conversation keys for users with
+    // RSA-OAEP only (server/src/modules/conversations/cryptoUtils.js wrapForUser), so an
+    // X25519 identity key could not receive any DM or channel key. Every existing
+    // identity key is RSA-2048 as well. Switch to X25519 only together with the server.
+    if (support.rsa) {
         keyPair = await generateRSAKeyPair();
         algorithm = 'RSA-2048';
     }
@@ -161,8 +153,7 @@ export async function importPublicKeyPEM(pemKey, algorithm) {
         if (algorithm === 'X25519') {
             format = 'raw';
             keyConfig = {
-                name: 'ECDH',
-                namedCurve: 'X25519'
+                name: 'X25519'
             };
         } else {
             format = 'spki';
@@ -204,8 +195,7 @@ export async function importPrivateKeyJWK(jwk, algorithm, extractable = true) {
 
         if (algorithm === 'X25519') {
             keyConfig = {
-                name: 'ECDH',
-                namedCurve: 'X25519'
+                name: 'X25519'
             };
             usages = ['deriveKey'];
         } else {
@@ -275,7 +265,7 @@ export async function wrapKeyWithX25519(conversationKeyBytes, recipientPublicKey
         
         const sharedSecret = await crypto.subtle.deriveKey(
             {
-                name: 'ECDH',
+                name: 'X25519',
                 public: recipientPublicKey
             },
             ephemeralKeyPair.privateKey,
@@ -324,8 +314,7 @@ export async function unwrapKeyWithX25519(encryptedKeyBase64, ephemeralPublicKey
             'raw',
             ephemeralPublicKeyRaw.buffer,
             {
-                name: 'ECDH',
-                namedCurve: 'X25519'
+                name: 'X25519'
             },
             false,
             []
@@ -334,7 +323,7 @@ export async function unwrapKeyWithX25519(encryptedKeyBase64, ephemeralPublicKey
         
         const sharedSecret = await crypto.subtle.deriveKey(
             {
-                name: 'ECDH',
+                name: 'X25519',
                 public: ephemeralPublicKey
             },
             privateKey,

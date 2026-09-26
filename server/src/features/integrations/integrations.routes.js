@@ -5,10 +5,40 @@ const aiProviderService = require('./ai-provider.service');
 const { requireAIAccess } = require('../ai/ai.access');
 const aiAdmin = requireAIAccess({ adminOnly: true });
 const Webhook = require('./webhook.model');
+const { requireFlag } = require('../../shared/featureFlags');
+
+// Third-party provider connections stay behind the "integrations" flag until the
+// provider handlers are real. Outgoing webhooks and AI providers are live features.
+const integrationsFlag = requireFlag('integrations');
+
+const mongoose = require('mongoose');
+const Workspace = require('../../../models/Workspace');
+const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
+
+const ADMIN_ROLES = ['owner', 'admin'];
+
+// A malformed id would otherwise reach Mongo and surface as a 500.
+function validWorkspaceId(req, res, next) {
+  const id = req.query.workspaceId || req.body?.workspaceId;
+  if (id && !mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ message: 'Invalid workspaceId' });
+  }
+  next();
+}
+
+function requireWorkspaceAdmin(req, res, next) {
+  if (!ADMIN_ROLES.includes(req.workspaceRole)) {
+    return res.status(403).json({ message: 'Only workspace owners and admins can manage integrations and webhooks' });
+  }
+  next();
+}
+
+const member = [validWorkspaceId, requireWorkspaceMember];
+const admin = [...member, requireWorkspaceAdmin];
 
 router.use(requireAuth);
 
-router.get('/', async (req, res) => {
+router.get('/', integrationsFlag, ...member, async (req, res) => {
   try {
     const { workspaceId } = req.query;
     if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
@@ -20,7 +50,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/connect', async (req, res) => {
+router.post('/connect', integrationsFlag, ...admin, async (req, res) => {
   try {
     const { workspaceId, type, config, label } = req.body;
     if (!workspaceId || !type) return res.status(400).json({ message: 'workspaceId and type required' });
@@ -38,7 +68,7 @@ router.post('/connect', async (req, res) => {
   }
 });
 
-router.post('/disconnect', async (req, res) => {
+router.post('/disconnect', integrationsFlag, ...admin, async (req, res) => {
   try {
     const { workspaceId, type } = req.body;
     if (!workspaceId || !type) return res.status(400).json({ message: 'workspaceId and type required' });
@@ -50,7 +80,7 @@ router.post('/disconnect', async (req, res) => {
   }
 });
 
-router.post('/webhook/:type', async (req, res) => {
+router.post('/webhook/:type', integrationsFlag, async (req, res) => {
   try {
     const { type } = req.params;
     const { workspaceId } = req.query;
@@ -104,7 +134,7 @@ router.post('/webhook/:type', async (req, res) => {
   }
 });
 
-router.get('/webhooks', async (req, res) => {
+router.get('/webhooks', ...member, async (req, res) => {
   try {
     const { workspaceId } = req.query;
     if (!workspaceId) return res.status(400).json({ message: 'workspaceId required' });
@@ -118,7 +148,7 @@ router.get('/webhooks', async (req, res) => {
   }
 });
 
-router.post('/webhooks', async (req, res) => {
+router.post('/webhooks', ...admin, async (req, res) => {
   try {
     const { workspaceId, event, url } = req.body;
     if (!workspaceId || !event || !url) {
@@ -126,7 +156,11 @@ router.post('/webhooks', async (req, res) => {
     }
 
     
-    try { new URL(url); } catch { return res.status(400).json({ message: 'Invalid URL' }); }
+    let parsed;
+    try { parsed = new URL(url); } catch { return res.status(400).json({ message: 'Invalid URL' }); }
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return res.status(400).json({ message: 'Webhook URL must use http or https' });
+    }
 
     const webhook = await Webhook.create({
       workspaceId,
@@ -143,8 +177,18 @@ router.post('/webhooks', async (req, res) => {
 
 router.delete('/webhooks/:id', async (req, res) => {
   try {
-    const webhook = await Webhook.findByIdAndDelete(req.params.id);
-    if (!webhook) return res.status(404).json({ message: 'Webhook not found' });
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ message: 'Webhook not found' });
+    }
+    const webhook = await Webhook.findById(req.params.id).select('workspaceId').lean();
+    // Only an owner/admin of the webhook's own workspace may delete it; anyone
+    // else gets the same 404 as for a missing id, so ids cannot be probed.
+    const userId = String(req.user.sub || req.user._id);
+    const workspace = webhook && await Workspace.findOne(
+      { _id: webhook.workspaceId, members: { $elemMatch: { user: userId, status: 'active', role: { $in: ADMIN_ROLES } } } }
+    ).select('_id').lean();
+    if (!webhook || !workspace) return res.status(404).json({ message: 'Webhook not found' });
+    await Webhook.deleteOne({ _id: webhook._id });
     res.json({ message: 'Webhook deleted' });
   } catch (err) {
     res.status(500).json({ message: err.message });

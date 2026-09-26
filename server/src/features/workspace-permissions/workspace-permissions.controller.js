@@ -1,4 +1,5 @@
 const WorkspacePermission = require('../../models/WorkspacePermission');
+const { recordAdminAction } = require('../../shared/adminAudit');
 const Workspace = require('../../../models/Workspace');
 const { handleError } = require('../../../utils/responseHelpers');
 
@@ -61,11 +62,17 @@ exports.updatePermissions = async (req, res) => {
     
     const io = req.app?.get('io');
     if (io) {
-      io.to(`workspace_${workspaceId}`).emit('workspace-permissions-updated', {
+      io.to(`workspace:${workspaceId}`).emit('workspace-permissions-updated', {
         workspaceId,
         permissions: updated
       });
     }
+
+    await recordAdminAction({
+      userId, companyId: workspace.company, action: 'workspace.permissions_updated', category: 'permissions', severity: 'warning',
+      resourceType: 'Workspace', resourceId: workspace._id, resourceName: workspace.name,
+      details: { fields: Object.keys(req.body || {}) }, req,
+    });
 
     return res.json({ message: 'Permissions updated', permissions: updated });
   } catch (err) {
@@ -95,6 +102,7 @@ exports.getFeatureToggles = async (req, res) => {
 
 exports.updateFeatureToggles = async (req, res) => {
   try {
+    require('../../shared/workspaceFeatures').invalidateWorkspaceFeatures(req.params.workspaceId || req.params.id);
     const workspaceId = req.params.id;
     const userId = req.user?.sub;
 
@@ -119,11 +127,17 @@ exports.updateFeatureToggles = async (req, res) => {
 
     const io = req.app?.get('io');
     if (io) {
-      io.to(`workspace_${workspaceId}`).emit('workspace-features-updated', {
+      io.to(`workspace:${workspaceId}`).emit('workspace-features-updated', {
         workspaceId,
         featureToggles: updated.featureToggles
       });
     }
+
+    await recordAdminAction({
+      userId, companyId: workspace.company, action: 'workspace.features_updated', category: 'permissions', severity: 'warning',
+      resourceType: 'Workspace', resourceId: workspace._id, resourceName: workspace.name,
+      details: { featureToggles }, req,
+    });
 
     return res.json({ message: 'Feature toggles updated', featureToggles: updated.featureToggles });
   } catch (err) {

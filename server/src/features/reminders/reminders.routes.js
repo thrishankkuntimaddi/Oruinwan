@@ -2,8 +2,8 @@ const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
-const MessageReminder = require('../messages/MessageReminder');
-const Message = require('../messages/message.model');
+const MessageReminder = require('../../modules/messages/messageReminder.model');
+const Message = require('../../modules/messages/message.model');
 const { canAccessMessage } = require('../../modules/messages/messageAccess');
 const mongoose = require('mongoose');
 

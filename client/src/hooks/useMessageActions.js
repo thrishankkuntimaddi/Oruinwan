@@ -23,7 +23,13 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
     }, []);
 
     
-    const sendMessage = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, linkPreview = null, mentionText = '' }) => {
+    const sendMessage = useCallback(async ({ text, attachment = null, type = 'message', attachments = [], replyTo = null, quotedMessageId = null, contact = null, meeting = null, checklist = null, linkPreview = null, mentionText = '' }) => {
+
+        // A checklist is an encrypted message whose body is JSON; the server only
+        // stores one checked/unchecked slot per item.
+        const isChecklist = type === 'checklist' && checklist?.items?.length > 0;
+        if (isChecklist) text = JSON.stringify({ title: checklist.title || '', items: checklist.items });
+        const checklistFields = isChecklist ? { type: 'checklist', checklistCount: checklist.items.length } : {};
 
         
         if (!encryptionReady) {
@@ -38,7 +44,9 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         
         const isAttachmentMessage = ['image', 'video', 'file', 'voice'].includes(type) && attachment;
         
-        const isContactMessage = type === 'contact' && contact;
+        // Structured cards (contact, meeting) carry their data in their own field, not in text.
+        const structured = (type === 'contact' && contact) ? { contact } : (type === 'meeting' && meeting) ? { meeting } : null;
+        const isContactMessage = !!structured;
 
         if (!conversationId || (!text?.trim() && attachments.length === 0 && !isAttachmentMessage && !isContactMessage)) {
             logger.error('❌ [sendMessage] Validation failed:', { conversationId, text: text?.trim(), attachments, type });
@@ -51,8 +59,8 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         if (isContactMessage) {
             try {
                 const payload = conversationType === 'channel'
-                    ? { channelId: conversationId, type: 'contact', contact, clientTempId: tempId }
-                    : { dmSessionId: conversationId, workspaceId, type: 'contact', contact, clientTempId: tempId };
+                    ? { channelId: conversationId, type, ...structured, clientTempId: tempId }
+                    : { dmSessionId: conversationId, workspaceId, type, ...structured, clientTempId: tempId };
 
                 const endpoint = conversationType === 'channel'
                     ? '/api/v2/messages/channel'
@@ -71,11 +79,11 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                 return {
                     success: true,
                     tempId,
-                    message: { ...response.data.message, contact, type: 'contact' },
+                    message: { ...response.data.message, ...structured, type },
                 };
             } catch (err) {
-                logger.error('❌ [sendMessage] Contact send error:', err);
-                return { success: false, error: err.response?.data?.message || 'Failed to share contact' };
+                logger.error(`❌ [sendMessage] ${type} send error:`, err);
+                return { success: false, error: err.response?.data?.message || (type === 'meeting' ? 'Failed to schedule meeting' : 'Failed to share contact') };
             }
         }
 
@@ -123,7 +131,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
         
         let optimisticMessage = {
             _id: tempId,
-            type: 'message',
+            type: isChecklist ? 'checklist' : 'message',
             payload: { text, attachments },
             sender: {
                 _id: user?.sub || user?._id,
@@ -190,6 +198,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     quotedMessageId,
                     clientTempId: tempId,
                     mentionText: mentionText || undefined,
+                    ...checklistFields,
                     
                     linkPreview: linkPreview || undefined,
                 });
@@ -205,6 +214,7 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     quotedMessageId,
                     clientTempId: tempId,
                     mentionText: mentionText || undefined,
+                    ...checklistFields,
                     
                     linkPreview: linkPreview || undefined,
                 });

@@ -1,7 +1,7 @@
 'use strict';
 
 const aiCore        = require('../ai-core.service');
-const Message       = require('../../messages/message.model');
+const Message       = require('../../../modules/messages/message.model');
 const KnowledgePage = require('../../knowledge/KnowledgePage');
 const ScheduledMeeting = require('../../../models/ScheduledMeeting');
 

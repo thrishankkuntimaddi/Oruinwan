@@ -43,6 +43,45 @@ function OrgNode({ node, color, depth = 0 }) {
     );
 }
 
+/** People nested under their manager; admins can change who someone reports to. */
+function ReportingNode({ node, people, canEdit, onSetManager, depth = 0 }) {
+    const [expanded, setExpanded] = useState(depth < 3);
+    return (
+        <div style={{ marginLeft: depth === 0 ? 0 : 20 }} data-testid={`report-${node.username}`}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', maxWidth: 560 }}>
+                <button type="button" onClick={() => setExpanded(e => !e)} disabled={!node.reports.length}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-muted)', cursor: node.reports.length ? 'pointer' : 'default', width: 14 }}>
+                    {node.reports.length ? (expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />) : null}
+                </button>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{node.username}</p>
+                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
+                        {node.companyRole || 'member'}{node.reports.length ? ` · ${node.reports.length} direct report${node.reports.length === 1 ? '' : 's'}` : ''}
+                    </p>
+                </div>
+                {canEdit && (
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Reports to
+                        <select aria-label={`Manager of ${node.username}`} value={node.reportsTo || ''}
+                            onChange={e => onSetManager(node.id, e.target.value || null)}
+                            style={{ fontSize: '11px', padding: '3px 6px', background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
+                            <option value="">No one</option>
+                            {people.filter(p => String(p.id) !== String(node.id)).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
+                        </select>
+                    </label>
+                )}
+            </div>
+            {expanded && node.reports.length > 0 && (
+                <div style={{ marginTop: 6, paddingLeft: 14, borderLeft: '1px dashed var(--border-accent)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {node.reports.map(r => <ReportingNode key={r.id} node={r} people={people} canEdit={canEdit} onSetManager={onSetManager} depth={depth + 1} />)}
+                </div>
+            )}
+        </div>
+    );
+}
+
+const flattenPeople = (nodes) => nodes.flatMap(n => [n, ...flattenPeople(n.reports || [])]);
+
 const NODE_COLORS = ['var(--accent)', '#5aba8a', '#9b8ecf', '#e05252', '#7a7a7a', '#b8956a', '#5ab8ba', '#ba5a8a'];
 
 export default function OrgChartPage() {
@@ -50,6 +89,9 @@ export default function OrgChartPage() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [view, setView] = useState('departments');
+    const [saveError, setSaveError] = useState(null);
+    const canEdit = ['owner', 'admin'].includes(user?.companyRole);
 
     const companyId = typeof user?.companyId === 'object' ? (user?.companyId?._id || user?.companyId?.id) : user?.companyId;
 
@@ -65,6 +107,16 @@ export default function OrgChartPage() {
     }, [companyId]);
 
     useEffect(() => { fetchOrgChart(); }, [fetchOrgChart]);
+
+    const setManager = async (employeeId, managerId) => {
+        setSaveError(null);
+        try {
+            await api.put(`/api/companies/${companyId}/employees/${employeeId}/manager`, { managerId });
+            await fetchOrgChart();
+        } catch (err) {
+            setSaveError(err.response?.data?.message || 'Could not update the reporting line');
+        }
+    };
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
@@ -108,7 +160,27 @@ export default function OrgChartPage() {
                             ))}
                         </div>
 
-                        {}
+                        <div role="tablist" style={{ display: 'flex', gap: 4 }}>
+                            {[['departments', 'Departments & teams'], ['reporting', 'Reporting lines']].map(([key, label]) => (
+                                <button key={key} role="tab" aria-selected={view === key} onClick={() => setView(key)}
+                                    style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid var(--border-default)', cursor: 'pointer', background: view === key ? 'var(--bg-active)' : 'var(--bg-surface)', color: view === key ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {view === 'reporting' && (
+                            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {saveError && <p style={{ fontSize: '12px', color: 'var(--state-danger)', margin: 0 }}>{saveError}</p>}
+                                {(data.reportingLines || []).length === 0
+                                    ? <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No employees yet.</p>
+                                    : (data.reportingLines || []).map(root => (
+                                        <ReportingNode key={root.id} node={root} people={flattenPeople(data.reportingLines)} canEdit={canEdit} onSetManager={setManager} />
+                                    ))}
+                            </div>
+                        )}
+
+                        {view === 'departments' && (
                         <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '24px' }}>
                             {}
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: 'var(--accent)', padding: '12px 20px', marginBottom: '24px' }}>
@@ -127,6 +199,7 @@ export default function OrgChartPage() {
                                     ))}
                                 </div>}
                         </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -61,7 +61,7 @@ exports.initIdentityCryptoState = async (req, res) => {
             cryptoState.umekEnvelopeIv = umekEnvelopeIv || null;
             cryptoState.umekSalt = umekSalt || null;
             cryptoState.umekProtectionType = umekProtectionType;
-            cryptoState.algorithm = algorithm || 'X25519';
+            cryptoState.algorithm = algorithm || 'RSA-2048';
             cryptoState.version = (cryptoState.version || 1) + 1; 
             cryptoState.updatedAt = new Date();
 
@@ -79,7 +79,7 @@ exports.initIdentityCryptoState = async (req, res) => {
                 umekEnvelopeIv: umekEnvelopeIv || null,
                 umekSalt: umekSalt || null,
                 umekProtectionType,
-                algorithm: algorithm || 'X25519',
+                algorithm: algorithm || 'RSA-2048',
                 version: version || 1
             });
 

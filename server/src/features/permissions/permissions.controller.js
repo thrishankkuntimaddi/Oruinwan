@@ -4,11 +4,16 @@ const permissionsService = require('./permissions.service');
 const WorkspacePermission = require('../../models/WorkspacePermission');
 const AuditLog = require('../../../models/AuditLog');
 const { handleError } = require('../../../utils/responseHelpers');
+const { scopedCompanyId } = require('../../shared/middleware/requireCompanyAdmin');
 
 exports.getMatrix = async (req, res) => {
     try {
-        const companyId = req.query.companyId || req.user?._dbUser?.companyId || req.companyId;
+        // Members read their own company's matrix; the query parameter is only a hint.
+        const companyId = req.companyId;
         if (!companyId) return res.status(400).json({ message: 'companyId is required' });
+        if (req.query.companyId && String(req.query.companyId) !== companyId) {
+            return res.status(403).json({ message: 'Access denied: that company is not yours' });
+        }
 
         const matrix = await permissionsService.getMatrix(companyId);
         return res.json({ matrix, companyId });
@@ -19,22 +24,33 @@ exports.getMatrix = async (req, res) => {
 
 exports.updateMatrix = async (req, res) => {
     try {
-        const { companyId, updates } = req.body;
+        const { updates } = req.body;
         const userId = req.user?.sub;
+        const companyId = scopedCompanyId(req, res, req.body.companyId);
+        if (res.headersSent) return undefined;
 
         if (!companyId || !updates || typeof updates !== 'object') {
             return res.status(400).json({ message: 'companyId and updates object are required' });
         }
 
-        const matrix = await permissionsService.updateMatrix(companyId, updates, userId);
+        // Admins manage the roles below them; only the owner changes what admins may do.
+        const touchesPrivileged = Object.keys(updates).some(role => ['owner', 'admin'].includes(role));
+        if (touchesPrivileged && !req.isPlatformAdmin) {
+            const actor = await require('../../../models/User').findById(userId).select('companyRole coOwnerOf companyId').lean();
+            const isOwner = actor?.companyRole === 'owner'
+                || (actor?.coOwnerOf && String(actor.coOwnerOf) === String(actor.companyId));
+            if (!isOwner) {
+                return res.status(403).json({ message: 'Only the company owner can change admin permissions' });
+            }
+        }
 
-        
-        await AuditLog.create({
-            companyId, userId,
-            action: 'permissions.matrix.updated',
-            resource: 'Permission', details: { rolesUpdated: Object.keys(updates) },
-            category: 'permissions', severity: 'warning', status: 'success'
-        }).catch(() => {});
+        const matrix = await permissionsService.updateMatrix(companyId, updates, userId);
+        require('../../shared/companyPermissions').invalidateCompanyPermissions(companyId);
+
+        await require('../../shared/adminAudit').recordAdminAction({
+            userId, companyId, action: 'permissions.matrix.updated', category: 'permissions', severity: 'warning',
+            resourceType: 'Permission', details: { rolesUpdated: Object.keys(updates) }, req,
+        });
 
         return res.json({ message: 'Permission matrix updated', matrix });
     } catch (err) {
@@ -75,10 +91,11 @@ exports.getFeatureToggles = async (req, res) => {
 
 exports.updateFeatureToggles = async (req, res) => {
     try {
+        require('../../shared/workspaceFeatures').invalidateWorkspaceFeatures(req.params.workspaceId || req.params.id);
         const { workspaceId } = req.params;
         const { featureToggles, invitePermission, channelCreationPermission } = req.body;
         const userId = req.user?.sub;
-        const companyId = req.user?._dbUser?.companyId || null;
+        const companyId = req.workspace?.company || null;
 
         const updateData = { updatedBy: userId };
         if (featureToggles) updateData.featureToggles = featureToggles;
@@ -119,10 +136,14 @@ exports.updateFeatureToggles = async (req, res) => {
 exports.getAuditLogs = async (req, res) => {
     try {
         const AuditLog = require('../../../models/AuditLog');
-        const { companyId, category, severity, actorId, page = 1, limit = 50, from, to } = req.query;
+        const { category, severity, actorId, page = 1, limit = 50, from, to } = req.query;
+        const companyId = scopedCompanyId(req, res, req.query.companyId);
+        if (res.headersSent) return undefined;
 
+        // Always scoped: a company admin only ever sees their own company's log.
         const filter = {};
         if (companyId) filter.companyId = companyId;
+        else if (!req.isPlatformAdmin) return res.json({ logs: [], total: 0, page: 1, pages: 0 });
         if (category) filter.category = category;
         if (severity) filter.severity = severity;
         if (actorId) filter.userId = actorId;

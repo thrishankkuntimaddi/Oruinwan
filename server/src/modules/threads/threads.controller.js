@@ -1,7 +1,8 @@
 const logger = require('../../../utils/logger');
-const Message = require("../../features/messages/message.model.js");
+const Message = require("../messages/message.model.js");
 const Channel = require("../../features/channels/channel.model.js");
 const { followThread, unfollowThread, getFollowStatus, getFollowerIds } = require('./threads.service');
+const { checkThreadAccess } = require('./threadAccess');
 
 exports.getChannelThreads = async (req, res) => {
     try {
@@ -93,10 +94,35 @@ exports.getThread = async (req, res) => {
         const followerStrings = (parentMessage.followers || []).map(String);
         const isFollowing = followerStrings.includes(String(userId));
 
+        // Everyone who took part: the author first, then repliers by first reply.
+        const participants = [];
+        const seen = new Map();
+        for (const m of [parentMessage, ...replies]) {
+            const u = m.sender;
+            const id = u?._id ? String(u._id) : null;
+            if (!id) continue;
+            if (!seen.has(id)) {
+                const entry = { _id: id, username: u.username, profilePicture: u.profilePicture || null, replyCount: 0 };
+                seen.set(id, entry);
+                participants.push(entry);
+            }
+            if (m !== parentMessage) seen.get(id).replyCount += 1;
+        }
+
+        let resolvedBy = null;
+        if (parentMessage.resolvedBy) {
+            const User = require("../../../models/User");
+            resolvedBy = await User.findById(parentMessage.resolvedBy).select("_id username").lean();
+        }
+
         return res.json({
             parent: parentMessage,
             replies,
             count: replies.length,
+            participants,
+            resolved: !!parentMessage.resolvedThreadAt,
+            resolvedThreadAt: parentMessage.resolvedThreadAt || null,
+            resolvedBy,
             
             followStatus: {
                 following: isFollowing,
@@ -126,6 +152,9 @@ exports.postThreadReply = async (req, res) => {
         if (!parentMessage) {
             return res.status(404).json({ message: "Parent message not found" });
         }
+
+        const access = await checkThreadAccess(parentMessage, userId, { forWrite: true });
+        if (!access.ok) return res.status(access.status).json({ message: access.error });
 
         
         const replyData = {
@@ -220,11 +249,15 @@ exports.postThreadReply = async (req, res) => {
         
         (async () => {
             try {
-                const notificationService = require('../../features/notifications/notificationService');
+                const notificationService = require('../notifications/notificationService');
 
                 
+                // The replier follows the thread; on the first reply the message's
+                // author does too (after that, their follow choice is respected).
+                const autoFollow = [userId];
+                if ((parentMessage.replyCount || 0) === 0 && parentMessage.sender) autoFollow.push(parentMessage.sender);
                 await Message.findByIdAndUpdate(messageId, {
-                    $addToSet: { followers: userId }
+                    $addToSet: { followers: { $each: autoFollow } }
                 });
 
                 
@@ -282,6 +315,8 @@ exports.followThread = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.user.sub;
+        const access = await checkThreadAccess(messageId, userId);
+        if (!access.ok) return res.status(access.status).json({ message: access.error });
         const result = await followThread(messageId, userId);
         return res.json(result);
     } catch (err) {
@@ -306,6 +341,8 @@ exports.getFollowStatus = async (req, res) => {
     try {
         const { messageId } = req.params;
         const userId = req.user.sub;
+        const access = await checkThreadAccess(messageId, userId);
+        if (!access.ok) return res.status(access.status).json({ message: access.error });
         const result = await getFollowStatus(messageId, userId);
         return res.json(result);
     } catch (err) {

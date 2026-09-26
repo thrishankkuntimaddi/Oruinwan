@@ -1,4 +1,4 @@
-const Message = require('../../features/messages/message.model.js');
+const Message = require('../messages/message.model.js');
 
 async function followThread(messageId, userId) {
     const updated = await Message.findByIdAndUpdate(

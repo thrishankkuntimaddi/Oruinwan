@@ -1,6 +1,6 @@
 'use strict';
 
-const Message  = require('../../messages/message.model');
+const Message  = require('../../../modules/messages/message.model');
 const logger   = require('../../../../utils/logger');
 
 let TaskModel = null;

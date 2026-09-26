@@ -1,4 +1,5 @@
 import React from 'react';
+import UserAvatarImage from '../../../../shared/components/ui/UserAvatarImage';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Lock, Megaphone, Star } from 'lucide-react';
 
@@ -73,16 +74,17 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
                 <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {item.type === 'dm' ? (
                         <div style={{ position: 'relative' }}>
-                            <div style={{
-                                width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                fontWeight: 700, fontSize: '11px',
-                                background: isActive ? 'var(--bg-active)' : 'var(--bg-surface)',
-                                border: `1px solid ${isActive ? 'var(--border-accent)' : 'var(--border-default)'}`,
-                                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                                transition: '150ms ease',
-                            }}>
-                                {item.label.charAt(0).toUpperCase()}
-                            </div>
+                            <UserAvatarImage
+                                userId={item.userId}
+                                name={item.label}
+                                src={item.avatar}
+                                size={28}
+                                style={{ border: `1px solid ${isActive ? 'var(--border-accent)' : 'var(--border-default)'}`, boxSizing: 'border-box' }}
+                                initialStyle={{
+                                    background: isActive ? 'var(--bg-active)' : 'var(--bg-surface)',
+                                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                                }}
+                            />
                             {}
                             <div style={{
                                 position: 'absolute', bottom: '-1px', right: '-1px',

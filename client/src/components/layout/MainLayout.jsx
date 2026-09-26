@@ -4,7 +4,7 @@ import IconSidebar from "./IconSidebar";
 import ProfileMenu from "../SidebarComp/ProfileSidebar";
 import ChttrixAIChat from "../ai/ChttrixAIChat/ChttrixAIChat";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { useNotifications } from "../../contexts/NotificationsContext";
+import { useNotifications } from "../../features/notifications/NotificationsContext";
 import SearchInlineBar from "../search/SearchInlineBar";
 import MobileBottomNav from "./MobileBottomNav";
 import MobileHomePage from "./MobileHomePage";
@@ -191,6 +191,14 @@ const MainLayout = ({ children, sidePanel }) => {
     const { activeWorkspace } = useWorkspace();
     const [showProfile, setShowProfile] = useState(false);
     const [showAI, setShowAI] = useState(false);
+    const [aiPrompt, setAIPrompt] = useState(null);
+
+    // The composer's AI button and /ai command open the assistant (optionally with a question).
+    useEffect(() => {
+        const open = (e) => { setShowAI(true); if (e.detail?.prompt) setAIPrompt(e.detail.prompt); };
+        window.addEventListener('chttrix-ai:open', open);
+        return () => window.removeEventListener('chttrix-ai:open', open);
+    }, []);
     const [aiWidth, setAiWidth] = useState(350);
     const [sidePanelWidth, setSidePanelWidth] = useState(270);
     const navigate = useNavigate();
@@ -677,7 +685,7 @@ const MainLayout = ({ children, sidePanel }) => {
                                     paddingBottom: isMobile ? '54px' : 0,
                                 }}
                             >
-                                <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
+                                <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} initialPrompt={aiPrompt} onPromptConsumed={() => setAIPrompt(null)} />
                             </div>
                         </>
                     )}

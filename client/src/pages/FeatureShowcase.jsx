@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useFlag } from '../contexts/FeatureFlagsContext';
 import {
     MessageSquare, Zap, CheckSquare, Globe, Shield, Sparkles, ArrowRight,
     Laptop, Briefcase, Building2, CheckCircle2, MessageCircle, GitBranch,
@@ -143,7 +144,7 @@ const FEATURES = [
     { icon: MessageSquare, color: '#6ea8fe', title: 'Channels', desc: 'Structured, threaded conversations for every project and topic. Keep the noise out, the focus in.' },
     { icon: MessageCircle, color: '#a78bfa', title: 'Direct Messages', desc: 'Private 1:1 and group chats. Secure, fast, context-aware.' },
     { icon: GitBranch, color: '#c084fc', title: 'Threads', desc: 'Reply to any message without cluttering the main channel. Side conversations, properly organized.' },
-    { icon: Zap, color: '#fbbf24', title: 'Video Huddles', desc: 'One-click voice and video. Screen-share live, no calendar invite needed.' },
+    { icon: Zap, color: '#fbbf24', title: 'Voice Huddles', desc: 'One-click voice calls with your team, no calendar invite needed.' },
     { icon: CheckSquare, color: '#34d399', title: 'Tasks', desc: 'Native project management — Kanban boards, deadlines, assignments, and progress tracking.' },
     { icon: Globe, color: '#fb923c', title: 'Notes', desc: 'Collaborative wiki-style documents that live next to your conversations.' },
     { icon: Shield, color: '#f472b6', title: 'Updates', desc: 'Async status reports for teams. Async standup, no meeting required.' },
@@ -151,6 +152,7 @@ const FEATURES = [
 ];
 
 const FeatureShowcase = () => {
+    const communityEnabled = useFlag('community');
     const navigate = useNavigate();
     const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(true);
@@ -297,7 +299,7 @@ const FeatureShowcase = () => {
                         </h1>
 
                         <p style={{ fontSize: '16px', color: 'var(--text-muted)', lineHeight: '1.75', marginBottom: '36px', maxWidth: '500px' }}>
-                            Chttrix is the operating system for modern teams — channels, DMs, video huddles, tasks, notes, and <span style={{ color: 'rgba(184,149,106,0.9)', fontWeight: 600 }}>Chttrix AI</span>, all in one place. No tab-switching. No context loss. Just work.
+                            Chttrix is the operating system for modern teams — channels, DMs, voice huddles, tasks, notes, and <span style={{ color: 'rgba(184,149,106,0.9)', fontWeight: 600 }}>Chttrix AI</span>, all in one place. No tab-switching. No context loss. Just work.
                         </p>
 
                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '40px' }}>
@@ -553,7 +555,7 @@ const FeatureShowcase = () => {
                         {[
                             { title: 'Product', links: [{ l: 'Features', f: () => scrollTo('platform') }, { l: 'Chttrix AI', f: () => scrollTo('ai') }, { l: 'Enterprise', f: () => scrollTo('accounts') }, { l: 'Security', f: () => navigate('/security') }, { l: 'Downloads', f: () => scrollTo('downloads') }] },
                             { title: 'Company', links: [{ l: 'About Us', f: () => navigate('/about') }, { l: 'Careers', f: () => navigate('/careers') }, { l: 'Blog', f: () => navigate('/blog') }, { l: 'Brand & Media', f: () => navigate('/brand') }, { l: 'Contact', f: () => navigate('/contact') }] },
-                            { title: 'Resources', links: [{ l: 'Documentation', f: () => navigate('/chttrix-docs') }, { l: 'Help Center', f: () => navigate('/help') }, { l: 'Community', f: () => navigate('/community') }, { l: 'Status', f: () => navigate('/status') }] },
+                            { title: 'Resources', links: [{ l: 'Documentation', f: () => navigate('/chttrix-docs') }, { l: 'Help Center', f: () => navigate('/help') }, ...(communityEnabled ? [{ l: 'Community', f: () => navigate('/community') }] : []), { l: 'Status', f: () => navigate('/status') }] },
                             { title: 'Legal', links: [{ l: 'Privacy Policy', f: () => navigate('/privacy') }, { l: 'Terms of Service', f: () => navigate('/terms') }, { l: 'Cookie Settings', f: () => navigate('/cookies') }] },
                         ].map(col => (
                             <div key={col.title}>

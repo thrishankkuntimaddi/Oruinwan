@@ -292,7 +292,8 @@ export function useConversation(conversationId, conversationType, workspaceId) {
 
         
         let processedEvent = event;
-        if (event.type === 'message') {
+        // Checklists are encrypted like text (their body is JSON).
+        if (event.type === 'message' || event.type === 'checklist') {
 
             
             

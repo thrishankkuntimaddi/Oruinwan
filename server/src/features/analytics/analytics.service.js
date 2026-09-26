@@ -1,4 +1,4 @@
-const Message = require('../messages/message.model');
+const Message = require('../../modules/messages/message.model');
 const Channel = require('../channels/channel.model');
 const Task = require('../../../models/Task');
 const ScheduledMeeting = require('../../models/ScheduledMeeting');

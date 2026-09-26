@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useWorkspaceFeatures } from '../../hooks/useWorkspaceFeatures';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useWorkspace } from "../../contexts/WorkspaceContext";
-import { useNotifications } from "../../contexts/NotificationsContext";
+import { useNotifications } from "../../features/notifications/NotificationsContext";
 import { Home, MessageSquare, CheckSquare, FileText, Newspaper, Hash, Rocket, Briefcase, Zap, Palette, Microscope, Globe, Shield, TrendingUp, Lightbulb, Flame, Target, Trophy, Video, Settings, Puzzle, ChevronDown } from "lucide-react";
 import { Avatar } from "../../shared/components/ui";
 
@@ -51,13 +52,15 @@ const IconSidebar = ({ onProfileClick }) => {
         return path === fullPath || path.startsWith(fullPath + "/");
     };
 
+    const features = useWorkspaceFeatures(workspaceId);
     const navItems = [
         { icon: <Home size={19} strokeWidth={2} />, path: "/home", label: "Home" },
         { icon: <Hash size={19} strokeWidth={2} />, path: "/channels", label: "Channels" },
         { icon: <MessageSquare size={19} strokeWidth={2} />, path: "/messages", label: "Messages" },
-        { icon: <CheckSquare size={19} strokeWidth={2} />, path: "/tasks", label: "Tasks" },
-        { icon: <FileText size={19} strokeWidth={2} />, path: "/notes", label: "Notes" },
-        { icon: <Video size={19} strokeWidth={2} />, path: "/huddles", label: "Huddles" },
+        // Tasks, Notes and Huddles disappear when the workspace admins switch them off.
+        ...(features.tasks ? [{ icon: <CheckSquare size={19} strokeWidth={2} />, path: "/tasks", label: "Tasks" }] : []),
+        ...(features.notes ? [{ icon: <FileText size={19} strokeWidth={2} />, path: "/notes", label: "Notes" }] : []),
+        ...(features.huddles ? [{ icon: <Video size={19} strokeWidth={2} />, path: "/huddles", label: "Huddles" }] : []),
         { icon: <Puzzle size={19} strokeWidth={2} />, path: "/apps", label: "Apps" },
         ...(user?.userType === "company" ? [{ icon: <Newspaper size={19} strokeWidth={2} />, path: "/updates", label: "Updates" }] : []),
         ...((['owner', 'admin'].includes(user?.companyRole) || user?.isCoOwner) ? [{ icon: <Shield size={19} strokeWidth={2} />, path: "/admin/analytics", label: "Admin", absolute: true }] : []),

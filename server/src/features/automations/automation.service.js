@@ -86,7 +86,7 @@ const ACTION_HANDLERS = {
         const { channelId, text } = config;
         if (!channelId || !text) return { skipped: true, reason: 'Missing channelId or text' };
 
-        const Message = require('../messages/message.model');
+        const Message = require('../../modules/messages/message.model');
         const msg = await Message.create({
             workspace: eventData.workspaceId,
             channel:   channelId,
@@ -135,7 +135,7 @@ const ACTION_HANDLERS = {
         const { title, body, recipientId } = config;
         if (!title) return { skipped: true, reason: 'Missing notification title' };
 
-        const notifService = require('../notifications/notificationService');
+        const notifService = require('../../modules/notifications/notificationService');
         const recipient = recipientId || eventData.userId || null;
         if (!recipient) return { skipped: true, reason: 'No recipient resolved' };
 

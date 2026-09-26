@@ -139,7 +139,7 @@ exports.sendTicketMessage = async (req, res) => {
             const io = req.app.get('io');
 
             
-            io.to(`company-${ticket.companyId._id}`).emit('support-message', {
+            io.to(`company_${ticket.companyId._id}`).emit('support-message', {
                 ticketId,
                 message
             });

@@ -7,7 +7,7 @@ const IssueKeyCounter = require('./issue-key-counter.model');
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
 const Channel = require("../channels/channel.model.js");
-const Message = require("../messages/message.model.js");
+const Message = require("../../modules/messages/message.model.js");
 const _DMSession = require('../../../models/DMSession');
 
 const messagesService = require('../../modules/messages/messages.service');
@@ -17,7 +17,7 @@ const { isValidTransition, getAllowedTransitions, validateBlocked } = require('.
 
 const policy = require('./tasks.policy');
 const _validator = require('./tasks.validator');
-const notifEmitter = require('../notifications/notificationEventEmitter');
+const notifEmitter = require('../../modules/notifications/notificationEventEmitter');
 
 async function getTasks(userId, filters) {
     const { workspaceId, status, _assignedTo, priority, includeDeleted } = filters;
@@ -582,7 +582,7 @@ async function updateTask(userId, taskId, updates, io, req) {
     // other edits go to everyone on the task except the person editing it.
     if (changes.length > 0) {
         (async () => {
-            const notificationService = require('../notifications/notificationService');
+            const notificationService = require('../../modules/notifications/notificationService');
             const changer = await User.findById(userId).select('username').lean();
             const actorUsername = changer?.username || 'Someone';
             const base = { workspaceId: task.workspace, taskTitle: task.title, taskId: String(task._id) };
@@ -662,7 +662,7 @@ async function deleteTask(userId, taskId, io, req) {
         await task.save();
 
         (async () => {
-            const notificationService = require('../notifications/notificationService');
+            const notificationService = require('../../modules/notifications/notificationService');
             const actor = await User.findById(userId).select('username').lean();
             await notificationService.taskRemoved(io, {
                 recipientIds: task.assignedTo.map(String).filter(id => id !== String(userId)),
@@ -949,7 +949,7 @@ async function requestTransfer(userId, taskId, newAssigneeId, note, io, req) {
     await task.save();
 
     (async () => {
-        const notificationService = require('../notifications/notificationService');
+        const notificationService = require('../../modules/notifications/notificationService');
         const [requester, target] = await Promise.all([
             User.findById(userId).select('username').lean(),
             User.findById(newAssigneeId).select('username').lean(),
@@ -1041,7 +1041,7 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
         await task.save();
 
         (async () => {
-            const notificationService = require('../notifications/notificationService');
+            const notificationService = require('../../modules/notifications/notificationService');
             const approver = await User.findById(userId).select('username').lean();
             const actorUsername = approver?.username || 'Someone';
             const base = { workspaceId: task.workspace, taskTitle: task.title, taskId: String(task._id) };
@@ -1103,7 +1103,7 @@ async function handleTransferRequest(userId, taskId, action, io, req) {
         await task.save();
 
         (async () => {
-            const notificationService = require('../notifications/notificationService');
+            const notificationService = require('../../modules/notifications/notificationService');
             const rejecter = await User.findById(userId).select('username').lean();
             const requesterId = String(task.transferRequest.requestedBy?._id || task.transferRequest.requestedBy || '');
             if (requesterId && requesterId !== String(userId)) {
@@ -1210,7 +1210,7 @@ async function createSubtask(userId, parentId, subtaskData, io, req) {
     await parentTask.save();
 
     (async () => {
-        const notificationService = require('../notifications/notificationService');
+        const notificationService = require('../../modules/notifications/notificationService');
         const creator = await User.findById(userId).select('username').lean();
         const actorUsername = creator?.username || 'Someone';
         const me = String(userId);

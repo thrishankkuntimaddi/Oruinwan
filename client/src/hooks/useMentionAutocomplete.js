@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 
-export function useMentionAutocomplete(members = []) {
+export function useMentionAutocomplete(members = [], { includeBroadcast = false } = {}) {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const [selectedIndex, setSelectedIndex] = useState(0);
@@ -43,15 +43,18 @@ export function useMentionAutocomplete(members = []) {
         const query = text.slice(atIndex + 1, cursorPos).toLowerCase();
         queryRef.current = query;
 
-        
-        if (query === 'here' || query === 'channel') {
-            setShowSuggestions(false);
-            return;
-        }
+        // Channels also offer @here (online members) and @channel (everyone).
+        const broadcast = includeBroadcast
+            ? [{ _id: '@here', username: 'here', isBroadcast: true, name: 'Notify online members' },
+               { _id: '@channel', username: 'channel', isBroadcast: true, name: 'Notify everyone in this channel' }]
+                .filter(b => b.username.startsWith(query) && b.username !== query)
+            : [];
 
-        const filtered = members
-            .filter(m => m.username?.toLowerCase().startsWith(query))
-            .slice(0, 8); 
+        // Names starting with the query first, then names containing it.
+        const lower = (m) => (m.username || '').toLowerCase();
+        const starts = members.filter(m => lower(m).startsWith(query));
+        const contains = members.filter(m => !lower(m).startsWith(query) && lower(m).includes(query));
+        const filtered = [...starts, ...contains, ...broadcast].slice(0, 8);
 
         if (filtered.length > 0) {
             setSuggestions(filtered);
@@ -60,7 +63,7 @@ export function useMentionAutocomplete(members = []) {
         } else {
             setShowSuggestions(false);
         }
-    }, [members]);
+    }, [members, includeBroadcast]);
 
     
     const handleMentionKeyDown = useCallback((e) => {

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Cloud, Zap, Bot, Link2, Plus, Trash2, CheckCircle, XCircle, RefreshCw, Eye, EyeOff, AlertCircle, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
+import { API_BASE } from '../../services/api';
 import { getIntegrations, connectIntegration, disconnectIntegration, getWebhooks, createWebhook, deleteWebhook, getAIProviders, connectAIProvider, switchAIProvider, disconnectAIProvider } from '../../services/integrations.service';
 
 const S = { font: { fontFamily: 'Inter, system-ui, -apple-system, sans-serif' } };
@@ -72,7 +74,7 @@ function IntegrationCard({ provider, integration, workspaceId, onRefresh }) {
     const [fields, setFields] = useState({});
     const [showPwd, setShowPwd] = useState({});
     const isConnected = integration?.status === 'connected';
-    const webhookEndpoint = `${window.location.protocol}//${window.location.hostname}:5000/api/v2/integrations/webhook/${provider.type}?workspaceId=${workspaceId}`;
+    const webhookEndpoint = `${API_BASE}/api/v2/integrations/webhook/${provider.type}?workspaceId=${workspaceId}`;
 
     const handleConnect = async () => {
         const missing = provider.fields.filter(f => !f.label.includes('optional') && !fields[f.key]);
@@ -413,20 +415,24 @@ function AIProvidersPanel({ workspaceId }) {
     );
 }
 
-const TABS = [
-    ...PROVIDER_CATALOGUE.map(c => ({ id: c.category, label: c.category })),
+const PROVIDER_TABS = PROVIDER_CATALOGUE.map(c => ({ id: c.category, label: c.category }));
+const LIVE_TABS = [
     { id: 'Webhooks', label: '⚡ Webhooks' },
     { id: 'AI', label: '✨ AI Providers' },
 ];
 
 const IntegrationsTab = ({ workspaceId }) => {
+    // Third-party providers are behind the "integrations" flag; webhooks and AI providers are live.
+    const providersEnabled = useFlag('integrations');
+    const TABS = providersEnabled ? [...PROVIDER_TABS, ...LIVE_TABS] : LIVE_TABS;
     const [integrations, setIntegrations] = useState([]);
-    const [activeCategory, setActiveCategory] = useState('Developer');
+    const [selectedCategory, setActiveCategory] = useState(null);
+    const activeCategory = TABS.some(t => t.id === selectedCategory) ? selectedCategory : TABS[0].id;
 
     const loadIntegrations = useCallback(async () => {
-        if (!workspaceId) return;
+        if (!workspaceId || !providersEnabled) return;
         try { setIntegrations(await getIntegrations(workspaceId)); } catch { }
-    }, [workspaceId]);
+    }, [workspaceId, providersEnabled]);
 
     useEffect(() => { loadIntegrations(); }, [loadIntegrations]);
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, Menu, X as XIcon } from 'lucide-react';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 
 const NAV_LINKS = [
     { label: 'Platform',  href: '/#platform' },
@@ -81,6 +82,7 @@ function useWindowWidth() {
 }
 
 export default function PublicPageShell({ children, title }) {
+    const communityEnabled = useFlag('community');
     const navigate    = useNavigate();
     const [scrolled, setScrolled]         = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -254,7 +256,7 @@ export default function PublicPageShell({ children, title }) {
                             <div key={col.title}>
                                 <h4 style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '12px' }}>{col.title}</h4>
                                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {col.links.map(link => (
+                                    {col.links.filter(link => communityEnabled || link.path !== '/community').map(link => (
                                         <li key={link.l}>
                                             <button
                                                 onClick={() => navigate(link.path)}

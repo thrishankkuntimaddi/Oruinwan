@@ -1,6 +1,6 @@
 const User = require('../../../models/User');
 const Workspace = require('../../../models/Workspace');
-const Message = require("../messages/message.model.js");
+const Message = require("../../modules/messages/message.model.js");
 const _Channel = require("../channels/channel.model.js");
 const analyticsService = require('../analytics/analytics.service');
 

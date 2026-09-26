@@ -309,7 +309,7 @@ async function shareNote(userId, noteId, userIds, io, req) {
     }
 
     if (populatedNote.workspace) {
-        const notificationService = require('../notifications/notificationService');
+        const notificationService = require('../../modules/notifications/notificationService');
         notificationService.noteShared(io, {
             recipientIds: userIds.map(String).filter(id => id !== String(userId)),
             sharerUsername: populatedNote.owner?.username || 'Someone',

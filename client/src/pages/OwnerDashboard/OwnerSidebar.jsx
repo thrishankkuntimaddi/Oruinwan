@@ -7,6 +7,7 @@ import {
     BarChart2, ClipboardList, ShieldCheck, ChevronUp
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 
 const OwnerSidebar = ({ onNavigate }) => {
     const navigate = useNavigate();
@@ -15,6 +16,7 @@ const OwnerSidebar = ({ onNavigate }) => {
     const [showUserMenu, setShowUserMenu] = useState(false);
 
     const hasWorkspaces = user?.workspaces?.length > 0;
+    const billingEnabled = useFlag('billing');
 
     const navGroups = [
         {
@@ -22,7 +24,7 @@ const OwnerSidebar = ({ onNavigate }) => {
             items: [
                 { path: '/owner/dashboard', label: 'Dashboard', icon: LayoutDashboard },
                 { path: '/owner/analytics', label: 'Activity Health', icon: Activity },
-                { path: '/owner/billing', label: 'Billing & Plan', icon: CreditCard },
+                ...(billingEnabled ? [{ path: '/owner/billing', label: 'Billing & Plan', icon: CreditCard }] : []),
                 { path: '/owner/security', label: 'Security & Risk', icon: Shield },
             ]
         },

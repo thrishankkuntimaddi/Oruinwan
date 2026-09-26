@@ -2,7 +2,7 @@
 
 const Channel      = require('../channels/channel.model.js');
 const User         = require('../../../models/User');
-const Message      = require('../messages/message.model.js');
+const Message      = require('../../modules/messages/message.model.js');
 const Workspace    = require('../../../models/Workspace');
 const Task         = require('../../../models/Task');
 const Note         = require('../../../models/Note');

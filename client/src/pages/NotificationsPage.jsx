@@ -5,9 +5,9 @@ import {
     Trash2, RefreshCcw, Loader2, ExternalLink, Settings,
     ChevronDown, X, Calendar, Zap, Brain, AlertTriangle
 } from 'lucide-react';
-import { useNotifications } from '../contexts/NotificationsContext';
+import { useNotifications } from '../features/notifications/NotificationsContext';
 import { useWorkspace } from '../contexts/WorkspaceContext';
-import NotificationPreferences from '../components/shared/NotificationPreferences';
+import NotificationPreferences from '../features/notifications/components/NotificationPreferences';
 
 const T = {
     bg:          'var(--bg-base)',

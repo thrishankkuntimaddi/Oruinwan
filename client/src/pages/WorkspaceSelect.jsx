@@ -154,7 +154,8 @@ const WorkspaceSelect = () => {
                     name: createData.name,
                     icon: createData.icon,
                     color: createData.color,
-                    rules: createData.rules
+                    rules: createData.rules,
+                    ...(createData.templateId ? { templateId: createData.templateId } : {})
                 });
 
                 const newWorkspaceId = res.data.workspace.id;

@@ -265,6 +265,10 @@ ChttrixCollab/
 │   ├── public/                     # Static assets
 │   ├── src/
 │   │   ├── App.js                  # Root router — all routes defined here
+│   │   ├── features/               # Domain folders (new code goes here)
+│   │   │   ├── messaging/          # Channel & DM chat window, message list, threads UI, modals
+│   │   │   ├── huddles/            # useHuddle (WebRTC), HuddleContext, huddle overlay
+│   │   │   └── notifications/      # NotificationsContext, preferences, desktop notifications
 │   │   ├── index.css               # Global design system tokens (Monolith Flow)
 │   │   ├── main.jsx                # React entry point
 │   │   ├── components/
@@ -287,7 +291,6 @@ ChttrixCollab/
 │   │   │   │   └── ChttrixAIChat/  # Full AI chat panel
 │   │   │   ├── chat/               # Message composer, rich editor, slash commands
 │   │   │   ├── home/               # Home panel, workspace header
-│   │   │   ├── messagesComp/       # Channel & DM message list, modals
 │   │   │   ├── profile/            # Profile views (main menu, profile, settings)
 │   │   │   ├── SidebarComp/        # Profile sidebar, settings drawer
 │   │   │   ├── tasksComp/          # Task cards, modals, board components
@@ -326,14 +329,12 @@ ChttrixCollab/
 │   │   ├── features/               # Feature modules (~60 domains)
 │   │   │   ├── auth/               # Login, register, OAuth, sessions, E2EE unlock
 │   │   │   ├── channels/           # Channel CRUD, membership, invites
-│   │   │   ├── messages/           # Message send, edit, delete, reactions, pins
 │   │   │   ├── tasks/              # Task CRUD, assignments, comments
 │   │   │   ├── notes/              # Note CRUD, sharing
 │   │   │   ├── knowledge/          # Knowledge base pages
 │   │   │   ├── files/              # GCS file upload, library
 │   │   │   ├── ai/                 # Gemini AI chat, context, summarise
 │   │   │   ├── automations/        # Workflow automations engine
-│   │   │   ├── notifications/      # Push notifications (WS + Web Push)
 │   │   │   ├── search/             # Full-text cross-entity search
 │   │   │   ├── analytics/          # Workspace analytics
 │   │   │   ├── audit/              # Audit log read routes
@@ -353,13 +354,16 @@ ChttrixCollab/
 │   │   │   ├── presence/           # Online/offline user presence
 │   │   │   ├── status/             # Custom user status
 │   │   │   └── ... (40+ more)
-│   │   ├── modules/                # Shared technical modules
+│   │   ├── modules/                # Self-contained domains; index.js is the registry
+│   │   │   ├── index.js            # register() / registerSocket() / start() for each module
+│   │   │   ├── messages/           # Messages, DM actions, bookmarks, reminders, Message model
+│   │   │   ├── threads/            # Thread replies (v1 + v2 routes)
+│   │   │   ├── notifications/      # Notifications, preferences, email digests, cron, models
+│   │   │   ├── huddles/            # Voice-call signaling, participant registry, ICE/TURN config
 │   │   │   ├── ai/                 # Gemini AI client & prompt engine
 │   │   │   ├── conversations/      # Conversation session management
 │   │   │   ├── encryption/         # AES-GCM server-side E2EE helpers
 │   │   │   ├── identity/           # User identity key management (X25519)
-│   │   │   ├── messages/           # Message delivery engine
-│   │   │   ├── threads/            # Thread reply engine
 │   │   │   ├── uploads/            # GCS upload client
 │   │   │   └── linkPreview/        # OG metadata scraper
 │   │   ├── socket/                 # Socket.IO server setup & handlers
@@ -398,8 +402,12 @@ ChttrixCollab/
 │   ├── sdk/                        # Browser API client, token manager, socket client, E2EE helpers
 │   └── constants/                  # API versions, socket event names, encryption constants
 │
-├── .github/workflows/ci.yml        # CI: server lint+test, client lint+test+build
-├── package.json                    # Root workspace orchestrator (npm workspaces: client, server)
+├── e2e/                            # Playwright browser tests (sign in, DM + thread, tasks, huddle)
+│   ├── tests/                      # Specs, run in order against one seeded database
+│   └── scripts/                    # Stack launcher, seed, shared config
+│
+├── .github/workflows/ci.yml        # CI: server lint+test, client lint+test+build, e2e
+├── package.json                    # Root workspace orchestrator (npm workspaces: client, server, e2e)
 ├── nixpacks.toml                   # Railway deployment config
 ├── railway.json                    # Railway service config
 └── vercel.json                     # Vercel deployment config
@@ -471,6 +479,14 @@ npm run build    # Production client build into /dist
 ```
 
 The same three commands run in CI on every push and pull request.
+
+### 6. Browser (E2E) Tests
+
+```bash
+npm run test:e2e   # Playwright: sign in, encrypted DM + thread, tasks, DM huddle, webhook access, status page
+```
+
+The tests need a local MongoDB on `127.0.0.1:27017` (for example `brew services start mongodb-community@7.0`). They start their own API server (port 8095) and client (port 3095) against a throwaway `chttrix_e2e` database. That database is dropped and re-seeded on every run, and the runner refuses any database whose name does not end in `_e2e`. Locally they use your installed Chrome. Point them elsewhere with `E2E_MONGO_URI`, `E2E_API_PORT` and `E2E_WEB_PORT`. CI runs the same suite with a MongoDB service container and uploads the Playwright report when a test fails.
 
 ---
 

@@ -1,4 +1,6 @@
 const express = require('express');
+const { requireCompanyPermission } = require('../../shared/companyPermissions');
+const { requireWorkspaceFeature, resolvers } = require('../../shared/workspaceFeatures');
 const router = express.Router();
 const tasksController = require('./tasks.controller');
 const requireAuth = require('../../shared/middleware/auth');
@@ -11,7 +13,7 @@ router.get('/', tasksController.getTasks);
 
 router.get('/my', tasksController.getMyTasks);
 
-router.post('/', tasksController.createTask);
+router.post('/', requireWorkspaceFeature('tasks'), requireCompanyPermission('createTasks'), tasksController.createTask);
 
 router.get('/:id/activity', tasksController.getTaskActivity);
 

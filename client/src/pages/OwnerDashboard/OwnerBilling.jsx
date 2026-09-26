@@ -28,11 +28,11 @@ const OwnerBilling = () => {
             ]);
             setBillingData(billing);
             setInvoices(invoicesRes.data.invoices || []);
-            setPaymentMethod(paymentRes.data.paymentMethod || { type: 'card', last4: '4242', brand: 'visa' });
+            setPaymentMethod(paymentRes.data.paymentMethod || null);
         } catch {
             showToast('Failed to load billing data', 'error');
             setInvoices([]);
-            setPaymentMethod({ type: 'card', last4: '4242', brand: 'visa' });
+            setPaymentMethod(null);
         }
     }, [showToast]);
 
@@ -253,8 +253,11 @@ const OwnerBilling = () => {
                                     <CreditCard size={18} style={{ color: 'var(--accent)' }} />
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>**** **** **** {paymentMethod?.last4 || '4242'}</p>
-                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Expires {paymentMethod?.expiryMonth || 12}/{paymentMethod?.expiryYear || 2027}</p>
+                                    {paymentMethod?.last4 ? (
+                                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{paymentMethod.brand ? `${paymentMethod.brand} ` : ''}**** **** **** {paymentMethod.last4}</p>
+                                    ) : (
+                                        <p style={{ fontSize: '13px', color: 'var(--text-muted)' }}>No payment method on file</p>
+                                    )}
                                 </div>
                                 <TextBtn label="Update" />
                             </div>

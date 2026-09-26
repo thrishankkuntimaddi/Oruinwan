@@ -4,11 +4,80 @@ const { randomUUID } = require('crypto');
 const path = require('path');
 const { pipeline } = require('stream');
 
+const fs = require('fs');
+
 const storageClient = new Storage({
     projectId: process.env.GCP_PROJECT_ID || 'chttrix-prod',
 });
 
 const BUCKET_NAME = process.env.GCS_BUCKET_NAME || 'chttrix-uploads';
+
+/**
+ * Where uploaded objects live. GCS needs credentials (GOOGLE_APPLICATION_CREDENTIALS,
+ * or the platform's own on Cloud Run/GCE); without them every upload used to fail.
+ * STORAGE_DRIVER=gcs|local forces a choice; otherwise GCS is used only when credentials
+ * are present and local disk (LOCAL_UPLOAD_DIR) otherwise.
+ */
+function storageDriver(env = process.env) {
+    if (env.STORAGE_DRIVER === 'gcs' || env.STORAGE_DRIVER === 'local') return env.STORAGE_DRIVER;
+    return env.GOOGLE_APPLICATION_CREDENTIALS || env.K_SERVICE || env.GCE_METADATA_HOST ? 'gcs' : 'local';
+}
+
+const LOCAL_UPLOAD_DIR = process.env.LOCAL_UPLOAD_DIR || path.join(__dirname, '..', '..', '..', 'uploads', 'objects');
+
+if (storageDriver() === 'local') {
+    const note = `[UploadService] Storing uploads on local disk at ${LOCAL_UPLOAD_DIR} (no GCS credentials).`;
+    if (process.env.NODE_ENV === 'production') logger.warn(`${note} Files will not survive a redeploy; set GOOGLE_APPLICATION_CREDENTIALS or STORAGE_DRIVER=gcs.`);
+    else logger.info(note);
+}
+
+function localPath(objectPath) {
+    const full = path.resolve(LOCAL_UPLOAD_DIR, objectPath);
+    if (!full.startsWith(path.resolve(LOCAL_UPLOAD_DIR) + path.sep)) throw Object.assign(new Error('Invalid path'), { code: 400 });
+    return full;
+}
+
+/** A GCS-like handle (getMetadata / createReadStream) for either driver. */
+function objectHandle(objectPath) {
+    if (storageDriver() === 'gcs') return storageClient.bucket(BUCKET_NAME).file(objectPath);
+    const full = localPath(objectPath);
+    return {
+        async getMetadata() {
+            let meta;
+            try {
+                meta = JSON.parse(await fs.promises.readFile(`${full}.meta.json`, 'utf8'));
+            } catch {
+                throw Object.assign(new Error('File not found'), { code: 404 });
+            }
+            const { size } = await fs.promises.stat(full);
+            return [{ contentType: meta.contentType, size, metadata: meta.metadata || {} }];
+        },
+        createReadStream(opts = {}) {
+            return fs.createReadStream(full, opts.start != null ? { start: opts.start, end: opts.end } : undefined);
+        },
+    };
+}
+
+async function writeObject(objectPath, buffer, { contentType, metadata }) {
+    if (storageDriver() === 'gcs') {
+        const gcsFile = storageClient.bucket(BUCKET_NAME).file(objectPath);
+        await new Promise((resolve, reject) => {
+            const stream = gcsFile.createWriteStream({
+                resumable: false,
+                contentType,
+                metadata: { cacheControl: 'private, max-age=3600', ...metadata },
+            });
+            stream.on('error', reject);
+            stream.on('finish', resolve);
+            stream.end(buffer);
+        });
+        return;
+    }
+    const full = localPath(objectPath);
+    await fs.promises.mkdir(path.dirname(full), { recursive: true });
+    await fs.promises.writeFile(full, buffer);
+    await fs.promises.writeFile(`${full}.meta.json`, JSON.stringify({ contentType, metadata }));
+}
 
 function resolveAttachmentType(mimeType = '') {
     if (mimeType.startsWith('image/')) return 'image';
@@ -34,24 +103,13 @@ async function uploadToGCS(file, folder = 'channels', owner = {}) {
     const uniqueName = `${randomUUID()}${ext}`;
     const gcsPath = `${folder}/${date}/${uniqueName}`;
 
-    const bucket = storageClient.bucket(BUCKET_NAME);
-    const gcsFile = bucket.file(gcsPath);
-
-    
-    await new Promise((resolve, reject) => {
-        const stream = gcsFile.createWriteStream({
-            resumable: false,
-            contentType: file.mimetype,
-            metadata: {
-                cacheControl: 'private, max-age=3600',
-                originalName: file.originalname,
-                ...(owner.userId ? { uploadedBy: String(owner.userId) } : {}),
-                ...(owner.companyId ? { companyId: String(owner.companyId) } : {}),
-            },
-        });
-        stream.on('error', reject);
-        stream.on('finish', resolve);
-        stream.end(file.buffer);
+    await writeObject(gcsPath, file.buffer, {
+        contentType: file.mimetype,
+        metadata: {
+            originalName: file.originalname,
+            ...(owner.userId ? { uploadedBy: String(owner.userId) } : {}),
+            ...(owner.companyId ? { companyId: String(owner.companyId) } : {}),
+        },
     });
 
     
@@ -91,6 +149,9 @@ function buildSafeHeaders(mimeType, originalName) {
         'X-Content-Type-Options': 'nosniff',
         'Content-Security-Policy': "default-src 'none'; sandbox",
         'Cache-Control': 'private, max-age=3600',
+        // The web app may run on another origin than the API; files are protected by
+        // auth or a signed link, so let the app embed them in <img>/<video>/<audio>.
+        'Cross-Origin-Resource-Policy': 'cross-origin',
     };
 }
 
@@ -113,8 +174,7 @@ function pipeToResponse(readStream, res, label) {
  *        metadata is loaded; a falsy result yields 403 without streaming anything.
  */
 async function streamGCSFile(gcsPath, req, res, options = {}) {
-    const bucket = storageClient.bucket(BUCKET_NAME);
-    const gcsFile = bucket.file(gcsPath);
+    const gcsFile = objectHandle(gcsPath);
 
     const [metadata] = await gcsFile.getMetadata();
     const objectMeta = metadata.metadata || {};
@@ -167,4 +227,4 @@ async function streamGCSFile(gcsPath, req, res, options = {}) {
     }
 }
 
-module.exports = { uploadToGCS, streamGCSFile, BUCKET_NAME, isInlineSafe, buildSafeHeaders };
+module.exports = { uploadToGCS, streamGCSFile, BUCKET_NAME, isInlineSafe, buildSafeHeaders, storageDriver, writeObject, objectHandle };

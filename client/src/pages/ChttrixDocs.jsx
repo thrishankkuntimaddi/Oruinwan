@@ -148,7 +148,7 @@ const ChttrixDocs = () => {
                     </div>
 
                     <DocSection id="intro" icon={BookOpen} title="Introduction">
-                        <p style={S.p}>Chttrix is an all-in-one workspace OS designed for modern teams. It combines real-time messaging, video huddles, task management, collaborative notes, and an AI layer into a single unified platform.</p>
+                        <p style={S.p}>Chttrix is an all-in-one workspace OS designed for modern teams. It combines real-time messaging, voice huddles, task management, collaborative notes, and an AI layer into a single unified platform.</p>
                         <p style={S.p}>Unlike traditional tools that require switching between Slack, Notion, Jira, and Zoom, Chttrix keeps everything in context — conversations next to tasks, notes next to channels, and AI woven throughout.</p>
                         <TipBox type="tip">New to Chttrix? Start with <strong>Getting Started</strong> below to create your first workspace and invite your team.</TipBox>
                         <h3 style={S.h3}>Core concepts</h3>
@@ -157,7 +157,7 @@ const ChttrixDocs = () => {
                                 'Workspace — your company\'s root environment, managed by an Owner and Admins',
                                 'Channels — topic-based rooms for structured team conversations',
                                 'Threads — replies to specific messages that keep discussions organized',
-                                'Huddles — instant voice and video calls, no scheduling required',
+                                'Huddles — instant voice calls, no scheduling required',
                                 'Tasks — native project management with Kanban and assignment',
                                 'Notes — collaborative documents that live alongside channels',
                                 'Chttrix AI — the intelligence layer that understands your workspace context',

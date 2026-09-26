@@ -12,12 +12,14 @@ import {
     getActivityHealth
 } from '../../services/ownerDashboardService';
 import logger from '../../utils/logger';
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 
 const OwnerDashboard = () => {
     const { isCompanyOwner } = useCompany();
     const { showToast } = useToast();
     const navigate = useNavigate();
 
+    const billingEnabled = useFlag('billing');
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
@@ -288,12 +290,14 @@ const OwnerDashboard = () => {
                                     link="/owner/analytics"
                                     icon={BarChart2}
                                 />
-                                <QuickLinkCard
-                                    title="Billing & Plan"
-                                    description="Subscription, invoices & usage details"
-                                    link="/owner/billing"
-                                    icon={CreditCard}
-                                />
+                                {billingEnabled && (
+                                    <QuickLinkCard
+                                        title="Billing & Plan"
+                                        description="Subscription, invoices & usage details"
+                                        link="/owner/billing"
+                                        icon={CreditCard}
+                                    />
+                                )}
                                 <QuickLinkCard
                                     title="Security & Risk"
                                     description="Sessions, compliance & audit logs"

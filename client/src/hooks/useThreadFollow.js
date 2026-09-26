@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import api from '@services/api';
 import logger from '../utils/logger';
 
@@ -6,6 +6,13 @@ export function useThreadFollow(messageId, initialStatus = { following: false, f
     const [following, setFollowing] = useState(initialStatus.following);
     const [followerCount, setFollowerCount] = useState(initialStatus.followerCount ?? 0);
     const [loading, setLoading] = useState(false);
+
+    // The real status arrives after the thread loads; adopt it (it used to be ignored,
+    // so a followed thread showed "Follow" and the wrong count).
+    useEffect(() => {
+        setFollowing(!!initialStatus.following);
+        setFollowerCount(initialStatus.followerCount ?? 0);
+    }, [messageId, initialStatus.following, initialStatus.followerCount]);
 
     
     const toggle = useCallback(async () => {

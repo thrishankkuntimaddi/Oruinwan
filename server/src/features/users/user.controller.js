@@ -252,7 +252,7 @@ exports.deleteAccount = async (req, res) => {
         
 
         
-        const Message = require("../messages/message.model.js");
+        const Message = require("../../modules/messages/message.model.js");
         const Channel = require("../channels/channel.model.js");
         const Workspace = require('../../../models/Workspace');
         const Task = require('../../../models/Task');

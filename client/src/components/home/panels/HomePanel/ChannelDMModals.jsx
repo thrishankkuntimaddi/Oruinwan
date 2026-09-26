@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import CreateChannelModal from '../../../messagesComp/CreateChannelModal';
+import CreateChannelModal from '../../../../features/messaging/CreateChannelModal';
 import { getAvatarUrl } from '../../../../utils/avatarUtils';
 import { X, Search, MessageSquare } from 'lucide-react';
 

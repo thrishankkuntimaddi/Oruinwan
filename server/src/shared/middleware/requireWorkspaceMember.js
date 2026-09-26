@@ -3,7 +3,7 @@ const Workspace = require("../../../models/Workspace");
 const requireWorkspaceMember = async (req, res, next) => {
     try {
         const workspaceId =
-            req.params.workspaceId || req.params.id || req.body.workspaceId || req.query.workspaceId;
+            req.params.workspaceId || req.params.id || req.body?.workspaceId || req.query?.workspaceId;
 
         if (!workspaceId) {
             return res.status(400).json({

@@ -1,4 +1,5 @@
 const express = require("express");
+const { requireCompanyPermission } = require('../../shared/companyPermissions');
 const router = express.Router();
 const updateController = require("./updates.controller");
 const requireAuth = require("../../shared/middleware/auth");
@@ -7,7 +8,7 @@ router.get("/company/:companyId", requireAuth, updateController.getCompanyUpdate
 
 router.get("/:workspaceId", requireAuth, updateController.getUpdates);
 
-router.post("/", requireAuth, updateController.postUpdate);
+router.post("/", requireAuth, requireCompanyPermission("postUpdates"), updateController.postUpdate);
 
 router.put("/:id", requireAuth, updateController.updateUpdate);
 

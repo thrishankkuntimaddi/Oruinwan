@@ -1,5 +1,5 @@
 const DMSession = require('../../../models/DMSession');
-const Message = require('../../features/messages/message.model');
+const Message = require('./message.model');
 const mongoose = require('mongoose');
 
 async function getSessionAsParticipant(dmId, userId) {
@@ -19,8 +19,9 @@ exports.getDMStatus = async (req, res) => {
 
         const isMuted = session.mutedBy?.some(m => String(m.user) === String(userId));
         const isBlocked = session.blockedBy?.some(b => String(b.user) === String(userId));
+        const isBlockedByOther = session.blockedBy?.some(b => String(b.user) !== String(userId));
 
-        return res.json({ isMuted, isBlocked });
+        return res.json({ isMuted, isBlocked, isBlockedByOther });
     } catch (err) {
         return res.status(err.status || 500).json({ message: err.message });
     }
@@ -52,12 +53,14 @@ exports.deleteDMChat = async (req, res) => {
         const session = await getSessionAsParticipant(dmId, userId);
 
         
-        const alreadyHidden = session.hiddenFor?.some(h => String(h.user) === String(userId));
-        if (!alreadyHidden) {
-            session.hiddenFor = session.hiddenFor || [];
-            session.hiddenFor.push({ user: userId, hiddenAt: new Date() });
-            await session.save();
-        }
+        // Deleting a conversation hides it from this user's list and clears its
+        // history for them only; a new message brings it back (sendDirectMessage).
+        const now = new Date();
+        session.hiddenFor = (session.hiddenFor || []).filter(h => String(h.user) !== String(userId));
+        session.hiddenFor.push({ user: userId, hiddenAt: now });
+        session.clearedAt = (session.clearedAt || []).filter(c => String(c.user) !== String(userId));
+        session.clearedAt.push({ user: userId, clearedAt: now });
+        await session.save();
 
         return res.json({ success: true });
     } catch (err) {

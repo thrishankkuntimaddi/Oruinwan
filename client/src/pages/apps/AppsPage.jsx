@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MOCK_INTEGRATIONS, INTEGRATION_CATEGORIES } from "../../components/apps/mock/mockIntegrations";
+import { useFlag } from '../../contexts/FeatureFlagsContext';
 import IntegrationCard from "../../components/apps/IntegrationCard";
 import IntegrationDetailsModal from "../../components/apps/IntegrationDetailsModal";
 import api from '@services/api';
@@ -170,7 +171,10 @@ export default function AppsPage() {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState("integrations");
+  // Integrations still run on mock data, so without the flag only the Marketplace tab exists.
+  const integrationsEnabled = useFlag('integrations');
+  const [selectedTab, setActiveTab] = useState("integrations");
+  const activeTab = integrationsEnabled ? selectedTab : "marketplace";
 
   
   const [connectedMap, setConnectedMap] = useState(() => {
@@ -295,9 +299,11 @@ export default function AppsPage() {
 
           {}
           <div style={{ display: 'flex', gap: '2px', background: 'var(--bg-active)', padding: '3px', width: 'fit-content', marginBottom: '20px' }}>
-            <button onClick={() => setActiveTab("integrations")} style={tabBtn(activeTab === 'integrations')}>
-              Integrations
-            </button>
+            {integrationsEnabled && (
+              <button onClick={() => setActiveTab("integrations")} style={tabBtn(activeTab === 'integrations')}>
+                Integrations
+              </button>
+            )}
             <button onClick={() => setActiveTab("marketplace")} style={tabBtn(activeTab === 'marketplace')}>
               <ShoppingBag size={12} />Marketplace
             </button>

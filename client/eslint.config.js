@@ -1,3 +1,6 @@
+import react from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
+
 export default [
     {
         ignores: [
@@ -11,6 +14,13 @@ export default [
     },
     {
         files: ['src/**/*.js', 'src/**/*.jsx'],
+        plugins: {
+            react,
+            'react-hooks': reactHooks
+        },
+        settings: {
+            react: { version: 'detect' }
+        },
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'module',
@@ -35,7 +45,12 @@ export default [
             }
         },
         rules: {
-            'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+            // Without these two, every component used only in JSX is reported as unused.
+            'react/jsx-uses-vars': 'error',
+            'react/jsx-uses-react': 'off',
+            'react-hooks/rules-of-hooks': 'error',
+            'react-hooks/exhaustive-deps': 'warn',
+            'no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^(_|React$)', caughtErrors: 'none' }],
             'no-console': 'off'
         }
     }

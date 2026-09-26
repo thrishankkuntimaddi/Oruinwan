@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import UserAvatarImage from '../../../shared/components/ui/UserAvatarImage';
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Plus, Search, Trash2, CheckSquare, Megaphone, Settings2, X } from "lucide-react";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useSocket } from "../../../contexts/SocketContext";
 import { useToast } from "../../../contexts/ToastContext";
-import { useNotifications } from "../../../contexts/NotificationsContext";
+import { useNotifications } from "../../../features/notifications/NotificationsContext";
 import { messageService } from "../../../services/messageService";
-import NewDMModal from "../../messagesComp/NewDMModal";
-import BroadcastModal from "../../messagesComp/BroadcastModal";
+import NewDMModal from "../../../features/messaging/NewDMModal";
+import BroadcastModal from "../../../features/messaging/BroadcastModal";
 import ConfirmationModal from "../../../shared/components/ui/ConfirmationModal";
 import api from '@services/api';
 import logger from '../../../utils/logger';
@@ -48,6 +49,41 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         return text;
     };
 
+    // Previews of encrypted messages are decrypted here, in the browser.
+    const decryptPreviews = useCallback(async (items) => {
+        const { decryptTextOrNull } = await import('../../../services/messageEncryptionService');
+        const results = await Promise.all(items.filter(i => i.preview?.ciphertext).map(async (i) => {
+            const text = await decryptTextOrNull(i.preview.ciphertext, i.preview.messageIv, i.id, 'dm');
+            return [i.id, text || 'Encrypted message'];
+        }));
+        if (!results.length) return;
+        const byId = new Map(results);
+        setContacts(prev => prev.map(c => byId.has(c.id) ? { ...c, lastMessage: byId.get(c.id) } : c));
+    }, []);
+
+    // Keep previews and ordering live: newest conversation first.
+    useEffect(() => {
+        if (!socket) return undefined;
+        const LABELS = { image: '📷 Photo', video: '🎬 Video', voice: '🎵 Voice note', file: '📎 File', poll: '📊 Poll', contact: '👤 Contact', meeting: '📅 Meeting', checklist: '☑️ Checklist' };
+        const onNewMessage = async (msg) => {
+            const dmId = String(msg?.dm?._id || msg?.dm || '');
+            if (!dmId || msg.parentId) return;
+            let text = LABELS[msg.type] || '';
+            if (!text && msg.payload?.ciphertext) {
+                const { decryptTextOrNull } = await import('../../../services/messageEncryptionService');
+                text = (await decryptTextOrNull(msg.payload.ciphertext, msg.payload.messageIv, dmId, 'dm')) || 'Encrypted message';
+            }
+            setContacts(prev => {
+                const idx = prev.findIndex(c => String(c.id) === dmId);
+                if (idx === -1) return prev;
+                const updated = { ...prev[idx], lastMessage: text || prev[idx].lastMessage };
+                return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+            });
+        };
+        socket.on('new-message', onNewMessage);
+        return () => socket.off('new-message', onNewMessage);
+    }, [socket]);
+
     useEffect(() => {
         const loadDMs = async () => {
             if (!workspaceId) return;
@@ -69,11 +105,13 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         avatar: session.otherUser?.profilePicture,
                         status: initialStatus,
                         unread: session.unreadCount || 0,
-                        lastMessage: sanitizePreview(session.lastMessage) || "",
+                        lastMessage: session.lastMessagePreview ? "" : (sanitizePreview(session.lastMessage) || ""),
+                        preview: session.lastMessagePreview,
                         type: "dm"
                     };
                 });
                 setContacts(formatted);
+                decryptPreviews(formatted);
                 seedConversationUnread?.('dm', formatted.map(c => ({ id: c.id, unread: c.unread })));
             } catch (err) {
                 logger.error("Failed to load DMs:", err);
@@ -267,6 +305,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         return (
             <div
                 key={item.id}
+                data-testid={item.type === 'dm' ? 'dm-row' : undefined}
                 onClick={handleClick}
                 style={rowStyle}
                 onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
@@ -279,9 +318,19 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         </div>
                     )}
                     <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <div style={{ width: isMobile ? '42px' : '34px', height: isMobile ? '42px' : '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: isMobile ? '15px' : '13px', background: avatarBg, color: avatarColor, fontFamily: 'Inter, system-ui, sans-serif' }}>
-                            {isBroadcast ? <Megaphone size={isMobile ? 17 : 14} /> : item.name.charAt(0).toUpperCase()}
-                        </div>
+                        {isBroadcast ? (
+                            <div style={{ width: isMobile ? '42px' : '34px', height: isMobile ? '42px' : '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: avatarBg, color: avatarColor }}>
+                                <Megaphone size={isMobile ? 17 : 14} />
+                            </div>
+                        ) : (
+                            <UserAvatarImage
+                                userId={item.userId}
+                                name={item.name}
+                                src={item.avatar}
+                                size={isMobile ? 42 : 34}
+                                initialStyle={{ background: avatarBg, color: avatarColor, fontFamily: 'Inter, system-ui, sans-serif' }}
+                            />
+                        )}
                         {!isBroadcast && (
                             <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: isMobile ? '11px' : '9px', height: isMobile ? '11px' : '9px', borderRadius: '50%', background: statusColor, border: '2px solid #0c0c0c' }} />
                         )}

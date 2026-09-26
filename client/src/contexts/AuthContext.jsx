@@ -7,8 +7,19 @@ import { clearAllAiHistory } from '../utils/aiChatHistoryStorage';
 
 export const AuthContext = createContext(null);
 
+// Login responds with `id` while /me responds with `_id`; components read either,
+// so every stored user carries both.
+const withIds = (u) => {
+  if (!u || typeof u !== 'object') return u;
+  const id = u._id || u.id;
+  return id && (!u._id || !u.id) ? { ...u, _id: id, id } : u;
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUserState] = useState(null);
+  const setUser = useCallback((next) => {
+    setUserState((prev) => withIds(typeof next === 'function' ? next(prev) : next));
+  }, []);
   const [loading, setLoading] = useState(true);
   
   const [encryptionReady, setEncryptionReady] = useState(false);
@@ -381,7 +392,7 @@ export const AuthProvider = ({ children }) => {
     
     
     window.dispatchEvent(new CustomEvent('auth:logout', { detail: { userId: loggedOutUserId } }));
-  }, []); 
+  }, [setUser]); 
 
   
   const logoutRef = useRef(logout);

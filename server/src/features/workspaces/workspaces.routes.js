@@ -1,4 +1,5 @@
 const express = require('express');
+const { requireCompanyPermission } = require('../../shared/companyPermissions');
 const router = express.Router();
 const workspaceController = require('./workspace.controller');
 const workspaceAdminController = require('./workspace-admin.controller');
@@ -64,13 +65,13 @@ router.get('/:workspaceId/channels', ...memberGatePersonal, workspaceController.
 
 // Any active member may create channels (public or private); the controller
 // honours workspace.settings.allowMemberChannelCreation for non-admins.
-router.post('/:workspaceId/channels', ...memberGatePersonal, workspaceController.createWorkspaceChannel);
+router.post('/:workspaceId/channels', ...memberGatePersonal, requireCompanyPermission('createChannel'), workspaceController.createWorkspaceChannel);
 
 router.get('/:workspaceId/stats', ...memberGatePersonal, workspaceController.getWorkspaceStats);
 
-router.post('/:workspaceId/invite', ...adminGatePersonal, workspaceController.inviteToWorkspace);
+router.post('/:workspaceId/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), workspaceController.inviteToWorkspace);
 
-router.post('/:id/invite', ...adminGatePersonal, workspaceController.inviteToWorkspace);
+router.post('/:id/invite', ...adminGatePersonal, requireCompanyPermission('inviteUsers'), workspaceController.inviteToWorkspace);
 
 router.get('/:workspaceId/invites', ...adminGatePersonal, workspaceAdminController.getWorkspaceInvites);
 router.post('/:workspaceId/invites/:inviteId/revoke', ...adminGatePersonal, workspaceAdminController.revokeInvite);
@@ -107,7 +108,7 @@ router.use('/:id', workspacePermissionsRouter);
 
 router.post('/:id/clone', ...adminGatePersonal, workspaceController.cloneWorkspace);
 
-router.get('/:id/export', ...memberGatePersonal, workspaceController.exportWorkspace);
+router.get('/:id/export', ...adminGatePersonal, workspaceController.exportWorkspace); // includes private channels: admins only
 
 router.post('/import', requireAuth, workspaceController.importWorkspace);
 

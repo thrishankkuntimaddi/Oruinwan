@@ -10,6 +10,10 @@ import PermissionsTab from '../../../workspace/settings/PermissionsTab';
 import GeneralTab from '../../../workspace/settings/GeneralTab';
 import BillingTab from '../../../workspace/settings/BillingTab';
 import AdvancedTab from '../../../workspace/settings/AdvancedTab';
+import FeaturesTab from '../../../workspace/settings/FeaturesTab';
+import DataTab from '../../../workspace/settings/DataTab';
+import WorkspaceAnalyticsDashboard from '../../../../pages/workspace-os/WorkspaceAnalyticsDashboard';
+import { useFlag } from '../../../../contexts/FeatureFlagsContext';
 import logger from '../../../../utils/logger';
 
 const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setShowDeleteConfirm }) => {
@@ -49,6 +53,13 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     const [loadingStats, setLoadingStats] = useState(true);
 
     const isAdmin = activeWorkspace?.role === 'admin' || activeWorkspace?.role === 'owner';
+    const billingEnabled = useFlag('billing');
+    useEffect(() => {
+        if (!showSettingsModal) return undefined;
+        const onKey = (e) => { if (e.key === 'Escape') setShowSettingsModal(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [showSettingsModal, setShowSettingsModal]);
 
     const fetchStats = useCallback(async () => {
         if (!activeWorkspace?.id) return;
@@ -130,7 +141,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
     if (!showSettingsModal) return null;
 
     const tabs = isAdmin
-        ? ["General", "Permissions", "Members", "Invitations", "Billing", "Advanced"]
+        ? ["General", "Permissions", "Members", "Invitations", "Features", "Analytics", "Data", ...(billingEnabled ? ["Billing"] : []), "Advanced"]
         : ["General", "Members"];
 
     return (
@@ -213,6 +224,15 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                         {activeSettingsTab === "Billing" && (
                             <BillingTab stats={stats} loadingStats={loadingStats} />
                         )}
+                        {activeSettingsTab === "Features" && (
+                            <FeaturesTab workspaceId={activeWorkspace?.id} isAdmin={isAdmin} />
+                        )}
+                        {activeSettingsTab === "Analytics" && (
+                            <WorkspaceAnalyticsDashboard workspaceId={activeWorkspace?.id} workspaceName={activeWorkspace?.name} />
+                        )}
+                        {activeSettingsTab === "Data" && (
+                            <DataTab workspaceId={activeWorkspace?.id} workspaceName={activeWorkspace?.name} />
+                        )}
                         {activeSettingsTab === "Advanced" && (
                             <AdvancedTab isAdmin={isAdmin} setShowDeleteConfirm={setShowDeleteConfirm} />
                         )}
@@ -222,6 +242,7 @@ const WorkspaceSettingsModal = ({ showSettingsModal, setShowSettingsModal, setSh
                 {}
                 <button
                     onClick={() => setShowSettingsModal(false)}
+                    aria-label="Close settings"
                     style={{ position: 'absolute', top: '14px', right: '14px', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', borderRadius: '2px', transition: '150ms ease' }}
                     onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
                     onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
