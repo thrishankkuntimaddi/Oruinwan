@@ -120,6 +120,20 @@ const TaskSchema = new mongoose.Schema({
         createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         createdAt: { type: Date, default: Date.now }
     }],
+    // Links to external work items (GitHub PRs/issues, Jira issues), upserted by
+    // url by the integrations feature. `kind` and `state` mirror the integration card.
+    externalLinks: [{
+        _id: false,
+        provider: { type: String, enum: ['github', 'gitlab', 'jira'], required: true },
+        kind: { type: String, enum: ['pull_request', 'issue', 'jira_issue'], required: true },
+        url: { type: String, required: true },
+        repo: { type: String, default: null },
+        number: { type: Number, default: null },
+        key: { type: String, default: null },
+        title: { type: String, default: '' },
+        state: { type: String, default: null },
+        updatedAt: { type: Date, default: Date.now }
+    }],
     // `type` must be wrapped: a bare `type: String` key would turn the whole
     // element into a String and reject every attachment object.
     attachments: [{
@@ -229,6 +243,7 @@ TaskSchema.index({ epic: 1 });
 TaskSchema.index({ type: 1, workspace: 1 });
 TaskSchema.index({ dueDate: 1, status: 1 });
 TaskSchema.index({ project: 1 });
+TaskSchema.index({ workspace: 1, 'externalLinks.url': 1 }, { sparse: true });
 TaskSchema.index({ workspace: 1, createdAt: -1, status: 1 }); 
 
 TaskSchema.index({ company: 1, workspace: 1, status: 1 });   

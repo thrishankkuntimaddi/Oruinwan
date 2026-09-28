@@ -16,6 +16,9 @@ import { AILiveReplies } from '../../../components/ai/AILiveReply';
 import { useAIContext } from '../../../contexts/AIContext';
 import AIMarkdown from '../../../components/ai/AIMarkdown';
 import BRAND from '../../../shared/brand';
+import MessageMarkdown from '../../../shared/components/messages/MessageMarkdown';
+import ProfileTrigger from '../../profileCard/ProfileTrigger';
+import { setOpenThread, clearOpenThread } from '../../notifications/attention';
 
 export default function ThreadPanel({ parentMessage, channelId, conversationType = 'channel', onClose, socket, currentUserId, showHeader = true, className = "", style = {} }) {
     const { showToast } = useToast();
@@ -68,6 +71,12 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
         setAIThread({ parentId: threadRootId, getMessages: () => threadTranscriptRef.current() });
         return () => setAIThread(null);
     }, [setAIThread, threadRootId]);
+
+    // Replies in the open thread must not pop notifications (notificationPolicy).
+    useEffect(() => {
+        setOpenThread(threadRootId);
+        return () => clearOpenThread(threadRootId);
+    }, [threadRootId]);
 
     // Slash commands in the thread composer.
     const handleThreadSlash = (name, args) => {
@@ -493,6 +502,10 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
     }, [onClose]);
 
     const FONT = 'Inter, system-ui, -apple-system, sans-serif';
+    // Who wrote a message, for the profile popover on avatars and names.
+    const senderIdOf = (m) => m?.sender?._id || m?.senderId?._id || (typeof m?.senderId === 'string' ? m.senderId : null) || (typeof m?.sender === 'string' ? m.sender : null);
+    const parentSenderId = senderIdOf(parentMessageState);
+    const parentSenderName = parentMessageState?.sender?.username || parentMessageState?.senderName || parentMessageState?.senderId?.username || null;
 
     return (
         <div data-testid="thread-panel" style={{
@@ -644,6 +657,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                         borderLeft: '3px solid var(--accent)',
                                     }}>
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                                            <ProfileTrigger userId={parentSenderId} username={parentSenderName} style={{ flexShrink: 0 }}>
                                             <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <img
                                                     src={getAvatarUrl(
@@ -663,25 +677,28 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                     }}
                                                 />
                                             </div>
+                                            </ProfileTrigger>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '3px' }}>
-                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--accent)', fontFamily: FONT }}>
-                                                        {parentMessageState.sender?.username || parentMessageState.senderName || parentMessageState.senderId?.username || 'Unknown'}
-                                                    </span>
+                                                    <ProfileTrigger userId={parentSenderId} username={parentSenderName}>
+                                                        <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--accent)', fontFamily: FONT }}>
+                                                            {parentSenderName || 'Unknown'}
+                                                        </span>
+                                                    </ProfileTrigger>
                                                     <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>
                                                         {formatTime(parentMessageState.ts || parentMessageState.createdAt)}
                                                     </span>
                                                 </div>
-                                                <p style={{
+                                                <div className="message-content" style={{
                                                     fontSize: '12px', color: 'var(--text-primary)', margin: 0,
-                                                    lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap',
+                                                    lineHeight: 1.6, wordBreak: 'break-word',
                                                     overflow: 'hidden', fontFamily: FONT,
                                                     display: parentExpanded ? 'block' : '-webkit-box',
                                                     WebkitLineClamp: parentExpanded ? undefined : 4,
                                                     WebkitBoxOrient: 'vertical',
                                                 }}>
-                                                    {parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text}
-                                                </p>
+                                                    <MessageMarkdown text={parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text || ''} />
+                                                </div>
                                                 {(() => {
                                                     const txt = parentMessageState.decryptedContent || parentMessageState.payload?.text || parentMessageState.text || '';
                                                     return txt.length > 200 || txt.split('\n').length > 4 ? (
@@ -727,6 +744,7 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                             return (
                                                 <div key={reply._id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                                                     {}
+                                                    <ProfileTrigger userId={senderIdOf(reply)} username={senderName} style={{ flexShrink: 0 }}>
                                                     <div style={{ width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                         <img
                                                             src={senderPic}
@@ -739,17 +757,18 @@ export default function ThreadPanel({ parentMessage, channelId, conversationType
                                                             }}
                                                         />
                                                     </div>
+                                                    </ProfileTrigger>
                                                     <div style={{ flex: 1, minWidth: 0 }}>
                                                         <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '2px' }}>
-                                                            <span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>{senderName}</span>
+                                                            <ProfileTrigger userId={senderIdOf(reply)} username={senderName}><span style={{ fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', fontFamily: FONT }}>{senderName}</span></ProfileTrigger>
                                                             <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: FONT }}>{formatTime(reply.createdAt)}</span>
                                                         </div>
                                                         {senderName === BRAND.ai ? (
                                                             <AIMarkdown text={reply.decryptedContent || reply.payload?.text || reply.text} />
                                                         ) : (
-                                                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: FONT }}>
-                                                                {reply.decryptedContent || reply.payload?.text || reply.text}
-                                                            </p>
+                                                            <div className="message-content" style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6, wordBreak: 'break-word', overflowWrap: 'anywhere', fontFamily: FONT }}>
+                                                                <MessageMarkdown text={reply.decryptedContent || reply.payload?.text || reply.text || ''} />
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>

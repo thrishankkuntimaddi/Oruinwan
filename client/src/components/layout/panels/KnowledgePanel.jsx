@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { BookOpen, Plus, ChevronRight, ChevronDown, Network, RefreshCw, Search, Book } from 'lucide-react';
+import { BookOpen, Plus, ChevronRight, ChevronDown, Network, Search, Book } from 'lucide-react';
 import { useKnowledge } from '../../../hooks/useKnowledge';
+import WorkspacePanel, { PanelSection, PanelEmpty } from '../WorkspacePanel';
+import '../../../styles/gloss-x-panels.css';
 
 function PageTreeItem({ page, depth = 0, workspaceId, allPages, onNavigate, activePath }) {
     const children = allPages.filter(p => p.parentId === page._id || p.parentId?.toString?.() === page._id?.toString?.());
@@ -10,19 +12,20 @@ function PageTreeItem({ page, depth = 0, workspaceId, allPages, onNavigate, acti
 
     return (
         <div>
-            <button
+            <button type="button"
                 onClick={() => onNavigate(page._id)}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '6px', paddingTop: '6px', paddingBottom: '6px', paddingRight: '12px', textAlign: 'left', background: isActive ? 'rgba(184,149,106,0.1)' : 'transparent', borderLeft: isActive ? '2px solid #b8956a' : '2px solid transparent', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'all 150ms ease', paddingLeft: `${12 + depth * 14}px` }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}>
+                className={`gl-item gl-x-indent${isActive ? ' is-active' : ''}`}
+                aria-current={isActive ? 'page' : undefined}
+                style={{ '--gl-x-depth': depth, gap: '6px' }}>
                 {children.length > 0 ? (
-                    <span onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
-                        style={{ color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    <span className="gl-x-caret" role="button" aria-label={open ? 'Collapse' : 'Expand'}
+                        onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+                        style={{ cursor: 'pointer' }}>
                         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
                     </span>
-                ) : <span style={{ width: '11px', display: 'inline-block' }} />}
-                <span style={{ fontSize: '13px', marginRight: '2px' }}>{page.icon || '📄'}</span>
-                <span style={{ fontSize: '12px', fontWeight: isActive ? 600 : 400, color: isActive ? '#e4e4e4' : 'rgba(228,228,228,0.55)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.title}</span>
+                ) : <span className="gl-x-caret" />}
+                <span className="gl-x-emoji">{page.icon || '📄'}</span>
+                <span className="gl-x-item-title">{page.title}</span>
             </button>
             {open && children.map(child => (
                 <PageTreeItem
@@ -66,73 +69,63 @@ const KnowledgePanel = ({ title }) => {
     const filtered = search
         ? pages.filter(p => p.title.toLowerCase().includes(search.toLowerCase()))
         : rootPages;
+    const onGraph = location.pathname.endsWith('/knowledge/graph');
+    const onHandbook = location.pathname.endsWith('/knowledge/handbook');
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {}
-            <div style={{ padding: '12px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        <BookOpen size={12} /> Knowledge
-                    </span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                        <button onClick={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
-                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease' }}
-                            title="Knowledge Graph"
-                            onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
-                            <Network size={13} />
-                        </button>
-                        <button onClick={handleCreatePage} disabled={creating}
-                            style={{ padding: '4px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'color 150ms ease' }}
-                            title="New page"
-                            onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
-                            <Plus size={13} />
-                        </button>
-                    </div>
+        <WorkspacePanel
+            icon={BookOpen}
+            title="Knowledge"
+            subtitle={title}
+            actions={(
+                <>
+                    <button type="button" className={`gl-icon-btn${onGraph ? ' is-active' : ''}`} onClick={() => navigate(`/workspace/${workspaceId}/knowledge/graph`)}
+                        title="Knowledge Graph" aria-label="Knowledge Graph">
+                        <Network size={14} />
+                    </button>
+                    <button type="button" className="gl-icon-btn" onClick={handleCreatePage} disabled={creating} title="New page" aria-label="New page">
+                        <Plus size={15} />
+                    </button>
+                </>
+            )}
+            tools={(
+                <div className="gl-search">
+                    <Search size={12} />
+                    <input className="gl-input" value={search} onChange={e => setSearch(e.target.value)} placeholder="Find page…" aria-label="Find page" />
                 </div>
-                <div style={{ position: 'relative' }}>
-                    <Search size={11} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Find page..."
-                        style={{ width: '100%', paddingLeft: '26px', paddingRight: '8px', paddingTop: '5px', paddingBottom: '5px', fontSize: '12px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
-                </div>
-            </div>
-
-            {}
-            <div style={{ padding: '4px 8px', borderBottom: '1px solid var(--border-subtle)' }}>
-                <button onClick={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 8px', background: 'transparent', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <Book size={13} style={{ color: '#b8956a', flexShrink: 0 }} />
-                    <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>Company Handbook</span>
+            )}
+            footer={(
+                <button type="button" className="gl-btn gl-btn--ghost gl-btn--sm gl-btn--block" onClick={handleCreatePage} disabled={creating}>
+                    <Plus size={12} />{creating ? 'Creating…' : 'New page'}
                 </button>
-            </div>
+            )}
+        >
+            <button type="button" className={`gl-item${onHandbook ? ' is-active' : ''}`} aria-current={onHandbook ? 'page' : undefined}
+                onClick={() => navigate(`/workspace/${workspaceId}/knowledge/handbook`)}>
+                <Book size={13} className="gl-x-accent" style={{ flexShrink: 0 }} />
+                <span className="gl-x-item-title">Company Handbook</span>
+            </button>
 
-            {}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
-                {loading && (
-                    <div style={{ display: 'flex', justifyContent: 'center', padding: '32px 0' }}>
-                        <div style={{ width: '16px', height: '16px', border: '2px solid #b8956a', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                    </div>
-                )}
+            <PanelSection label={search ? 'Results' : 'Pages'}>
+                {loading && <div className="gl-x-center"><div className="gl-x-spinner" /></div>}
                 {!loading && filtered.length === 0 && (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px', textAlign: 'center' }}>
-                        <BookOpen size={28} style={{ color: 'var(--text-muted)', marginBottom: '8px' }} />
-                        <p style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No pages yet</p>
-                        <button onClick={handleCreatePage}
-                            style={{ marginTop: '10px', fontSize: '12px', color: '#b8956a', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>Create first page</button>
-                    </div>
+                    <PanelEmpty
+                        icon={BookOpen}
+                        title={search ? 'No matching pages' : 'No pages yet'}
+                        text={search ? 'Try a different title.' : 'Write down how your team works — pages can nest.'}
+                        action={!search && (
+                            <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={handleCreatePage} disabled={creating}>
+                                <Plus size={12} /> Create first page
+                            </button>
+                        )}
+                    />
                 )}
                 {search
                     ? filtered.map(page => (
-                        <button key={page._id} onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${page._id}`)}
-                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 12px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter, system-ui, sans-serif', transition: 'background 150ms ease' }}
-                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                            <span style={{ fontSize: '13px' }}>{page.icon || '📄'}</span>
-                            <span style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{page.title}</span>
+                        <button key={page._id} type="button" className={`gl-item${id === page._id ? ' is-active' : ''}`}
+                            onClick={() => navigate(`/workspace/${workspaceId}/knowledge/${page._id}`)}>
+                            <span className="gl-x-emoji">{page.icon || '📄'}</span>
+                            <span className="gl-x-item-title">{page.title}</span>
                         </button>
                     ))
                     : filtered.map(page => (
@@ -140,18 +133,8 @@ const KnowledgePanel = ({ title }) => {
                             onNavigate={(pid) => navigate(`/workspace/${workspaceId}/knowledge/${pid}`)} activePath={id} />
                     ))
                 }
-            </div>
-
-            {}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', padding: '8px 12px' }}>
-                <button onClick={handleCreatePage} disabled={creating}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px', background: 'transparent', border: 'none', fontSize: '12px', color: 'var(--text-muted)', cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'color 150ms ease' }}
-                    onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.35)'}>
-                    <Plus size={12} />{creating ? 'Creating…' : 'New page'}
-                </button>
-            </div>
-        </div>
+            </PanelSection>
+        </WorkspacePanel>
     );
 };
 

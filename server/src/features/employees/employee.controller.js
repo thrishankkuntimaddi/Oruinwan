@@ -1,132 +1,75 @@
 const logger = require('../../../utils/logger');
 const employeeService = require("./employee.service");
 
+const { assignRoleError, assertCompanyDepartments } = require('../../shared/roleCeiling');
+
+/** The company in the URL must be the caller's own (set by requireCompanyMember). */
+function ownCompanyOr403(req, res) {
+    if (String(req.params.id) !== String(req.companyId)) {
+        res.status(403).json({ message: 'Access denied: that company is not yours' });
+        return false;
+    }
+    return true;
+}
+
 exports.inviteEmployee = async (req, res) => {
     try {
-        const companyId = req.params.id;
+        if (!ownCompanyOr403(req, res)) return;
+        const companyId = req.companyId;
         const userId = req.user.sub;
-        const { email, role = "member", workspaceId = null, departmentId = null, managerId = null } = req.body;
+        const { email, role = "member", departmentId = null, departmentIds, jobTitle, firstName, lastName } = req.body;
 
-        if (!email) {
+        if (!email || typeof email !== 'string') {
             return res.status(400).json({ message: "Email is required" });
         }
 
-        
+        const roleError = assignRoleError({ companyRole: req.companyRole }, role);
+        if (roleError) {
+            return res.status(roleError.includes('Invalid') ? 400 : 403).json({ message: roleError });
+        }
+
+        const depts = await assertCompanyDepartments(companyId, departmentIds || (departmentId ? [departmentId] : []));
+
         const result = await employeeService.inviteEmployee({
             companyId,
             email,
             role,
-            workspaceId,
-            departmentId,
-            managerId,
-            userId,
+            firstName,
+            lastName,
+            jobTitle,
+            departmentIds: depts,
+            invitedBy: userId,
             req
         });
 
         return res.json({
             message: "Invitation sent successfully",
             inviteId: result.inviteId,
-            inviteLink: result.inviteLink
+            emailSent: result.emailSent
         });
 
     } catch (err) {
+        if (err.status && err.status < 500) {
+            return res.status(err.status).json({ message: err.message });
+        }
         logger.error("INVITE EMPLOYEE ERROR:", err);
-
         if (err.message.includes('not found')) {
             return res.status(404).json({ message: err.message });
         }
-        if (err.message.includes('Only') || err.message.includes('already')) {
-            return res.status(403).json({ message: err.message });
-        }
-
         return res.status(500).json({ message: "Server error" });
     }
 };
 
+// Bulk invite and direct account creation were never implemented in the
+// service. Bulk onboarding lives at /api/company/onboarding; invites at /:id/invite.
 exports.bulkInviteEmployees = async (req, res) => {
-    try {
-        const companyId = req.params.id;
-        const userId = req.user.sub;
-        const { employees } = req.body;
-
-        if (!employees || !Array.isArray(employees) || employees.length === 0) {
-            return res.status(400).json({ message: "Employees array is required" });
-        }
-
-        
-        const result = await employeeService.bulkInviteEmployees({
-            companyId,
-            employees,
-            userId,
-            req
-        });
-
-        return res.json({
-            message: `Successfully invited ${result.successful} out of ${employees.length} employees`,
-            successful: result.successful,
-            failed: result.failed,
-            results: result.results
-        });
-
-    } catch (err) {
-        logger.error("BULK INVITE ERROR:", err);
-
-        if (err.message.includes('not found')) {
-            return res.status(404).json({ message: err.message });
-        }
-        if (err.message.includes('Only')) {
-            return res.status(403).json({ message: err.message });
-        }
-
-        return res.status(500).json({ message: "Server error" });
-    }
+    if (!ownCompanyOr403(req, res)) return;
+    return res.status(501).json({ message: 'Bulk invite is not available here. Use Onboard → bulk upload (/api/company/onboarding).' });
 };
 
 exports.directCreateEmployee = async (req, res) => {
-    try {
-        const companyId = req.params.id;
-        const userId = req.user.sub;
-        const { username, email, password, role = "member", department, jobTitle } = req.body;
-
-        if (!username || !email || !password) {
-            return res.status(400).json({
-                message: "Username, email, and password are required"
-            });
-        }
-
-        
-        const result = await employeeService.directCreateEmployee({
-            companyId,
-            username,
-            email,
-            password,
-            role,
-            department,
-            jobTitle,
-            userId,
-            req
-        });
-
-        return res.json({
-            message: "Employee created successfully",
-            employee: result.employee
-        });
-
-    } catch (err) {
-        logger.error("DIRECT CREATE EMPLOYEE ERROR:", err);
-
-        if (err.message.includes('not found')) {
-            return res.status(404).json({ message: err.message });
-        }
-        if (err.message.includes('already') || err.message.includes('exists')) {
-            return res.status(409).json({ message: err.message });
-        }
-        if (err.message.includes('Only')) {
-            return res.status(403).json({ message: err.message });
-        }
-
-        return res.status(500).json({ message: "Server error" });
-    }
+    if (!ownCompanyOr403(req, res)) return;
+    return res.status(501).json({ message: 'Direct account creation is not available. Invite the employee instead.' });
 };
 
 exports.acceptInvite = async (req, res) => {
@@ -174,7 +117,8 @@ exports.acceptInvite = async (req, res) => {
             passwordHash,
             userType: "company",
             companyId: invite.company,
-            companyRole: invite.role || "member",
+            // Ownership is never granted through an invite.
+            companyRole: invite.role && invite.role !== "owner" ? invite.role : "member",
             departments: invite.department ? [invite.department] : [],
             accountStatus: "active",
             verified: true

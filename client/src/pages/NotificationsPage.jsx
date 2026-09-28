@@ -8,21 +8,10 @@ import { useNotifications, notificationHref } from '../features/notifications/No
 import { useWorkspace } from '../contexts/WorkspaceContext';
 import NotificationPreferences from '../features/notifications/components/NotificationPreferences';
 import { notificationTypeMeta, timeAgo, COUNT_BADGE_STYLE } from '../features/notifications/notificationTypes';
+import { PanelEmpty } from '../components/layout/WorkspacePanel';
+import '../styles/gloss.css';
+import '../styles/gloss-x-panels.css';
 
-const T = {
-    bg:          'var(--bg-base)',
-    surface:     'var(--bg-surface)',
-    border:      'var(--border-subtle)',
-    borderHover: 'var(--border-default)',
-    accent:      'var(--accent)',
-    accentBg:    'var(--accent-dim)',
-    danger:      'var(--state-danger)',
-    text:        'var(--text-primary)',
-    secondary:   'var(--text-secondary)',
-    muted:       'var(--text-muted)',
-    dim:         'var(--text-muted)',
-    font:        'var(--font)',
-};
 
 const TABS = [
     { key: 'all',      label: 'All' },
@@ -57,7 +46,6 @@ export default function NotificationsPage() {
     } = useNotifications();
 
     const [activeTab, setActiveTab] = useState('all');
-    const [hoveredId, setHoveredId] = useState(null);
     const [confirmClear, setConfirmClear] = useState(false);
     const [clearing, setClearing] = useState(false);
 
@@ -86,103 +74,57 @@ export default function NotificationsPage() {
         if (!items.length) return null;
         return (
             <div key={label} style={{ marginBottom: '24px' }}>
-                {}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', padding: '0 2px' }}>
-                    <span style={{ fontSize: '10px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: T.font, whiteSpace: 'nowrap' }}>{label}</span>
-                    <div style={{ flex: 1, height: '1px', background: T.border }} />
-                </div>
+                <div className="gl-x-group-label">{label}</div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     {items.map(n => {
                         const { Icon, color: dot, label: typeLabel } = notificationTypeMeta(n.type);
-                        const isHovered = hoveredId === n._id;
                         const href = notificationHref(n, workspaceId);
                         return (
                             <div
                                 key={n._id}
                                 onClick={() => handleClick(n)}
-                                onMouseEnter={() => setHoveredId(n._id)}
-                                onMouseLeave={() => setHoveredId(null)}
-                                onFocus={() => setHoveredId(n._id)}
-                                onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setHoveredId(null); }}
                                 onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleClick(n); }}
                                 tabIndex={0}
                                 role="button"
-                                style={{
-                                    display: 'flex', alignItems: 'flex-start', gap: '12px',
-                                    padding: '10px 14px',
-                                    background: n.read
-                                        ? (isHovered ? 'var(--bg-hover)' : 'transparent')
-                                        : (isHovered ? 'var(--bg-hover)' : 'var(--highlight-bg-weak)'),
-                                    border: `1px solid ${isHovered ? T.borderHover : T.border}`,
-                                    cursor: href ? 'pointer' : 'default',
-                                    outline: 'none',
-                                    transition: 'all 150ms ease',
-                                    position: 'relative',
-                                }}
+                                className={`gl-card gl-x-row gl-x-notif${n.read ? '' : ' is-unread'}`}
+                                style={{ cursor: href ? 'pointer' : 'default' }}
                             >
-                                {}
-                                {!n.read && (
-                                    <span style={{ position: 'absolute', left: 0, top: '10px', bottom: '10px', width: '2px', background: T.accent }} />
-                                )}
-
-                                {}
-                                <div style={{
-                                    flexShrink: 0, width: '34px', height: '34px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: 'var(--bg-active)',
-                                    border: `1px solid ${T.borderHover}`,
-                                }}>
+                                <div className="gl-x-notif-icon">
                                     <Icon size={15} style={{ color: dot }} />
                                 </div>
 
-                                {}
                                 <div style={{ flex: 1, minWidth: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px' }}>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                                <span style={{ fontSize: '13px', fontWeight: n.read ? 500 : 700, color: n.read ? T.muted : T.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: T.font }}>
+                                                <span style={{ fontSize: '13px', fontWeight: n.read ? 500 : 700, color: n.read ? 'var(--text-secondary)' : 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                     {n.title}
                                                 </span>
                                                 {!n.read && (
-                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: T.accent, flexShrink: 0 }} />
+                                                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', flexShrink: 0 }} />
                                                 )}
-                                                <span style={{ fontSize: '9px', fontWeight: 700, color: T.muted, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '1px 5px', background: 'var(--bg-hover)', border: `1px solid ${T.border}`, fontFamily: T.font, whiteSpace: 'nowrap' }}>
-                                                    {typeLabel}
-                                                </span>
+                                                <span className="gl-x-badge">{typeLabel}</span>
                                             </div>
                                             {n.body && (
-                                                <p style={{ fontSize: '12px', color: T.muted, marginTop: '2px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontFamily: T.font }}>
+                                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '2px 0 0', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
                                                     {n.body}
                                                 </p>
                                             )}
-                                            <p style={{ fontSize: '10px', color: T.dim, marginTop: '4px', fontFamily: T.font }}>
+                                            <p style={{ fontSize: '10.5px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
                                                 {timeAgo(n.createdAt)}
                                             </p>
                                         </div>
 
-                                        {}
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', opacity: isHovered ? 1 : 0, transition: 'opacity 150ms ease', flexShrink: 0 }}>
+                                        <div className="gl-x-reveal" style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
                                             {href && (
-                                                <button
-                                                    title="Open"
-                                                    aria-label="Open"
-                                                    onClick={e => { e.stopPropagation(); handleClick(n); }}
-                                                    style={{ padding: '4px', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
-                                                    onMouseEnter={e => e.currentTarget.style.color = T.accent}
-                                                    onMouseLeave={e => e.currentTarget.style.color = T.muted}
-                                                >
+                                                <button type="button" className="gl-icon-btn gl-x-xs" title="Open" aria-label="Open"
+                                                    onClick={e => { e.stopPropagation(); handleClick(n); }}>
                                                     <ExternalLink size={12} />
                                                 </button>
                                             )}
-                                            <button
-                                                title="Dismiss"
-                                                aria-label={`Dismiss: ${n.title}`}
-                                                onClick={e => { e.stopPropagation(); dismiss(n._id); }}
-                                                style={{ padding: '4px', background: 'none', border: 'none', color: T.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
-                                                onMouseEnter={e => e.currentTarget.style.color = T.danger}
-                                                onMouseLeave={e => e.currentTarget.style.color = T.muted}
-                                            >
+                                            <button type="button" className="gl-icon-btn gl-x-xs gl-x-danger" title="Dismiss" aria-label={`Dismiss: ${n.title}`}
+                                                onClick={e => { e.stopPropagation(); dismiss(n._id); }}>
                                                 <X size={12} />
                                             </button>
                                         </div>
@@ -196,100 +138,56 @@ export default function NotificationsPage() {
         );
     };
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: T.bg, fontFamily: T.font }}>
+    const lead = error && notifications.length === 0 ? 'Couldn’t load notifications' : unreadCount > 0 ? `${unreadCount} unread` : 'All caught up';
 
-            {}
-            <div style={{ flexShrink: 0, background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '16px 24px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', maxWidth: '760px', margin: '0 auto' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.accentBg, border: `1px solid ${T.borderHover}` }}>
-                            <Bell size={17} style={{ color: T.accent }} />
-                        </div>
-                        <div>
-                            <h1 style={{ fontSize: '17px', fontWeight: 700, color: T.text, margin: 0 }}>Notifications</h1>
-                            <p style={{ fontSize: '12px', color: T.muted, margin: 0 }}>
-                                {error && notifications.length === 0 ? 'Couldn’t load notifications' : unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-                                {activeWorkspace?.name ? ` · ${activeWorkspace.name}` : ''}
-                            </p>
+    return (
+        <div className="gl-x-page" style={{ '--gl-x-page-w': '816px' }}>
+
+            <div className="gl-x-page-top gl-ambient">
+                <div className="gl-page-head gl-x-wrap">
+                    <div className="gl-x-head-row">
+                        <span className="gl-x-head-mark" aria-hidden="true"><Bell size={19} /></span>
+                        <div style={{ minWidth: 0 }}>
+                            <span className="gl-eyebrow">{activeWorkspace?.name || 'Workspace'}</span>
+                            <h1 className="gl-page-title">Notifications</h1>
+                            <p className="gl-page-lead">{lead}</p>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <button
-                            onClick={refresh}
-                            disabled={loading}
-                            title="Refresh"
-                            style={{ padding: '6px', background: 'none', border: `1px solid ${T.border}`, color: T.muted, cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease', opacity: loading ? 0.5 : 1 }}
-                            onMouseEnter={e => e.currentTarget.style.color = T.text}
-                            onMouseLeave={e => e.currentTarget.style.color = T.muted}
-                        >
+                    <div className="gl-x-head-actions">
+                        <button type="button" className="gl-icon-btn" onClick={refresh} disabled={loading} title="Refresh" aria-label="Refresh" style={{ width: 32, height: 32, border: '1px solid var(--border-default)' }}>
                             <RefreshCcw size={14} className={loading ? 'animate-spin' : ''} />
                         </button>
 
                         {unreadCount > 0 && (
-                            <button
-                                onClick={markAllRead}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: T.accentBg, border: `1px solid ${T.borderHover}`, color: T.accent, fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: T.font, transition: '150ms ease' }}
-                                onMouseEnter={e => { e.currentTarget.style.borderColor = T.accent; }}
-                                onMouseLeave={e => { e.currentTarget.style.borderColor = T.borderHover; }}
-                            >
+                            <button type="button" className="gl-btn gl-btn--primary" onClick={markAllRead}>
                                 <Check size={13} /> Mark all read
                             </button>
                         )}
 
                         {notifications.length > 0 && !confirmClear && (
-                            <button
-                                onClick={() => setConfirmClear(true)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', background: 'transparent', border: `1px solid ${T.border}`, color: T.muted, fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: T.font, transition: '150ms ease' }}
-                                onMouseEnter={e => { e.currentTarget.style.color = T.danger; e.currentTarget.style.borderColor = T.danger; }}
-                                onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
-                            >
+                            <button type="button" className="gl-btn gl-x-danger" onClick={() => setConfirmClear(true)}>
                                 <Trash2 size={13} /> Clear all
                             </button>
                         )}
                         {confirmClear && (
-                            <div role="alertdialog" aria-label="Clear all notifications?" style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 3px 3px 10px', border: `1px solid ${T.borderHover}`, background: 'var(--bg-active)' }}>
-                                <span style={{ fontSize: '12px', color: T.text }}>Clear all notifications?</span>
-                                <button
-                                    onClick={() => setConfirmClear(false)}
-                                    disabled={clearing}
-                                    style={{ padding: '4px 10px', fontSize: '12px', background: 'transparent', border: `1px solid ${T.border}`, color: T.secondary, cursor: 'pointer', fontFamily: T.font }}
-                                >
+                            <div role="alertdialog" aria-label="Clear all notifications?" className="gl-card gl-x-confirm">
+                                <span>Clear all notifications?</span>
+                                <button type="button" className="gl-btn gl-btn--sm" onClick={() => setConfirmClear(false)} disabled={clearing}>
                                     Cancel
                                 </button>
-                                <button
-                                    onClick={doClearAll}
-                                    disabled={clearing}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '4px 10px', fontSize: '12px', fontWeight: 600, background: T.danger, border: `1px solid ${T.danger}`, color: 'var(--bg-base)', cursor: clearing ? 'wait' : 'pointer', fontFamily: T.font }}
-                                >
+                                <button type="button" className="gl-btn gl-btn--sm gl-x-danger-solid" onClick={doClearAll} disabled={clearing}>
                                     {clearing ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />} Clear
                                 </button>
                             </div>
                         )}
                     </div>
                 </div>
-            </div>
 
-            {}
-            <div style={{ flexShrink: 0, background: T.surface, borderBottom: `1px solid ${T.border}`, padding: '0 24px' }}>
-                <div style={{ maxWidth: '760px', margin: '0 auto', display: 'flex', gap: '0', overflowX: 'auto' }}>
-                    {TABS.map(tab => {
-                        const isActive = activeTab === tab.key;
-                        return (
-                            <button
-                                key={tab.key}
-                                onClick={() => setActiveTab(tab.key)}
-                                style={{
-                                    flexShrink: 0, display: 'flex', alignItems: 'center', gap: '5px',
-                                    padding: '10px 14px', fontSize: '12px', fontWeight: isActive ? 700 : 400,
-                                    color: isActive ? T.accent : T.muted,
-                                    background: 'transparent', border: 'none', borderBottom: `2px solid ${isActive ? T.accent : 'transparent'}`,
-                                    cursor: 'pointer', fontFamily: T.font, transition: 'all 150ms ease', whiteSpace: 'nowrap',
-                                }}
-                                onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = T.text; }}
-                                onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = T.muted; }}
-                            >
+                <div className="gl-x-wrap gl-x-page-tabs">
+                    <div className="gl-tabs gl-x-tabs-fit" role="tablist" aria-label="Notification filters">
+                        {TABS.map(tab => (
+                            <button key={tab.key} type="button" role="tab" className="gl-tab" aria-selected={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
                                 {tab.Icon && <tab.Icon size={12} />}
                                 {tab.label}
                                 {tab.key === 'unread' && unreadCount > 0 && (
@@ -298,74 +196,48 @@ export default function NotificationsPage() {
                                     </span>
                                 )}
                             </button>
-                        );
-                    })}
+                        ))}
+                    </div>
                 </div>
             </div>
 
-            {}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-                {activeTab === 'settings' ? (
-                    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '32px 24px' }}>
+            <div className="gl-x-page-body">
+                <div className="gl-x-wrap gl-x-page-pad">
+                    {activeTab === 'settings' ? (
                         <NotificationPreferences workspaceId={workspaceId} />
-                    </div>
-                ) : (
-                    <div style={{ maxWidth: '760px', margin: '0 auto', padding: '24px 24px' }}>
-                        {loading && notifications.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', gap: '12px', color: T.muted }}>
-                                <Loader2 size={28} className="animate-spin" style={{ color: T.accent }} />
-                                <p style={{ fontSize: '13px', fontFamily: T.font }}>Loading notifications…</p>
-                            </div>
-                        ) : error && notifications.length === 0 ? (
-                            <div role="alert" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', gap: '10px' }}>
-                                <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-hover)', border: `1px solid ${T.border}` }}>
-                                    <AlertCircle size={24} style={{ color: T.danger }} />
-                                </div>
-                                <p style={{ fontSize: '14px', fontWeight: 600, color: T.text, fontFamily: T.font, margin: 0 }}>Couldn’t load notifications</p>
-                                <p style={{ fontSize: '12px', color: T.secondary, fontFamily: T.font, margin: 0 }}>{error}</p>
-                                <button
-                                    onClick={refresh}
-                                    style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', fontSize: '12px', fontWeight: 500, color: T.text, background: 'var(--bg-active)', border: `1px solid ${T.borderHover}`, cursor: 'pointer', fontFamily: T.font }}
-                                >
-                                    <RefreshCcw size={13} /> Try again
-                                </button>
-                            </div>
-                        ) : filtered.length === 0 ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '96px', gap: '12px' }}>
-                                <div style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-hover)', border: `1px solid ${T.border}` }}>
-                                    <Bell size={24} style={{ color: T.dim }} />
-                                </div>
-                                <p style={{ fontSize: '14px', fontWeight: 600, color: T.muted, fontFamily: T.font }}>
-                                    {activeTab === 'all' ? 'No notifications yet' : `No ${activeTab} notifications`}
-                                </p>
-                                <p style={{ fontSize: '12px', color: T.dim, fontFamily: T.font }}>
-                                    {activeTab === 'all' ? "You're all caught up." : 'Try a different filter'}
-                                </p>
-                            </div>
-                        ) : (
-                            <>
-                                {renderGroup('Today', groups.Today)}
-                                {renderGroup('Yesterday', groups.Yesterday)}
-                                {renderGroup('Older', groups.Older)}
+                    ) : loading && notifications.length === 0 ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', paddingTop: '72px', gap: '12px', color: 'var(--text-secondary)' }}>
+                            <Loader2 size={28} className="animate-spin" style={{ color: 'var(--accent)' }} />
+                            <p style={{ fontSize: '13px', margin: 0 }}>Loading notifications…</p>
+                        </div>
+                    ) : error && notifications.length === 0 ? (
+                        <div role="alert" style={{ paddingTop: '48px' }}>
+                            <PanelEmpty icon={AlertCircle} title="Couldn’t load notifications" text={error}
+                                action={<button type="button" className="gl-btn" onClick={refresh}><RefreshCcw size={13} /> Try again</button>} />
+                        </div>
+                    ) : filtered.length === 0 ? (
+                        <div style={{ paddingTop: '48px' }}>
+                            <PanelEmpty icon={Bell}
+                                title={activeTab === 'all' ? 'No notifications yet' : `No ${activeTab} notifications`}
+                                text={activeTab === 'all' ? "You're all caught up." : 'Try a different filter'} />
+                        </div>
+                    ) : (
+                        <>
+                            {renderGroup('Today', groups.Today)}
+                            {renderGroup('Yesterday', groups.Yesterday)}
+                            {renderGroup('Older', groups.Older)}
 
-                                {hasMore && (
-                                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
-                                        <button
-                                            onClick={loadMore}
-                                            disabled={loading}
-                                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', fontSize: '12px', fontWeight: 500, color: T.muted, background: 'transparent', border: `1px solid ${T.border}`, cursor: 'pointer', fontFamily: T.font, transition: '150ms ease', opacity: loading ? 0.5 : 1 }}
-                                            onMouseEnter={e => { e.currentTarget.style.color = T.text; e.currentTarget.style.borderColor = T.borderHover; }}
-                                            onMouseLeave={e => { e.currentTarget.style.color = T.muted; e.currentTarget.style.borderColor = T.border; }}
-                                        >
-                                            {loading ? <Loader2 size={13} className="animate-spin" /> : <ChevronDown size={13} />}
-                                            Load more
-                                        </button>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                )}
+                            {hasMore && (
+                                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '16px' }}>
+                                    <button type="button" className="gl-btn" onClick={loadMore} disabled={loading}>
+                                        {loading ? <Loader2 size={13} className="animate-spin" /> : <ChevronDown size={13} />}
+                                        Load more
+                                    </button>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
         </div>
     );

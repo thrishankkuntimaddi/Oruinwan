@@ -15,7 +15,7 @@ const ImageBlock = ({
     showToast,
     readOnly = false,
 }) => {
-    const { url, error } = useBlockMediaUrl(block.content, { allowDataImage: true });
+    const { url, error, onMediaError } = useBlockMediaUrl(block.content, { allowDataImage: true });
 
     const handleFile = async (file) => {
         if (!file.type.startsWith('image/')) { showToast('Please choose an image file', 'error'); return; }
@@ -46,7 +46,7 @@ const ImageBlock = ({
                         {error ? (
                             <p style={mediaStyles.error}>This image could not be loaded.</p>
                         ) : url ? (
-                            <img src={url} alt={block.meta?.name || 'Note image'} style={{ width: '100%', maxHeight: '384px', objectFit: 'contain', display: 'block' }} />
+                            <img src={url} onError={onMediaError} alt={block.meta?.name || 'Note image'} style={{ width: '100%', maxHeight: '384px', objectFit: 'contain', display: 'block' }} />
                         ) : (
                             <div style={{ width: '100%', height: '160px', background: 'var(--bg-hover)' }} />
                         )}

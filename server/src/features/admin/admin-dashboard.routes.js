@@ -17,7 +17,8 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
         const [total, active, pending, suspended, blocked, guests] = await Promise.all([
             User.countDocuments({ companyId, accountStatus: { $ne: 'removed' } }),
             User.countDocuments({ companyId, accountStatus: 'active' }),
-            User.countDocuments({ companyId, accountStatus: 'pending' }),
+            // Onboarding creates 'invited' users; both count as pending.
+            User.countDocuments({ companyId, accountStatus: { $in: ['pending', 'invited'] } }),
             User.countDocuments({ companyId, accountStatus: 'suspended' }),
             User.countDocuments({ companyId, accountStatus: 'blocked' }),
             User.countDocuments({ companyId, companyRole: 'guest', accountStatus: { $ne: 'removed' } })
@@ -27,10 +28,10 @@ router.get('/users-access', requireAuth, requireAdmin, async (req, res) => {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const recentInvites = await User.find({
             companyId,
-            accountStatus: 'pending',
+            accountStatus: { $in: ['pending', 'invited'] },
             createdAt: { $gte: sevenDaysAgo }
         })
-            .select('username email createdAt')
+            .select('username email accountStatus createdAt')
             .sort({ createdAt: -1 })
             .limit(10)
             .lean();

@@ -1,78 +1,84 @@
-import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { MessageSquare, Zap, Shield, Settings, BookOpen, ArrowRight, X } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { BookOpen, ArrowRight, ArrowUpRight, X, Sparkles } from 'lucide-react';
 import PublicPageShell from '../../components/layout/PublicPageShell';
-import { PageHero, Block, Card, Callout, CTABand } from '../../components/public/PublicKit';
+import { PageHero, Callout, CTABand, spotlight } from '../../components/public/PublicKit';
+import { useAuth } from '../../contexts/AuthContext';
+import {
+    TOPICS, ARTICLES, WHATS_NEW, articlesInTopic, getArticle, searchArticles, resolveAppPath,
+} from '../../content/helpArticles';
+import { TOPIC_ICONS } from '../../components/help/topicIcons';
+import ArticleBody from '../../components/help/ArticleBody';
+import '../../components/help/helpCenter.css';
 
-const CATEGORIES = [
-    { icon: Zap,           color: '#c8a274', title: 'Getting Started',  faqs: [
-        { q: 'How do I create a workspace?', a: 'From the home page, click "Get Started" → "Register Company HQ" for a team workspace, or "Personal Account" for individual use. Follow the setup wizard to configure your organization.' },
-        { q: 'How do I invite team members?', a: 'From your Admin Dashboard → Members → Invite Members. Enter email addresses or share an invite link. Members will receive an onboarding email with setup instructions.' },
-        { q: 'Can I migrate from Slack or Microsoft Teams?', a: 'Oruinwan currently does not have an automated migration tool, but we support bulk member import via CSV. Export your member list from your existing tool and upload it to Admin Dashboard → Members → Import.' },
-    ]},
-    { icon: MessageSquare, color: '#6ea8fe', title: 'Messaging', faqs: [
-        { q: 'How do I create a private channel?', a: 'Click the + icon next to Channels in the sidebar, select "Private", and invite specific members. Private channel content is hidden from non-members, including admins by default.' },
-        { q: 'Can I edit or delete sent messages?', a: 'Yes — hover any message you sent and click the ··· menu. You can edit the message (an "edited" label will appear) or delete it entirely. Deleted messages cannot be recovered.' },
-        { q: 'How do threads work?', a: 'Hover any message and click "Reply in thread." The thread opens in the right panel. Thread participants receive notifications, and the thread is tracked in your Threads inbox.' },
-    ]},
-    { icon: Shield,        color: '#5aba8a', title: 'Security & Privacy',  faqs: [
-        { q: 'Is my data encrypted?', a: 'Yes. All data is encrypted at rest using AES-256 and in transit using TLS 1.3. We use per-workspace key isolation — your data never crosses tenant boundaries.' },
-        { q: 'Can admins read my DMs?', a: 'No. Direct messages are private by design and not accessible to workspace admins unless a legal hold has been placed on the account by authorized legal process.' },
-        { q: 'How do I enable two-factor authentication?', a: 'Go to Settings → Security → Two-Factor Authentication. We support authenticator apps (TOTP) and SMS-based 2FA. Enterprise plans can enforce 2FA for all workspace members.' },
-    ]},
-    { icon: Settings,      color: '#a78bfa', title: 'Account & Settings', faqs: [
-        { q: 'How do I change my username or email?', a: 'Settings → Profile → Edit Profile. You can update your display name, job title, bio, and avatar. Email changes require verification of your new address.' },
-        { q: 'How do I reset my password?', a: 'From the login page, click "Forgot password?" and enter your email address. You\'ll receive a reset link valid for 1 hour.' },
-        { q: 'How do I delete my account?', a: 'Settings → Account → Delete Account. Note: deleting your account removes all personal data from Oruinwan within 30 days. Workspace content you created may remain visible to other members.' },
-    ]},
-];
+function lastWorkspaceId() {
+    try { return localStorage.getItem('lastWorkspaceId') || ''; } catch { return ''; }
+}
 
-const normalize = (t) => t.toLowerCase().replace(/\s+/g, ' ').trim();
-
-// Accessible accordion (same pattern as the landing FAQ). `openKey` is shared
-// across categories so only one answer is expanded at a time.
-const FaqList = ({ catIndex, faqs, openKey, setOpenKey }) => (
-    <div className="orw-faq" style={{ marginTop: 18 }}>
-        {faqs.map(({ faq, index }) => {
-            const key = `${catIndex}-${index}`;
-            const isOpen = openKey === key;
-            return (
-                <div className="orw-faq__item" key={faq.q}>
-                    <h4>
-                        <button type="button" className="orw-faq__q" id={`help-q-${key}`}
-                            aria-expanded={isOpen} aria-controls={`help-a-${key}`}
-                            onClick={() => setOpenKey(isOpen ? null : key)}
-                            style={{ fontSize: 14.5, padding: '18px 2px' }}>
-                            {faq.q}
-                            <span className="orw-faq__sign" aria-hidden="true" />
-                        </button>
-                    </h4>
-                    <div className={`orw-faq__a${isOpen ? ' is-open' : ''}`} id={`help-a-${key}`}
-                        role="region" aria-labelledby={`help-q-${key}`} inert={!isOpen}>
-                        <div><p style={{ marginTop: 0, paddingLeft: 2 }}>{faq.a}</p></div>
+/*
+ * Articles as an accessible accordion (same pattern as the landing FAQ).
+ * Content here is rendered without scroll-reveal so search results and deep
+ * links are visible immediately.
+ */
+function ArticleList({ articles, openId, setOpenId, signedIn }) {
+    return (
+        <div className="orw-faq hc-faq">
+            {articles.map((a) => {
+                const isOpen = openId === a.id;
+                const appHref = signedIn && a.appPath
+                    ? resolveAppPath(a.appPath, { pathname: '/help', lastWorkspaceId: lastWorkspaceId() })
+                    : null;
+                return (
+                    <div className="orw-faq__item" key={a.id} id={a.id}>
+                        <h4>
+                            <button type="button" className="orw-faq__q hc-q" id={`help-q-${a.id}`}
+                                aria-expanded={isOpen} aria-controls={`help-a-${a.id}`}
+                                onClick={() => {
+                                    setOpenId(isOpen ? null : a.id);
+                                    if (!isOpen) window.history.replaceState(null, '', `#${a.id}`);
+                                }}>
+                                <span>
+                                    <span className="hc-q__title">{a.title}</span>
+                                    <span className="hc-q__sum">{a.summary}</span>
+                                </span>
+                                <span className="orw-faq__sign" aria-hidden="true" />
+                            </button>
+                        </h4>
+                        <div className={`orw-faq__a${isOpen ? ' is-open' : ''}`} id={`help-a-${a.id}`}
+                            role="region" aria-labelledby={`help-q-${a.id}`} inert={!isOpen}>
+                            <div>
+                                <div className="hc-body">
+                                    <ArticleBody body={a.body} classes={{ steps: 'hc-steps', note: 'hc-note' }} />
+                                    {appHref && (
+                                        <Link to={appHref} className="orw-btn orw-btn--ghost hc-open">
+                                            {a.appLabel || 'Open in Oruinwan'} <ArrowUpRight size={14} aria-hidden="true" />
+                                        </Link>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            );
-        })}
-    </div>
-);
+                );
+            })}
+        </div>
+    );
+}
 
 export default function HelpCenter() {
+    const { user } = useAuth() || {};
+    const signedIn = !!user;
+    const { hash } = useLocation();
     const [search, setSearch] = useState('');
-    const [openKey, setOpenKey] = useState(null);
-    const query = normalize(search);
+    const [openId, setOpenId] = useState(null);
+    const query = search.trim();
 
-    // Filter by question + answer text; keep each FAQ's original index so
-    // accordion ids stay stable while searching.
-    const results = useMemo(() => CATEGORIES.map((cat, catIndex) => ({
-        cat,
-        catIndex,
-        faqs: cat.faqs
-            .map((faq, index) => ({ faq, index }))
-            .filter(({ faq }) => !query || normalize(`${faq.q} ${faq.a}`).includes(query)),
-    })).filter(r => r.faqs.length > 0), [query]);
+    // Deep link: /help#<article-id> opens that article.
+    useEffect(() => {
+        const id = decodeURIComponent((hash || '').slice(1));
+        if (id && getArticle(id)) setOpenId(id);
+    }, [hash]);
 
-    const matchCount = results.reduce((n, r) => n + r.faqs.length, 0);
+    const results = useMemo(() => (query ? searchArticles(query) : null), [query]);
 
     return (
         <PublicPageShell title="Help Center">
@@ -81,13 +87,13 @@ export default function HelpCenter() {
                 eyebrow="Help Center"
                 icon={BookOpen}
                 title={<>How can we <span className="orw-gloss-text">help?</span></>}
-                lead="Search our knowledge base or browse by topic below."
+                lead="Guides for workspaces, messaging, Oruinwan AI, tasks, huddles, security and your account."
                 actions={
-                    <form role="search" className="orw-field" style={{ width: '100%', maxWidth: 520 }} onSubmit={e => e.preventDefault()}>
+                    <form role="search" className="orw-field" style={{ width: '100%', maxWidth: 560 }} onSubmit={(e) => e.preventDefault()}>
                         <label className="orw-label" htmlFor="help-search">Search help articles</label>
                         <div className="orw-input-wrap">
                             <input id="help-search" type="search" className="orw-input" value={search}
-                                onChange={e => setSearch(e.target.value)} placeholder="e.g. invite, password, threads"
+                                onChange={(e) => setSearch(e.target.value)} placeholder="e.g. invite, 2FA, threads, export"
                                 autoComplete="off" aria-describedby="help-search-count" />
                             {search && (
                                 <button type="button" className="orw-input-wrap__btn" aria-label="Clear search" onClick={() => setSearch('')}>
@@ -96,37 +102,95 @@ export default function HelpCenter() {
                             )}
                         </div>
                         <p className="orw-hint" id="help-search-count" aria-live="polite">
-                            {query ? `${matchCount} ${matchCount === 1 ? 'answer matches' : 'answers match'} “${search.trim()}”` : `${CATEGORIES.reduce((n, c) => n + c.faqs.length, 0)} answers across ${CATEGORIES.length} topics`}
+                            {results
+                                ? `${results.length} ${results.length === 1 ? 'article matches' : 'articles match'} “${query}”`
+                                : `${ARTICLES.length} articles across ${TOPICS.length} topics`}
                         </p>
                     </form>
                 }
             />
 
-            <Block eyebrow="Browse by topic" title={query ? 'Search results' : 'Common questions'}>
-                {results.length > 0 ? (
-                    <div className="orw-grid" style={{ '--min': 'min(440px, 100%)' }} data-reveal>
-                        {results.map(({ cat, catIndex, faqs }) => (
-                            <Card key={cat.title} icon={cat.icon} color={cat.color} title={cat.title}
-                                kicker={`${faqs.length} ${faqs.length === 1 ? 'question' : 'questions'}`}>
-                                <FaqList catIndex={catIndex} faqs={faqs} openKey={openKey} setOpenKey={setOpenKey} />
-                            </Card>
-                        ))}
+            {results ? (
+                <section className="orw-block" aria-labelledby="hc-results-title">
+                    <div className="orw-container">
+                        <div className="orw-block__head">
+                            <p className="orw-eyebrow">Search</p>
+                            <h2 className="orw-h2" id="hc-results-title">Results</h2>
+                        </div>
+                        {results.length > 0 ? (
+                            <ArticleList articles={results} openId={openId} setOpenId={setOpenId} signedIn={signedIn} />
+                        ) : (
+                            <Callout type="warn">
+                                <strong>No articles match “{query}”.</strong> Try a different word, or{' '}
+                                <button type="button" className="orw-link" onClick={() => setSearch('')}>clear the search</button>{' '}
+                                to browse every topic. You can also <Link className="orw-link" to="/contact">contact us</Link>.
+                            </Callout>
+                        )}
                     </div>
-                ) : (
-                    <div data-reveal>
-                        <Callout type="warn">
-                            <strong>No answers match “{search.trim()}”.</strong> Try a different word, or{' '}
-                            <button type="button" className="orw-link" onClick={() => setSearch('')}>clear the search</button>{' '}
-                            to browse every topic. You can also <Link className="orw-link" to="/contact">contact support</Link>.
-                        </Callout>
-                    </div>
-                )}
-            </Block>
+                </section>
+            ) : (
+                <>
+                    <section className="orw-block" aria-labelledby="hc-topics-title">
+                        <div className="orw-container">
+                            <div className="orw-block__head">
+                                <p className="orw-eyebrow">Browse by topic</p>
+                                <h2 className="orw-h2" id="hc-topics-title">Topics</h2>
+                            </div>
+                            <div className="orw-grid" style={{ '--min': 'min(250px, 100%)' }}>
+                                {TOPICS.map((t) => {
+                                    const Icon = TOPIC_ICONS[t.id] || BookOpen;
+                                    return (
+                                        <a key={t.id} href={`#topic-${t.id}`} className="orw-card orw-card--link" onMouseMove={spotlight}>
+                                            <span className="orw-card__icon"><Icon size={19} aria-hidden="true" /></span>
+                                            <span className="orw-card__kicker">{articlesInTopic(t.id).length} articles</span>
+                                            <h3>{t.title}</h3>
+                                            <p>{t.blurb}</p>
+                                        </a>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+
+                    {TOPICS.map((t) => (
+                        <section key={t.id} id={`topic-${t.id}`} className="orw-block hc-topic" aria-labelledby={`hc-t-${t.id}`}>
+                            <div className="orw-container hc-topic__grid">
+                                <div className="hc-topic__head">
+                                    <p className="orw-eyebrow">Topic</p>
+                                    <h2 className="orw-h2" id={`hc-t-${t.id}`}>{t.title}</h2>
+                                    <p className="orw-lead">{t.blurb}</p>
+                                </div>
+                                <ArticleList articles={articlesInTopic(t.id)} openId={openId} setOpenId={setOpenId} signedIn={signedIn} />
+                            </div>
+                        </section>
+                    ))}
+
+                    <section className="orw-block" aria-labelledby="hc-new-title">
+                        <div className="orw-container">
+                            <div className="orw-block__head">
+                                <p className="orw-eyebrow"><Sparkles size={12} aria-hidden="true" /> Recently shipped</p>
+                                <h2 className="orw-h2" id="hc-new-title">What&apos;s new</h2>
+                            </div>
+                            <div className="orw-grid" style={{ '--min': 'min(300px, 100%)' }}>
+                                {WHATS_NEW.map((n) => (
+                                    <div key={n.id} className="orw-card" onMouseMove={spotlight}>
+                                        <span className="orw-card__kicker">{n.date}</span>
+                                        <h3>{n.title}</h3>
+                                        <p>{n.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </section>
+                </>
+            )}
 
             <CTABand
                 eyebrow="Support"
                 title="Still need help?"
-                lead="Send us a message and our support team will get back to you."
+                lead={signedIn
+                    ? 'Inside Oruinwan, open Help (the ? button or press ?) → Contact support to send a request and follow its status. Or write to us here.'
+                    : 'Send us a message and our team will get back to you.'}
                 actions={
                     <Link to="/contact" className="orw-btn orw-btn--primary orw-btn--lg">
                         Contact support <ArrowRight size={16} aria-hidden="true" />

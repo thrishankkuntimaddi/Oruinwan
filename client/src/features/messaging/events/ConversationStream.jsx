@@ -4,6 +4,7 @@ import PollEvent from './PollEvent';
 import SystemEvent from './SystemEvent';
 import SystemEventItem from '../SystemEventItem';
 import MeetingEvent from './MeetingEvent';
+import IntegrationEvent from '../../integrations/IntegrationEvent';
 import JoinMarker from '../chatWindowComp/messages/JoinMarker';
 import { Loader2, Lock, Hash } from 'lucide-react';
 import logger from '../../../utils/logger';
@@ -336,6 +337,17 @@ function ConversationStream({
                         event={event}
                         actions={actions}
                         currentUserId={currentUserId}
+                    />
+                );
+
+            case 'integration':
+                // GitHub / Jira bot posts (plaintext `integration` object + E2EE summary).
+                return (
+                    <IntegrationEvent
+                        key={event.id}
+                        event={event}
+                        onThreadOpen={onThreadOpen}
+                        threadCounts={threadCounts}
                     />
                 );
 

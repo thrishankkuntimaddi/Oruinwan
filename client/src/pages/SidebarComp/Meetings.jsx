@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
     Mic, MicOff, Video, VideoOff, Monitor, MonitorOff, PhoneOff,
-    Users, MessageSquare, Hand, Radio, Calendar, X, AlertTriangle, RotateCcw,
+    Users, PanelRight, Hand, Radio, Calendar, X, AlertTriangle, RotateCcw,
 } from 'lucide-react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { useHuddleContext, meetingHuddleId, meetingConversationPath } from '../../features/huddles/HuddleContext';
+import { useHuddleContext, meetingHuddleId, meetingConversationPath, callTitle } from '../../features/huddles/HuddleContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useScheduledMeetings } from '../../hooks/useScheduledMeetings';
 import ScheduleMeetingModal from '../../features/messaging/chatWindowComp/modals/ScheduleMeetingModal';
@@ -219,13 +219,20 @@ const ActiveRoom = ({ huddle, onLeave }) => {
         participants, muted, toggleMute, isVideo, cameraOn, toggleCamera,
         localStream, remoteStreams, screenStream, startScreenShare, stopScreenShare, peerStates,
     } = huddle;
-    const [duration, setDuration] = useState(0);
+    const [now, setNow] = useState(Date.now());
     const [showParticipants, setShowParticipants] = useState(false);
+    // The call keeps running when you leave this page, so time it from its real start.
+    const started = huddle.session?.startedAt || huddle.selectedHuddle?.startTime;
+    const duration = started ? Math.max(0, Math.floor((now - new Date(started).getTime()) / 1000)) : 0;
 
     useEffect(() => {
-        const interval = setInterval(() => setDuration(d => d + 1), 1000);
+        const interval = setInterval(() => setNow(Date.now()), 1000);
         return () => clearInterval(interval);
     }, []);
+
+    // This page shows the call, so the floating "in huddle" pill hides while it is open.
+    const { huddleId, registerInlineUI } = huddle;
+    useEffect(() => (huddleId && registerInlineUI ? registerInlineUI(huddleId) : undefined), [huddleId, registerInlineUI]);
 
     const hasCameraTrack = !!localStream && localStream.getVideoTracks().length > 0;
     const sharing = !!screenStream;
@@ -259,7 +266,9 @@ const ActiveRoom = ({ huddle, onLeave }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--state-success)', flexShrink: 0 }} />
                     <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {huddle.selectedHuddle?.title || 'Huddle'}
+                        {huddle.selectedHuddle?.channelName || huddle.selectedHuddle?.channelId || huddle.selectedHuddle?.dmId
+                            ? callTitle(huddle.selectedHuddle)
+                            : (huddle.selectedHuddle?.title || 'Huddle')}
                     </h3>
                     <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>{formatTime(duration)}</span>
                     {sharing && (
@@ -306,7 +315,8 @@ const ActiveRoom = ({ huddle, onLeave }) => {
                     <DockButton testId="room-screen" icon={sharing ? MonitorOff : Monitor} label={screenLabel} onClick={handleScreen}
                         active={sharing} unavailable={!isVideo || !hasCameraTrack} />
                     <DockButton icon={Hand} label="Raise hand: coming soon" unavailable />
-                    <DockButton icon={MessageSquare} label="In-call chat: coming soon" unavailable />
+                    <DockButton testId="room-workspace" icon={PanelRight} label={huddle.workspaceOpen ? 'Hide huddle workspace' : 'Notes, tasks, chat and wrap-up'}
+                        onClick={() => (huddle.workspaceOpen ? huddle.closeWorkspace() : huddle.openWorkspace())} active={!!huddle.workspaceOpen} />
                     <span style={{ width: '1px', height: '28px', background: 'var(--border-default)', margin: '0 4px' }} />
                     <DockButton testId="room-participants" icon={Users} label={showParticipants ? 'Hide participants' : 'Show participants'}
                         onClick={() => setShowParticipants(s => !s)} active={showParticipants} badge={count} />

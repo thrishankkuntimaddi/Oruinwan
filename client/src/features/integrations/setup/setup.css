@@ -1,0 +1,40 @@
+/* Settings → Integrations: GitHub / Jira / Zoom setup (on top of settings.css). */
+.oi-setup-title { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.oi-setup-body { display: flex; flex-direction: column; gap: 14px; padding: 12px 0 16px; }
+.oi-setup-empty { margin: 0; }
+.oi-setup-status { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-secondary); }
+.oi-setup-block { display: flex; flex-direction: column; gap: 10px; padding-top: 14px; border-top: 1px solid var(--border-subtle); }
+.oi-setup-h { margin: 0; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+.oi-setup-save { margin-top: 2px; }
+.oi-setup-toggles .stg-row:last-child { border-bottom: none; }
+
+.oi-test { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--state-danger); }
+.oi-test[data-ok='true'] { color: var(--state-success); }
+
+.oi-steps { margin: 0; padding-left: 22px; list-style: decimal; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; line-height: 1.55; color: var(--text-primary); }
+.oi-steps code, .oi-scopes code, .oi-setup-body .stg-hint code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; padding: 0 4px; border-radius: 2px; background: var(--bg-active); border: 1px solid var(--border-subtle); }
+
+.oi-scopes { padding: 10px 12px; font-size: 12px; line-height: 1.5; border: 1px solid var(--border-subtle); border-radius: 3px; background: var(--bg-surface); }
+.oi-scopes p { margin: 0 0 4px; display: flex; align-items: center; gap: 6px; }
+.oi-scopes ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; color: var(--text-secondary); }
+.oi-scopes strong { color: var(--text-primary); }
+
+.oi-copyfield { margin-top: 0; }
+
+.oi-routes { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.oi-route { width: 100%; margin: 0; padding: 10px; border: 1px solid var(--border-default); border-radius: 3px; background: var(--bg-surface); min-width: 0; }
+.oi-route:disabled { opacity: 0.85; }
+.oi-route-row { display: flex; align-items: flex-end; gap: 8px; }
+.oi-route-key, .oi-route-channel { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.oi-route-arrow { padding-bottom: 8px; color: var(--text-muted); }
+.oi-route-events { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
+.oi-route-event { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-primary); cursor: pointer; }
+.oi-route-event input { accent-color: var(--accent); }
+@media (max-width: 560px) {
+    .oi-route-row { flex-wrap: wrap; }
+    .oi-route-key, .oi-route-channel { flex: 1 1 100%; }
+    .oi-route-arrow { display: none; }
+}
+.oi-steps li { display: list-item; }
+.oi-setup-block > .stg-btn { align-self: flex-start; }
+.oi-scopes ul { list-style: disc; }

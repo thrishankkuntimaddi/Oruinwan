@@ -19,6 +19,7 @@ const Note = require('../../../models/Note');
 const requireAuth = require('../../shared/middleware/auth');
 const { requireAdmin } = require('../../shared/middleware/permissionMiddleware');
 const { toSafeUser } = require('../../shared/utils/safeUser');
+const { manageUserError, assignRoleError, syncCompanyAdmins } = require('../../shared/roleCeiling');
 
 // Company of the authenticated admin (requireAdmin may replace req.user with the full doc).
 function callerCompanyId(req) {
@@ -56,7 +57,7 @@ router.get('/overview/stats', requireSuperAdmin, async (req, res) => {
     
     const activeUsers = await User.countDocuments({
       accountStatus: 'active',
-      companyId: { $exists: true }
+      companyId: { $ne: null }
     });
 
     
@@ -165,31 +166,34 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
     company.verificationStatus = 'verified';
     await company.save();
 
-    
+    let emailSent = false;
+    let provisioned = false;
     const adminUser = await User.findOne({ companyId: company._id, companyRole: 'owner' });
     if (adminUser) {
+      // First approval: create the departments / default workspace the company
+      // asked for (skipped when it already has a default workspace).
+      if (!company.defaultWorkspace) {
+        try {
+          const { provisionCompanyResources } = require('../company-registration/registration.service');
+          await provisionCompanyResources({ company, adminUser });
+          provisioned = true;
+        } catch (provisionError) {
+          logger.error('Company provisioning after approval failed:', provisionError.message);
+        }
+      }
       adminUser.accountStatus = 'active';
       await adminUser.save();
 
-      
+      // Email is best effort: the decision is already saved.
       try {
-        
         const personalEmail = adminUser.personalEmail || adminUser.email;
-
         const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
         const { companyApprovedTemplate } = require('../../../utils/emailTemplates');
         const template = companyApprovedTemplate(adminUser.username, company.name, loginUrl, message);
-
-        await sendEmail({
-          to: personalEmail,
-          subject: template.subject,
-          html: template.html,
-          text: template.text
-        });
-        logger.info(`📧 Approval email sent to personal email: ${personalEmail}`);
-      } catch (_emailError) {
+        await sendEmail({ to: personalEmail, subject: template.subject, html: template.html, text: template.text });
+        emailSent = true;
+      } catch (emailError) {
         logger.error('Failed to send approval email:', emailError.message);
-        
       }
     }
 
@@ -204,9 +208,9 @@ router.post('/approve-company/:id', requireSuperAdmin, async (req, res) => {
       description: `Company ${company.name} approved by ${auditUser ? auditUser.username : 'Admin'}`
     });
 
-    res.json({ message: "Company Approved", company });
+    res.json({ message: "Company Approved", company, emailSent, provisioned });
   } catch (err) {
-
+    logger.error('Approve company error:', err);
     res.status(500).json({ message: "Server Error" });
   }
 });
@@ -224,9 +228,10 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
     await company.save();
 
     
+    let emailSent = false;
     const adminUser = await User.findOne({ companyId: company._id, companyRole: 'owner' });
     if (adminUser) {
-      
+      // Email is best effort: the decision is already saved.
       try {
         
         const personalEmail = adminUser.personalEmail || adminUser.email;
@@ -240,9 +245,9 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
           html: template.html,
           text: template.text
         });
-      } catch (_emailError) {
+        emailSent = true;
+      } catch (emailError) {
         logger.error('Failed to send rejection email:', emailError.message);
-        
       }
     }
 
@@ -258,9 +263,9 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
       description: `Company ${company.name} rejected by ${auditUser ? auditUser.username : 'Admin'}`
     });
 
-    res.json({ message: "Company Rejected", company });
+    res.json({ message: "Company Rejected", company, emailSent });
   } catch (err) {
-
+    logger.error('Reject company error:', err);
     res.status(500).json({ message: "Server Error" });
   }
 });
@@ -268,6 +273,7 @@ router.post('/reject-company/:id', requireSuperAdmin, async (req, res) => {
 router.get('/active-companies', requireSuperAdmin, async (req, res) => {
   try {
     const companies = await Company.find({ verificationStatus: 'verified' })
+      .select('-phoneOTP -phoneOTPExpiresAt -domainVerificationToken -domainVerificationExpires -ssoConfig')
       .populate({
         path: 'admins.user',
         select: 'username name email personalEmail jobTitle'
@@ -349,7 +355,11 @@ router.put('/tickets/:id', requireSuperAdmin, async (req, res) => {
 
 router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
   try {
-    const { subject, message, targetType, targetCompanies } = req.body;
+    const { subject, targetType, targetCompanies } = req.body;
+    const body = String(req.body.body ?? req.body.message ?? '').trim();
+    if (!subject || !String(subject).trim() || !body) {
+      return res.status(400).json({ message: 'Subject and message are required' });
+    }
 
     
     let companies = [];
@@ -364,6 +374,9 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
         companies = await Company.find({ verificationStatus: 'pending' });
         break;
       case 'specific':
+        if (!Array.isArray(targetCompanies) || !targetCompanies.length || !targetCompanies.every((id) => mongoose.Types.ObjectId.isValid(String(id)))) {
+          return res.status(400).json({ message: 'Choose at least one company' });
+        }
         companies = await Company.find({ _id: { $in: targetCompanies } });
         break;
       default:
@@ -371,11 +384,14 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
     }
 
     
+    // Recorded for the platform history; there is no company-wide in-app
+    // channel to deliver it through yet, so counts say who it targets.
+    const recipientUsers = await User.countDocuments({ companyId: { $in: companies.map(c => c._id) }, accountStatus: 'active' });
     const broadcast = await Broadcast.create({
-      subject,
-      message,
+      subject: String(subject).trim(),
+      body,
       targetType,
-      targetCompanies: targetType === 'specific' ? targetCompanies : companies.map(c => c._id),
+      targetCompanies: companies.map(c => c._id),
       recipientCount: companies.length,
       sentBy: req.user.sub,
       status: 'sent'
@@ -396,8 +412,10 @@ router.post('/broadcast/send', requireSuperAdmin, async (req, res) => {
 
     res.json({
       success: true,
-      message: `Broadcast sent to ${companies.length} companies`,
-      broadcast
+      message: `Broadcast recorded for ${companies.length} companies (${recipientUsers} active users)`,
+      broadcast,
+      recipients: { companies: companies.length, users: recipientUsers },
+      delivered: false
     });
   } catch (err) {
     logger.error('Error sending broadcast:', err);
@@ -761,9 +779,9 @@ router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res)
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    
-    if (employee.companyRole === 'owner') {
-      return res.status(403).json({ message: 'Cannot suspend company owner' });
+    const ceiling = manageUserError(req.user, employee);
+    if (ceiling) {
+      return res.status(403).json({ message: ceiling });
     }
 
     employee.accountStatus = 'suspended';
@@ -772,6 +790,10 @@ router.put('/employees/:id/suspend', requireAuth, requireAdmin, async (req, res)
     employee.suspensionReason = reason || 'No reason provided';
 
     await employee.save();
+    require('../security/security.service').logSecurityEvent({
+      companyId: employee.companyId, actorId: adminId, eventType: 'account_suspended',
+      metadata: { targetId: String(employee._id), reason: employee.suspensionReason }, req,
+    });
 
     res.json({ message: 'Employee suspended successfully', employee: toSafeUser(employee) });
   } catch (error) {
@@ -785,6 +807,10 @@ router.put('/employees/:id/activate', requireAuth, requireAdmin, async (req, res
     const employee = await findCompanyEmployee(req);
     if (!employee) {
       return res.status(404).json({ message: 'Employee not found' });
+    }
+    const ceiling = manageUserError(req.user, employee);
+    if (ceiling) {
+      return res.status(403).json({ message: ceiling });
     }
 
     employee.accountStatus = 'active';
@@ -808,9 +834,9 @@ router.delete('/employees/:id', requireAuth, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    
-    if (employee.companyRole === 'owner') {
-      return res.status(403).json({ message: 'Cannot remove company owner' });
+    const ceiling = manageUserError(req.user, employee);
+    if (ceiling) {
+      return res.status(403).json({ message: ceiling });
     }
 
     const employeeId = employee._id;
@@ -870,8 +896,9 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
   try {
     const { role, managedDepartments } = req.body;
 
-    if (!['member', 'guest', 'manager', 'admin'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role' });
+    const roleError = assignRoleError(req.user, role);
+    if (roleError) {
+      return res.status(roleError.startsWith('Invalid') ? 400 : 403).json({ message: roleError });
     }
 
     const employee = await findCompanyEmployee(req);
@@ -879,9 +906,9 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
       return res.status(404).json({ message: 'Employee not found' });
     }
 
-    
-    if (employee.companyRole === 'owner') {
-      return res.status(403).json({ message: 'Cannot change owner role' });
+    const ceiling = manageUserError(req.user, employee);
+    if (ceiling) {
+      return res.status(403).json({ message: ceiling });
     }
 
     employee.companyRole = role;
@@ -901,6 +928,11 @@ router.put('/employees/:id/change-role', requireAuth, requireAdmin, async (req, 
     }
 
     await employee.save();
+    await syncCompanyAdmins(employee.companyId, employee._id, role);
+    require('../security/security.service').logSecurityEvent({
+      companyId: employee.companyId, actorId: req.user._id || req.user.sub, eventType: 'role_changed',
+      metadata: { targetId: String(employee._id), newRole: role }, req,
+    });
 
     res.json({ message: 'Employee role updated', employee: toSafeUser(employee) });
   } catch (error) {
@@ -919,8 +951,12 @@ router.get('/departments/:id/workspaces', requireAuth, requireAdmin, async (req,
       return res.status(404).json({ message: 'Department not found' });
     }
 
-    const workspaces = await Workspace.find({ departmentId: req.params.id, company: callerCompanyId(req) })
-      .populate('members', 'username email')
+    // Workspace.department is the field; also include ones listed on the department.
+    const workspaces = await Workspace.find({
+      company: callerCompanyId(req),
+      $or: [{ department: department._id }, { _id: { $in: department.workspaces || [] } }],
+    })
+      .populate('members.user', 'username email')
       .select('name description members createdAt');
 
     res.json(workspaces);

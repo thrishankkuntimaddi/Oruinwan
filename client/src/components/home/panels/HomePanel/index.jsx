@@ -1,6 +1,8 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Trash2, X, Calendar, Clock, Video, ExternalLink, Plus, Loader } from 'lucide-react';
+import { Trash2, X, Calendar, Clock, ExternalLink, Loader, ChevronDown, Settings2, SquarePen } from 'lucide-react';
+import WorkspacePanel from "../../../layout/WorkspacePanel";
+import '../../../layout/shell.css';
 import ConfirmationModal from "../../../../shared/components/ui/ConfirmationModal";
 import { useContacts } from "../../../../contexts/ContactsContext";
 import { useToast } from "../../../../contexts/ToastContext";
@@ -17,6 +19,7 @@ import WorkspaceSettingsModal from "./WorkspaceSettingsModal";
 import DeleteWorkspaceModal from "./DeleteWorkspaceModal";
 import { CreateChannelModal, NewDMModal } from "./ChannelDMModals";
 import logger from '../../../../utils/logger';
+import ActivitySection from "../../../../features/activity/ActivitySection";
 
 const HomePanel = ({ title }) => {
     const navigate = useNavigate();
@@ -78,6 +81,7 @@ const HomePanel = ({ title }) => {
     
 
     const [expanded, setExpanded] = useState({
+        activity: true,
         favorites: true,
         channels: true,
         dms: true,
@@ -348,298 +352,252 @@ const HomePanel = ({ title }) => {
     const channels = items.filter(i => !i.isFavorite && i.type === 'channel');
     const dms = items.filter(i => !i.isFavorite && i.type === 'dm');
 
+    const userRole = activeWorkspace?.role?.toLowerCase() || '';
+    const canCreateChannel = userRole === 'admin' || userRole === 'owner' || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
+    const roleLabel = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : '';
+    const listProps = { isSelectionMode, selectedItems, setSelectedItems, toggleFavorite };
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', position: 'relative' }}>
-            {}
-            <WorkspaceHeader
-                workspaceName={workspaceName}
-                showWorkspaceMenu={showWorkspaceMenu}
-                setShowWorkspaceMenu={setShowWorkspaceMenu}
-                isSelectionMode={isSelectionMode}
-                setIsSelectionMode={setIsSelectionMode}
-                setShowNewDMModal={setShowNewDMModal}
-                setShowInviteModal={setShowInviteModal}
-                setShowSettingsModal={setShowSettingsModal}
-                setShowRenameModal={setShowRenameModal}
-                setNewName={setNewName}
+        <WorkspacePanel
+            title={workspaceName}
+            titleAfter={<ChevronDown size={13} style={{ flexShrink: 0, color: 'var(--text-secondary)', transition: 'transform 200ms ease', transform: showWorkspaceMenu ? 'rotate(180deg)' : 'none' }} />}
+            titleButtonProps={{
+                onClick: () => setShowWorkspaceMenu(!showWorkspaceMenu),
+                'aria-haspopup': 'menu',
+                'aria-expanded': showWorkspaceMenu,
+                title: 'Workspace menu',
+            }}
+            subtitle={roleLabel ? `Home · ${roleLabel}` : 'Home'}
+            actions={(
+                <>
+                    <button
+                        type="button"
+                        className="gl-icon-btn"
+                        title="Manage Chats"
+                        aria-label="Manage chats"
+                        aria-pressed={isSelectionMode}
+                        onClick={() => { setIsSelectionMode(!isSelectionMode); if (isSelectionMode) setSelectedItems(new Set()); }}
+                    >
+                        <Settings2 size={15} />
+                    </button>
+                    <button
+                        type="button"
+                        className="gl-icon-btn"
+                        title="New Message"
+                        aria-label="New message"
+                        onClick={() => setShowNewDMModal(true)}
+                    >
+                        <SquarePen size={15} />
+                    </button>
+                </>
+            )}
+            headerExtra={(
+                <WorkspaceHeader
+                    workspaceName={workspaceName}
+                    showWorkspaceMenu={showWorkspaceMenu}
+                    setShowWorkspaceMenu={setShowWorkspaceMenu}
+                    setShowInviteModal={setShowInviteModal}
+                    setShowSettingsModal={setShowSettingsModal}
+                    setShowRenameModal={setShowRenameModal}
+                    setNewName={setNewName}
+                />
+            )}
+            bodyClassName="custom-scrollbar"
+            bodyProps={{ style: { paddingTop: isSelectionMode ? 0 : undefined } }}
+        >
+            {isSelectionMode && (
+                <div className="gl-shell-selbar">
+                    <span>{selectedItems.size} selected</span>
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                        <button
+                            type="button"
+                            className="gl-icon-btn is-danger"
+                            onClick={() => setShowSelectionDeleteConfirm(true)}
+                            disabled={selectedItems.size === 0}
+                            title="Delete Selected"
+                            aria-label="Delete selected"
+                        >
+                            <Trash2 size={14} />
+                        </button>
+                        <button
+                            type="button"
+                            className="gl-icon-btn"
+                            onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
+                            title="Cancel"
+                            aria-label="Cancel selection"
+                        >
+                            <X size={14} />
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {!isSelectionMode && (
+                <ActivitySection isOpen={expanded.activity} onToggle={() => toggle("activity")} />
+            )}
+
+            {favorites.length > 0 && (
+                <>
+                    <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />
+                    {expanded.favorites && favorites.map(item => <ListItem key={item.id} item={item} {...listProps} />)}
+                </>
+            )}
+
+            <SectionHeader
+                label="Channels"
+                isOpen={expanded.channels}
+                onClick={() => toggle("channels")}
+                onAdd={canCreateChannel ? () => setShowCreateChannelModal(true) : undefined}
             />
+            {expanded.channels && (
+                channels.length > 0
+                    ? channels.map(item => <ListItem key={item.id} item={item} {...listProps} />)
+                    : favorites.every(f => f.type !== 'channel') && <div className="gl-shell-hint">No channels yet</div>
+            )}
 
-            {}
-            <div className="flex-1 overflow-y-auto custom-scrollbar px-0 pb-2 pt-2 space-y-0.5">
+            <SectionHeader
+                label="Direct Messages"
+                isOpen={expanded.dms}
+                onClick={() => toggle("dms")}
+                onAdd={() => setShowNewDMModal(true)}
+            />
+            {expanded.dms && (
+                dms.length > 0
+                    ? dms.map(item => <ListItem key={item.id} item={item} {...listProps} />)
+                    : favorites.every(f => f.type !== 'dm') && <div className="gl-shell-hint">No direct messages yet</div>
+            )}
 
-                {}
-                {isSelectionMode && (
-                    <div style={{ padding: '6px 14px', background: 'var(--bg-hover)', borderBottom: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-                        <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedItems.size} selected</span>
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                            <button
-                                onClick={() => setShowSelectionDeleteConfirm(true)}
-                                disabled={selectedItems.size === 0}
-                                style={{ padding: '5px', color: 'var(--state-danger)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '2px', display: 'flex', opacity: selectedItems.size === 0 ? 0.4 : 1, transition: '150ms ease' }}
-                                title="Delete Selected"
-                            >
-                                <Trash2 size={15} />
-                            </button>
-                            <button
-                                onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
-                                style={{ padding: '5px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: '2px', display: 'flex', transition: '150ms ease' }}
-                                title="Cancel"
-                            >
-                                <X size={15} />
-                            </button>
-                        </div>
+            <SectionHeader
+                label="Upcoming Schedules"
+                isOpen={expanded.schedules}
+                onClick={() => toggle('schedules')}
+                onAdd={() => setShowScheduleModal(true)}
+            />
+            {expanded.schedules && (
+                meetingsLoading ? (
+                    <div className="gl-shell-muted-note">
+                        <Loader size={11} className="animate-spin" />
+                        <span>Loading...</span>
                     </div>
-                )}
+                ) : scheduledMeetings.length === 0 ? (
+                    <div className="gl-shell-hint">Nothing scheduled</div>
+                ) : (
+                    scheduledMeetings.map(meeting => (
+                        <div key={meeting._id} className="gl-item gl-shell-row gl-shell-row--tall gl-shell-meeting">
+                            <span className="gl-shell-glyph" aria-hidden="true">
+                                {meeting.status === 'live'
+                                    ? <span className="gl-shell-live" />
+                                    : <Calendar size={11} style={{ color: 'var(--accent)' }} />}
+                            </span>
 
-                {}
-                {favorites.length > 0 && (
-                    <>
-                        <SectionHeader label="Favorites" isOpen={expanded.favorites} onClick={() => toggle("favorites")} />
-                        {expanded.favorites && (
-                            <div className="space-y-0.5">
-                                {favorites.map(item => (
-                                    <ListItem
-                                        key={item.id}
-                                        item={item}
-                                        isSelectionMode={isSelectionMode}
-                                        selectedItems={selectedItems}
-                                        setSelectedItems={setSelectedItems}
-                                        toggleFavorite={toggleFavorite}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </>
-                )}
+                            <span className="gl-shell-row-text">
+                                <span className="gl-shell-row-label" style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{meeting.title}</span>
+                                <span className="gl-shell-row-sub" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10.5px' }}>
+                                    <Clock size={9} />
+                                    {formatTime(meeting.startTime)} · {formatRelativeTime(meeting.startTime)}
+                                    {meeting.duration ? ` · ${meeting.duration}m` : ''}
+                                </span>
+                            </span>
 
-                {}
-                <SectionHeader
-                    label="Channels"
-                    isOpen={expanded.channels}
-                    onClick={() => toggle("channels")}
-                    onAdd={(() => {
-                        const userRole = activeWorkspace?.role?.toLowerCase() || '';
-                        const isAdmin = userRole === 'admin' || userRole === 'owner';
-                        const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
-
-                        
-                        return canCreate ? () => setShowCreateChannelModal(true) : undefined;
-                    })()}
-                />
-                {expanded.channels && (
-                    <div className="space-y-0.5">
-                        {channels.map(item => (
-                            <ListItem
-                                key={item.id}
-                                item={item}
-                                isSelectionMode={isSelectionMode}
-                                selectedItems={selectedItems}
-                                setSelectedItems={setSelectedItems}
-                                toggleFavorite={toggleFavorite}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {}
-                <SectionHeader
-                    label="Direct Messages"
-                    isOpen={expanded.dms}
-                    onClick={() => toggle("dms")}
-                    onAdd={() => setShowNewDMModal(true)}
-                />
-                {expanded.dms && (
-                    <div className="space-y-0.5">
-                        {dms.map(item => (
-                            <ListItem
-                                key={item.id}
-                                item={item}
-                                isSelectionMode={isSelectionMode}
-                                selectedItems={selectedItems}
-                                setSelectedItems={setSelectedItems}
-                                toggleFavorite={toggleFavorite}
-                            />
-                        ))}
-                    </div>
-                )}
-                {}
-                <SectionHeader
-                    label="Upcoming Schedules"
-                    isOpen={expanded.schedules}
-                    onClick={() => toggle('schedules')}
-                    onAdd={() => setShowScheduleModal(true)}
-                />
-                {expanded.schedules && (
-                    <div style={{ padding: '0 0 4px' }}>
-                        {meetingsLoading ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 18px', color: 'var(--text-muted)' }}>
-                                <Loader size={11} className="animate-spin" />
-                                <span style={{ fontSize: '12px' }}>Loading...</span>
-                            </div>
-                        ) : (
-                            scheduledMeetings.map(meeting => (
-                                <div
-                                    key={meeting._id}
-                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px 6px 18px', cursor: 'default', transition: '150ms ease' }}
-                                    className="group"
-                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                            <span className="gl-shell-meeting-actions">
+                                {meeting.meetingLink && (
+                                    <a href={meeting.meetingLink} target="_blank" rel="noopener noreferrer" title="Open meeting link"
+                                        className="gl-icon-btn" style={{ color: 'var(--accent)' }}
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <ExternalLink size={11} />
+                                    </a>
+                                )}
+                                <button type="button" onClick={() => handleCancelMeeting(meeting._id)} title="Cancel" aria-label={`Cancel ${meeting.title}`}
+                                    className="gl-icon-btn is-danger"
                                 >
-                                    {}
-                                    <div style={{ width: '24px', height: '24px', borderRadius: '2px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                        {meeting.status === 'live' ? (
-                                            <span style={{ position: 'relative', display: 'flex', width: '8px', height: '8px' }}>
-                                                <span style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'var(--state-danger)', opacity: 0.75, animation: 'ws-spin 1s ease infinite' }} />
-                                                <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', width: '8px', height: '8px', background: 'var(--state-danger)' }} />
-                                            </span>
-                                        ) : (
-                                            <Calendar size={11} style={{ color: 'var(--accent)' }} />
-                                        )}
-                                    </div>
+                                    <X size={11} />
+                                </button>
+                            </span>
+                        </div>
+                    ))
+                )
+            )}
 
-                                    {}
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', margin: 0, lineHeight: 1.3 }}>
-                                            {meeting.title}
-                                        </p>
-                                        <p style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', margin: '2px 0 0' }}>
-                                            <Clock size={8} />
-                                            {formatTime(meeting.startTime)} · {formatRelativeTime(meeting.startTime)}
-                                            {meeting.duration ? ` · ${meeting.duration}m` : ''}
-                                        </p>
-                                    </div>
-
-                                    {}
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', opacity: 0, transition: '150ms ease' }} className="group-hover:opacity-100">
-                                        {meeting.meetingLink && (
-                                            <a href={meeting.meetingLink} target="_blank" rel="noopener noreferrer" title="Open meeting link"
-                                                style={{ padding: '3px', borderRadius: '2px', color: 'var(--accent)', display: 'flex', transition: '150ms ease' }}
-                                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                                onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                                                onClick={e => e.stopPropagation()}
-                                            >
-                                                <ExternalLink size={11} />
-                                            </a>
-                                        )}
-                                        <button onClick={() => handleCancelMeeting(meeting._id)} title="Cancel"
-                                            style={{ padding: '3px', borderRadius: '2px', color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', transition: '150ms ease' }}
-                                            onMouseEnter={e => { e.currentTarget.style.color = 'var(--state-danger)'; }}
-                                            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
-                                        >
-                                            <X size={11} />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {}
             {showScheduleModal && (
                 <div
-                    style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.65)', fontFamily: 'var(--font)' }}
+                    className="gl-shell-modal-scrim"
                     onClick={e => { if (e.target === e.currentTarget) setShowScheduleModal(false); }}
                 >
-                    <div style={{ position: 'relative', width: '100%', maxWidth: '340px', margin: '0 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden' }}>
-                        {}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
-                            <Calendar size={14} style={{ color: 'var(--accent)', flexShrink: 0 }} />
-                            <h2 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', flex: 1, margin: 0 }}>Schedule Meeting</h2>
-                            <button onClick={() => setShowScheduleModal(false)} style={{ color: 'var(--text-muted)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', padding: '2px', borderRadius: '2px', transition: '150ms ease' }}
-                                onMouseEnter={e => e.currentTarget.style.color = 'var(--text-primary)'}
-                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
-                            >
+                    <div className="gl-card gl-shell-modal" role="dialog" aria-label="Schedule Meeting" style={{ background: 'var(--bg-surface)', backgroundImage: 'var(--gl-glass)' }}>
+                        <div className="gl-shell-popover-head">
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span className="gl-panel-mark" aria-hidden="true"><Calendar size={13} /></span>
+                                <h2 className="gl-shell-popover-title" style={{ margin: 0, fontSize: '13.5px' }}>Schedule Meeting</h2>
+                            </span>
+                            <button type="button" className="gl-icon-btn" onClick={() => setShowScheduleModal(false)} aria-label="Close">
                                 <X size={15} />
                             </button>
                         </div>
 
-                        {}
-                        <form onSubmit={handleScheduleMeeting} style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {}
+                        <form onSubmit={handleScheduleMeeting} style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             <div>
-                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>
+                                <label className="gl-shell-field-label">
                                     Title <span style={{ color: 'var(--state-danger)' }}>*</span>
                                 </label>
                                 <input
                                     type="text" value={scheduleForm.title}
                                     onChange={e => setScheduleForm(f => ({ ...f, title: e.target.value }))}
                                     placeholder="e.g. Weekly Sync" maxLength={100}
-                                    style={{ width: '100%', padding: '8px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
-                                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
-                                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                                    className="gl-input"
                                 />
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>
+                                <label className="gl-shell-field-label">
                                     Date <span style={{ color: 'var(--state-danger)' }}>*</span>
                                 </label>
                                 <input
                                     type="date" value={scheduleForm.startDate}
                                     onChange={e => setScheduleForm(f => ({ ...f, startDate: e.target.value }))}
                                     min={new Date().toISOString().slice(0, 10)}
-                                    style={{ width: '100%', padding: '8px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box', colorScheme: 'dark' }}
-                                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
-                                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                                    className="gl-input"
                                 />
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>Time</label>
+                                    <label className="gl-shell-field-label">Time</label>
                                     <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                                        <select value={scheduleForm.startHour} onChange={e => setScheduleForm(f => ({ ...f, startHour: e.target.value }))}
-                                            style={{ flex: 1, padding: '8px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', cursor: 'pointer' }}
-                                        >
+                                        <select value={scheduleForm.startHour} onChange={e => setScheduleForm(f => ({ ...f, startHour: e.target.value }))} className="gl-input" aria-label="Hour">
                                             {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map(h => <option key={h} value={h}>{h}</option>)}
                                         </select>
-                                        <span style={{ color: 'var(--text-muted)', fontWeight: 700, fontSize: '12px' }}>:</span>
-                                        <select value={scheduleForm.startMin} onChange={e => setScheduleForm(f => ({ ...f, startMin: e.target.value }))}
-                                            style={{ flex: 1, padding: '8px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', cursor: 'pointer' }}
-                                        >
+                                        <span style={{ color: 'var(--text-secondary)', fontWeight: 700, fontSize: '12px' }}>:</span>
+                                        <select value={scheduleForm.startMin} onChange={e => setScheduleForm(f => ({ ...f, startMin: e.target.value }))} className="gl-input" aria-label="Minute">
                                             {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>Duration</label>
-                                    <select value={scheduleForm.duration} onChange={e => setScheduleForm(f => ({ ...f, duration: Number(e.target.value) }))}
-                                        style={{ width: '100%', padding: '8px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '12px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', cursor: 'pointer' }}
-                                    >
+                                    <label className="gl-shell-field-label">Duration</label>
+                                    <select value={scheduleForm.duration} onChange={e => setScheduleForm(f => ({ ...f, duration: Number(e.target.value) }))} className="gl-input">
                                         {[15, 30, 45, 60, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}
                                     </select>
                                 </div>
                             </div>
 
                             <div>
-                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '5px' }}>
-                                    Meeting link <span style={{ color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '11px' }}>(optional)</span>
+                                <label className="gl-shell-field-label">
+                                    Meeting link <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: '11px' }}>(optional)</span>
                                 </label>
                                 <input
                                     type="url" value={scheduleForm.meetingLink}
                                     onChange={e => setScheduleForm(f => ({ ...f, meetingLink: e.target.value }))}
                                     placeholder="https://meet.google.com/..."
-                                    style={{ width: '100%', padding: '8px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', fontSize: '13px', color: 'var(--text-primary)', outline: 'none', fontFamily: 'var(--font)', boxSizing: 'border-box' }}
-                                    onFocus={e => e.currentTarget.style.borderColor = 'var(--border-accent)'}
-                                    onBlur={e => e.currentTarget.style.borderColor = 'var(--border-default)'}
+                                    className="gl-input"
                                 />
                             </div>
 
                             <div style={{ display: 'flex', gap: '8px', paddingTop: '4px' }}>
-                                <button type="button" onClick={() => setShowScheduleModal(false)}
-                                    style={{ flex: 1, padding: '9px', fontSize: '13px', fontWeight: 500, borderRadius: '2px', border: '1px solid var(--border-default)', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontFamily: 'var(--font)', transition: '150ms ease' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                                >
+                                <button type="button" onClick={() => setShowScheduleModal(false)} className="gl-btn gl-btn--block" style={{ flex: 1 }}>
                                     Cancel
                                 </button>
-                                <button type="submit" disabled={schedulingLoading}
-                                    style={{ flex: 1, padding: '9px', fontSize: '13px', fontWeight: 600, borderRadius: '2px', border: '1px solid var(--border-accent)', background: 'var(--bg-active)', color: 'var(--accent)', cursor: schedulingLoading ? 'wait' : 'pointer', fontFamily: 'var(--font)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: schedulingLoading ? 0.65 : 1, transition: '150ms ease' }}
-                                    onMouseEnter={e => { if (!schedulingLoading) e.currentTarget.style.borderColor = 'var(--text-muted)'; }}
-                                    onMouseLeave={e => { if (!schedulingLoading) e.currentTarget.style.borderColor = 'var(--border-accent)'; }}
-                                >
+                                <button type="submit" disabled={schedulingLoading} className="gl-btn gl-btn--primary gl-btn--block" style={{ flex: 1 }}>
                                     {schedulingLoading ? <><Loader size={12} className="animate-spin" /> Scheduling…</> : 'Schedule'}
                                 </button>
                             </div>
@@ -732,7 +690,7 @@ const HomePanel = ({ title }) => {
                 workspaceMembers={workspaceMembers}
                 handleStartDM={handleStartDM}
             />
-        </div >
+        </WorkspacePanel>
     );
 };
 

@@ -1,181 +1,106 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import api from '@services/api';
-import { Globe, MessageSquare, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import logger from '../../../../utils/logger';
+import { Building2, MessageSquare, RefreshCcw } from 'lucide-react';
+import {
+    DashPage, PageHead, Toolbar, SearchBox, FilterTabs, DataTable, Btn, IconBtn, Chip, Avatar,
+    EmptyState, ErrorState, LoadingState, useAsync,
+} from '../../../../components/company-dash/dashUi';
+import CompanyDetail from './CompanyDetail';
 
-const getPlanColor = (plan) => {
-    if (plan === 'enterprise') return 'var(--accent)';
-    if (plan === 'professional') return 'var(--state-success)';
-    return 'var(--text-muted)';
-};
+const PLAN_TONE = { enterprise: 'accent', professional: 'success', starter: undefined, free: undefined };
+const ownerOf = (c) => (c?.admins || []).find((a) => a.role === 'owner')?.user || c?.admins?.[0]?.user || null;
 
 const ActiveCompanies = () => {
-    const [companies, setCompanies] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
+    const list = useAsync(() => api.get('/api/admin/active-companies').then((r) => (Array.isArray(r.data) ? r.data : [])));
+    const [q, setQ] = useState('');
+    const [plan, setPlan] = useState('all');
+    const [selected, setSelected] = useState(null);
 
-    useEffect(() => { fetchCompanies(); }, []);
+    const companies = useMemo(() => list.data || [], [list.data]);
+    const counts = useMemo(() => companies.reduce((acc, c) => { const p = c.plan || 'free'; acc[p] = (acc[p] || 0) + 1; return acc; }, {}), [companies]);
+    const rows = useMemo(() => {
+        const needle = q.trim().toLowerCase();
+        return companies.filter((c) => (plan === 'all' || (c.plan || 'free') === plan)
+            && (!needle || [c.name, c.domain, ownerOf(c)?.username, ownerOf(c)?.email].some((v) => String(v || '').toLowerCase().includes(needle))));
+    }, [companies, q, plan]);
 
-    const fetchCompanies = async () => {
-        try {
-            const res = await api.get('/api/admin/active-companies');
-            setCompanies(res.data);
-        } catch (err) {
-            logger.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const filtered = companies.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()));
-
-    if (loading) return <LoadingSpinner />;
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', margin: 0 }}>Active Companies</h1>
-                <SearchInput value={searchTerm} onChange={setSearchTerm} placeholder="Search companies..." />
-            </div>
-
-            <div style={{ border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
-                                {['Company', 'Plan', 'Admin', 'Joined', 'Actions'].map((col, i) => (
-                                    <th key={col} style={{ padding: '10px 16px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: i === 4 ? 'right' : 'left' }}>{col}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map(company => (
-                                <CompanyRow key={company._id} company={company} navigate={navigate} />
-                            ))}
-                        </tbody>
-                    </table>
-                    {filtered.length === 0 && (
-                        <div style={{ padding: '48px 24px', textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)' }}>
-                            No active companies found.
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const CompanyRow = ({ company, navigate }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <tr
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
-            style={{ background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', transition: 'background 150ms ease' }}
-        >
-            <td style={{ padding: '14px 16px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '32px', height: '32px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: 700, color: 'var(--accent)', flexShrink: 0 }}>
-                        {company.logo ? <img src={company.logo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : company.name.charAt(0)}
-                    </div>
+    const columns = [
+        {
+            key: 'company', label: 'Company', render: (c) => (
+                <div className="cd-cell-user">
+                    <Avatar name={c.name} src={c.logo} />
                     <div>
-                        <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-primary)' }}>{company.name}</div>
-                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
-                            <Globe size={10} /> {company.domain || 'No domain'}
-                        </div>
+                        <div className="cd-cell-title">{c.displayName || c.name}</div>
+                        <div className="cd-cell-sub">{c.domain || 'No domain'}</div>
                     </div>
                 </div>
-            </td>
-            <td style={{ padding: '14px 16px' }}>
-                <span style={{
-                    fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase',
-                    color: getPlanColor(company.plan),
-                    padding: '2px 8px',
-                    border: `1px solid ${getPlanColor(company.plan)}`
-                }}>
-                    {company.plan || 'Free'}
-                </span>
-            </td>
-            <td style={{ padding: '14px 16px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{company.admins[0]?.user?.username || 'Unknown'}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{company.billingEmail}</div>
-            </td>
-            <td style={{ padding: '14px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {new Date(company.createdAt).toLocaleDateString()}
-            </td>
-            <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                    <IconBtn icon={MessageSquare} title="Message Admin" onClick={() => navigate(`/platform-admin/dm/${company._id}`)} />
-                    <PrimaryBtn label="Manage" />
-                </div>
-            </td>
-        </tr>
-    );
-};
-
-const IconBtn = ({ icon: Icon, title, onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} title={title} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ width: '32px', height: '32px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '2px', transition: 'all 150ms ease' }}>
-            <Icon size={14} />
-        </button>
-    );
-};
-
-const PrimaryBtn = ({ label, onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ padding: '6px 12px', background: hov ? 'var(--bg-hover)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, borderRadius: '2px', cursor: 'pointer', transition: 'all 150ms ease' }}>
-            {label}
-        </button>
-    );
-};
-
-const SearchInput = ({ value, onChange, placeholder }) => (
-    <div style={{ position: 'relative' }}>
-        <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-        <input
-            type="text"
-            placeholder={placeholder}
-            value={value}
-            onChange={e => onChange(e.target.value)}
-            style={{
-                paddingLeft: '32px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px',
-                background: 'var(--bg-input)', border: '1px solid var(--border-default)',
-                color: 'var(--text-primary)', fontSize: '13px',
-                outline: 'none', width: '220px',
-                fontFamily: 'inherit'
-            }}
-        />
-    </div>
-);
-
-const LoadingSpinner = () => (
-    <div style={{ padding: '20px', background: 'var(--bg-base)' }}>
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            <div className="sk" style={{ height: '32px', flex: 1 }} />
-            <div className="sk" style={{ height: '32px', width: '120px' }} />
-        </div>
-        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)', padding: '10px 16px', gap: '16px' }}>
-                {[120,60,60,70,40].map((w,i) => <div key={i} className="sk" style={{ height: '8px', width: `${w}px` }} />)}
-            </div>
-            {[1,2,3,4,5].map(i => (
-                <div key={i} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr', padding: '11px 16px', borderBottom: '1px solid var(--border-subtle)', gap: '16px', alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div className="sk" style={{ width: '28px', height: '28px', flexShrink: 0 }} />
-                        <div><div className="sk" style={{ height: '10px', width: '120px', marginBottom: '4px' }} /><div className="sk" style={{ height: '8px', width: '80px' }} /></div>
+            ),
+        },
+        { key: 'plan', label: 'Plan', render: (c) => <Chip tone={PLAN_TONE[c.plan]}>{(c.plan || 'free').replace(/^./, (m) => m.toUpperCase())}</Chip> },
+        {
+            key: 'owner', label: 'Owner', className: 'cd-hide-sm', render: (c) => {
+                const o = ownerOf(c);
+                return o ? <div><div className="cd-cell-title" style={{ fontWeight: 500 }}>{o.username || o.name}</div><div className="cd-cell-sub">{o.email}</div></div> : <span className="cd-muted">—</span>;
+            },
+        },
+        { key: 'status', label: 'Status', className: 'cd-hide-sm', render: (c) => (c.isActive === false ? <Chip tone="danger">Suspended</Chip> : c.isSetupComplete ? <Chip tone="success">Live</Chip> : <Chip tone="warning">In setup</Chip>) },
+        { key: 'joined', label: 'Joined', className: 'cd-hide-sm', render: (c) => <span className="cd-muted">{new Date(c.createdAt).toLocaleDateString()}</span> },
+        {
+            key: 'actions', label: '', className: 'cd-num', render: (c) => {
+                const o = ownerOf(c);
+                return (
+                    <div style={{ display: 'inline-flex', gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                        {o?._id && (
+                            <IconBtn className="cd-hide-sm" label={`Message ${o.username || 'owner'}`} onClick={() => navigate(`/platform-admin/dm/user/${o._id}`)}>
+                                <MessageSquare size={15} />
+                            </IconBtn>
+                        )}
+                        <Btn size="sm" onClick={() => setSelected(c)}>Details</Btn>
                     </div>
-                    <div className="sk" style={{ height: '18px', width: '60px' }} />
-                    <div className="sk" style={{ height: '10px', width: '40px' }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><div className="sk" style={{ width: '6px', height: '6px', borderRadius: '50%' }} /><div className="sk" style={{ height: '8px', width: '40px' }} /></div>
-                    <div style={{ display: 'flex', gap: '4px' }}><div className="sk" style={{ height: '22px', width: '22px' }} /><div className="sk" style={{ height: '22px', width: '22px' }} /></div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
+                );
+            },
+        },
+    ];
+
+    return (
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow="Platform"
+                    title="Companies"
+                    lead={list.data ? `${companies.length} verified compan${companies.length === 1 ? 'y' : 'ies'} on Oruinwan.` : 'Verified companies on Oruinwan.'}
+                    actions={<Btn icon={RefreshCcw} onClick={list.reload}>Refresh</Btn>}
+                />
+            )}
+        >
+            <Toolbar>
+                <SearchBox value={q} onChange={setQ} placeholder="Search name, domain or owner…" />
+                <FilterTabs
+                    label="Plan"
+                    value={plan}
+                    onChange={setPlan}
+                    options={[
+                        { value: 'all', label: 'All', count: companies.length },
+                        ...['free', 'starter', 'professional', 'enterprise'].filter((p) => counts[p]).map((p) => ({ value: p, label: p.replace(/^./, (m) => m.toUpperCase()), count: counts[p] })),
+                    ]}
+                />
+            </Toolbar>
+            {list.loading && !list.data ? <LoadingState /> : list.error ? (
+                <ErrorState message={list.error} onRetry={list.reload} />
+            ) : (
+                <DataTable
+                    caption="Verified companies"
+                    columns={columns}
+                    rows={rows}
+                    onRowClick={setSelected}
+                    empty={<EmptyState icon={Building2} title={companies.length ? 'No company matches' : 'No verified companies yet'} text={companies.length ? 'Try another search or plan.' : 'Approved registrations appear here.'} />}
+                />
+            )}
+            <CompanyDetail company={selected} onClose={() => setSelected(null)} />
+        </DashPage>
+    );
+};
 
 export default ActiveCompanies;

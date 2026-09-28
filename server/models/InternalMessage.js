@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 
+// ObjectId must be constructed with `new` (a bare call throws on current mongoose).
+const toOid = (v) => new mongoose.Types.ObjectId(String(v));
+
 const internalMessageSchema = new mongoose.Schema(
   {
     
@@ -136,10 +139,10 @@ internalMessageSchema.statics.getAdminInbox = async function (
   const conversations = await this.aggregate([
     {
       $match: {
-        companyId: mongoose.Types.ObjectId(companyId),
+        companyId: toOid(companyId),
         $or: [
-          { sender: mongoose.Types.ObjectId(adminId) },
-          { recipient: mongoose.Types.ObjectId(adminId) }
+          { sender: toOid(adminId) },
+          { recipient: toOid(adminId) }
         ]
       }
     },
@@ -148,7 +151,7 @@ internalMessageSchema.statics.getAdminInbox = async function (
       $group: {
         _id: {
           $cond: [
-            { $eq: ['$sender', mongoose.Types.ObjectId(adminId)] },
+            { $eq: ['$sender', toOid(adminId)] },
             '$recipient',
             '$sender'
           ]
@@ -159,7 +162,7 @@ internalMessageSchema.statics.getAdminInbox = async function (
             $cond: [
               {
                 $and: [
-                  { $eq: ['$recipient', mongoose.Types.ObjectId(adminId)] },
+                  { $eq: ['$recipient', toOid(adminId)] },
                   { $eq: ['$read', false] }
                 ]
               },

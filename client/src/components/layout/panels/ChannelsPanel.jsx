@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Plus, Hash, Search, Trash2, X, CheckSquare, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
+import { Plus, Hash, Search, Trash2, X, Check, Settings2, Lock, Megaphone, UserPlus } from 'lucide-react';
+import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
+import "../shell.css";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useToast } from "../../../contexts/ToastContext";
 import api from '@services/api';
@@ -85,6 +87,8 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                             isFavorite: ch.isDefault || false,
                             isPrivate: ch.isPrivate || false,
                             isDefault: ch.isDefault || false,
+                            isDiscoverable: ch.isDiscoverable ?? true,
+                            isMember: ch.isMember ?? false,
                             description: ch.description || '',
                             canDelete: !ch.isDefault,
                             workspaceId: ch.workspace
@@ -265,11 +269,19 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
         return 0;
     });
 
-    const Item = ({ item }) => {
+    const userRole = activeWorkspace?.role?.toLowerCase() || '';
+    const canCreateChannel = userRole === 'admin' || userRole === 'owner' || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
+    const openCreate = () => {
+        if (!canCreateChannel) { showToast('Channel creation is disabled for members in this workspace', 'warning'); return; }
+        setShowCreateChannelModal(true);
+    };
+
+    const renderItem = (item) => {
         const isSelected = selectedItems.has(item.id);
         const isActive = channelId === item.id;
         const unread = notif ? notif.getUnread('channel', item.id) : 0;
         const mentioned = notif ? notif.hasMention('channel', item.id) : false;
+        const isAnnouncements = (item.label || '').toLowerCase() === 'announcements';
 
         const handleClick = (e) => {
             if (isSelectionMode) {
@@ -284,198 +296,152 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
             }
         };
 
-        const rowStyle = {
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: isMobile ? '10px 14px' : '7px 12px',
-            minHeight: isMobile ? '48px' : 'auto',
-            margin: '1px 4px', cursor: 'pointer',
-            background: isSelected
-                ? 'rgba(184,149,106,0.12)'
-                : isActive
-                    ? 'rgba(184,149,106,0.08)'
-                    : 'transparent',
-            borderLeft: isActive ? '2px solid #b8956a' : '2px solid transparent',
-            position: 'relative', transition: 'all 150ms ease',
-            WebkitTapHighlightColor: 'transparent',
-        };
-
-        const iconBoxStyle = {
-            width: isMobile ? '32px' : '26px', height: isMobile ? '32px' : '26px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-            background: isActive
-                ? 'rgba(184,149,106,0.15)'
-                : item.isPrivate
-                    ? 'rgba(139,92,246,0.1)'
-                    : 'var(--bg-active)',
-            color: isActive ? '#b8956a' : item.isPrivate ? '#a78bfa' : 'var(--text-muted)',
-        };
+        const classes = ['gl-item', 'gl-shell-row'];
+        if (isMobile) classes.push('gl-shell-row--tall');
+        if (isActive && !isSelectionMode) classes.push('is-active');
+        if (isSelected) classes.push('is-selected');
+        if (unread > 0) classes.push('is-unread');
 
         return (
             <div
+                key={item.id}
+                role="link"
+                tabIndex={0}
+                className={classes.join(' ')}
+                aria-current={isActive && !isSelectionMode ? 'page' : undefined}
                 onClick={handleClick}
-                style={rowStyle}
-                onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onMouseLeave={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'transparent'; }}
+                onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleClick(e); } }}
+                style={{ WebkitTapHighlightColor: 'transparent' }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden', gap: '10px' }}>
-                    {isSelectionMode && !item.isDefault && (
-                        <div style={{ width: '14px', height: '14px', border: `1px solid ${isSelected ? '#b8956a' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? '#b8956a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {isSelected && <CheckSquare size={9} style={{ color: '#0c0c0c' }} />}
-                        </div>
-                    )}
-
-                    <div style={iconBoxStyle}>
-                        {item.isPrivate ? (
-                            <Lock size={isMobile ? 14 : 12} strokeWidth={2.5} />
-                        ) : (item.label || '').toLowerCase() === 'announcements' ? (
-                            <Megaphone size={isMobile ? 14 : 12} strokeWidth={2.5} />
-                        ) : (
-                            <Hash size={isMobile ? 14 : 12} strokeWidth={2.5} />
-                        )}
-                    </div>
-
-                    <span style={{ fontSize: '13px', fontWeight: isActive || unread > 0 ? 600 : 400, color: isActive || unread > 0 ? 'var(--text-primary)' : 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        {(item.label || 'Unnamed Channel').replace(/^#/, '')}
+                {isSelectionMode && !item.isDefault && (
+                    <span className={`gl-shell-check${isSelected ? ' is-on' : ''}`} aria-hidden="true">
+                        {isSelected && <Check size={10} strokeWidth={3} />}
                     </span>
+                )}
 
-                    {!item.isMember && item.isDiscoverable && (
-                        <div style={{ marginLeft: '4px', padding: '2px', background: 'rgba(184,149,106,0.1)' }} title="Click to join">
-                            <UserPlus size={10} style={{ color: '#b8956a' }} strokeWidth={2.5} />
-                        </div>
+                <span className={`gl-shell-glyph${isAnnouncements ? ' gl-shell-glyph--accent' : ''}`} aria-hidden="true"
+                    style={isMobile ? { width: '30px', height: '30px' } : undefined}
+                >
+                    {item.isPrivate ? (
+                        <Lock size={isMobile ? 14 : 11} strokeWidth={2.5} />
+                    ) : isAnnouncements ? (
+                        <Megaphone size={isMobile ? 14 : 11} strokeWidth={2.5} />
+                    ) : (
+                        <Hash size={isMobile ? 14 : 11} strokeWidth={2.5} />
                     )}
-                </div>
+                </span>
+
+                <span className="gl-shell-row-label">
+                    {(item.label || 'Unnamed Channel').replace(/^#/, '')}
+                </span>
+
+                {item.isMember === false && item.isDiscoverable && (
+                    <span className="gl-shell-join" title="Click to join">
+                        <UserPlus size={10} strokeWidth={2.5} />
+                    </span>
+                )}
 
                 {unread > 0 && !isSelectionMode && (
-                    <div
+                    <span
+                        className={`gl-shell-unread${mentioned ? ' is-mention' : ''}`}
                         title={mentioned ? 'You were mentioned' : `${unread} unread`}
-                        style={{ minWidth: '18px', height: '18px', borderRadius: '9px', flexShrink: 0, background: mentioned ? 'var(--state-danger)' : '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#0c0c0c', fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', padding: '0 4px' }}
                     >
                         {mentioned ? '@' : ''}{unread > 99 ? '99+' : unread}
-                    </div>
+                    </span>
                 )}
             </div>
         );
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {}
-            <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0, borderBottom: '1px solid var(--border-subtle)' }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <h2 style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.2', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        {activeWorkspace?.name || 'Channels'}
-                    </h2>
-                    <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>Channels</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <WorkspacePanel
+            icon={Hash}
+            title="Channels"
+            subtitle={activeWorkspace?.name || title || 'Workspace'}
+            actions={(
+                <>
                     <button
-                        onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        style={{ padding: '6px', background: isSelectionMode ? 'rgba(184,149,106,0.1)' : 'transparent', border: isSelectionMode ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: isSelectionMode ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        type="button"
+                        className="gl-icon-btn"
+                        onClick={() => { setIsSelectionMode(!isSelectionMode); if (isSelectionMode) setSelectedItems(new Set()); }}
+                        aria-pressed={isSelectionMode}
                         title="Manage Channels"
-                        onMouseEnter={e => { if (!isSelectionMode) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                        onMouseLeave={e => { if (!isSelectionMode) e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        aria-label="Manage channels"
                     >
-                        <Settings2 size={18} />
+                        <Settings2 size={15} />
                     </button>
                     <button
-                        onClick={() => {
-                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
-                            const isAdmin = userRole === 'admin' || userRole === 'owner';
-                            const canCreateChannel = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
-                            if (!canCreateChannel) { showToast('Channel creation is disabled for members in this workspace', 'warning'); return; }
-                            setShowCreateChannelModal(true);
-                        }}
-                        disabled={(() => { const userRole = activeWorkspace?.role?.toLowerCase() || ''; const isAdmin = userRole === 'admin' || userRole === 'owner'; return !isAdmin && activeWorkspace?.settings?.allowMemberChannelCreation === false; })()}
-                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        type="button"
+                        className="gl-icon-btn"
+                        onClick={openCreate}
+                        disabled={!canCreateChannel}
                         title="Create Channel"
-                        onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; }}
+                        aria-label="Create channel"
                     >
-                        <Plus size={18} />
+                        <Plus size={16} />
                     </button>
-                </div>
-            </div>
-
-            {}
-            <div style={{ padding: '12px 16px 8px' }}>
-                <div style={{ position: 'relative' }}>
-                    <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={14} />
+                </>
+            )}
+            tools={(
+                <div className="gl-search">
+                    <Search size={13} />
                     <input
                         type="text"
+                        className="gl-input"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search channels..."
-                        style={{ width: '100%', paddingLeft: '32px', paddingRight: '12px', paddingTop: '7px', paddingBottom: '7px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }}
+                        aria-label="Search channels"
                     />
                 </div>
-            </div>
-
-            {}
+            )}
+            bodyClassName="custom-scrollbar"
+            bodyProps={{ style: { paddingTop: isSelectionMode ? 0 : undefined } }}
+        >
             {isSelectionMode && (
-                <div style={{ padding: '8px 16px', background: 'rgba(184,149,106,0.08)', borderBottom: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#b8956a', fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedItems.size} selected</span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => setShowDeleteConfirm(true)} disabled={selectedItems.size === 0}
-                            style={{ padding: '5px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: selectedItems.size === 0 ? 0.4 : 1 }}
-                            title="Delete Selected">
-                            <Trash2 size={15} />
+                <div className="gl-shell-selbar">
+                    <span>{selectedItems.size} selected</span>
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                        <button type="button" className="gl-icon-btn is-danger" onClick={() => setShowDeleteConfirm(true)} disabled={selectedItems.size === 0}
+                            title="Delete Selected" aria-label="Delete selected">
+                            <Trash2 size={14} />
                         </button>
-                        <button onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
-                            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Cancel">
-                            <X size={15} />
+                        <button type="button" className="gl-icon-btn" onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
+                            title="Cancel" aria-label="Cancel selection">
+                            <X size={14} />
                         </button>
                     </div>
                 </div>
             )}
 
-            {}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '8px 4px' }}>
-                <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '4px 16px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    {activeWorkspace?.name || 'Workspace'} Channels
-                </p>
-                {isLoadingChannels ? (
-                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {[70, 50, 85, 60, 75, 45].map((w, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px' }}>
-                                <div style={{ width: '24px', height: '24px', background: 'var(--bg-active)', flexShrink: 0 }} />
-                                <div style={{ height: '10px', background: 'var(--bg-active)', width: `${w}%` }} />
-                            </div>
-                        ))}
+            {isLoadingChannels ? (
+                <div aria-busy="true" aria-label="Loading channels" style={{ paddingTop: '6px' }}>
+                    {[70, 50, 85, 60, 75, 45].map((w, i) => (
+                        <div key={i} className="gl-shell-skel"><i /><i style={{ width: `${w}%` }} /></div>
+                    ))}
+                </div>
+            ) : sortedChannels.length > 0 ? (
+                <>
+                    <div className="gl-section-label">
+                        <span style={{ flex: 1 }}>All channels</span>
+                        <span className="gl-count">{sortedChannels.length}</span>
                     </div>
-                ) : sortedChannels.length > 0 ? (
-                    sortedChannels.map(channel => (
-                        <Item key={channel.id} item={channel} />
-                    ))
-                ) : searchQuery ? (
-                    <div style={{ padding: '32px 16px', textAlign: 'center' }}>
-                        <div style={{ width: '36px', height: '36px', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
-                            <Search size={16} style={{ color: 'var(--text-muted)' }} />
-                        </div>
-                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>No results for &ldquo;{searchQuery}&rdquo;</p>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>Try a different search term</p>
-                    </div>
-                ) : (
-                    <div style={{ padding: '40px 16px', textAlign: 'center' }}>
-                        <div style={{ width: '44px', height: '44px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
-                            <Hash size={20} style={{ color: '#b8956a' }} />
-                        </div>
-                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '4px', fontFamily: 'Inter, system-ui, sans-serif' }}>No channels yet</p>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5', fontFamily: 'Inter, system-ui, sans-serif' }}>Create a channel to start collaborating</p>
-                        {(() => {
-                            const userRole = activeWorkspace?.role?.toLowerCase() || '';
-                            const isAdmin = userRole === 'admin' || userRole === 'owner';
-                            const canCreate = isAdmin || activeWorkspace?.settings?.allowMemberChannelCreation !== false;
-                            return canCreate ? (
-                                <button onClick={() => setShowCreateChannelModal(true)}
-                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '12px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                                    <Plus size={13} /> Create Channel
-                                </button>
-                            ) : null;
-                        })()}
-                    </div>
-                )}
-            </div>
+                    {sortedChannels.map(renderItem)}
+                </>
+            ) : searchQuery ? (
+                <PanelEmpty icon={Search} title={<>No results for &ldquo;{searchQuery}&rdquo;</>} text="Try a different search term" />
+            ) : (
+                <PanelEmpty
+                    icon={Hash}
+                    title="No channels yet"
+                    text="Create a channel to start collaborating"
+                    action={canCreateChannel ? (
+                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={() => setShowCreateChannelModal(true)}>
+                            <Plus size={13} /> Create Channel
+                        </button>
+                    ) : null}
+                />
+            )}
 
             {}
             <ConfirmationModal
@@ -515,7 +481,7 @@ const ChannelsPanel = ({ title, isMobile = false }) => {
                     workspaceId={workspaceId}
                 />
             )}
-        </div >
+        </WorkspacePanel>
     );
 };
 

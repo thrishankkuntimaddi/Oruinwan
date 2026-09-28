@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams, useLocation } from "react-router-dom";
 
 import { WorkspaceProvider } from "./contexts/WorkspaceContext";
@@ -23,6 +24,7 @@ import KnowledgePanel from "./components/layout/panels/KnowledgePanel";
 
 import MeetingsPanel from "./components/layout/panels/MeetingsPanel";
 import { HuddleProvider } from "./features/huddles/HuddleContext";
+import GlobalHuddleProvider from "./features/huddles/GlobalHuddleProvider";
 import { NotificationsProvider } from "./features/notifications/NotificationsContext";
 import { AIProvider } from "./contexts/AIContext";
 import NotificationsPage from "./pages/NotificationsPage";
@@ -60,7 +62,8 @@ import AcceptInvite from "./pages/AcceptInvite";
 import JoinWorkspace from "./pages/JoinWorkspace";
 import JoinChannel from "./pages/JoinChannel";
 
-import ChttrixDocs from "./pages/ChttrixDocs";
+// The docs site is its own chunk (content + highlighter), loaded on first visit.
+const ChttrixDocs = lazy(() => import("./pages/ChttrixDocs"));
 import Careers from "./pages/Careers";
 
 import About from "./pages/company/About";
@@ -150,6 +153,11 @@ function LegacyRedirect({ from, to }) {
   return <Navigate to={`${to}${pathname.slice(from.length)}${search}${hash}`} replace />;
 }
 
+// Shown for a moment while the docs chunk loads (same dark backdrop as the docs).
+function DocsFallback() {
+  return <div role="status" aria-label="Loading documentation" style={{ minHeight: "100vh", background: "#08080a" }} />;
+}
+
 function DeveloperPortalWrapper() {
   const { workspaceId } = useParams();
   return <DeveloperPortalPage workspaceId={workspaceId} />;
@@ -170,6 +178,8 @@ function App() {
                   <NotesProvider>
                     <TasksProvider>
                       <UpdatesProvider>
+                        {/* The huddle call lives above the routes: changing pages keeps you in it. */}
+                        <GlobalHuddleProvider>
                           <AppErrorBoundary label="App">
                             <Routes>
 
@@ -674,8 +684,9 @@ function App() {
                           {}
                           <Route path="/" element={<Landing />} />
                           <Route path="/features" element={<Landing />} />
-                          <Route path="/docs" element={<ChttrixDocs />} />
-                          <Route path="/chttrix-docs" element={<LegacyRedirect from="/chttrix-docs" to="/docs" />} />
+                          {/* /docs, /docs/:section and /docs/:section/:page (one route so the shell stays mounted) */}
+                          <Route path="/docs/*" element={<Suspense fallback={<DocsFallback />}><ChttrixDocs /></Suspense>} />
+                          <Route path="/chttrix-docs/*" element={<LegacyRedirect from="/chttrix-docs" to="/docs" />} />
 
                           {}
                           <Route path="/about" element={<About />} />
@@ -904,6 +915,7 @@ function App() {
 
                             </Routes>
                           </AppErrorBoundary>
+                        </GlobalHuddleProvider>
 
                         {}
                         <GlobalPasswordUnlockModal />

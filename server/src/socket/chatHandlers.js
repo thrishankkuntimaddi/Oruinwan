@@ -672,6 +672,8 @@ module.exports = function registerChatHandlers(io, socket) {
 
       io.to(ctx.room).emit("message-deleted", {
         messageId,
+        dm: message.dm || null,
+        channel: message.channel || null,
         deletedBy: userId,
         deletedByName: deleterName,
         isUniversal: true,

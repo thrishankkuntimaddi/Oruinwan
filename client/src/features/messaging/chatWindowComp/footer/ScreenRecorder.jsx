@@ -1,13 +1,18 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Monitor, Square, Send, Trash2 } from "lucide-react";
-import api from '@services/api';
 import logger from '../../../../utils/logger';
+import { pickRecordingMimeType, extensionForMime, baseMime } from '../../../../utils/mediaRecording';
 
-export default function ScreenRecorder({ onSend, disabled = false }) {
+/**
+ * Records the screen (or a window/tab) with getDisplayMedia, then lets you send it.
+ * onRecorded({ file, duration, mimeType, variant }) hands it to the composer's upload list.
+ */
+export default function ScreenRecorder({ onRecorded, disabled = false }) {
     const [state, setState] = useState("idle"); 
     const [duration, setDuration] = useState(0);
     const [videoUrl, setVideoUrl] = useState(null);
-    const [uploading, setUploading] = useState(false);
+    const mimeRef = useRef('');
+    const startedAtRef = useRef(0);
     const mediaRecorderRef = useRef(null);
     const chunksRef = useRef([]);
     const blobRef = useRef(null);
@@ -50,7 +55,9 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
                 return;
             }
             streamRef.current = stream;
-            const mr = new MediaRecorder(stream, { mimeType: "video/webm" });
+            const mime = pickRecordingMimeType('video');
+            const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+            mimeRef.current = mr.mimeType || mime || 'video/webm';
             mediaRecorderRef.current = mr;
             chunksRef.current = [];
 
@@ -59,7 +66,8 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
                 stream.getTracks().forEach(t => t.stop());
                 if (streamRef.current === stream) streamRef.current = null;
                 if (unmountedRef.current) return;
-                const blob = new Blob(chunksRef.current, { type: "video/webm" });
+                const blob = new Blob(chunksRef.current, { type: mimeRef.current });
+                setDuration(Math.max(1, Math.round((performance.now() - startedAtRef.current) / 1000)));
                 blobRef.current = blob;
                 setVideoUrl(URL.createObjectURL(blob));
                 setState("preview");
@@ -71,7 +79,8 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
                 clearInterval(timerRef.current);
             });
 
-            mr.start();
+            mr.start(1000);
+            startedAtRef.current = performance.now();
             setState("recording");
             setDuration(0);
             timerRef.current = setInterval(() => setDuration(d => d + 1), 1000);
@@ -95,30 +104,12 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
         setState("idle");
     };
 
-    const send = async () => {
-        if (!blobRef.current || uploading) return;
-        setUploading(true);
-        try {
-            const formData = new FormData();
-            formData.append("file", blobRef.current, `screen_${Date.now()}.webm`);
-            const res = await api.post("/api/v2/uploads", formData, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            const { url, name, size, mimeType } = res.data;
-            onSend?.({
-                type: "video",
-                url,
-                name: name || "Screen recording",
-                size,
-                mimeType: mimeType || "video/webm",
-                duration
-            });
-            discard();
-        } catch (err) {
-            logger.error("Screen recording upload failed:", err);
-        } finally {
-            setUploading(false);
-        }
+    const send = () => {
+        if (!blobRef.current) return;
+        const type = baseMime(mimeRef.current) || 'video/webm';
+        const file = new File([blobRef.current], `screen-recording-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.${extensionForMime(type)}`, { type });
+        onRecorded?.({ file, duration, mimeType: type, variant: 'screen_recording' });
+        discard();
     };
 
     const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -135,12 +126,10 @@ export default function ScreenRecorder({ onSend, disabled = false }) {
                 >
                     <Trash2 size={14} />
                 </button>
-                <button onClick={send} disabled={uploading} title="Send screen recording"
-                    style={{ padding: '5px 10px', background: '#b8956a', border: 'none', color: '#0c0c0c', cursor: uploading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease', opacity: uploading ? 0.6 : 1 }}
+                <button onClick={send} title="Send screen recording" aria-label="Send screen recording"
+                    style={{ padding: '5px 10px', background: 'var(--accent)', border: 'none', color: '#0c0c0c', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: '150ms ease' }}
                 >
-                    {uploading
-                        ? <span style={{ width: '13px', height: '13px', border: '2px solid rgba(0,0,0,0.3)', borderTopColor: '#0c0c0c', borderRadius: '50%', display: 'block', animation: 'spin 1s linear infinite' }} />
-                        : <Send size={13} />}
+                    <Send size={13} />
                 </button>
             </div>
         );

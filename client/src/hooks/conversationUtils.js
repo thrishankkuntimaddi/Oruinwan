@@ -12,6 +12,7 @@ export function normalizeMessage(msg) {
                 : msg.pollId ? 'poll'
                     : msg.type === 'contact' ? 'contact'
                         : msg.type === 'meeting' ? 'meeting'
+                        : msg.type === 'integration' ? 'integration'
                             : msg.type === 'checklist' ? 'checklist'
                                 : ATTACHMENT_TYPES.includes(msg.type) ? msg.type
                                 : 'message',
@@ -28,6 +29,7 @@ export function normalizeMessage(msg) {
         },
         ...((msg.type === 'poll' || msg.pollId) && { poll: msg.poll }),
         ...(msg.type === 'contact' && { contact: msg.contact }),
+        ...(msg.type === 'integration' && { integration: msg.integration || null }),
         ...(msg.type === 'checklist' && { checklist: msg.checklist || [] }),
         ...(msg.type === 'system' && {
             systemEvent: msg.systemEvent,

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
+import { Plus, Link2, Search, Lock } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../contexts/ToastContext";
@@ -11,9 +12,12 @@ import Header from './workspaceSelectComponents/Header.jsx';
 import WorkspaceGrid from "./workspaceSelectComponents/WorkspaceGrid.jsx";
 import CreateWorkspaceModal from "./workspaceSelectComponents/CreateWorkspaceModal.jsx";
 import { DEFAULT_WORKSPACE_COLOR } from "../utils/workspaceIcons";
-import HelpModalsContainer from "./workspaceSelectComponents/HelpModalsContainer.jsx";
 import LoadingState from "./workspaceSelectComponents/LoadingState.jsx";
 import ErrorState from "./workspaceSelectComponents/ErrorState.jsx";
+import EmptyState from "./workspaceSelectComponents/EmptyState.jsx";
+import JoinInviteDialog from "./workspaceSelectComponents/JoinInviteDialog.jsx";
+import { getCreatePolicy } from "./workspaceSelectComponents/createPolicy";
+import "./workspaceSelectComponents/workspaceSelect.css";
 import logger from '../utils/logger';
 
 const WorkspaceSelect = () => {
@@ -35,8 +39,11 @@ const WorkspaceSelect = () => {
     const [loadError, setLoadError] = useState(null);
 
     
-    const [showHelp, setShowHelp] = useState(false);
-    const [activeHelpModal, setActiveHelpModal] = useState(null);
+    const [query, setQuery] = useState("");
+    const [showJoin, setShowJoin] = useState(false);
+    const closeJoin = React.useCallback(() => setShowJoin(false), []);
+    // Per-workspace unread notification counts, reported by the header bell.
+    const [unreadByWs, setUnreadByWs] = useState({});
 
     
     const [showProfile, setShowProfile] = useState(false);
@@ -79,6 +86,7 @@ const WorkspaceSelect = () => {
                 setWorkspaces(response.data.workspaces.filter(ws => !['removed', 'left'].includes(ws.membershipStatus)).map(ws => ({
                     id: ws.id,
                     name: ws.name,
+                    description: ws.description || '',
                     // Active members only (server-side count).
                     members: typeof ws.memberCount === 'number' ? ws.memberCount : 1,
                     icon: ws.icon,
@@ -211,15 +219,30 @@ const WorkspaceSelect = () => {
     };
 
     
+    const firstName = user?.username?.split(' ')[0];
+    const policy = getCreatePolicy(user, workspaces);
+    const openCreate = () => setIsCreateModalOpen(true);
+    const showSearch = workspaces.length > 6;
+    const q = showSearch ? query.trim().toLowerCase() : '';
+    const visible = useMemo(
+        () => (q ? workspaces.filter(ws => `${ws.name} ${ws.description || ''}`.toLowerCase().includes(q)) : workspaces),
+        [workspaces, q],
+    );
+    const ownedCount = workspaces.filter(ws => ws.isOwner).length;
+    const totalUnread = Object.values(unreadByWs).reduce((a, b) => a + b, 0);
+    const ready = !isLoadingWorkspaces && !loadError;
+
     return (
-    <div style={{ background: 'var(--bg-base)', minHeight: '100vh', fontFamily: 'var(--font)' }}>
-            {}
+        <div className="gl-wsp">
+            <div className="gl-wsp-backdrop" aria-hidden="true">
+                <div className="gl-wsp-backdrop__aurora gl-wsp-backdrop__aurora--a" />
+                <div className="gl-wsp-backdrop__aurora gl-wsp-backdrop__aurora--b" />
+            </div>
+
             <Header
                 workspaces={workspaces}
-                showHelp={showHelp}
-                setShowHelp={setShowHelp}
-                onHelpModalOpen={setActiveHelpModal}
                 user={user}
+                onUnreadChange={setUnreadByWs}
                 onProfileClick={() => setShowProfile(true)}
                 onSettingsClick={() => navigate('/settings', { state: { from: '/workspaces' } })}
                 onLogout={handleLogout}
@@ -230,39 +253,94 @@ const WorkspaceSelect = () => {
                 showAI={showAI}
             />
 
-            {}
-            <main style={{ paddingTop: '80px', paddingBottom: '48px', paddingLeft: '16px', paddingRight: '16px', maxWidth: '1200px', margin: '0 auto', boxSizing: 'border-box' }}>
-                <div style={{ marginBottom: '32px', textAlign: 'center', maxWidth: '560px', margin: '0 auto 32px' }}>
-                    <h1 style={{
-                        fontSize: '26px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        letterSpacing: '-0.02em',
-                        marginBottom: '8px',
-                        lineHeight: 1.15
-                    }}>
-                        Welcome back, {user?.username?.split(' ')[0]}
-                    </h1>
-                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: 400, lineHeight: 1.5, margin: 0 }}>
-                        Select a workspace to jump back in, or create a new one to get started.
-                    </p>
-                </div>
+            <main className="gl-wsp-main">
+                <section className="gl-wsp-hero gl-ambient" aria-labelledby="gl-wsp-title">
+                    <div>
+                        <span className="gl-eyebrow">Your workspaces</span>
+                        <h1 id="gl-wsp-title" className="gl-wsp-title">
+                            Welcome back, {firstName ? <span className="gl-sheen">{firstName}</span> : null}
+                        </h1>
+                        <p className="gl-wsp-lead">
+                            Select a workspace to jump back in, or create a new one to get started.
+                        </p>
+                        {ready && workspaces.length > 0 && (
+                            <div className="gl-wsp-stats">
+                                <div className="gl-wsp-stat">
+                                    <span className="gl-wsp-stat__value">{workspaces.length}</span>
+                                    <span className="gl-wsp-stat__label">Workspace{workspaces.length !== 1 && 's'}</span>
+                                </div>
+                                <div className="gl-wsp-stat">
+                                    <span className="gl-wsp-stat__value">{ownedCount}</span>
+                                    <span className="gl-wsp-stat__label">Owned by you</span>
+                                </div>
+                                <div className="gl-wsp-stat">
+                                    <span className="gl-wsp-stat__value">{totalUnread}</span>
+                                    <span className="gl-wsp-stat__label">Unread</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                    <div className="gl-wsp-actions">
+                        {policy.isCompanyMember ? (
+                            <button type="button" className="gl-btn gl-btn--lg" disabled title={`Only admins & owners can create workspaces in ${policy.companyName}`}>
+                                <Lock size={15} /> New workspace
+                            </button>
+                        ) : (
+                            <button type="button" className="gl-btn gl-btn--primary gl-btn--lg" onClick={openCreate} disabled={policy.isLimitReached}
+                                title={policy.isLimitReached ? 'You have reached the limit of 3 workspaces on the personal plan.' : undefined}>
+                                <Plus size={16} /> New workspace
+                            </button>
+                        )}
+                        <button type="button" className="gl-btn gl-btn--lg" onClick={() => setShowJoin(true)}>
+                            <Link2 size={15} /> Join with invite
+                        </button>
+                    </div>
+                </section>
 
                 {isLoadingWorkspaces ? (
-                    <LoadingState count={workspaces.length || 1} />
+                    <>
+                        <div className="gl-wsp-section-head"><h2 className="gl-wsp-section-title">Workspaces</h2></div>
+                        <LoadingState count={workspaces.length || 2} />
+                    </>
                 ) : loadError ? (
                     <ErrorState error={loadError} onRetry={loadWorkspaces} />
+                ) : workspaces.length === 0 ? (
+                    <EmptyState {...policy} onCreateClick={openCreate} onJoinClick={() => setShowJoin(true)} />
                 ) : (
-                    <WorkspaceGrid
-                        workspaces={workspaces}
-                        onWorkspaceClick={handleWorkspaceClick}
-                        onCreateClick={() => setIsCreateModalOpen(true)}
-                        user={user}
-                    />
+                    <>
+                        <div className="gl-wsp-section-head">
+                            <h2 className="gl-wsp-section-title">
+                                Workspaces <span className="gl-count">{q ? `${visible.length} / ${workspaces.length}` : workspaces.length}</span>
+                            </h2>
+                            {showSearch && (
+                                <div className="gl-search gl-wsp-search" role="search">
+                                    <Search size={14} />
+                                    <input
+                                        type="search"
+                                        className="gl-input"
+                                        placeholder="Search workspaces"
+                                        aria-label="Search workspaces"
+                                        value={query}
+                                        onChange={e => setQuery(e.target.value)}
+                                        onKeyDown={e => { if (e.key === 'Escape') setQuery(''); }}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                        <WorkspaceGrid
+                            workspaces={visible}
+                            allWorkspaces={workspaces}
+                            query={q}
+                            unreadByWs={unreadByWs}
+                            onWorkspaceClick={handleWorkspaceClick}
+                            onCreateClick={openCreate}
+                            onClearSearch={() => setQuery('')}
+                            user={user}
+                        />
+                    </>
                 )}
             </main>
 
-            {}
             <CreateWorkspaceModal
                 isOpen={isCreateModalOpen}
                 onClose={resetCreateModal}
@@ -279,18 +357,12 @@ const WorkspaceSelect = () => {
                 user={user}
             />
 
-            {}
-            <HelpModalsContainer
-                activeModal={activeHelpModal}
-                onClose={() => setActiveHelpModal(null)}
-            />
+            <JoinInviteDialog open={showJoin} onClose={closeJoin} />
 
-            {}
             {showProfile && <ProfileQuickSettings onClose={() => setShowProfile(false)} />}
 
-            {}
             {showAI && (
-                <div style={{ position: 'fixed', top: '48px', right: 0, width: '320px', height: 'calc(100vh - 48px)', zIndex: 40, borderLeft: '1px solid var(--border-subtle)' }}>
+                <div className="gl-wsp-ai">
                     <WorkspaceProvider>
                         <ChttrixAIChat onClose={() => setShowAI(false)} isSidebar={true} />
                     </WorkspaceProvider>

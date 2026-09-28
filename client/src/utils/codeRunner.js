@@ -10,27 +10,43 @@ const READY_MS = 2500;
 
 function sandboxDocument(id, code) {
     // The snippet travels as a JSON string literal ("<" escaped so it cannot close the
-    // script element) and is compiled with Function inside the sandbox.
+    // script element). It runs in a Worker started inside the sandboxed frame, so even
+    // an endless loop never blocks the app's page: removing the frame ends the worker.
+    // Where a Worker can't be created, it runs in the frame itself.
     const source = JSON.stringify(String(code)).replace(/</g, '\\u003c');
     return `<!doctype html><script>
 const ID = ${JSON.stringify(id)};
+const CODE = ${source};
 const send = (m) => parent.postMessage(Object.assign({ id: ID }, m), '*');
-const fmt = (v) => { try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2); } catch (_) { return String(v); } };
-['log', 'info', 'warn', 'error'].forEach((level) => {
-  console[level] = (...args) => send({ type: 'log', level, text: args.map(fmt).join(' ') });
-});
+const RUNNER = function (code, post) {
+  const fmt = (v) => { try { return typeof v === 'string' ? v : JSON.stringify(v, null, 2); } catch (_) { return String(v); } };
+  ['log', 'info', 'warn', 'error'].forEach((level) => {
+    console[level] = (...args) => post({ type: 'log', level, text: args.map(fmt).join(' ') });
+  });
+  (async () => {
+    try {
+      const run = new Function('return (async () => {\\n' + code + '\\n})()');
+      const result = await run();
+      if (result !== undefined) post({ type: 'log', level: 'result', text: fmt(result) });
+      post({ type: 'done' });
+    } catch (err) {
+      post({ type: 'log', level: 'error', text: String((err && err.message) || err) });
+      post({ type: 'done', error: true });
+    }
+  })();
+};
 send({ type: 'ready' });
-(async () => {
-  try {
-    const run = new Function('return (async () => {\\n' + ${source} + '\\n})()');
-    const result = await run();
-    if (result !== undefined) send({ type: 'log', level: 'result', text: fmt(result) });
-    send({ type: 'done' });
-  } catch (err) {
-    send({ type: 'log', level: 'error', text: String((err && err.message) || err) });
-    send({ type: 'done', error: true });
-  }
-})();
+let worker = null;
+try {
+  const src = 'self.onmessage = (e) => { (' + RUNNER.toString() + ')(e.data, (m) => self.postMessage(m)); };';
+  worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  worker.onmessage = (e) => send(e.data);
+  worker.onerror = (e) => { e.preventDefault(); send({ type: 'log', level: 'error', text: String(e.message || 'Error') }); send({ type: 'done', error: true }); };
+  worker.postMessage(CODE);
+} catch (_) {
+  worker = null;
+  RUNNER(CODE, send);
+}
 </script>`;
 }
 

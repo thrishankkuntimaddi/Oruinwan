@@ -5,9 +5,10 @@ import {
 } from "lucide-react";
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
+import { PanelEmpty } from '../layout/WorkspacePanel';
+import '../../styles/gloss.css';
+import '../../styles/gloss-x-panels.css';
 
-// Text colour used on accent-filled buttons (matches the app's primary button style).
-const ON_ACCENT = '#0c0c0c';
 const FONT = 'var(--font)';
 
 const errorMessage = (err, fallback) => err?.response?.data?.message || err?.response?.data?.error || fallback;
@@ -63,13 +64,13 @@ function ReviewModal({ app, onClose, onSubmitted }) {
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, backgroundColor: 'var(--bg-overlay)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div role="dialog" aria-label={`Review ${app.name}`} style={{ backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', width: '100%', maxWidth: '440px', fontFamily: FONT }}>
+      <div role="dialog" aria-label={`Review ${app.name}`} className="gl-card" style={{ width: '100%', maxWidth: '440px', fontFamily: FONT, boxShadow: 'var(--gl-spec-strong), var(--gl-drop)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div>
             <h3 style={{ fontWeight: 700, color: 'var(--text-primary)', margin: 0, fontSize: '14px' }}>Review {app.name}</h3>
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0' }}>Share your experience with the team</p>
           </div>
-          <button onClick={onClose} aria-label="Close" style={{ padding: '4px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>
+          <button type="button" onClick={onClose} aria-label="Close" className="gl-icon-btn">
             <X size={16} />
           </button>
         </div>
@@ -96,9 +97,8 @@ function ReviewModal({ app, onClose, onSubmitted }) {
           {error && <p style={{ fontSize: '12px', color: 'var(--state-danger)', margin: 0 }}>{error}</p>}
         </div>
         <div style={{ display: 'flex', gap: '8px', padding: '0 20px 16px' }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', backgroundColor: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: FONT }}>Cancel</button>
-          <button onClick={submit} disabled={submitting || !rating}
-            style={{ flex: 1, padding: '8px', fontSize: '13px', fontWeight: 700, color: ON_ACCENT, backgroundColor: 'var(--accent)', border: 'none', borderRadius: '2px', cursor: submitting || !rating ? 'not-allowed' : 'pointer', opacity: submitting || !rating ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontFamily: FONT }}>
+          <button type="button" onClick={onClose} className="gl-btn" style={{ flex: 1 }}>Cancel</button>
+          <button type="button" onClick={submit} disabled={submitting || !rating} className="gl-btn gl-btn--primary" style={{ flex: 1 }}>
             {submitting ? <><RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} />Submitting…</> : "Submit Review"}
           </button>
         </div>
@@ -109,19 +109,16 @@ function ReviewModal({ app, onClose, onSubmitted }) {
 
 function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onReview }) {
   const installed = !!app.installed;
-  const btnBase = { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 10px', fontSize: '11px', fontWeight: 700, borderRadius: '2px', cursor: busy ? 'not-allowed' : 'pointer', fontFamily: FONT, opacity: busy ? 0.6 : 1, transition: 'opacity 150ms ease' };
 
   return (
-    <div data-testid="marketplace-app-card" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', overflow: 'hidden', transition: 'border-color 150ms ease', display: 'flex', flexDirection: 'column' }}
-      onMouseEnter={e => (e.currentTarget.style.borderColor = 'var(--border-accent)')}
-      onMouseLeave={e => (e.currentTarget.style.borderColor = 'var(--border-default)')}>
+    <div data-testid="marketplace-app-card" className="gl-card gl-x-hovercard" style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
           {app.iconUrl ? (
-            <img src={app.iconUrl} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', flexShrink: 0, borderRadius: '2px' }} />
+            <img src={app.iconUrl} alt="" className="gl-x-app-icon" />
           ) : (
-            <div style={{ width: '40px', height: '40px', backgroundColor: 'var(--accent-dim)', border: '1px solid var(--border-default)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Puzzle size={18} style={{ color: 'var(--accent)' }} />
+            <div className="gl-x-app-icon">
+              <Puzzle size={18} />
             </div>
           )}
           <div style={{ minWidth: 0, flex: 1 }}>
@@ -129,7 +126,7 @@ function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onRe
             <p style={{ fontSize: '11px', color: 'var(--text-muted)', margin: '3px 0 0' }}>{app.developer} · v{app.version}</p>
           </div>
           {installed && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', fontWeight: 700, color: 'var(--state-success)', background: 'color-mix(in srgb, var(--state-success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--state-success) 30%, transparent)', borderRadius: '2px', padding: '2px 7px', flexShrink: 0 }}>
+            <span className="gl-x-badge gl-x-badge--ok">
               <CheckCircle2 size={10} />Installed
             </span>
           )}
@@ -145,13 +142,11 @@ function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onRe
         <div style={{ display: 'flex', gap: '8px' }}>
           {canManage ? (
             installed ? (
-              <button onClick={() => onUninstall(app)} disabled={busy}
-                style={{ ...btnBase, background: 'transparent', border: '1px solid color-mix(in srgb, var(--state-danger) 40%, transparent)', color: 'var(--state-danger)' }}>
+              <button type="button" onClick={() => onUninstall(app)} disabled={busy} className="gl-btn gl-btn--sm gl-x-danger" style={{ flex: 1 }}>
                 {busy ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />Removing…</> : <><Trash2 size={11} />Uninstall</>}
               </button>
             ) : (
-              <button onClick={() => onInstall(app)} disabled={busy}
-                style={{ ...btnBase, background: 'var(--accent)', border: '1px solid var(--accent)', color: ON_ACCENT }}>
+              <button type="button" onClick={() => onInstall(app)} disabled={busy} className="gl-btn gl-btn--sm gl-btn--primary" style={{ flex: 1 }}>
                 {busy ? <><RefreshCw size={11} style={{ animation: 'spin 1s linear infinite' }} />Installing…</> : <><Download size={11} />Install</>}
               </button>
             )
@@ -160,10 +155,7 @@ function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onRe
               {installed ? 'Installed in this workspace' : 'Not installed'}
             </span>
           )}
-          <button onClick={() => onReview(app)}
-            style={{ padding: '7px 10px', fontSize: '12px', color: 'var(--text-muted)', background: 'none', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', transition: 'border-color 150ms ease, color 150ms ease' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-accent)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-default)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+          <button type="button" onClick={() => onReview(app)} className="gl-btn gl-btn--sm" style={{ padding: '0 9px' }}
             title="Write a review" aria-label={`Review ${app.name}`}>
             <MessageSquare size={12} />
           </button>
@@ -173,13 +165,6 @@ function MarketplaceAppCard({ app, canManage, busy, onInstall, onUninstall, onRe
   );
 }
 
-const filterBtn = (active) => ({
-  padding: '4px 12px', fontSize: '11px', fontWeight: 600, borderRadius: '2px',
-  background: active ? 'var(--accent-dim)' : 'var(--bg-hover)',
-  border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`,
-  color: active ? 'var(--accent)' : 'var(--text-muted)',
-  cursor: 'pointer', transition: 'all 150ms ease', fontFamily: FONT,
-});
 
 /**
  * The workspace app marketplace: search, categories, install state per workspace and
@@ -251,30 +236,29 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
           onSubmitted={() => { showToast("Review submitted", "success"); fetchApps(); }} />
       )}
 
-      <div style={{ position: 'relative', marginBottom: '14px' }}>
-        <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-        <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search marketplace…" aria-label="Search marketplace"
-          style={{ width: '100%', paddingLeft: '36px', paddingRight: '16px', paddingTop: '9px', paddingBottom: '9px', fontSize: '13px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', borderRadius: '2px', color: 'var(--text-primary)', outline: 'none', fontFamily: FONT, boxSizing: 'border-box' }}
-          onFocus={e => (e.target.style.borderColor = 'var(--border-accent)')}
-          onBlur={e => (e.target.style.borderColor = 'var(--border-default)')} />
+      <div className="gl-search" style={{ marginBottom: '12px' }}>
+        <Search size={14} />
+        <input type="text" className="gl-input" value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Search marketplace…" aria-label="Search marketplace"
+          style={{ height: '38px', fontSize: '13px' }} />
       </div>
-      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '20px' }}>
+      <div className="gl-x-chips gl-x-chips--wrap" style={{ marginBottom: '20px' }}>
         {MARKETPLACE_CATEGORIES.map(cat => (
-          <button key={cat.id} onClick={() => { setCategory(cat.id); setPage(1); }} style={filterBtn(category === cat.id)}>{cat.label}</button>
+          <button key={cat.id} type="button" className={`gl-x-chip gl-x-chip--lg${category === cat.id ? ' is-active' : ''}`} aria-pressed={category === cat.id}
+            onClick={() => { setCategory(cat.id); setPage(1); }}>{cat.label}</button>
         ))}
       </div>
 
       {canManage === false && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '12px', color: 'var(--text-secondary)', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', borderRadius: '2px' }}>
+        <div className="gl-card gl-x-note" style={{ alignItems: 'center', marginBottom: '16px' }}>
           <Lock size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
           Only workspace owners and admins can install or uninstall apps.
         </div>
       )}
 
       {loading ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+        <div className="gl-x-grid">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} style={{ height: '180px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', borderRadius: '2px' }} />
+            <div key={i} className="gl-x-skeleton" />
           ))}
         </div>
       ) : error ? (
@@ -282,26 +266,19 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
           <AlertTriangle size={24} style={{ color: 'var(--state-danger)', marginBottom: '12px' }} />
           <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>Couldn’t load apps</p>
           <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '0 0 14px' }}>{error}</p>
-          <button onClick={fetchApps} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '7px 14px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: 'pointer', fontFamily: FONT }}>
+          <button type="button" onClick={fetchApps} className="gl-btn">
             <RefreshCw size={12} />Retry
           </button>
         </div>
       ) : apps.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-          <div style={{ width: '56px', height: '56px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <ShoppingBag size={24} style={{ color: 'var(--text-muted)' }} />
-          </div>
-          <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>No apps found</p>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: 0 }}>
-            {search.trim() || category !== 'all' ? 'Try a different search or category' : 'No apps have been published yet'}
-          </p>
-        </div>
+        <PanelEmpty icon={ShoppingBag} title="No apps found"
+          text={search.trim() || category !== 'all' ? 'Try a different search or category' : 'No apps have been published yet'} />
       ) : (
         <>
           <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px' }}>
             {apps.length} app{apps.length !== 1 ? "s" : ""} · {apps.filter(a => a.installed).length} installed
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div className="gl-x-grid" style={{ marginBottom: '24px' }}>
             {apps.map(app => (
               <MarketplaceAppCard key={app._id} app={app} canManage={canManage && !!workspaceId} busy={!!busy[app._id]}
                 onInstall={a => runAction(a, 'install')} onUninstall={a => runAction(a, 'uninstall')} onReview={setReviewApp} />
@@ -309,13 +286,11 @@ export default function MarketplacePanel({ workspaceId, canManage }) {
           </div>
           {totalPages > 1 && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                style={{ padding: '7px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: page === 1 ? 'not-allowed' : 'pointer', opacity: page === 1 ? 0.4 : 1, fontFamily: FONT }}>
+              <button type="button" className="gl-btn" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
                 Previous
               </button>
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Page {page} of {totalPages}</span>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 16px', fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderRadius: '2px', cursor: page === totalPages ? 'not-allowed' : 'pointer', opacity: page === totalPages ? 0.4 : 1, fontFamily: FONT }}>
+              <button type="button" className="gl-btn" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
                 Next <ChevronRight size={14} />
               </button>
             </div>

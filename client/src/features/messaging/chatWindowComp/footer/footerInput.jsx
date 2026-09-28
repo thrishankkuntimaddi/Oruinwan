@@ -11,12 +11,16 @@ import { useMentionAutocomplete } from "../../../../hooks/useMentionAutocomplete
 import SlashCommandMenu from "../../../../components/chat/slash/SlashCommandMenu";
 import { parseSlashCommand } from "../../../../components/chat/slash/slashCommands";
 import { useFeatureFlags } from "../../../../contexts/FeatureFlagsContext";
-import CreateGitHubIssueModal from "../../../../components/apps/modals/CreateGitHubIssueModal";
-import CreateJiraTicketModal from "../../../../components/apps/modals/CreateJiraTicketModal";
+import { INTEGRATION_COMMANDS, runIntegrationCommand } from "../../../../features/integrations/slashActions";
+import { useToast } from "../../../../contexts/ToastContext";
 import SlashCommandPreview from "../../../../components/chat/slash/SlashCommandPreview";
 import SmartReplySuggestions from "./SmartReplySuggestions";
 import { useAIContext } from "../../../../contexts/AIContext";
 import ScreenRecorder from "./ScreenRecorder";
+import VideoNoteRecorder from "./VideoNoteRecorder";
+import UploadTray from "./UploadTray";
+import useUploadQueue from "./useUploadQueue";
+import { COMPOSER_MENTION_EVENT } from "../../../profileCard/composerBridge";
 
 const turndownService = new TurndownService({
   headingStyle: "atx",
@@ -106,13 +110,67 @@ export default function FooterInput({
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashQuery, setSlashQuery] = useState("");
   const [previewCommand, setPreviewCommand] = useState(null);
-  const [appModal, setAppModal] = useState(null); // 'github' | 'jira' (from slash commands)
   const { flags } = useFeatureFlags();
+  const { showToast } = useToast();
   // Workspace admins can switch off uploads and AI; hide their controls.
   const uploadsOn = features?.fileUploads !== false;
   const showAIControl = showAI && features?.ai !== false;
   const showVoiceControl = showVoice && uploadsOn;
   const showScreenRecordControl = showScreenRecord && uploadsOn;
+
+  // ── Files: picked, pasted or dropped files upload here with progress/cancel/retry,
+  // and each one is sent as its own message when its upload finishes.
+  const canUpload = uploadsOn && !!onSendAttachment && !blocked;
+  const rootRef = useRef(null);
+  const [showVideoNote, setShowVideoNote] = useState(false);
+  const [dropZone, setDropZone] = useState(null); // DOMRect of the chat column while files are dragged over it
+  const uploads = useUploadQueue({
+    conversationId,
+    conversationType,
+    onUploaded: (attachment) => onSendAttachment?.(attachment),
+  });
+  const addFiles = uploads.add;
+  const queueRecording = useCallback(({ file, duration, width, height, variant }) => {
+    addFiles([file], { attachment: { duration, ...(width ? { width } : {}), ...(height ? { height } : {}), ...(variant ? { variant } : {}) } });
+  }, [addFiles]);
+  const handlePaste = useCallback((e) => {
+    const files = Array.from(e.clipboardData?.files || []);
+    if (!files.length || !canUpload || disabled) return;
+    e.preventDefault();
+    // Screenshots arrive as "image.png"; give them a readable, unique name.
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    files.forEach((f, i) => {
+      const generic = /^image\.(png|jpe?g|gif|webp)$/i.test(f.name || '');
+      addFiles([f], generic ? { filename: `pasted-image-${stamp}${files.length > 1 ? `-${i + 1}` : ''}.${f.name.split('.').pop()}` } : undefined);
+    });
+  }, [canUpload, disabled, addFiles]);
+  // Dropping files anywhere on the conversation (message list + composer) shares them.
+  useEffect(() => {
+    const zone = rootRef.current?.parentElement;
+    if (!zone || !canUpload || disabled) return undefined;
+    const hasFiles = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
+    let depth = 0;
+    const onEnter = (e) => { if (!hasFiles(e)) return; depth += 1; setDropZone(zone.getBoundingClientRect()); };
+    const onOver = (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; };
+    const onLeave = (e) => { if (!hasFiles(e)) return; depth = Math.max(0, depth - 1); if (!depth) setDropZone(null); };
+    const onDrop = (e) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0;
+      setDropZone(null);
+      addFiles(e.dataTransfer.files);
+    };
+    zone.addEventListener('dragenter', onEnter);
+    zone.addEventListener('dragover', onOver);
+    zone.addEventListener('dragleave', onLeave);
+    zone.addEventListener('drop', onDrop);
+    return () => {
+      zone.removeEventListener('dragenter', onEnter);
+      zone.removeEventListener('dragover', onOver);
+      zone.removeEventListener('dragleave', onLeave);
+      zone.removeEventListener('drop', onDrop);
+    };
+  }, [canUpload, disabled, addFiles]);
 
   const insertSlashCommand = useCallback((cmd) => {
     if (!editableRef.current) return;
@@ -237,6 +295,53 @@ export default function FooterInput({
     onChange({ target: { value: html } });
   };
 
+  // "Mention" from a profile popover: an @username chip at the caret (or at the
+  // end when the caret is elsewhere), followed by a space, caret after it.
+  const insertMentionChipRef = useRef(null);
+  insertMentionChipRef.current = (username) => {
+    const el = editableRef.current;
+    if (!el || !username || blocked || disabled) return;
+    if (/^oruinwan$/i.test(username)) { insertAIMention(); return; }
+    el.focus();
+    const sel = window.getSelection();
+    let range = sel && sel.rangeCount > 0 ? sel.getRangeAt(0) : null;
+    if (!range || !el.contains(range.startContainer)) {
+      range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+    }
+    range.deleteContents();
+    const chip = document.createElement('span');
+    chip.className = 'mention-chip inline-flex items-center px-1.5 py-0.5 rounded text-[13px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400 cursor-default select-none';
+    chip.contentEditable = 'false';
+    chip.dataset.mention = username;
+    chip.textContent = `@${username}`;
+    const space = document.createTextNode(' ');
+    // Keep "@name" apart from a word typed right before it.
+    const before = range.startContainer.nodeType === Node.TEXT_NODE
+      ? range.startContainer.textContent.slice(0, range.startOffset)
+      : (el.textContent || '');
+    const frag = document.createDocumentFragment();
+    if (before && !/\s$/.test(before)) frag.appendChild(document.createTextNode(' '));
+    frag.appendChild(chip);
+    frag.appendChild(space);
+    range.insertNode(frag);
+    const caret = document.createRange();
+    caret.setStartAfter(space);
+    caret.collapse(true);
+    sel?.removeAllRanges();
+    sel?.addRange(caret);
+    setHasText(true);
+    onChange({ target: { value: el.innerHTML || '' } });
+  };
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return undefined;
+    const onMention = (e) => insertMentionChipRef.current?.(e?.detail?.username);
+    root.addEventListener(COMPOSER_MENTION_EVENT, onMention);
+    return () => root.removeEventListener(COMPOSER_MENTION_EVENT, onMention);
+  }, []);
+
   const insertFormat = (type) => {
     if (blocked || disabled) return;
     editableRef.current?.focus();
@@ -311,9 +416,22 @@ export default function FooterInput({
         setShowSlashMenu(false); setPreviewCommand(null);
         return;
       }
-      if (command.name === 'github' || command.name === 'jira') {
+      // /github, /jira, /zoom, /review, /task: run here, post the result as a
+      // message; on failure explain why and give the command back to edit.
+      if (INTEGRATION_COMMANDS.has(command.name)) {
+        const typed = el.innerText.trim();
         clear();
-        setAppModal(command.name);
+        const wsId = workspaceId || window.location.pathname.match(/\/workspace\/([^/]+)/)?.[1] || null;
+        runIntegrationCommand(command.name, command.args, {
+          workspaceId: wsId,
+          conversationId,
+          conversationType,
+          send: (text) => onSend(text, { mentionText: '' }),
+          notify: (msg, tone) => showToast?.(msg, tone),
+        }).catch((err) => {
+          showToast?.(err?.message || 'That command failed.', 'error', 6000);
+          if (editableRef.current && !editableRef.current.textContent.trim()) insertText(typed);
+        });
         return;
       }
       // Only a view that handles slash commands may consume one; without a
@@ -340,7 +458,7 @@ export default function FooterInput({
     setNewMessage("");
     setShowSlashMenu(false);
     setPreviewCommand(null);
-  }, [blocked, disabled, onSend, setNewMessage, closeSuggestions, extractMentionText, flags, onSlashCommand]);
+  }, [blocked, disabled, onSend, setNewMessage, closeSuggestions, extractMentionText, flags, onSlashCommand, workspaceId, conversationId, conversationType, showToast, insertText]);
 
   const handleKeyDown = useCallback((e) => {
     if (showSlashMenu) {
@@ -377,13 +495,43 @@ export default function FooterInput({
   }, [onChange, onPickEmoji]);
 
   return (
-    <div style={{
+    <div ref={rootRef} data-composer-root="" style={{
       padding: '12px 16px',
       backgroundColor: 'var(--bg-surface)',
       borderTop: '1px solid var(--border-default)',
       flexShrink: 0,
       position: 'relative',
     }}>
+      {dropZone && (
+        <div data-testid="drop-overlay" aria-hidden
+          style={{
+            position: 'fixed', left: dropZone.left, top: dropZone.top, width: dropZone.width, height: dropZone.height,
+            zIndex: 70, pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'color-mix(in srgb, var(--bg-surface) 82%, transparent)', border: '2px dashed var(--accent)',
+            color: 'var(--text-primary)', fontSize: 15, fontWeight: 600,
+          }}>
+          Drop files to share them here
+        </div>
+      )}
+
+      <UploadTray items={uploads.items} onCancel={uploads.cancel} onRetry={uploads.retry} onDismiss={uploads.dismiss} />
+
+      {recording && showVoiceControl && canUpload && (
+        <div style={{ marginBottom: 6 }}>
+          <VoiceRecorder
+            onRecorded={(rec) => { queueRecording(rec); setRecording(false); }}
+            onCancel={() => setRecording(false)}
+          />
+        </div>
+      )}
+
+      {showVideoNote && canUpload && (
+        <VideoNoteRecorder
+          onRecorded={(rec) => { queueRecording({ ...rec, variant: 'video_note' }); setShowVideoNote(false); }}
+          onCancel={() => setShowVideoNote(false)}
+        />
+      )}
+
       {}
       {replyingTo && (
         <ReplyPreview replyingTo={replyingTo} onCancel={onCancelReply} />
@@ -497,6 +645,7 @@ export default function FooterInput({
             suppressContentEditableWarning
             onInput={handleInput}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             style={{
               outline: 'none',
               minHeight: '40px',
@@ -651,6 +800,7 @@ export default function FooterInput({
             </div>
 
             {}
+            {(onAttach || onCreatePoll || onCreateChecklist || onSendAttachment) && (
             <div style={{ position: 'relative' }} ref={attachRef}>
               <ToolBtn
                 icon={<Paperclip size={16} />}
@@ -662,42 +812,35 @@ export default function FooterInput({
                 <div style={{ position: 'absolute', bottom: '100%', right: 0, marginBottom: '8px', zIndex: 50 }}>
                   <AttachMenu
                     onAttach={onAttach}
-                    onSendAttachment={onSendAttachment}
+                    onPickFiles={canUpload ? addFiles : undefined}
                     onCreatePoll={onCreatePoll}
                     onCreateChecklist={onCreateChecklist}
-                    onOpenVoiceRecorder={showVoiceControl ? (() => setRecording(true)) : undefined}
+                    onOpenVoiceRecorder={showVoiceControl && canUpload ? (() => { setShowVideoNote(false); setRecording(true); }) : undefined}
+                    onOpenVideoNote={showVoiceControl && canUpload ? (() => { setRecording(false); setShowVideoNote(true); }) : undefined}
                     allowUploads={uploadsOn}
                     onInsertText={insertText}
-                    conversationId={conversationId}
-                    conversationType={conversationType}
                     onClose={() => setShowAttach(false)}
                   />
                 </div>
               )}
             </div>
+            )}
 
             {}
-            {showVoiceControl && (
-              <>
-                <ToolBtn
-                  icon={<Mic size={16} />}
-                  title="Voice note"
-                  onClick={() => { if (!blocked && !disabled) setRecording(true); }}
-                />
-                {recording && (
-                  <VoiceRecorder
-                    onSend={(attachment) => { onSendAttachment?.(attachment); setRecording(false); }}
-                    onCancel={() => setRecording(false)}
-                  />
-                )}
-              </>
+            {showVoiceControl && canUpload && (
+              <ToolBtn
+                icon={<Mic size={16} />}
+                title="Voice note"
+                active={recording}
+                onClick={() => { if (!blocked && !disabled) { setShowVideoNote(false); setRecording(!recording); } }}
+              />
             )}
 
             {}
             {showScreenRecordControl && (
               <ScreenRecorder
-                disabled={blocked || disabled}
-                onSend={(attachment) => onSendAttachment?.(attachment)}
+                disabled={blocked || disabled || !canUpload}
+                onRecorded={queueRecording}
               />
             )}
 
@@ -725,8 +868,6 @@ export default function FooterInput({
             </button>
           </div>
         </div>
-      {appModal === 'github' && <CreateGitHubIssueModal onClose={() => setAppModal(null)} onInsertText={insertText} />}
-      {appModal === 'jira' && <CreateJiraTicketModal onClose={() => setAppModal(null)} onInsertText={insertText} />}
       </div>
     </div>
   );

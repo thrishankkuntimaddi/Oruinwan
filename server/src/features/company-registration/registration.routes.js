@@ -3,6 +3,12 @@ const router = express.Router();
 const registrationController = require("./registration.controller");
 const requireAuth = require("../../shared/middleware/auth");
 const User = require("../../../models/User");
+const requireCompanyMember = require("../../shared/middleware/requireCompanyMember");
+const requireOwnCompany = require("../../shared/middleware/requireOwnCompany");
+const { requireCompanyRole } = require("../../shared/utils/companyRole");
+
+// Current company admins (role read from the database), own company only.
+const companyAdminGuard = [requireAuth, requireCompanyMember, requireOwnCompany("id"), requireCompanyRole("admin")];
 
 // Platform (Oruinwan) admin only — same rule as requireSuperAdmin in admin.routes.js.
 async function requireChttrixAdmin(req, res, next) {
@@ -19,8 +25,8 @@ router.post("/register", registrationController.registerCompany);
 
 router.post("/:id/verify", requireAuth, requireChttrixAdmin, registrationController.verifyCompany);
 
-router.post("/:id/start-setup", requireAuth, registrationController.startSetup);
+router.post("/:id/start-setup", ...companyAdminGuard, registrationController.startSetup);
 
-router.put("/:id/setup", requireAuth, registrationController.updateCompanySetup);
+router.put("/:id/setup", ...companyAdminGuard, registrationController.updateCompanySetup);
 
 module.exports = router;

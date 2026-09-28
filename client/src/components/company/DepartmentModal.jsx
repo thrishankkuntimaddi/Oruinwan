@@ -1,111 +1,62 @@
-import React, { useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { createDepartment, updateDepartment } from '../../services/departmentService';
-import { useForm } from '../../hooks/useForm';
-import { getErrorMessage } from '../../utils/apiHelpers';
-import logger from '../../utils/logger';
+import { Dialog, Btn, Field, errorMessage } from '../company-dash/dashUi';
 
+/** Create or rename a department. */
 const DepartmentModal = ({ isOpen, onClose, companyId, department, onSuccess }) => {
-
-    const { values, errors, handleChange, handleSubmit, isSubmitting, resetForm, setMultipleValues } = useForm(
-        { name: '', description: '' },
-        async (formValues) => {
-            try {
-                if (department) {
-                    await updateDepartment(department._id, formValues);
-                } else {
-                    await createDepartment(companyId, formValues.name, formValues.description);
-                }
-                onSuccess();
-                onClose();
-            } catch (err) {
-                logger.error("Failed to save department", err);
-                const error = new Error(getErrorMessage(err));
-                error.fieldErrors = { submit: getErrorMessage(err) };
-                throw error;
-            }
-        }
-    );
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (isOpen) {
-            if (department) {
-                setMultipleValues({
-                    name: department.name || '',
-                    description: department.description || ''
-                });
-            } else {
-                resetForm();
-            }
-        }
-        
-    }, [department, isOpen]);
+        if (!isOpen) return;
+        setName(department?.name || '');
+        setDescription(department?.description || '');
+        setError(null);
+    }, [isOpen, department]);
 
-    if (!isOpen) return null;
+    const submit = async (e) => {
+        e?.preventDefault();
+        if (!name.trim()) return;
+        setBusy(true);
+        setError(null);
+        try {
+            if (department) await updateDepartment(department._id, { name: name.trim(), description: description.trim() });
+            else await createDepartment(companyId, name.trim(), description.trim());
+            onSuccess?.();
+            onClose();
+        } catch (err) {
+            setError(errorMessage(err, 'Could not save the department'));
+        } finally {
+            setBusy(false);
+        }
+    };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-slideUp">
-                <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h3 className="font-bold text-lg text-slate-800">
-                        {department ? 'Edit Department' : 'Create Department'}
-                    </h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
-                        <X size={20} />
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    {errors.submit && (
-                        <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                            {errors.submit}
-                        </div>
-                    )}
-
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Department Name <span className="text-red-500">*</span></label>
-                        <input
-                            type="text"
-                            name="name"
-                            required
-                            value={values.name}
-                            onChange={handleChange}
-                            placeholder="e.g. Engineering"
-                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-bold text-slate-700 mb-1">Description</label>
-                        <textarea
-                            name="description"
-                            value={values.description}
-                            onChange={handleChange}
-                            placeholder="Brief description..."
-                            rows="3"
-                            className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium resize-none"
-                        />
-                    </div>
-
-                    <div className="pt-4 flex gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 px-4 py-2.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={isSubmitting}
-                            className="flex-1 px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100 disabled:opacity-50"
-                        >
-                            {isSubmitting ? (department ? 'Saving...' : 'Creating...') : (department ? 'Save Changes' : 'Create Department')}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <Dialog
+            open={isOpen}
+            title={department ? 'Edit department' : 'New department'}
+            lead={department ? undefined : 'Departments group people and give managers a scope.'}
+            onClose={onClose}
+            busy={busy}
+            footer={(
+                <>
+                    <Btn variant="ghost" onClick={onClose} disabled={busy}>Cancel</Btn>
+                    <Btn variant="primary" loading={busy} disabled={!name.trim()} onClick={submit}>{department ? 'Save' : 'Create'}</Btn>
+                </>
+            )}
+        >
+            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Field label="Name" htmlFor="ad-dept-name" error={error}>
+                    <input id="ad-dept-name" className="gl-input" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} placeholder="e.g. Engineering" required />
+                </Field>
+                <Field label="Description (optional)" htmlFor="ad-dept-desc">
+                    <textarea id="ad-dept-desc" className="gl-input" value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} placeholder="What this department does" />
+                </Field>
+                <button type="submit" hidden aria-hidden="true" />
+            </form>
+        </Dialog>
     );
 };
 

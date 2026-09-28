@@ -1,171 +1,130 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Users, Search, Edit, Trash2, MessageCircle } from 'lucide-react';
-import { useCompany } from '../../contexts/CompanyContext';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Building, Users, Crown, MessageCircle, Pencil } from 'lucide-react';
+import { useCompany } from '../../contexts/CompanyContext';
+import { getDepartments } from '../../services/departmentService';
 import DepartmentModal from '../../components/company/DepartmentModal';
 import DepartmentDetailsModal from '../../components/company/DepartmentDetailsModal';
-import { getDepartments, deleteDepartment } from '../../services/departmentService';
-import logger from '../../utils/logger';
-
-const inputSt = {
-    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
-    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
-    fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px',
-};
+import {
+    DashPage, PageHead, KpiGrid, Kpi, Toolbar, SearchBox, Btn, IconBtn, Chip, DataTable, LoadingState, ErrorState, EmptyState, Avatar, useAsync,
+} from '../../components/company-dash/dashUi';
+import { idOf } from '../../components/company-dash/dashNav';
+import './admin.css';
 
 const DepartmentManagement = () => {
-    const { company } = useCompany();
+    const { company, isCompanyAdmin } = useCompany();
     const navigate = useNavigate();
-    const [departments, setDepartments] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [selectedDept, setSelectedDept] = useState(null);
-    const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-    const [viewDepartment, setViewDepartment] = useState(null);
-    const [searchQuery, setSearchQuery] = useState('');
+    const companyId = company?._id;
+    const canEdit = isCompanyAdmin();
+    const [query, setQuery] = useState('');
+    const [editing, setEditing] = useState(undefined); // undefined closed, null new, object edit
+    const [openId, setOpenId] = useState(null);
 
-    const fetchDepartments = useCallback(async () => {
-        if (!company?._id) return;
-        try {
-            setLoading(true);
-            const res = await getDepartments(company._id);
-            setDepartments(res.departments || []);
-        } catch (err) {
-            logger.error('Failed to fetch departments', err);
-        } finally {
-            setLoading(false);
-        }
-    }, [company?._id]);
+    const { data, loading, error, reload } = useAsync(
+        () => getDepartments(companyId).then((r) => r.departments || []),
+        [companyId],
+        { enabled: !!companyId },
+    );
+    const departments = useMemo(() => data || [], [data]);
+    const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return departments.filter((d) => !q || d.name?.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q));
+    }, [departments, query]);
 
-    useEffect(() => { fetchDepartments(); }, [fetchDepartments]);
+    const stats = useMemo(() => {
+        const people = new Set(departments.flatMap((d) => (d.members || []).map(idOf)));
+        return {
+            count: departments.length,
+            people: people.size,
+            noHead: departments.filter((d) => !d.head).length,
+            largest: departments.reduce((m, d) => Math.max(m, d.members?.length || 0), 0),
+        };
+    }, [departments]);
 
-    const handleCreate = () => { setSelectedDept(null); setIsModalOpen(true); };
-    const handleEdit = (dept) => { setSelectedDept(dept); setIsModalOpen(true); };
-    const handleDelete = async (deptId) => {
-        if (window.confirm('Are you sure you want to delete this department?')) {
-            try { await deleteDepartment(deptId); fetchDepartments(); }
-            catch { alert('Failed to delete department'); }
-        }
-    };
-    const handleRowClick = (dept) => { setViewDepartment(dept); setIsDetailsOpen(true); };
-    const filteredDepartments = departments.filter(d => d.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    const open = departments.find((d) => d._id === openId) || null;
+    const dmWorkspace = company?.defaultWorkspace?._id || company?.defaultWorkspace;
+
+    const columns = [
+        { key: 'name', label: 'Department' },
+        { key: 'head', label: 'Head' },
+        { key: 'members', label: 'People', className: 'cd-num' },
+        { key: 'ws', label: 'Workspaces', className: 'cd-num cd-hide-sm' },
+        { key: 'created', label: 'Created', className: 'cd-hide-sm' },
+        { key: 'actions', label: <span className="sr-only">Actions</span>, className: 'cd-num' },
+    ];
 
     return (
-        <React.Fragment>
-            <header style={{ height: '56px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
-                <div>
-                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>Departments</h2>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Structure & Access</p>
-                </div>
-                <CreateBtn onClick={handleCreate} />
-            </header>
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow="Organization"
+                    title="Departments"
+                    lead="Company structure: who belongs where, and who leads each group."
+                    actions={canEdit && <Btn variant="primary" icon={Plus} onClick={() => setEditing(null)} disabled={!companyId}>New department</Btn>}
+                />
+            )}
+        >
+            <KpiGrid min={160}>
+                <Kpi loading={loading} label="Departments" value={data ? stats.count : undefined} icon={Building} />
+                <Kpi loading={loading} label="People assigned" value={data ? stats.people : undefined} icon={Users} tone="muted" />
+                <Kpi loading={loading} label="Without a head" value={data ? stats.noHead : undefined} icon={Crown} tone={stats.noHead ? 'danger' : 'muted'} />
+                <Kpi loading={loading} label="Largest" value={data ? stats.largest : undefined} icon={Users} tone="muted" hint="people in one department" />
+            </KpiGrid>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }} className="custom-scrollbar">
-                <div style={{ position: 'relative', marginBottom: '14px', maxWidth: '320px' }}>
-                    <Search size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                    <input type="text" placeholder="Search departments..." value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={{ ...inputSt, width: '100%', paddingLeft: '30px', boxSizing: 'border-box' }} />
-                </div>
+            <Toolbar>
+                <SearchBox value={query} onChange={setQuery} placeholder="Search departments…" />
+            </Toolbar>
 
-                <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ background: 'var(--bg-active)', borderBottom: '1px solid var(--border-subtle)' }}>
-                                {['Name', 'Head', 'Members', 'Created', 'Actions'].map((h, i) => (
-                                    <th key={h} style={{ padding: '10px 16px', textAlign: i === 4 ? 'right' : 'left', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)' }}>{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {loading ? (
-                                <>
-                                    {[1,2,3,4].map(i => (
-                                        <tr key={i} style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                                            <td style={{ padding: '12px 16px' }}>
-                                                <div className="sk" style={{ height: '12px', width: '140px', marginBottom: '4px' }} />
-                                                <div className="sk" style={{ height: '9px', width: '100px' }} />
-                                            </td>
-                                            <td style={{ padding: '12px 16px' }}><div className="sk" style={{ height: '20px', width: '80px' }} /></td>
-                                            <td style={{ padding: '12px 16px' }}><div className="sk" style={{ height: '9px', width: '30px' }} /></td>
-                                            <td style={{ padding: '12px 16px' }}><div className="sk" style={{ height: '9px', width: '80px' }} /></td>
-                                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
-                                                    <div className="sk" style={{ height: '26px', width: '26px' }} />
-                                                    <div className="sk" style={{ height: '26px', width: '26px' }} />
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </>
-                            ) : filteredDepartments.length === 0 ? (
-                                <tr><td colSpan="5" style={{ textAlign: 'center', padding: '32px', fontSize: '13px', color: 'var(--text-muted)' }}>No departments found</td></tr>
-                            ) : filteredDepartments.map(dept => (
-                                <tr key={dept._id} onClick={() => handleRowClick(dept)} style={{ borderBottom: '1px solid var(--border-subtle)', cursor: 'pointer', transition: 'background 150ms ease' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-                                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>{dept.name}</div>
-                                        {dept.description && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px' }}>{dept.description}</div>}
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        {dept.head ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <span style={{ fontSize: '11px', fontWeight: 600, padding: '2px 7px', border: '1px solid var(--accent)', color: 'var(--accent)' }}>{dept.head?.username || 'Unknown'}</span>
-                                                <button onClick={e => {
-                                                    e.stopPropagation();
-                                                    if (company?.defaultWorkspace) navigate(`/workspace/${company.defaultWorkspace}/dm/new/${dept.head._id}`);
-                                                    else alert('No default workspace available.');
-                                                }} style={{ padding: '3px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'color 150ms ease' }}
-                                                    onMouseEnter={e => e.currentTarget.style.color = 'var(--accent)'}
-                                                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'} title="Message Manager">
-                                                    <MessageCircle size={13} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Unassigned</span>
-                                        )}
-                                    </td>
-                                    <td style={{ padding: '12px 16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                            <Users size={12} style={{ color: 'var(--text-muted)' }} /> {dept.members?.length || 0}
+            {error ? <ErrorState message={error} onRetry={reload} /> : loading && !data ? <LoadingState label="Loading departments…" /> : (
+                <DataTable columns={columns} caption="Departments">
+                    <tbody>
+                        {filtered.length === 0 ? (
+                            <tr><td colSpan={columns.length} style={{ padding: 0 }}>
+                                <EmptyState
+                                    icon={Building}
+                                    title={departments.length ? 'No department matches' : 'No departments yet'}
+                                    text={departments.length ? 'Try another search.' : 'Create departments to organise people and give managers a scope.'}
+                                    action={!departments.length && canEdit && <Btn size="sm" icon={Plus} onClick={() => setEditing(null)}>New department</Btn>}
+                                />
+                            </td></tr>
+                        ) : filtered.map((d) => (
+                            <tr key={d._id} data-clickable="true" onClick={() => setOpenId(d._id)}>
+                                <td>
+                                    <div className="cd-cell-title">{d.name}</div>
+                                    {d.description && <div className="cd-cell-sub">{d.description}</div>}
+                                </td>
+                                <td>
+                                    {d.head ? (
+                                        <div className="cd-cell-user">
+                                            <Avatar user={d.head} size="sm" />
+                                            <span className="cd-cell-title" style={{ fontWeight: 500 }}>{d.head.username || 'Unknown'}</span>
+                                            {dmWorkspace && idOf(d.head) && (
+                                                <IconBtn label={`Message ${d.head.username}`} onClick={(e) => { e.stopPropagation(); navigate(`/workspace/${dmWorkspace}/dm/new/${idOf(d.head)}`); }}>
+                                                    <MessageCircle size={14} />
+                                                </IconBtn>
+                                            )}
                                         </div>
-                                    </td>
-                                    <td style={{ padding: '12px 16px', fontSize: '11px', color: 'var(--text-muted)' }}>{new Date(dept.createdAt).toLocaleDateString()}</td>
-                                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                                        <ActionIconBtn icon={Edit} onClick={e => { e.stopPropagation(); handleEdit(dept); }} hoverColor="var(--accent)" />
-                                        <ActionIconBtn icon={Trash2} onClick={e => { e.stopPropagation(); handleDelete(dept._id); }} hoverColor="var(--state-danger)" />
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                    ) : <Chip tone="warning">No head</Chip>}
+                                </td>
+                                <td className="cd-num">{d.members?.length || 0}</td>
+                                <td className="cd-num cd-hide-sm">{d.workspaces?.length || 0}</td>
+                                <td className="cd-hide-sm cd-muted">{d.createdAt ? new Date(d.createdAt).toLocaleDateString() : '—'}</td>
+                                <td className="cd-num">
+                                    {canEdit && (
+                                        <IconBtn label={`Rename ${d.name}`} onClick={(e) => { e.stopPropagation(); setEditing(d); }}>
+                                            <Pencil size={14} />
+                                        </IconBtn>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </DataTable>
+            )}
 
-            <DepartmentModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} department={selectedDept} companyId={company?._id} onSuccess={fetchDepartments} />
-            <DepartmentDetailsModal isOpen={isDetailsOpen} onClose={() => setIsDetailsOpen(false)} department={viewDepartment} companyId={company?._id} onUpdate={() => { fetchDepartments(); setIsDetailsOpen(false); }} />
-        </React.Fragment>
-    );
-};
-
-const CreateBtn = ({ onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
-            <Plus size={13} /> Add Department
-        </button>
-    );
-};
-
-const ActionIconBtn = ({ icon: Icon, onClick, hoverColor }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ padding: '5px', background: hov ? 'var(--bg-active)' : 'none', border: hov ? `1px solid var(--border-default)` : '1px solid transparent', color: hov ? hoverColor : 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', marginLeft: '2px', transition: 'all 150ms ease' }}>
-            <Icon size={13} />
-        </button>
+            <DepartmentModal isOpen={editing !== undefined} onClose={() => setEditing(undefined)} companyId={companyId} department={editing || null} onSuccess={reload} />
+            <DepartmentDetailsModal isOpen={!!open} onClose={() => setOpenId(null)} department={open} companyId={companyId} onUpdate={reload} canEdit={canEdit} />
+        </DashPage>
     );
 };
 

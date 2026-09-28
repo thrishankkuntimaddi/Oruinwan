@@ -1,76 +1,30 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
 
-const shimmer = {
-    background: 'linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-hover) 50%, var(--bg-surface) 75%)',
-    backgroundSize: '400% 100%',
-    animation: 'ws-shimmer 1.4s ease infinite',
-};
+const Bar = ({ w, h = 12, style }) => <span className="gl-wsp-skel__bar" style={{ width: w, height: h, ...style }} />;
 
+/** Skeleton cards in the same shape as the workspace grid. */
 const LoadingState = ({ count = 1 }) => (
-    <>
-        <style>{`
-            @keyframes ws-shimmer {
-                0%   { background-position: 100% 0; }
-                100% { background-position: -100% 0; }
-            }
-        `}</style>
-
-        {}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
-            {}
-            {Array.from({ length: count }).map((_, i) => (
-                <div key={i} style={{
-                    height: '200px',              
-                    background: 'var(--bg-surface)',
-                    border: '1px solid var(--border-default)',
-                    borderRadius: '2px',
-                    padding: '20px',              
-                    display: 'flex',
-                    flexDirection: 'column',
-                }}>
-                    {}
-                    <div style={{ width: '36px', height: '36px', borderRadius: '2px', marginBottom: '14px', flexShrink: 0, ...shimmer }} />
-
-                    {}
-                    <div style={{ height: '14px', width: '52%', borderRadius: '2px', marginBottom: '6px', ...shimmer }} />
-
-                    {}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
-                        <div style={{ height: '11px', width: '42px', borderRadius: '2px', ...shimmer }} />
-                        <div style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'var(--border-default)' }} />
-                        <div style={{ height: '11px', width: '60px', borderRadius: '2px', ...shimmer }} />
-                    </div>
-
-                    {}
-                    <div style={{ marginTop: 'auto', height: '12px', width: '100px', borderRadius: '2px', ...shimmer, opacity: 0.4 }} />
+    <div className="gl-wsp-grid" role="status" aria-live="polite" aria-label="Loading workspaces">
+        {Array.from({ length: Math.max(1, count) }).map((_, i) => (
+            <div key={i} className="gl-card gl-wsp-card gl-wsp-skel" aria-hidden="true">
+                <div className="gl-wsp-card__top">
+                    <Bar w={44} h={44} />
+                    <Bar w={64} h={22} style={{ borderRadius: 999 }} />
                 </div>
-            ))}
-
-            {}
-            <div style={{
-                height: '200px',
-                border: '1px dashed var(--border-default)',
-                borderRadius: '2px',
-                background: 'transparent',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                opacity: 0.4,
-                padding: '24px',
-            }}>
-                {}
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-active)', border: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <Plus size={18} style={{ color: 'var(--text-muted)' }} />
+                <Bar w="58%" h={16} style={{ marginTop: 20 }} />
+                <Bar w="40%" h={11} style={{ marginTop: 12 }} />
+                <div className="gl-wsp-card__foot">
+                    <Bar w={96} h={11} />
+                    <Bar w={44} h={11} />
                 </div>
-                <div style={{ height: '14px', width: '140px', borderRadius: '2px', ...shimmer }} />
-                <div style={{ height: '11px', width: '110px', borderRadius: '2px', ...shimmer, opacity: 0.6 }} />
             </div>
+        ))}
+        <div className="gl-wsp-create gl-wsp-skel" aria-hidden="true" style={{ opacity: 0.5 }}>
+            <Bar w={44} h={44} style={{ borderRadius: '50%', marginBottom: 8 }} />
+            <Bar w={150} h={14} />
+            <Bar w={110} h={11} />
         </div>
-    </>
+    </div>
 );
 
 export default LoadingState;

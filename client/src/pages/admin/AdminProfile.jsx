@@ -1,174 +1,111 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { UserRound, KeyRound, Bell, Building, ShieldCheck, MonitorSmartphone } from 'lucide-react';
+import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
-import { User, Mail, Calendar, Building, Shield, Camera, X, Check } from 'lucide-react';
+import { DashPage, PageHead, Grid, Panel, Btn, Chip, RoleChip, Avatar, LoadingState, useAsync, timeAgo } from '../../components/company-dash/dashUi';
+import { idOf } from '../../components/company-dash/dashNav';
+import { getDepartments } from '../../services/departmentService';
+import './admin.css';
 
-const fieldSt = {
-    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
-    color: 'var(--text-primary)', fontSize: '13px', outline: 'none',
-    fontFamily: 'Inter, system-ui, sans-serif', padding: '8px 12px',
-    width: '100%', boxSizing: 'border-box',
-};
-
-const roleBorder = { owner: 'var(--accent)', admin: 'var(--accent)', manager: 'var(--state-success)', member: 'var(--border-accent)' };
-
+/**
+ * The signed-in admin's profile inside the console: who they are in the company
+ * and what they manage. Personal details, password and 2FA are edited in
+ * Account settings (one place for every user), so this page links there.
+ */
 const AdminProfile = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const { company } = useCompany();
-    const [isEditing, setIsEditing] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    const [profileData, setProfileData] = useState({
-        username: user?.username || '', email: user?.email || '',
-        phone: user?.phone || '', address: user?.address || '', profilePicture: user?.profilePicture || ''
-    });
+    const me = idOf(user?._id || user?.id);
 
-    const set = (key, val) => setProfileData(s => ({ ...s, [key]: val }));
+    const { data: me2, loading } = useAsync(() => api.get('/api/auth/me').then((r) => r.data?.user || r.data), []);
+    const { data: depts } = useAsync(() => getDepartments(company?._id).then((r) => r.departments || []), [company?._id], { enabled: !!company?._id });
 
-    const handleSave = async () => {
-        setIsSaving(true);
-        setTimeout(() => { setIsSaving(false); setIsEditing(false); }, 1000);
-    };
-
-    const handleCancel = () => {
-        setProfileData({ username: user?.username || '', email: user?.email || '', phone: user?.phone || '', address: user?.address || '', profilePicture: user?.profilePicture || '' });
-        setIsEditing(false);
-    };
-
-    const role = user?.companyRole;
+    const u = { ...user, ...(me2 || {}) };
+    const mine = (depts || []).filter((d) => (d.members || []).some((m) => idOf(m) === me));
+    const heads = (depts || []).filter((d) => idOf(d.head) === me);
+    const twoFa = u.twoFactorEnabled ?? u.security?.twoFactorEnabled;
 
     return (
-        <React.Fragment>
-            <header style={{ height: '56px', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', flexShrink: 0 }}>
-                <div>
-                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>My Profile</h2>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Manage your personal information</p>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {isEditing ? (
-                        <>
-                            <IBtn onClick={handleCancel} icon={X} label="Cancel" secondary />
-                            <IBtn onClick={handleSave} icon={Check} label={isSaving ? 'Saving...' : 'Save Changes'} loading={isSaving} />
-                        </>
-                    ) : (
-                        <IBtn onClick={() => setIsEditing(true)} label="Edit Profile" />
-                    )}
-                </div>
-            </header>
-
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }} className="custom-scrollbar">
-                <div style={{ maxWidth: '600px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {}
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', borderLeft: `3px solid var(--accent)`, padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '20px' }}>
-                        <div style={{ position: 'relative' }}>
-                            <div style={{ width: '64px', height: '64px', background: 'var(--bg-active)', border: '2px solid var(--border-accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 700, color: 'var(--accent)', overflow: 'hidden', flexShrink: 0 }}>
-                                {profileData.profilePicture ? (
-                                    <img src={profileData.profilePicture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                ) : user?.username?.charAt(0)?.toUpperCase() || 'U'}
-                            </div>
-                            {isEditing && (
-                                <button style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', cursor: 'pointer' }}>
-                                    <Camera size={16} style={{ color: 'white' }} />
-                                </button>
-                            )}
-                        </div>
-                        <div>
-                            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>{user?.username || 'User'}</h3>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: roleBorder[role] || 'var(--text-muted)', border: `1px solid ${roleBorder[role] || 'var(--border-default)'}`, padding: '2px 7px' }}>
-                                    {role?.charAt(0).toUpperCase() + role?.slice(1) || 'Member'}
-                                </span>
-                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Building size={11} /> {company?.name || 'Company'}
-                                </span>
-                                <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                    <Mail size={11} /> {user?.email}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {}
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <User size={14} style={{ color: 'var(--accent)' }} /> Personal Information
-                        </h4>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            {[
-                                { key: 'username', label: 'Full Name', type: 'text', placeholder: 'Enter your name' },
-                                { key: 'email', label: 'Email Address', type: 'email', placeholder: 'email@example.com' },
-                                { key: 'phone', label: 'Phone Number', type: 'tel', placeholder: '+1 (555) 123-4567' },
-                            ].map(f => (
-                                <div key={f.key}>
-                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>{f.label}</label>
-                                    {isEditing ? (
-                                        <input type={f.type} value={profileData[f.key]} onChange={e => set(f.key, e.target.value)} placeholder={f.placeholder} style={fieldSt} />
-                                    ) : (
-                                        <div style={{ padding: '8px 12px', background: 'var(--bg-active)', fontSize: '13px', color: 'var(--text-primary)', fontWeight: 400 }}>{profileData[f.key] || <em style={{ color: 'var(--text-muted)', fontStyle: 'normal' }}>Not set</em>}</div>
-                                    )}
-                                </div>
-                            ))}
-                            <div>
-                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>Member Since</label>
-                                <div style={{ padding: '8px 12px', background: 'var(--bg-active)', fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                    <Calendar size={12} style={{ color: 'var(--text-muted)' }} />
-                                    {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown'}
-                                </div>
-                            </div>
-                            <div style={{ gridColumn: '1 / -1' }}>
-                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '6px' }}>Address</label>
-                                {isEditing ? (
-                                    <textarea value={profileData.address} onChange={e => set('address', e.target.value)} rows={3} placeholder="123 Main St, City, State, ZIP" style={{ ...fieldSt, resize: 'none', height: '72px' }} />
-                                ) : (
-                                    <div style={{ padding: '8px 12px', background: 'var(--bg-active)', fontSize: '13px', color: 'var(--text-primary)', minHeight: '52px' }}>{profileData.address || <em style={{ color: 'var(--text-muted)', fontStyle: 'normal' }}>Not set</em>}</div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    {}
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
-                        <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Shield size={14} style={{ color: 'var(--accent)' }} /> Account Security
-                        </h4>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {[
-                                { title: 'Password', note: 'Last changed 30 days ago', btnLabel: 'Change Password', primary: false },
-                                { title: 'Two-Factor Authentication', note: 'Add an extra layer of security', btnLabel: 'Enable 2FA', primary: true },
-                            ].map(item => (
-                                <div key={item.title} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
-                                    <div>
-                                        <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{item.title}</p>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.note}</p>
-                                    </div>
-                                    <SecBtn label={item.btnLabel} primary={item.primary} />
-                                </div>
-                            ))}
-                        </div>
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow="Account"
+                    title="My profile"
+                    lead="Your identity in the company. Personal details and security live in account settings."
+                    actions={<Btn variant="primary" icon={UserRound} onClick={() => navigate('/settings?tab=profile')}>Edit profile</Btn>}
+                />
+            )}
+        >
+            <div className="gl-card ad-card" style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+                <Avatar user={u} size="lg" />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <h2 className="ad-card-title" style={{ fontSize: 18 }}>{u.profile?.name || u.username || u.email}</h2>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
+                        <RoleChip role={u.companyRole} />
+                        <span className="cd-muted" style={{ fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Building size={11} /> {company?.displayName || company?.name || '—'}</span>
+                        <span className="cd-muted" style={{ fontSize: 12 }}>{u.email}</span>
                     </div>
                 </div>
             </div>
-        </React.Fragment>
-    );
-};
 
-const IBtn = ({ onClick, icon: Icon, label, secondary, loading }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} disabled={loading} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 12px', background: secondary ? (hov ? 'var(--bg-hover)' : 'var(--bg-surface)') : (hov ? 'var(--accent-hover)' : 'var(--accent)'), border: secondary ? '1px solid var(--border-default)' : 'none', color: secondary ? 'var(--text-secondary)' : 'var(--bg-base)', fontSize: '12px', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', borderRadius: '2px', opacity: loading ? 0.7 : 1, transition: 'all 150ms ease' }}>
-            {loading ? <div style={{ width: '12px', height: '12px', border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} /> : Icon && <Icon size={12} />}
-            {label}
-        </button>
-    );
-};
+            <Grid cols="2">
+                <Panel title="Details" icon={UserRound}>
+                    {loading && !me2 ? <LoadingState /> : (
+                        <dl className="ad-kv" style={{ margin: 0 }}>
+                            <dt>Name</dt><dd>{u.profile?.name || u.username || '—'}</dd>
+                            <dt>Job title</dt><dd>{u.jobTitle || '—'}</dd>
+                            <dt>Work email</dt><dd>{u.email || '—'}</dd>
+                            <dt>Phone</dt><dd>{u.phone || '—'}</dd>
+                            <dt>Member since</dt><dd>{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}</dd>
+                            <dt>Last sign-in</dt><dd>{u.lastLoginAt ? timeAgo(u.lastLoginAt) : '—'}</dd>
+                        </dl>
+                    )}
+                </Panel>
+                <Panel title="In the company" icon={Building}>
+                    <dl className="ad-kv" style={{ margin: 0 }}>
+                        <dt>Role</dt><dd><RoleChip role={u.companyRole} /></dd>
+                        <dt>Departments</dt>
+                        <dd>{!depts ? '—' : mine.length ? <span style={{ display: 'inline-flex', gap: 4, flexWrap: 'wrap' }}>{mine.map((d) => <Chip key={d._id}>{d.name}</Chip>)}</span> : 'None'}</dd>
+                        <dt>Head of</dt>
+                        <dd>{!depts ? '—' : heads.length ? heads.map((d) => d.name).join(', ') : 'None'}</dd>
+                        <dt>Workspaces</dt><dd>{Array.isArray(u.workspaces) ? u.workspaces.length : '—'}</dd>
+                    </dl>
+                </Panel>
+            </Grid>
 
-const SecBtn = ({ label, primary }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ padding: '6px 12px', background: primary ? (hov ? 'var(--accent-hover)' : 'var(--accent)') : (hov ? 'var(--bg-hover)' : 'none'), border: primary ? 'none' : '1px solid var(--border-default)', color: primary ? 'var(--bg-base)' : 'var(--text-secondary)', fontSize: '11px', fontWeight: 600, cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
-            {label}
-        </button>
+            <Panel title="Security & preferences" icon={ShieldCheck} flush>
+                <div className="cd-list">
+                    <div className="cd-list-row">
+                        <KeyRound size={15} className="cd-muted" />
+                        <div className="cd-grow">
+                            <div className="cd-cell-title">Password & two-factor</div>
+                            <div className="cd-cell-sub">{twoFa === undefined ? 'Manage your password and authenticator app' : twoFa ? 'Two-factor is on' : 'Two-factor is off — recommended for admins'}</div>
+                        </div>
+                        {twoFa === false && <Chip tone="warning">Action needed</Chip>}
+                        <Btn size="sm" onClick={() => navigate('/settings?tab=security')}>Open</Btn>
+                    </div>
+                    <div className="cd-list-row">
+                        <MonitorSmartphone size={15} className="cd-muted" />
+                        <div className="cd-grow">
+                            <div className="cd-cell-title">Sessions & devices</div>
+                            <div className="cd-cell-sub">See where you are signed in and sign out elsewhere</div>
+                        </div>
+                        <Btn size="sm" onClick={() => navigate('/settings?tab=sessions')}>Open</Btn>
+                    </div>
+                    <div className="cd-list-row">
+                        <Bell size={15} className="cd-muted" />
+                        <div className="cd-grow">
+                            <div className="cd-cell-title">Notifications</div>
+                            <div className="cd-cell-sub">Email, push and in-app alerts</div>
+                        </div>
+                        <Btn size="sm" onClick={() => navigate('/settings?tab=notifications')}>Open</Btn>
+                    </div>
+                </div>
+            </Panel>
+        </DashPage>
     );
 };
 

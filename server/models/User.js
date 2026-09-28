@@ -71,7 +71,9 @@ const UserSchema = new mongoose.Schema(
     email: { type: String, required: true, unique: true, lowercase: true },
     personalEmail: { type: String, lowercase: true }, 
     companyEmail: { type: String, lowercase: true }, 
-    phone: { type: String, unique: true, sparse: true },
+    // Sparse unique: an empty phone must be *absent*, not null (null would be
+    // indexed and collide), so empty values are stored as unset.
+    phone: { type: String, unique: true, sparse: true, set: (v) => (v === null || v === '' ? undefined : v) },
     phoneCode: { type: String, default: "+1" }, 
 
     

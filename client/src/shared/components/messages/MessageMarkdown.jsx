@@ -5,6 +5,7 @@ import remarkBreaks from 'remark-breaks';
 import CodeBlock from './CodeBlock';
 import { linkMentions, mentionFromHref } from '../../../utils/linkMentions';
 import { useAuth } from '../../../contexts/AuthContext';
+import { MentionChip } from '../../../features/profileCard/ProfileTrigger';
 
 // Renderers are defined once, at module level. Creating them inside the component
 // gave React new component types on every render, remounting code blocks (and
@@ -17,14 +18,15 @@ function MarkdownLink({ node, href, children, ...props }) {
         const me = auth?.user?.username || '';
         const broadcast = mention === 'here' || mention === 'channel';
         const self = me && mention.toLowerCase() === me.toLowerCase();
+        // Same chip look; now a button that opens the person's profile card.
         return (
-            <span data-mention={mention}
-                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[13px] font-semibold cursor-default select-none ${broadcast
+            <MentionChip mention={mention}
+                className={`inline-flex items-center px-1.5 py-0.5 rounded text-[13px] font-semibold select-none ${broadcast
                     ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
                     : self ? 'bg-blue-200 text-blue-800 dark:bg-blue-800/60 dark:text-blue-200 ring-1 ring-blue-400'
                         : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'}`}>
                 {children}
-            </span>
+            </MentionChip>
         );
     }
     return (

@@ -2,10 +2,6 @@ import React from "react";
 import { CheckCircle2, ZapOff } from "lucide-react";
 
 const T = {
-  bg: 'var(--bg-surface)',
-  bgHover: 'var(--bg-hover)',
-  border: 'var(--border-default)',
-  borderHover: 'var(--border-accent)',
   accent: 'var(--accent)',
   accentBg: 'var(--accent-dim)',
   text: 'var(--text-primary)',
@@ -16,20 +12,12 @@ const T = {
 export default function IntegrationCard({ integration, connected, onCardClick }) {
   return (
     <button
+      type="button"
       onClick={onCardClick}
+      className="gl-card gl-card--interactive"
       style={{
         position: 'relative', display: 'flex', flexDirection: 'column',
-        background: T.bg, border: `1px solid ${T.border}`, borderRadius: '2px',
-        padding: '18px', textAlign: 'left', cursor: 'pointer', outline: 'none',
-        width: '100%', transition: 'all 150ms ease', fontFamily: T.font,
-      }}
-      onMouseEnter={e => {
-        e.currentTarget.style.background = T.bgHover;
-        e.currentTarget.style.borderColor = T.borderHover;
-      }}
-      onMouseLeave={e => {
-        e.currentTarget.style.background = T.bg;
-        e.currentTarget.style.borderColor = T.border;
+        padding: '18px', textAlign: 'left', width: '100%', fontFamily: T.font,
       }}
     >
       {}
@@ -45,7 +33,7 @@ export default function IntegrationCard({ integration, connected, onCardClick })
       )}
 
       {}
-      <div style={{ width: '44px', height: '44px', background: 'var(--accent-dim)', border: '1px solid var(--border-accent)', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', marginBottom: '14px', flexShrink: 0 }}>
+      <div className="gl-x-app-icon" style={{ width: '44px', height: '44px', fontSize: '22px', marginBottom: '14px' }}>
         {integration.emoji}
       </div>
 

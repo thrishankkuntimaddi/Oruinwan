@@ -1,6 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Image, FileText, User, BarChart2, Video, Loader2, Mic, Calendar, ListChecks } from "lucide-react";
-import api from '@services/api';
+import { Image, FileText, User, BarChart2, Video, Mic, Calendar, ListChecks, Camera } from "lucide-react";
 import CreateGitHubIssueModal from "../../../../components/apps/modals/CreateGitHubIssueModal";
 import CreateJiraTicketModal from "../../../../components/apps/modals/CreateJiraTicketModal";
 import { useFlag } from "../../../../contexts/FeatureFlagsContext";
@@ -10,6 +9,7 @@ const ITEM_COLORS = {
     Video:    { bg: 'rgba(99,179,237,0.12)',  color: '#63b3ed' },
     Document: { bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
     'Voice Note': { bg: 'rgba(198,60,60,0.1)', color: 'var(--state-danger)' },
+    'Video Note': { bg: 'rgba(99,179,237,0.12)', color: '#63b3ed' },
     Contact:  { bg: 'rgba(72,187,120,0.1)',   color: 'var(--state-success)' },
     Poll:     { bg: 'rgba(184,149,106,0.12)', color: 'var(--accent)' },
     Meeting:  { bg: 'rgba(99,179,237,0.1)',   color: '#63b3ed' },
@@ -46,42 +46,28 @@ function AttachItem({ label, icon, emoji, onClick }) {
 }
 
 export default function AttachMenu({
-    onAttach, onSendAttachment, onCreatePoll, onCreateChecklist, onOpenVoiceRecorder, allowUploads = true,
-    conversationId, conversationType = "channel", onClose, onInsertText,
+    onAttach, onPickFiles, onCreatePoll, onCreateChecklist, onOpenVoiceRecorder, onOpenVideoNote, allowUploads = true,
+    onClose, onInsertText,
 }) {
     const photoInputRef = useRef(null);
     const videoInputRef = useRef(null);
     const fileInputRef  = useRef(null);
-    const [uploading, setUploading] = useState(false);
-    const [uploadError, setUploadError] = useState(null);
     const [showGitHubModal, setShowGitHubModal] = useState(false);
     const [showJiraModal, setShowJiraModal] = useState(false);
 
-    const uploadFile = async (file) => {
-        if (!onSendAttachment) return;
-        setUploading(true); setUploadError(null);
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("conversationType", conversationType || "channel");
-            if (conversationId) formData.append("conversationId", conversationId);
-            const { data: attachment } = await api.post("/api/v2/uploads", formData, { headers: { "Content-Type": "multipart/form-data" } });
-            onSendAttachment(attachment);
-            onClose?.();
-        } catch (err) {
-            setUploadError(err.response?.data?.error || "Upload failed");
-        } finally { setUploading(false); }
+    // Picked files go to the composer's upload list (progress, cancel, retry there).
+    const handlePick = (e) => {
+        const files = Array.from(e.target.files || []);
+        e.target.value = "";
+        if (files.length) { onPickFiles?.(files); onClose?.(); }
     };
 
-    const handlePhotoChange = (e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; };
-    const handleVideoChange = (e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; };
-    const handleFileChange  = (e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = ""; };
-
     const items = [
-        { label: "Photo",      icon: <Image size={16} />,    action: () => photoInputRef.current?.click(), hide: !allowUploads },
-        { label: "Video",      icon: <Video size={16} />,    action: () => videoInputRef.current?.click(), hide: !allowUploads },
-        { label: "Document",   icon: <FileText size={16} />, action: () => fileInputRef.current?.click(), hide: !allowUploads },
+        { label: "Photo",      icon: <Image size={16} />,    action: () => photoInputRef.current?.click(), hide: !allowUploads || !onPickFiles },
+        { label: "Video",      icon: <Video size={16} />,    action: () => videoInputRef.current?.click(), hide: !allowUploads || !onPickFiles },
+        { label: "Document",   icon: <FileText size={16} />, action: () => fileInputRef.current?.click(), hide: !allowUploads || !onPickFiles },
         { label: "Voice Note", icon: <Mic size={16} />,      action: () => { onClose?.(); onOpenVoiceRecorder?.(); }, hide: !onOpenVoiceRecorder },
+        { label: "Video Note", icon: <Camera size={16} />,   action: () => { onClose?.(); onOpenVideoNote?.(); }, hide: !onOpenVideoNote },
         { label: "Contact",    icon: <User size={16} />,     action: () => { onAttach?.("contact"); onClose?.(); } },
         { label: "Poll",       icon: <BarChart2 size={16} />,action: () => { onCreatePoll?.(); onClose?.(); }, hide: !onCreatePoll },
         { label: "Checklist",  icon: <ListChecks size={16} />, action: () => { onCreateChecklist?.(); onClose?.(); }, hide: !onCreateChecklist },
@@ -106,20 +92,12 @@ export default function AttachMenu({
                     boxShadow: '0 8px 32px rgba(0,0,0,0.4)', fontFamily: 'var(--font)',
                 }}
             >
-                <input ref={photoInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoChange} />
-                <input ref={videoInputRef} type="file" accept="video/*" style={{ display: 'none' }} onChange={handleVideoChange} />
-                <input ref={fileInputRef}  type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip,.rar,.7z,.ppt,.pptx" style={{ display: 'none' }} onChange={handleFileChange} />
+                <input ref={photoInputRef} data-testid="attach-photo-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handlePick} />
+                <input ref={videoInputRef} data-testid="attach-video-input" type="file" accept="video/*" multiple style={{ display: 'none' }} onChange={handlePick} />
+                {/* Any document, code or archive (the server refuses programs/installers). */}
+                <input ref={fileInputRef} data-testid="attach-file-input" type="file" multiple style={{ display: 'none' }} onChange={handlePick} />
 
-                {uploading && (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '16px 0', fontSize: '12px', color: 'var(--text-muted)' }}>
-                        <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading…
-                    </div>
-                )}
-                {uploadError && (
-                    <div style={{ padding: '4px 0', fontSize: '11px', color: 'var(--state-danger)', textAlign: 'center' }}>{uploadError}</div>
-                )}
-
-                {!uploading && (
+                {(
                     <>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px' }}>
                             {items.map(item => (

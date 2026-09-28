@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router({ mergeParams: true });
 const ctrl = require('./workspace-permissions.controller');
 const requireAuth = require('../../shared/middleware/auth');
-const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMember');
+// Members as before, plus owners/admins of the company that owns the workspace.
+const requireWorkspaceMember = require('../../shared/middleware/requireWorkspaceMemberOrCompanyAdmin');
 const requireWorkspaceAdmin = require('../../shared/middleware/requireWorkspaceAdmin');
 
 router.get('/permissions',    requireAuth, requireWorkspaceMember, ctrl.getPermissions);

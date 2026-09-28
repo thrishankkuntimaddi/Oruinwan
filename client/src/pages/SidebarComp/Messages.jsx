@@ -5,6 +5,8 @@ import BroadcastChatWindow from "../../features/messaging/BroadcastChatWindow";
 import { useContacts } from "../../contexts/ContactsContext";
 import api from '@services/api';
 import { MessageSquarePlus } from "lucide-react";
+import BrandMark from "../../shared/components/ui/BrandMark";
+import "../../components/layout/shell.css";
 import NewDMModal from "../../features/messaging/NewDMModal";
 import { useParams } from "react-router-dom";
 import logger from '../../utils/logger';
@@ -328,28 +330,19 @@ export default function Messages() {
               workspaceId={workspaceId || selectedChat.workspaceId}
             />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: 'var(--bg-base, #0c0c0c)', position: 'relative', overflow: 'hidden' }}>
-              {}
-              <div style={{ position: 'absolute', top: '30%', left: '40%', width: '320px', height: '320px', background: '#b8956a', opacity: 0.03, borderRadius: '50%', filter: 'blur(100px)', pointerEvents: 'none' }} />
-
-              <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '360px', textAlign: 'center', padding: '32px' }}>
-                {}
-                <div style={{ width: '72px', height: '72px', background: 'rgba(184,149,106,0.08)', border: '1px solid rgba(184,149,106,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', overflow: 'hidden', flexShrink: 0 }}>
-                  <video src="/hover-animation.mp4" autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} />
+            <div className="gl-shell-welcome gl-ambient">
+              <div className="gl-shell-welcome-inner" style={{ maxWidth: '380px' }}>
+                <div className="gl-shell-brand-tile">
+                  <BrandMark size={44} title="" />
                 </div>
-
-                <h2 style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary, #e4e4e4)', marginBottom: '8px', letterSpacing: '-0.02em', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                  Direct Messages
+                <span className="gl-eyebrow">Messages</span>
+                <h2 className="gl-display gl-shell-welcome-title" style={{ fontSize: '26px' }}>
+                  Direct <span className="gl-sheen">Messages</span>
                 </h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-muted, rgba(228,228,228,0.4))', marginBottom: '28px', lineHeight: '1.6', fontFamily: 'Inter, system-ui, sans-serif' }}>
+                <p className="gl-shell-welcome-lead">
                   Select a conversation from the sidebar or start a new private chat.
                 </p>
-
-                <button
-                  onClick={() => setShowCreateDM(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: '#b8956a', border: 'none', color: '#0c0c0c', fontSize: '13px', fontWeight: 700, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', transition: 'opacity 150ms ease' }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
-                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}>
+                <button type="button" className="gl-btn gl-btn--primary gl-btn--lg" onClick={() => setShowCreateDM(true)}>
                   <MessageSquarePlus size={15} />
                   Start a new chat
                 </button>

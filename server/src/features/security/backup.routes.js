@@ -4,12 +4,19 @@ const logger = require('../../../utils/logger');
 const express = require('express');
 const router = express.Router();
 const requireAuth = require('../../shared/middleware/auth');
-const { requireCompanyRole } = require('../../shared/utils/companyRole');
+const requireCompanyAdmin = require('../../shared/middleware/requireCompanyAdmin');
+const { scopedCompanyId } = requireCompanyAdmin;
 const { createBackup } = require('./backup.service');
 
-router.post('/backup', requireAuth, async (req, res) => {
+// Company admins back up their own company; only platform staff may choose
+// another company or a whole-platform backup (no companyId).
+router.post('/backup', requireAuth, requireCompanyAdmin, async (req, res) => {
   try {
-    const { companyId } = req.body;
+    const companyId = scopedCompanyId(req, res, req.body && req.body.companyId);
+    if (res.headersSent) return;
+    if (!companyId && !req.isPlatformAdmin) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
     const backup = await createBackup({ requesterId: req.user.sub, companyId });
     return res.status(201).json({
       message: 'Encrypted backup created successfully',
@@ -30,8 +37,9 @@ router.post('/backup', requireAuth, async (req, res) => {
 });
 
 if (process.env.NODE_ENV !== 'production') {
-  router.post('/trigger-retention', requireAuth, async (req, res) => {
+  router.post('/trigger-retention', requireAuth, requireCompanyAdmin, async (req, res) => {
     try {
+      if (!req.isPlatformAdmin) return res.status(403).json({ message: 'Platform admin only' });
       const { runRetentionCleanup } = require('./retention.cron');
       const result = await runRetentionCleanup();
       return res.json({ message: 'Retention cleanup completed', result });

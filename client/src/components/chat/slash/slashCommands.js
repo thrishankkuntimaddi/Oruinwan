@@ -23,8 +23,11 @@ export const SLASH_COMMANDS = [
   cmd("/code", "Code block", "productivity", "💻", "Insert a code block", "Usage: /code [language]"),
   cmd("/shrug", "Shrug", "communication", "🤷", "Send a message with ¯\\_(ツ)_/¯", "Usage: /shrug [message]"),
   cmd("/ai", "Ask Oruinwan AI", "ai", "✨", "Ask the assistant about this conversation", "Usage: /ai <question>"),
-  cmd("/github", "GitHub issue", "developer", "🐙", "Create a GitHub issue and link it", "Usage: /github", { flag: "integrations" }),
-  cmd("/jira", "Jira ticket", "developer", "🎫", "Create a Jira ticket and link it", "Usage: /jira", { flag: "integrations" }),
+  cmd("/task", "New task", "productivity", "✅", "Create a task in this conversation", "Usage: /task <title>"),
+  cmd("/github", "GitHub", "developer", "🐙", "Open an issue or share a pull request", "Usage: /github issue [owner/repo] <title> · /github pr owner/repo#12", { flag: "integrations" }),
+  cmd("/review", "Review pull request", "developer", "🔍", "Open a pull request's changes next to the chat", "Usage: /review owner/repo#12 (or a PR link)", { flag: "integrations" }),
+  cmd("/jira", "Jira issue", "developer", "🎫", "Create a Jira issue", "Usage: /jira <PROJECT> <summary>", { flag: "integrations" }),
+  cmd("/zoom", "Zoom meeting", "communication", "📹", "Create a Zoom meeting and post the join link", "Usage: /zoom [topic]", { flag: "integrations" }),
 ];
 
 /** Commands available with the given release flags. */

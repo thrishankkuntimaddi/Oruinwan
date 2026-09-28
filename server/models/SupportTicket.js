@@ -28,10 +28,11 @@ const TicketMessageSchema = new mongoose.Schema(
 
 const SupportTicketSchema = new mongoose.Schema(
   {
+    // Null for personal accounts: tickets from users outside a company.
     companyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Company",
-      required: true
+      default: null
     },
 
     creatorId: {
@@ -48,6 +49,19 @@ const SupportTicketSchema = new mongoose.Schema(
     description: {
       type: String,
       required: true
+    },
+
+    category: {
+      type: String,
+      enum: ["question", "problem", "feedback", "billing"],
+      default: "question"
+    },
+
+    // Where the request came from (page path, app version, browser). Never message contents.
+    context: {
+      path: { type: String, maxlength: 300 },
+      appVersion: { type: String, maxlength: 60 },
+      userAgent: { type: String, maxlength: 400 }
     },
 
     status: {
@@ -76,6 +90,7 @@ const SupportTicketSchema = new mongoose.Schema(
 );
 
 SupportTicketSchema.index({ companyId: 1, createdAt: -1 });
+SupportTicketSchema.index({ creatorId: 1, createdAt: -1 });
 SupportTicketSchema.index({ status: 1 });
 SupportTicketSchema.index({ priority: 1 });
 

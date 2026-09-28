@@ -4,10 +4,14 @@ const Message = require("../../modules/messages/message.model.js");
 const _Channel = require("../channels/channel.model.js");
 const analyticsService = require('../analytics/analytics.service');
 
+const mongoose = require('mongoose');
+
+const isCoOwnerOf = (user) => !!(user && user.coOwnerOf && user.companyId && String(user.coOwnerOf) === String(user.companyId));
+
 async function _resolveCompanyId(userId) {
-    const user = await User.findById(userId).select('companyId companyRole isCoOwner').lean();
+    const user = await User.findById(userId).select('companyId companyRole coOwnerOf').lean();
     if (!user) throw Object.assign(new Error('User not found'), { status: 401 });
-    return { companyId: user.companyId?.toString(), companyRole: user.companyRole, isCoOwner: user.isCoOwner };
+    return { companyId: user.companyId?.toString(), companyRole: user.companyRole, isCoOwner: isCoOwnerOf(user) };
 }
 
 exports.getDashboardMetrics = async (req, res) => {
@@ -15,12 +19,12 @@ exports.getDashboardMetrics = async (req, res) => {
         const { companyId } = req.params;
         const userId = req.user.sub;
 
-        const requestingUser = await User.findById(userId);
+        const requestingUser = await User.findById(userId).select('companyId companyRole coOwnerOf').lean();
         if (!requestingUser) return res.status(401).json({ message: 'User not found' });
-        if (requestingUser.companyId.toString() !== companyId) return res.status(403).json({ message: 'Access denied' });
+        if (!requestingUser.companyId || requestingUser.companyId.toString() !== String(companyId)) return res.status(403).json({ message: 'Access denied' });
 
         const adminRoles = ['owner', 'admin'];
-        if (!adminRoles.includes(requestingUser.companyRole) && !requestingUser.isCoOwner) {
+        if (!adminRoles.includes(requestingUser.companyRole) && !isCoOwnerOf(requestingUser)) {
             return res.status(403).json({ message: 'Admin privileges required' });
         }
 
@@ -68,6 +72,43 @@ exports.getDashboardMetrics = async (req, res) => {
 
 exports.getAdminDashboard = async (req, res) => {
     res.status(501).json({ message: 'Not implemented yet' });
+};
+
+exports.getEmployeeDashboard = async (req, res) => {
+    try {
+        const callerId = String(req.user.sub);
+        const targetId = req.params.userId === 'me' ? callerId : String(req.params.userId);
+        if (!mongoose.Types.ObjectId.isValid(targetId)) return res.status(400).json({ message: 'Invalid user id' });
+
+        if (targetId !== callerId) {
+            const [caller, target] = await Promise.all([
+                User.findById(callerId).select('companyId companyRole coOwnerOf').lean(),
+                User.findById(targetId).select('companyId').lean(),
+            ]);
+            const isAdmin = caller && (['owner', 'admin'].includes(caller.companyRole) || isCoOwnerOf(caller));
+            if (!isAdmin || !caller.companyId || !target || String(target.companyId) !== String(caller.companyId)) {
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        }
+
+        const Task = require('../../../models/Task');
+        const Note = require('../../../models/Note');
+        const Update = require('../../../models/Update');
+        const uid = new mongoose.Types.ObjectId(targetId);
+        const taskFilter = { deleted: { $ne: true }, $or: [{ assignedTo: uid }, { createdBy: uid }] };
+        const [myTasks, totalTasks, completedTasks, myNotes, totalNotes, recentUpdates] = await Promise.all([
+            Task.find(taskFilter).select('title status priority dueDate workspace updatedAt').sort({ updatedAt: -1 }).limit(10).lean(),
+            Task.countDocuments(taskFilter),
+            Task.countDocuments({ ...taskFilter, status: 'done' }),
+            Note.find({ owner: uid, isArchived: { $ne: true } }).select('title type updatedAt workspace').sort({ updatedAt: -1 }).limit(10).lean(),
+            Note.countDocuments({ owner: uid }),
+            Update.find({ postedBy: uid }).sort({ createdAt: -1 }).limit(5).lean(),
+        ]);
+
+        return res.json({ myTasks, myNotes, recentUpdates, stats: { totalTasks, completedTasks, totalNotes } });
+    } catch (err) {
+        return res.status(err.status || 500).json({ message: err.message || 'Server error' });
+    }
 };
 
 exports.getWorkspaceDashboard = async (req, res) => {

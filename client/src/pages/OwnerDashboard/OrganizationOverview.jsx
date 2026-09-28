@@ -1,117 +1,51 @@
 import React from 'react';
-import { Users, Briefcase, Building, TrendingUp } from 'lucide-react';
+import { Users, UserCheck, Briefcase, Building } from 'lucide-react';
+import { Section, KpiGrid, Kpi } from '../../components/company-dash/dashUi';
 
-const OrganizationOverview = ({ data }) => {
-    const stats = data || {
-        totalUsers: 0,
-        activeUsers: 0,
-        workspaceCount: 0,
-        departmentCount: 0,
-        growthRate: { users: 0, workspaces: 0 }
-    };
-
-    const StatCard = ({ icon: Icon, value, label, trend, trendLabel }) => {
-        const [hovered, setHovered] = React.useState(false);
-        return (
-            <div
-                onMouseEnter={() => setHovered(true)}
-                onMouseLeave={() => setHovered(false)}
-                style={{
-                    background: hovered ? 'var(--bg-hover)' : 'var(--bg-surface)',
-                    border: '1px solid var(--border-subtle)',
-                    padding: '20px',
-                    transition: 'background 150ms ease'
-                }}
-            >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                    <Icon size={16} style={{ color: 'var(--text-muted)' }} />
-                    {trend !== undefined && (
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            color: 'var(--state-success)',
-                            letterSpacing: '0.04em'
-                        }}>
-                            <TrendingUp size={10} />
-                            +{trend}
-                        </div>
-                    )}
-                </div>
-                <div style={{
-                    fontSize: '26px',
-                    fontWeight: 600,
-                    color: 'var(--text-primary)',
-                    letterSpacing: '-0.02em',
-                    lineHeight: '1.2'
-                }}>{value}</div>
-                <div style={{
-                    fontSize: '13px',
-                    color: 'var(--text-secondary)',
-                    marginTop: '4px'
-                }}>{label}</div>
-                {trendLabel && (
-                    <div style={{
-                        fontSize: '11px',
-                        color: 'var(--text-muted)',
-                        marginTop: '8px'
-                    }}>{trendLabel}</div>
-                )}
-            </div>
-        );
-    };
-
+/** Headcount and structure KPIs from GET /api/owner-dashboard/overview. */
+const OrganizationOverview = ({ data, loading, onNavigate }) => {
+    const growth = data?.growthRate || {};
     return (
-        <section>
-            <div style={{ marginBottom: '16px' }}>
-                <h3 style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: 'var(--text-muted)',
-                    letterSpacing: '0.13em',
-                    textTransform: 'uppercase',
-                    margin: '0 0 4px'
-                }}>Organization Overview</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                    High-level growth & scale metrics
-                </p>
-            </div>
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '1px',
-                background: 'var(--border-subtle)'
-            }}>
-                <StatCard
+        <Section title="Organization" lead="Headcount and structure of your company">
+            <KpiGrid>
+                <Kpi
+                    label="People"
                     icon={Users}
-                    value={stats.totalUsers}
-                    label="Total Employees"
-                    trend={stats.growthRate?.users}
-                    trendLabel="New in last 30 days"
+                    value={data?.totalUsers}
+                    loading={loading}
+                    delta={growth.users ? `+${growth.users}` : null}
+                    deltaTone="up"
+                    hint={growth.users ? 'joined in the last 30 days' : 'no new joiners in 30 days'}
+                    onClick={onNavigate ? () => onNavigate('/owner/users') : undefined}
                 />
-                <StatCard
-                    icon={Users}
-                    value={stats.activeUsers}
-                    label="Active Users"
-                    trendLabel="Currently active"
+                <Kpi
+                    label="Active accounts"
+                    icon={UserCheck}
+                    tone="success"
+                    value={data?.activeUsers}
+                    loading={loading}
+                    hint={data?.totalUsers ? `${Math.round(((data.activeUsers || 0) / data.totalUsers) * 100)}% of all accounts` : 'accounts in good standing'}
                 />
-                <StatCard
+                <Kpi
+                    label="Workspaces"
                     icon={Briefcase}
-                    value={stats.workspaceCount}
-                    label="Total Workspaces"
-                    trend={stats.growthRate?.workspaces}
-                    trendLabel="New in last 30 days"
+                    value={data?.workspaceCount}
+                    loading={loading}
+                    delta={growth.workspaces ? `+${growth.workspaces}` : null}
+                    deltaTone="up"
+                    hint={growth.workspaces ? 'created in the last 30 days' : 'none created in 30 days'}
+                    onClick={onNavigate ? () => onNavigate('/owner/workspaces') : undefined}
                 />
-                <StatCard
-                    icon={Building}
-                    value={stats.departmentCount}
+                <Kpi
                     label="Departments"
-                    trendLabel="Structural units"
+                    icon={Building}
+                    value={data?.departmentCount}
+                    loading={loading}
+                    hint="structural units"
+                    onClick={onNavigate ? () => onNavigate('/owner/departments') : undefined}
                 />
-            </div>
-        </section>
+            </KpiGrid>
+        </Section>
     );
 };
 

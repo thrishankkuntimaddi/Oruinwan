@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, Suspense, lazy } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useChatSocket, useConversation, useMessageActions } from '../../../hooks';
 import { sameId } from '../../../hooks/conversationUtils';
@@ -44,12 +44,17 @@ import useMessageInput from './hooks/useMessageInput.js';
 
 import { useLinkPreview } from './hooks/useLinkPreview.js';
 
-import { useHuddle } from '../../huddles/useHuddle.js';
+// Huddle calls live in the app-wide provider (they survive page changes); this hook scopes one to the conversation.
+import { useConversationHuddle as useHuddle } from '../../huddles/useConversationHuddle.js';
 import HuddleOverlay from '../../huddles/components/HuddleOverlay.jsx';
 
 import './chatWindow.css';
+import { CODE_REVIEW_EVENT } from '../../integrations/codeReviewBus';
 import logger from '../../../utils/logger';
 import { getUserPreferences } from '../../../hooks/useUserPreferences';
+
+// Pull request viewer (loaded on first use; carries the syntax highlighter).
+const CodeReviewPanel = lazy(() => import('../../integrations/codeReview/CodeReviewPanel'));
 
 function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId, onChatUpdate }) {
     const { user, encryptionReady } = useAuth();
@@ -197,6 +202,8 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
     const [showPinned, setShowPinned] = useState(false);
     const [showChecklistModal, setShowChecklistModal] = useState(false);
     const [showReminders, setShowReminders] = useState(false);
+    // Pull request open in the code-review side panel: { repo, number, messageId?, … } | null.
+    const [codeReview, setCodeReview] = useState(null);
     // Features the workspace admins switched off are hidden here (and refused by the server).
     const features = useWorkspaceFeatures(workspaceId || chat?.workspaceId);
 
@@ -1232,13 +1239,44 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
         setShowBookmarks(name === 'bookmarks');
         setShowPinned(name === 'pinned');
         setShowReminders(name === 'reminders');
+        if (name !== 'code-review') setCodeReview(null);
         if (name !== 'thread') setActiveThread(null);
     }, []);
+
+    // PR cards, pasted PR links, task chips and /review ask for the code-review
+    // panel through a window event; this conversation shows it beside the chat.
+    const activeTabRef = useRef(activeTab);
+    activeTabRef.current = activeTab;
+    useEffect(() => {
+        const onOpenReview = (e) => {
+            const d = e.detail;
+            if (!d || d.handled || activeTabRef.current !== 'chat') return;
+            d.handled = true;
+            openSidePanel('code-review');
+            setCodeReview({ ...d, workspaceId: d.workspaceId || workspaceId || chat?.workspaceId || null });
+        };
+        window.addEventListener(CODE_REVIEW_EVENT, onOpenReview);
+        return () => window.removeEventListener(CODE_REVIEW_EVENT, onOpenReview);
+    }, [openSidePanel, workspaceId, chat?.workspaceId]);
+    useEffect(() => { setCodeReview(null); }, [chat?.id]);
 
     const handleThreadOpen = useCallback((message) => {
         openSidePanel('thread');
         setActiveThread(message);
     }, [openSidePanel]);
+
+    // Home → Activity links a thread reply with { state: { openThreadId } }:
+    // open that thread once this conversation is on screen (ThreadPanel loads
+    // the parent and replies itself from the id).
+    const openThreadIdFromNav = location.state?.openThreadId || null;
+    const appliedNavThread = useRef(null);
+    useEffect(() => {
+        if (!openThreadIdFromNav || !chat?.id || !features.threads) return;
+        const key = `${chat.id}:${openThreadIdFromNav}`;
+        if (appliedNavThread.current === key) return;
+        appliedNavThread.current = key;
+        handleThreadOpen({ _id: String(openThreadIdFromNav), id: String(openThreadIdFromNav), workspace: workspaceId || chat?.workspaceId || null });
+    }, [openThreadIdFromNav, chat?.id, chat?.workspaceId, workspaceId, features.threads, handleThreadOpen]);
 
     
     const handleThreadClose = useCallback(() => {
@@ -1618,7 +1656,15 @@ function ChatWindowV2({ chat, onClose, contacts = [], onDeleteChat, workspaceId,
             <CentralContentView
                 typingUsers={typingUsers}
                 aiLiveReplies={conversationAI.mainReplies}
-                sidePanel={showReminders ? (
+                sidePanel={codeReview ? (
+                    <Suspense fallback={<div className="oi-cr" aria-busy="true" />}>
+                        <CodeReviewPanel
+                            key={`${codeReview.repo}#${codeReview.number}`}
+                            reviewRef={codeReview}
+                            onClose={() => setCodeReview(null)}
+                        />
+                    </Suspense>
+                ) : showReminders ? (
                     <RemindersPanel onClose={() => setShowReminders(false)} />
                 ) : showPinned && (chat?.type === 'channel' || chat?.type === 'dm') ? (
                     <PinnedMessagesPanel

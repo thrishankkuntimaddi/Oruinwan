@@ -1,0 +1,101 @@
+/* Admin console extras on top of the company-dash kit (dash.css). Tokens only. */
+
+/* Row action popover (rendered in a portal, fixed position). */
+.ad-menu {
+    position: fixed;
+    z-index: 1100;
+    min-width: 220px;
+    padding: 4px;
+    background: var(--bg-surface);
+    background-image: var(--gl-glass-strong);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius);
+    box-shadow: var(--gl-spec-strong), var(--gl-drop);
+    font-family: var(--font);
+}
+.ad-menu button {
+    display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 10px;
+    font: inherit; font-size: 13px; text-align: left; color: var(--text-primary);
+    background: none; border: 0; border-radius: var(--gl-radius); cursor: pointer;
+}
+.ad-menu button:hover, .ad-menu button:focus-visible { background: var(--bg-hover); outline: none; }
+.ad-menu button[data-tone='danger'] { color: var(--state-danger); }
+.ad-menu button[data-tone='success'] { color: var(--state-success); }
+.ad-menu hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 4px 0; }
+.ad-menu-note { padding: 8px 10px; font-size: 12px; color: var(--text-secondary); }
+
+/* Checkbox list (departments, members…) */
+.ad-checklist { display: flex; flex-direction: column; max-height: 260px; overflow-y: auto; border: 1px solid var(--border-default); border-radius: var(--gl-radius); }
+.ad-check {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px; cursor: pointer;
+    font-size: 13px; color: var(--text-primary); border-bottom: 1px solid var(--border-subtle);
+}
+.ad-check:last-child { border-bottom: 0; }
+.ad-check:hover { background: var(--bg-hover); }
+.ad-check input { accent-color: var(--accent); width: 15px; height: 15px; flex-shrink: 0; }
+.ad-check .ad-check-sub { margin-left: auto; font-size: 11.5px; color: var(--text-secondary); }
+
+input.ad-box { accent-color: var(--accent); width: 15px; height: 15px; cursor: pointer; }
+
+/* Bulk selection bar */
+.ad-bulk {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 8px 12px; border: 1px solid var(--gl-accent-line); background: var(--gl-accent-soft);
+    border-radius: var(--gl-radius); font-size: 12.5px; color: var(--text-primary);
+}
+
+/* Card grid items (departments, workspaces) */
+.ad-card { padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.ad-card-head { display: flex; align-items: flex-start; gap: 10px; }
+.ad-card-title { margin: 0; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ad-card-desc { margin: 2px 0 0; font-size: 12px; color: var(--text-secondary); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ad-card-stats { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); }
+.ad-card-stats strong { color: var(--text-primary); font-weight: 700; font-variant-numeric: tabular-nums; }
+.ad-card-foot { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
+.ad-mark {
+    width: 34px; height: 34px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    color: var(--accent); background: var(--gl-accent-soft); border: 1px solid var(--gl-accent-line); border-radius: var(--gl-radius);
+    font-size: 16px;
+}
+
+/* Key/value rows (profile, settings summaries) */
+.ad-kv { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; gap: 10px 16px; font-size: 13px; }
+.ad-kv dt { color: var(--text-secondary); }
+.ad-kv dd { margin: 0; color: var(--text-primary); min-width: 0; overflow-wrap: anywhere; }
+
+/* Step indicator (onboarding) */
+.ad-steps { display: flex; gap: 6px; flex-wrap: wrap; }
+.ad-step {
+    display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px;
+    font-size: 12px; font-weight: 600; color: var(--text-secondary);
+    border: 1px solid var(--border-default); border-radius: var(--gl-radius); background: var(--bg-active);
+}
+.ad-step[data-state='current'] { color: var(--accent); border-color: var(--gl-accent-line); background: var(--gl-accent-soft); }
+.ad-step[data-state='done'] { color: var(--state-success); }
+.ad-step-num { font-variant-numeric: tabular-nums; }
+
+.ad-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.ad-row > * { flex: 1 1 200px; min-width: 0; }
+
+@media (max-width: 640px) {
+    .ad-kv { grid-template-columns: 1fr; gap: 2px 0; }
+    .ad-kv dd { margin-bottom: 8px; }
+}
+
+/* Clickable list rows. (List text size, toolbar selects and grid caps live in dash.css.) */
+.cd-toolbar > .ad-select { width: auto; flex: 0 1 220px; min-width: 0; }
+button.ad-rowbtn {
+    width: 100%; font: inherit; font-size: 13px; text-align: left; color: var(--text-primary);
+    background: none; border: 0; border-bottom: 1px solid var(--border-subtle); cursor: pointer;
+}
+button.ad-rowbtn:last-child { border-bottom: 0; }
+button.ad-rowbtn:hover { background: var(--bg-hover); }
+button.ad-rowbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Simple themeable bar chart (div based) */
+.ad-bars { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; height: 180px; align-items: end; }
+.ad-bar { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; }
+.ad-bar-fill { width: 100%; max-width: 36px; min-height: 2px; background: var(--gl-accent-grad); border-radius: var(--gl-radius) var(--gl-radius) 0 0; box-shadow: var(--gl-spec-strong); transition: height 400ms var(--gl-ease); }
+.ad-bar-val { font-size: 11px; font-weight: 700; color: var(--text-primary); font-variant-numeric: tabular-nums; min-height: 14px; }
+.ad-bar-label { font-size: 11px; color: var(--text-secondary); }
+

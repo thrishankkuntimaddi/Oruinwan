@@ -88,12 +88,15 @@ export const CompanyProvider = ({ children }) => {
     const userCompanyRole = user?.companyRole || 'member';
 
     
+    // A co-owner (coOwnerOf === companyId) counts as an owner, as on the server.
+    const coOwner = !!(user?.isCoOwner || (user?.coOwnerOf && String(user.coOwnerOf?._id || user.coOwnerOf) === String(user?.companyId?._id || user?.companyId)));
+
     const isCompanyAdmin = () => {
-        return userCompanyRole === 'owner' || userCompanyRole === 'admin';
+        return userCompanyRole === 'owner' || userCompanyRole === 'admin' || coOwner;
     };
 
     const isCompanyOwner = () => {
-        return userCompanyRole === 'owner';
+        return userCompanyRole === 'owner' || coOwner;
     };
 
     const canManageUsers = () => {

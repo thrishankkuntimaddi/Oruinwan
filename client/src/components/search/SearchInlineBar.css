@@ -1,4 +1,4 @@
-/* SearchInlineBar.css — Monolith Flow design system */
+/* SearchInlineBar.css — Monolith Gloss (see styles/gloss.css) */
 
 /* ── Wrapper ── */
 .sib-wrap {
@@ -12,20 +12,24 @@
   align-items: center;
   gap: 7px;
   padding: 0 10px;
-  height: 32px;
-  background: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  border-radius: 2px;
-  transition: border-color 0.15s, background 0.15s;
+  height: 30px;
+  background-color: var(--bg-input);
+  background-image: var(--gl-glass);
+  border: 1px solid var(--border-default);
+  border-radius: var(--gl-radius, 3px);
+  box-shadow: var(--gl-spec);
+  transition: border-color 0.15s, background-color 0.15s, box-shadow 0.15s;
   cursor: text;
 }
+.sib-bar:hover { border-color: var(--border-accent); }
 .sib-bar--active,
-.sib-bar:hover {
-  border-color: var(--border-accent);
-  background: var(--bg-hover);
+.sib-bar:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--gl-spec), 0 0 0 3px var(--input-ring);
 }
 
-.sib-bar-icon { color: var(--text-muted); flex-shrink: 0; }
+.sib-bar-icon { color: var(--text-secondary); flex-shrink: 0; }
+.sib-bar--active .sib-bar-icon { color: var(--accent); }
 
 .sib-input {
   flex: 1;
@@ -37,7 +41,7 @@
   min-width: 0;
   font-family: var(--font);
 }
-.sib-input::placeholder { color: var(--text-muted); }
+.sib-input::placeholder { color: var(--text-secondary); opacity: 0.7; }
 
 .sib-spinner {
   color: var(--accent);
@@ -62,8 +66,9 @@
   background: var(--bg-active);
   border: 1px solid var(--border-default);
   border-radius: 2px;
-  color: var(--text-muted);
-  font-family: system-ui, sans-serif;
+  color: var(--text-secondary);
+  font-family: var(--font);
+  line-height: 1.4;
 }
 
 /* ── Dropdown ── */
@@ -71,18 +76,22 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0; right: 0;
-  background: var(--bg-surface);
+  background-color: var(--bg-surface);
+  background-image: var(--gl-glass);
   border: 1px solid var(--border-default);
-  border-radius: 2px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.45);
+  border-radius: var(--gl-radius, 3px);
+  box-shadow: var(--gl-spec-strong), var(--gl-drop);
   z-index: 9999;
   overflow: hidden;
+  animation: sib-pop 160ms var(--gl-ease, ease);
 }
+@keyframes sib-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .sib-dropdown { animation: none; } }
 
 /* Section header */
 .sib-section-header {
   font-size: 10px; font-weight: 700;
-  color: var(--text-muted); text-transform: uppercase;
+  color: var(--text-secondary); text-transform: uppercase;
   letter-spacing: 0.12em;
   padding: 10px 14px 4px;
   font-family: var(--font);
@@ -115,15 +124,15 @@
   padding: 8px 14px; text-align: left;
   transition: background 0.1s; font-family: var(--font);
 }
-.sib-result-row:hover,
-.sib-result-row--active { background: var(--bg-hover); }
+.sib-result-row:hover { background: var(--bg-hover); }
+.sib-result-row--active { background: var(--gl-accent-soft, var(--bg-hover)); box-shadow: inset 2px 0 0 var(--accent); }
 
 .sib-result-type-icon {
   flex-shrink: 0; color: var(--accent);
   width: 26px; height: 26px;
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg-active);
-  border: 1px solid var(--border-default);
+  background: var(--gl-accent-soft, var(--bg-active));
+  border: 1px solid var(--gl-accent-line, var(--border-default));
   border-radius: 2px;
 }
 
@@ -178,19 +187,20 @@
   font-family: system-ui; color: var(--text-muted);
 }
 .sib-see-all {
-  background: var(--bg-active);
-  border: 1px solid var(--border-accent);
+  background: var(--gl-accent-grad, var(--accent));
+  border: 1px solid rgba(255, 230, 190, 0.35);
+  box-shadow: var(--gl-spec-strong), var(--gl-accent-glow, none);
   cursor: pointer;
-  color: var(--accent); font-size: 11px; font-weight: 600;
-  padding: 4px 10px; border-radius: 2px;
-  transition: border-color 0.12s;
+  color: #120e08; font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: var(--gl-radius, 2px);
+  transition: filter 0.12s;
   font-family: var(--font);
 }
-.sib-see-all:hover { border-color: var(--text-muted); }
+.sib-see-all:hover { filter: brightness(1.06); }
 
 /* Highlight match */
 mark.sib-highlight {
-  background: rgba(184,149,106,0.2);
+  background: var(--gl-accent-soft, rgba(184,149,106,0.2));
   color: var(--accent);
   border-radius: 2px; padding: 0 1px;
 }

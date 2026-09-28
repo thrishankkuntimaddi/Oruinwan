@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import api, { API_BASE } from '../services/api';
 import { toProxyUrl } from './gcsProxy';
 
@@ -13,11 +13,12 @@ function objectPathOf(proxyUrl) {
     return new URLSearchParams(proxyUrl.split('?')[1] || '').get('path');
 }
 
-export async function getMediaUrl(attachment) {
+export async function getMediaUrl(attachment, { fresh = false } = {}) {
     const proxyUrl = toProxyUrl(attachment || {});
     const objectPath = objectPathOf(proxyUrl);
     if (!objectPath) return proxyUrl || null; // external or legacy URL: use as-is
 
+    if (fresh) cache.delete(objectPath);
     const hit = cache.get(objectPath);
     if (hit && hit.refreshAt > Date.now()) return hit.url;
     if (inflight.has(objectPath)) return inflight.get(objectPath);
@@ -34,20 +35,26 @@ export async function getMediaUrl(attachment) {
     return p;
 }
 
-/** { url, error } for an attachment; url is null until signed. */
+/**
+ * { url, error, refresh } for an attachment; url is null until signed. Signed links
+ * expire (10 min): call refresh() when a media element fails to load, to get a new one.
+ * refresh() resolves with the new URL (or null when it can't be signed again).
+ */
 export function useMediaUrl(attachment) {
     const key = toProxyUrl(attachment || {});
     const [state, setState] = useState({ url: null, error: null });
+    const [attempt, setAttempt] = useState(0);
     useEffect(() => {
         let cancelled = false;
         if (!key) { setState({ url: null, error: null }); return undefined; }
-        getMediaUrl(attachment)
+        getMediaUrl(attachment, { fresh: attempt > 0 })
             .then((url) => { if (!cancelled) setState({ url, error: null }); })
             .catch((err) => { if (!cancelled) setState({ url: null, error: err }); });
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [key]);
-    return state;
+    }, [key, attempt]);
+    const refresh = useCallback(() => setAttempt((n) => n + 1), []);
+    return { ...state, refresh, attempt };
 }
 
 export function __resetMediaUrlCacheForTests() {

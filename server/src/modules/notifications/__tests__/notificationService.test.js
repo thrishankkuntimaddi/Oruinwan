@@ -43,6 +43,22 @@ describe('notificationService.create', () => {
         expect(pushService.sendToUser).toHaveBeenCalledWith('u2', expect.any(String), expect.any(String), expect.objectContaining({ dmSessionId: 'dm1' }));
     });
 
+    it('skips mobile push while the recipient is active in a web tab', async () => {
+        const viewing = require('../viewingPresence');
+        viewing._reset();
+        viewing.record('u2', 'sock1', { conversationType: 'dm', conversationId: 'a'.repeat(24), visible: true, focused: true });
+        const io = fakeIo();
+        await notificationService.dmReceived(io, { recipientId: 'u2', senderUsername: 'nani', workspaceId: WS, dmSessionId: 'dm1' });
+        expect(io.emit).toHaveBeenCalledWith('notification:new', expect.anything());
+        expect(pushService.sendToUser).not.toHaveBeenCalled();
+
+        // Tab hidden again: push resumes.
+        viewing.record('u2', 'sock1', { visible: false, focused: false });
+        await notificationService.dmReceived(io, { recipientId: 'u2', senderUsername: 'nani', workspaceId: WS, dmSessionId: 'dm1' });
+        expect(pushService.sendToUser).toHaveBeenCalledTimes(1);
+        viewing._reset();
+    });
+
     it('respects the per-category preference', async () => {
         prefService.getUserPreferences.mockResolvedValue({ message: false, push: true });
         const io = fakeIo();

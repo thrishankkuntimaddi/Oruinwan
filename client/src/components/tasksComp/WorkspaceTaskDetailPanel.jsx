@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     X, Eye, Activity, Plus, CheckCircle2, Tag, Loader2, ArrowRight, User, Edit2, Calendar, Trash2,
-    Timer, Link2, PlayCircle, StopCircle, Paperclip, Ban, Users, Search, Check, Send, Hash, Lock, RotateCcw,
+    Timer, Link2, PlayCircle, StopCircle, Paperclip, Ban, Users, Search, Check, Send, Hash, Lock, RotateCcw, GitPullRequest,
 } from 'lucide-react';
 import api from '@services/api';
 import { useToast } from '../../contexts/ToastContext';
@@ -10,6 +10,7 @@ import { useAIContext } from '../../contexts/AIContext';
 import AITaskAssist from './AITaskAssist';
 import { STATUS_META, TRANSITIONS, PRIORITIES, PRIORITY_META, statusLabel, priorityLabel, toDateInput, taskErrorMessage } from '../../utils/taskMeta';
 import { StatusBadge, PriorityIcon, UserAvatar, IssueTypeIcon, fmtDate, tint, FONT } from './taskUi';
+import LinkedPullRequests from '../../features/integrations/LinkedPullRequests';
 
 function fmtSeconds(s) {
     const total = Math.max(0, Math.floor(s || 0));
@@ -38,10 +39,15 @@ const valueLabel = (field, v) => {
     return String(v).length > 40 ? `${String(v).slice(0, 40)}…` : String(v);
 };
 
+const providerName = (p) => ({ github: 'GitHub', gitlab: 'GitLab', jira: 'Jira', zoom: 'Zoom' }[String(p || '').toLowerCase()] || String(p || 'an integration'));
+
 function describeActivity(a) {
     switch (a.action) {
         case 'created': return 'created this task';
-        case 'status_changed': return <>moved it from <b>{statusLabel(a.from)}</b> to <b>{statusLabel(a.to)}</b>{a.metadata?.reason ? ` — “${a.metadata.reason}”` : ''}</>;
+        case 'status_changed': return <>moved it from <b>{statusLabel(a.from)}</b> to <b>{statusLabel(a.to)}</b>{a.metadata?.reason ? ` — “${a.metadata.reason}”` : ''}{a.metadata?.source ? ` (via ${providerName(a.metadata.source)})` : ''}</>;
+        // GitHub / Jira events and Oruinwan AI notes posted by the integrations.
+        case 'integration_event': return <>{a.metadata?.text || `${providerName(a.metadata?.provider)} ${String(a.metadata?.kind || 'update').replace(/_/g, ' ')}`}{a.metadata?.url && <> · <a href={a.metadata.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>open</a></>}</>;
+        case 'ai_note': return <>added an Oruinwan AI note{a.metadata?.text ? <>: “{a.metadata.text}”</> : ''}{a.metadata?.url && <> · <a href={a.metadata.url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>source</a></>}</>;
         case 'unblocked': return 'unblocked it';
         case 'blocked': return 'marked it blocked';
         case 'updated':
@@ -477,6 +483,13 @@ export default function WorkspaceTaskDetailPanel({
                                 </div>
                             )}
                         </Section>
+
+                        {/* Pull requests / issues linked by the GitHub and Jira integrations */}
+                        {task.externalLinks?.length > 0 && (
+                            <Section label={`Linked pull requests (${task.externalLinks.length})`} icon={<GitPullRequest size={10} />}>
+                                <LinkedPullRequests links={task.externalLinks} workspaceId={aiWorkspaceId} />
+                            </Section>
+                        )}
 
                         {task.channel?.name && (
                             <Section label="Channel" icon={<Hash size={10} />}>

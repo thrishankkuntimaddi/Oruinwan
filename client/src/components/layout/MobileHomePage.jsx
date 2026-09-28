@@ -1,13 +1,15 @@
+import { isCompanyOwner } from './IconSidebar';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Hash, MessageSquare, FolderOpen, BookOpen, Newspaper, Video,
-    Puzzle, Shield, Briefcase, ChevronRight, Bell, LogOut,
-    Settings, User, Zap, FileText, CheckSquare, Globe, ChevronDown, RefreshCw,
+    Puzzle, Shield, Briefcase, ChevronRight, LogOut,
+    Settings, User, FileText, Globe, ChevronDown, RefreshCw,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { getAvatarUrl } from '../../utils/avatarUtils';
+import ActivitySection from '../../features/activity/ActivitySection';
 
 const STATUS_MAP = {
     active:  { label: 'Active',    dot: '#34d399' },
@@ -40,7 +42,8 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
         { Icon: Video,     label: 'Huddles',          path: '/huddles',                show: true },
         { Icon: Puzzle,    label: 'Apps',             path: '/apps',                   show: true },
         { Icon: FileText,  label: 'Notes',            path: '/notes',                  show: true },
-        { Icon: Shield,    label: 'Admin Dashboard',  abs: '/admin/analytics',         show: ['owner','admin'].includes(user?.companyRole) || user?.isCoOwner },
+        { Icon: Shield,    label: 'Owner Console',    abs: '/owner/dashboard',         show: isCompanyOwner(user) },
+        { Icon: Shield,    label: 'Admin Console',    abs: '/admin/dashboard',         show: !isCompanyOwner(user) && user?.companyRole === 'admin' },
         { Icon: Briefcase, label: 'Manager Portal',   abs: '/manager/dashboard/overview', show: user?.companyRole === 'manager' || (user?.managedDepartments?.length > 0) },
     ].filter(r => r.show);
 
@@ -55,6 +58,8 @@ const MobileHomePage = ({ workspaceId, onProfileClick }) => {
             fontFamily: 'var(--font)', paddingBottom: '70px',
             WebkitOverflowScrolling: 'touch',
         }} className="custom-scrollbar">
+
+            <ActivitySection variant="mobile" />
 
             {}
             <div style={{

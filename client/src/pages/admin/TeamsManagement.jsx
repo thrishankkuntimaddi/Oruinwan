@@ -1,324 +1,302 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
+import { UsersRound, Plus, Pencil, Trash2, UserPlus, RefreshCw } from 'lucide-react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { Users, Plus, Edit2, Trash2, UserPlus, Search, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import {
+    DashPage, PageHead, Grid, Toolbar, SearchBox, SelectBox, Btn, IconBtn, Chip, Avatar, Dialog, Confirm, Field,
+    ErrorState, EmptyState, LoadingState, KpiGrid, Kpi, useAsync, errorMessage,
+} from '../../components/company-dash/dashUi';
+import { companyIdOf } from '../workspace-os/wosShared';
 
-const NODE_COLORS = ['#b8956a','#5aba8a','#9b8ecf','#e05252','#7a7a7a','#5ab8ba','#ba5a8a'];
-function teamColor(idx) { return NODE_COLORS[idx % NODE_COLORS.length]; }
+const idOf = (v) => String(v?._id || v || '');
 
-const inputStyle = {
-    width: '100%', boxSizing: 'border-box', background: 'var(--bg-input)',
-    border: '1px solid var(--border-default)', color: 'var(--text-primary)',
-    fontSize: '13px', padding: '9px 12px', outline: 'none', borderRadius: '0',
-    fontFamily: 'Inter, system-ui, sans-serif', transition: 'border-color 150ms ease',
-};
-const labelStyle = { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' };
-
-function TeamCard({ team, idx, onEdit, onDelete, onManageMembers }) {
-    const [expanded, setExpanded] = useState(false);
-    const color = teamColor(idx);
-    const [hov, setHov] = useState(false);
-    return (
-        <div style={{ background: hov ? 'var(--bg-hover)' : 'var(--bg-surface)', border: `1px solid var(--border-subtle)`, borderTop: `2px solid ${color}`, transition: 'background 150ms ease', overflow: 'hidden' }}
-            onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-            <div style={{ padding: '16px 18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px' }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '3px' }}>{team.name}</h3>
-                        {team.department && <span style={{ fontSize: '10px', color, border: `1px solid ${color}`, padding: '1px 7px', fontWeight: 600 }}>{team.department.name}</span>}
-                    </div>
-                    <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                        <IconBtn icon={<Edit2 size={12} />} onClick={() => onEdit(team)} title="Edit" />
-                        <IconBtn icon={<UserPlus size={12} />} onClick={() => onManageMembers(team)} title="Members" />
-                        <IconBtn icon={<Trash2 size={12} />} onClick={() => onDelete(team._id, team.name)} title="Delete" danger />
-                    </div>
-                </div>
-                {team.description && <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '10px', lineHeight: '1.5' }}>{team.description}</p>}
-                <div style={{ display: 'flex', gap: '14px', marginTop: '14px', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)', alignItems: 'center' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                        <b style={{ color: 'var(--text-primary)' }}>{team.members?.length || 0}</b> member{team.members?.length !== 1 ? 's' : ''}
-                    </span>
-                    {team.lead && <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Lead: <b style={{ color: 'var(--text-secondary)' }}>{team.lead.username}</b></span>}
-                    {(team.members?.length > 0) && (
-                        <button onClick={() => setExpanded(e => !e)}
-                            style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '3px', background: 'none', border: 'none', color: color, fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
-                            {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                            {expanded ? 'Hide' : 'Members'}
-                        </button>
-                    )}
-                </div>
-                {expanded && (
-                    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {(team.members || []).map(m => (
-                            <div key={m.user?._id || m._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 10px', background: 'var(--bg-active)' }}>
-                                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700, color: 'var(--bg-base)', flexShrink: 0 }}>
-                                    {(m.user?.username || '?').charAt(0).toUpperCase()}
-                                </div>
-                                <span style={{ fontSize: '12px', color: 'var(--text-primary)', flex: 1 }}>{m.user?.username || 'Unknown'}</span>
-                                <span style={{ fontSize: '10px', color: m.role === 'lead' ? 'var(--accent)' : 'var(--text-muted)', fontWeight: 700 }}>{m.role}</span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-}
-
-function TeamFormModal({ initial, departments, employees, onSave, onClose, saving }) {
+function TeamForm({ open, initial, departments, employees, onClose, onSaved }) {
+    const { showToast } = useToast();
     const isEdit = !!initial?._id;
-    const [form, setForm] = useState({
-        name: initial?.name || '', description: initial?.description || '',
-        departmentId: initial?.department?._id || initial?.department || '',
-        leadId: initial?.lead?._id || initial?.lead || '',
-    });
-    return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
-            onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
-                <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>{isEdit ? 'Edit Team' : 'Create Team'}</h2>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '2px' }}><X size={16} /></button>
-                </div>
-                <form onSubmit={e => { e.preventDefault(); onSave(form); }} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div><label style={labelStyle}>Team Name *</label><input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} style={inputStyle} placeholder="Team name" /></div>
-                    <div><label style={labelStyle}>Description</label><textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} style={{ ...inputStyle, resize: 'vertical', minHeight: '72px' }} placeholder="Optional description" /></div>
-                    <div><label style={labelStyle}>Department</label>
-                        <select value={form.departmentId} onChange={e => setForm(f => ({ ...f, departmentId: e.target.value }))} style={inputStyle}>
-                            <option value="">No department</option>
-                            {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                        </select>
-                    </div>
-                    <div><label style={labelStyle}>Team Lead</label>
-                        <select value={form.leadId} onChange={e => setForm(f => ({ ...f, leadId: e.target.value }))} style={inputStyle}>
-                            <option value="">No lead assigned</option>
-                            {employees.map(emp => <option key={emp._id} value={emp._id}>{emp.username}{emp.email ? ` (${emp.email})` : ''}</option>)}
-                        </select>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', paddingTop: '4px' }}>
-                        <button type="button" onClick={onClose} style={{ padding: '8px 18px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px' }}>Cancel</button>
-                        <button type="submit" disabled={saving} style={{ padding: '8px 20px', background: saving ? 'var(--bg-active)' : 'var(--accent)', border: 'none', color: saving ? 'var(--text-muted)' : 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
-                            {saving ? (isEdit ? 'Saving…' : 'Creating…') : (isEdit ? 'Save' : 'Create')}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
-function MembersModal({ team, employees, onClose, onSaved }) {
-    const [members, setMembers] = useState(() => new Set((team.members || []).map(m => m.user?._id || m.user).filter(Boolean).map(String)));
+    const [form, setForm] = useState({});
     const [saving, setSaving] = useState(false);
-    const [search, setSearch] = useState('');
+    const [error, setError] = useState(null);
+    React.useEffect(() => {
+        if (open) {
+            setForm({
+                name: initial?.name || '',
+                description: initial?.description || '',
+                departmentId: initial?.department ? idOf(initial.department) : '',
+                leadId: initial?.lead ? idOf(initial.lead) : '',
+            });
+            setError(null);
+        }
+    }, [open, initial]);
+    const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
-    const toggle = uid => setMembers(prev => { const n = new Set(prev); if (n.has(String(uid))) n.delete(String(uid)); else n.add(String(uid)); return n; });
-    const filtered = employees.filter(e => !search || e.username.toLowerCase().includes(search.toLowerCase()) || e.email?.toLowerCase().includes(search.toLowerCase()));
-
-    const handleSave = async () => {
+    const save = async (e) => {
+        e?.preventDefault();
+        if (!form.name?.trim()) { setError('Give the team a name'); return; }
         setSaving(true);
+        setError(null);
         try {
-            const currentIds = new Set((team.members || []).map(m => String(m.user?._id || m.user)).filter(Boolean));
-            const toAdd = [...members].filter(id => !currentIds.has(id));
-            const toRemove = [...currentIds].filter(id => !members.has(id));
-            if (toAdd.length > 0) await api.patch(`/api/teams/${team._id}/members`, { userIds: toAdd, action: 'add' });
-            if (toRemove.length > 0) await api.patch(`/api/teams/${team._id}/members`, { userIds: toRemove, action: 'remove' });
-            onSaved(); onClose();
-        } catch (err) { alert(err.response?.data?.error || 'Failed to update members'); }
-        finally { setSaving(false); }
+            if (isEdit) {
+                // The update route takes model field names (department, lead).
+                await api.patch(`/api/teams/${initial._id}`, {
+                    name: form.name.trim(), description: form.description,
+                    department: form.departmentId || null, lead: form.leadId || null,
+                });
+            } else {
+                await api.post('/api/teams', {
+                    name: form.name.trim(), description: form.description,
+                    departmentId: form.departmentId || undefined, leadId: form.leadId || undefined,
+                });
+            }
+            showToast(isEdit ? 'Team updated' : 'Team created', 'success');
+            onSaved();
+            onClose();
+        } catch (err) {
+            setError(errorMessage(err, isEdit ? 'Could not update the team' : 'Could not create the team'));
+        } finally {
+            setSaving(false);
+        }
     };
 
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
-            onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)', width: '100%', maxWidth: '500px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border-subtle)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                        <h2 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)' }}>Manage Members</h2>
-                        <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={16} /></button>
-                    </div>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '10px' }}>{team.name} · <b style={{ color: 'var(--accent)' }}>{members.size}</b> selected</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', padding: '0 10px' }}>
-                        <Search size={12} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search employees…" style={{ flex: 1, background: 'none', border: 'none', outline: 'none', padding: '8px 0', fontSize: '12px', color: 'var(--text-primary)', fontFamily: 'inherit' }} />
-                    </div>
+        <Dialog
+            open={open}
+            title={isEdit ? 'Edit team' : 'New team'}
+            lead="Teams are focused groups inside a department."
+            onClose={onClose}
+            busy={saving}
+            footer={(
+                <>
+                    <Btn variant="ghost" onClick={onClose} disabled={saving}>Cancel</Btn>
+                    <Btn variant="primary" loading={saving} onClick={save}>{isEdit ? 'Save' : 'Create team'}</Btn>
+                </>
+            )}
+        >
+            <form onSubmit={save} style={{ display: 'contents' }}>
+                <Field label="Name" htmlFor="team-name" error={error}>
+                    <input id="team-name" className="gl-input" value={form.name || ''} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Platform squad" maxLength={80} />
+                </Field>
+                <Field label="Description" htmlFor="team-desc">
+                    <textarea id="team-desc" className="gl-input" value={form.description || ''} onChange={(e) => set('description', e.target.value)} placeholder="What this team works on (optional)" />
+                </Field>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+                    <Field label="Department">
+                        <SelectBox value={form.departmentId || ''} onChange={(v) => set('departmentId', v)} label="Department">
+                            <option value="">No department</option>
+                            {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+                        </SelectBox>
+                    </Field>
+                    <Field label="Team lead">
+                        <SelectBox value={form.leadId || ''} onChange={(v) => set('leadId', v)} label="Team lead">
+                            <option value="">No lead</option>
+                            {employees.map((emp) => <option key={emp._id} value={emp._id}>{emp.username}</option>)}
+                        </SelectBox>
+                    </Field>
                 </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px' }} className="custom-scrollbar">
-                    {filtered.length === 0 && <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '24px', fontSize: '12px' }}>No employees found</p>}
-                    {filtered.map(emp => {
-                        const sel = members.has(String(emp._id));
-                        return (
-                            <div key={emp._id} onClick={() => toggle(emp._id)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 10px', marginBottom: '3px', cursor: 'pointer', background: sel ? 'rgba(184,149,106,0.08)' : 'transparent', border: `1px solid ${sel ? 'var(--accent)' : 'transparent'}`, transition: 'all 150ms ease' }}>
-                                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: sel ? 'var(--accent)' : 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: sel ? 'var(--bg-base)' : 'var(--text-secondary)', flexShrink: 0 }}>
-                                    {emp.username.charAt(0).toUpperCase()}
-                                </div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{emp.username}</p>
-                                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{emp.email}</p>
-                                </div>
-                                <div style={{ width: '18px', height: '18px', border: `1px solid ${sel ? 'var(--accent)' : 'var(--border-accent)'}`, background: sel ? 'var(--accent)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, borderRadius: '2px' }}>
-                                    {sel && <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--bg-base)', lineHeight: 1 }}>✓</span>}
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-                <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                    <button onClick={onClose} style={{ padding: '8px 18px', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', borderRadius: '2px' }}>Cancel</button>
-                    <button onClick={handleSave} disabled={saving} style={{ padding: '8px 20px', background: saving ? 'var(--bg-active)' : 'var(--accent)', border: 'none', color: saving ? 'var(--text-muted)' : 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
-                        {saving ? 'Saving…' : `Save (${members.size})`}
-                    </button>
-                </div>
-            </div>
-        </div>
+                <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
+            </form>
+        </Dialog>
     );
 }
 
+function MembersDialog({ team, employees, onClose, onSaved }) {
+    const { showToast } = useToast();
+    const [picked, setPicked] = useState(new Set());
+    const [q, setQ] = useState('');
+    const [saving, setSaving] = useState(false);
+    React.useEffect(() => {
+        if (team) setPicked(new Set((team.members || []).map((m) => idOf(m.user)).filter(Boolean)));
+        setQ('');
+    }, [team]);
+    const toggle = (id) => setPicked((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    const list = employees.filter((e) => !q || e.username?.toLowerCase().includes(q.toLowerCase()) || e.email?.toLowerCase().includes(q.toLowerCase()));
+
+    const save = async () => {
+        setSaving(true);
+        try {
+            const current = new Set((team.members || []).map((m) => idOf(m.user)).filter(Boolean));
+            const add = [...picked].filter((id) => !current.has(id));
+            const remove = [...current].filter((id) => !picked.has(id));
+            if (add.length) await api.patch(`/api/teams/${team._id}/members`, { userIds: add, action: 'add' });
+            if (remove.length) await api.patch(`/api/teams/${team._id}/members`, { userIds: remove, action: 'remove' });
+            showToast(add.length || remove.length ? 'Members updated' : 'No changes', 'success');
+            onSaved();
+            onClose();
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not update members'), 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Dialog
+            open={!!team}
+            title="Team members"
+            lead={team ? `${team.name} · ${picked.size} selected` : undefined}
+            onClose={onClose}
+            busy={saving}
+            footer={(
+                <>
+                    <Btn variant="ghost" onClick={onClose} disabled={saving}>Cancel</Btn>
+                    <Btn variant="primary" loading={saving} onClick={save}>Save members</Btn>
+                </>
+            )}
+        >
+            <SearchBox value={q} onChange={setQ} placeholder="Search people…" />
+            <div className="wo-pick" role="group" aria-label="Company members">
+                {list.length === 0 && <p className="cd-muted" style={{ fontSize: 12, textAlign: 'center', padding: 16, margin: 0 }}>No one matches.</p>}
+                {list.map((emp) => {
+                    const on = picked.has(String(emp._id));
+                    return (
+                        <label key={emp._id} className="wo-pick-row" data-on={on ? 'true' : undefined}>
+                            <input type="checkbox" checked={on} onChange={() => toggle(String(emp._id))} />
+                            <Avatar user={emp} size="sm" />
+                            <span style={{ minWidth: 0, flex: 1 }}>
+                                <span className="cd-cell-title" style={{ display: 'block' }}>{emp.username}</span>
+                                <span className="cd-cell-sub" style={{ display: 'block' }}>{emp.email}</span>
+                            </span>
+                        </label>
+                    );
+                })}
+            </div>
+        </Dialog>
+    );
+}
+
+/** Teams: sub-groups inside departments. Owners and admins create, edit, staff and delete them. */
 export default function TeamsManagement() {
     const { user } = useAuth();
-    const rawCompanyId = user?.companyId;
-    const companyId = typeof rawCompanyId === 'object' && rawCompanyId !== null ? (rawCompanyId._id || rawCompanyId.id || String(rawCompanyId)) : rawCompanyId;
+    const { showToast } = useToast();
+    const companyId = companyIdOf(user);
+    const [dept, setDept] = useState('');
+    const [q, setQ] = useState('');
+    const [form, setForm] = useState(null); // {} for new, team for edit
+    const [membersOf, setMembersOf] = useState(null);
+    const [deleting, setDeleting] = useState(null);
+    const [busy, setBusy] = useState(false);
 
-    const [teams, setTeams] = useState([]);
-    const [departments, setDepartments] = useState([]);
-    const [employees, setEmployees] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [filterDept, setFilterDept] = useState('');
-    const [search, setSearch] = useState('');
-    const [showCreate, setShowCreate] = useState(false);
-    const [editTeam, setEditTeam] = useState(null);
-    const [membersTeam, setMembersTeam] = useState(null);
-    const [saving, setSaving] = useState(false);
+    const teams = useAsync(() => api.get('/api/teams', { params: dept ? { departmentId: dept } : {} }).then((r) => r.data?.teams || []), [dept]);
+    const departments = useAsync(() => api.get('/api/departments').then((r) => r.data?.departments || []));
+    const employees = useAsync(
+        () => api.get(`/api/companies/${companyId}/employees`, { params: { limit: 200 } }).then((r) => r.data?.employees || []),
+        [companyId],
+        { enabled: !!companyId },
+    );
 
-    const fetchTeams = useCallback(async () => {
+    const list = useMemo(() => {
+        const s = q.trim().toLowerCase();
+        return (teams.data || []).filter((t) => !s || t.name?.toLowerCase().includes(s) || t.description?.toLowerCase().includes(s));
+    }, [teams.data, q]);
+    const memberTotal = (teams.data || []).reduce((n, t) => n + (t.members?.length || 0), 0);
+
+    const remove = async () => {
+        setBusy(true);
         try {
-            setLoading(true);
-            const params = filterDept ? `?departmentId=${filterDept}` : '';
-            const { data } = await api.get(`/api/teams${params}`);
-            setTeams(data.teams || []);
-        } catch (err) { setError(err.response?.data?.error || 'Failed to load teams'); }
-        finally { setLoading(false); }
-    }, [filterDept]);
-
-    useEffect(() => { fetchTeams(); }, [fetchTeams]);
-
-    useEffect(() => {
-        api.get('/api/departments').then(r => setDepartments(r.data.departments || r.data || [])).catch(() => {});
-        if (companyId) api.get(`/api/companies/${companyId}/employees?limit=200`).then(r => setEmployees(r.data.employees || [])).catch(() => {});
-    }, [companyId]);
-
-    const handleCreate = async (form) => {
-        setSaving(true);
-        try { await api.post('/api/teams', form); setShowCreate(false); fetchTeams(); }
-        catch (err) { alert(err.response?.data?.error || 'Failed to create team'); }
-        finally { setSaving(false); }
+            await api.delete(`/api/teams/${deleting._id}`);
+            showToast(`Deleted “${deleting.name}”`, 'success');
+            setDeleting(null);
+            teams.reload();
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not delete the team'), 'error');
+        } finally {
+            setBusy(false);
+        }
     };
-    const handleEdit = async (form) => {
-        setSaving(true);
-        try { await api.patch(`/api/teams/${editTeam._id}`, form); setEditTeam(null); fetchTeams(); }
-        catch (err) { alert(err.response?.data?.error || 'Failed to update team'); }
-        finally { setSaving(false); }
-    };
-    const handleDelete = async (teamId, name) => {
-        if (!window.confirm(`Delete team "${name}"? This cannot be undone.`)) return;
-        try { await api.delete(`/api/teams/${teamId}`); fetchTeams(); }
-        catch (err) { alert(err.response?.data?.error || 'Failed to delete team'); }
-    };
-
-    const filtered = teams.filter(t => !search || t.name.toLowerCase().includes(search.toLowerCase()) || t.description?.toLowerCase().includes(search.toLowerCase()));
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {}
-            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
-                <div>
-                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        <Users size={16} style={{ color: 'var(--accent)' }} />
-                        Teams
-                    </h2>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Sub-groups within departments for focused collaboration</p>
-                </div>
-                <CreateBtn onClick={() => setShowCreate(true)} />
-            </header>
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow="Collaboration"
+                    title="Teams"
+                    lead="Focused groups inside departments, each with a lead and members."
+                    actions={(
+                        <>
+                            <Btn icon={RefreshCw} loading={teams.loading} onClick={teams.reload}>Refresh</Btn>
+                            <Btn variant="primary" icon={Plus} onClick={() => setForm({})}>New team</Btn>
+                        </>
+                    )}
+                />
+            )}
+        >
+            {teams.error && !teams.data ? (
+                <ErrorState message={teams.error} onRetry={teams.reload} />
+            ) : !teams.data ? (
+                <LoadingState label="Loading teams…" />
+            ) : (
+                <>
+                    <KpiGrid>
+                        <Kpi label="Teams" value={teams.data.length} icon={UsersRound} hint={dept ? 'In this department' : 'Across the company'} />
+                        <Kpi label="Team memberships" value={memberTotal} />
+                        <Kpi label="Without a lead" value={teams.data.filter((t) => !t.lead).length} tone="muted" />
+                    </KpiGrid>
+                    <Toolbar>
+                        <SearchBox value={q} onChange={setQ} placeholder="Search teams…" />
+                        <SelectBox value={dept} onChange={setDept} label="Department filter" style={{ maxWidth: 220 }}>
+                            <option value="">All departments</option>
+                            {(departments.data || []).map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+                        </SelectBox>
+                    </Toolbar>
+                    {list.length === 0 ? (
+                        <EmptyState
+                            icon={UsersRound}
+                            title={teams.data.length === 0 ? 'No teams yet' : 'No matches'}
+                            text={teams.data.length === 0 ? 'Create a team to organise people within a department.' : 'Try a different search or department.'}
+                            action={teams.data.length === 0 && <Btn variant="primary" icon={Plus} onClick={() => setForm({})}>New team</Btn>}
+                        />
+                    ) : (
+                        <Grid cols="3">
+                            {list.map((t) => (
+                                <article key={t._id} className="gl-card wo-card">
+                                    <div className="wo-card-head">
+                                        <div style={{ minWidth: 0 }}>
+                                            <h3 className="wo-card-title">{t.name}</h3>
+                                            <div style={{ marginTop: 4 }}>{t.department ? <Chip tone="accent">{t.department.name}</Chip> : <Chip>No department</Chip>}</div>
+                                        </div>
+                                        <div className="wo-card-actions">
+                                            <IconBtn label={`Members of ${t.name}`} onClick={() => setMembersOf(t)}><UserPlus size={15} /></IconBtn>
+                                            <IconBtn label={`Edit ${t.name}`} onClick={() => setForm(t)}><Pencil size={14} /></IconBtn>
+                                            <IconBtn label={`Delete ${t.name}`} className="cd-btn-danger" onClick={() => setDeleting(t)}><Trash2 size={14} /></IconBtn>
+                                        </div>
+                                    </div>
+                                    {t.description && <p className="wo-card-text">{t.description}</p>}
+                                    <div className="wo-card-foot">
+                                        <span><b>{t.members?.length || 0}</b> member{t.members?.length === 1 ? '' : 's'}</span>
+                                        <span>Lead: <b>{t.lead?.username || '—'}</b></span>
+                                        {(t.members || []).length > 0 && (
+                                            <span className="wo-avatars" style={{ marginLeft: 'auto' }} aria-hidden="true">
+                                                {t.members.slice(0, 5).map((m) => <Avatar key={idOf(m.user)} user={m.user} size="sm" />)}
+                                            </span>
+                                        )}
+                                    </div>
+                                </article>
+                            ))}
+                        </Grid>
+                    )}
+                </>
+            )}
 
-            {}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
-                {}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <div style={{ position: 'relative', flex: '1 1 200px', minWidth: '200px' }}>
-                        <Search size={12} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search teams…"
-                            style={{ ...inputStyle, paddingLeft: '28px' }} />
-                    </div>
-                    <select value={filterDept} onChange={e => setFilterDept(e.target.value)}
-                        style={{ ...inputStyle, width: 'auto', minWidth: '160px', cursor: 'pointer' }}>
-                        <option value="">All Departments</option>
-                        {departments.map(d => <option key={d._id} value={d._id}>{d.name}</option>)}
-                    </select>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{filtered.length} team{filtered.length !== 1 ? 's' : ''}</span>
-                </div>
-
-                {error && <div style={{ padding: '10px 14px', background: 'rgba(224,82,82,0.08)', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '12px', marginBottom: '12px' }}>{error}</div>}
-
-                {loading ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
-                        {[1,2,3,4].map(i => (
-                            <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderTop: '2px solid var(--border-accent)', padding: '16px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
-                                    <div><div className="sk" style={{ height: '13px', width: '140px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '90px' }} /></div>
-                                    <div style={{ display: 'flex', gap: '4px' }}><div className="sk" style={{ width: '22px', height: '22px' }} /><div className="sk" style={{ width: '22px', height: '22px' }} /></div>
-                                </div>
-                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                                    {[1,2].map(j => <div key={j} className="sk" style={{ height: '18px', width: '70px' }} />)}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid var(--border-subtle)' }}>
-                                    <div style={{ display: 'flex' }}>{[1,2,3].map(j => <div key={j} className="sk" style={{ width: '26px', height: '26px', borderRadius: '50%', marginLeft: j > 1 ? '-6px' : 0 }} />)}</div>
-                                    <div className="sk" style={{ height: '28px', width: '100px' }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : filtered.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '64px' }}>
-                        <Users size={32} style={{ color: 'var(--text-muted)', margin: '0 auto 10px', opacity: 0.4 }} />
-                        <p style={{ fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>{teams.length === 0 ? 'No teams yet' : 'No teams match your search'}</p>
-                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{teams.length === 0 ? 'Create a team to organize members within a department.' : 'Try a different search or department filter.'}</p>
-                        {teams.length === 0 && <CreateBtn onClick={() => setShowCreate(true)} style={{ margin: '16px auto 0', display: 'inline-flex' }} />}
-                    </div>
-                ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '12px' }}>
-                        {filtered.map((team, i) => (
-                            <TeamCard key={team._id} team={team} idx={i} onEdit={setEditTeam} onDelete={handleDelete} onManageMembers={setMembersTeam} />
-                        ))}
-                    </div>
-                )}
-            </div>
-
-            {showCreate && <TeamFormModal departments={departments} employees={employees} onSave={handleCreate} onClose={() => setShowCreate(false)} saving={saving} />}
-            {editTeam && <TeamFormModal initial={editTeam} departments={departments} employees={employees} onSave={handleEdit} onClose={() => setEditTeam(null)} saving={saving} />}
-            {membersTeam && <MembersModal team={membersTeam} employees={employees} onClose={() => setMembersTeam(null)} onSaved={fetchTeams} />}
-        </div>
+            <TeamForm
+                open={!!form}
+                initial={form && form._id ? form : null}
+                departments={departments.data || []}
+                employees={employees.data || []}
+                onClose={() => setForm(null)}
+                onSaved={teams.reload}
+            />
+            <MembersDialog team={membersOf} employees={employees.data || []} onClose={() => setMembersOf(null)} onSaved={teams.reload} />
+            <Confirm
+                open={!!deleting}
+                title="Delete team?"
+                tone="danger"
+                confirmLabel="Delete team"
+                busy={busy}
+                onConfirm={remove}
+                onClose={() => setDeleting(null)}
+            >
+                “{deleting?.name}” will be removed. Its members stay in the company and their departments.
+            </Confirm>
+        </DashPage>
     );
 }
-
-const IconBtn = ({ icon, onClick, title, danger }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} title={title} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: hov ? (danger ? 'rgba(224,82,82,0.1)' : 'var(--bg-active)') : 'none', border: 'none', color: hov ? (danger ? 'var(--state-danger)' : 'var(--text-primary)') : 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
-            {icon}
-        </button>
-    );
-};
-
-const CreateBtn = ({ onClick, style }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 16px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease', ...style }}>
-            <Plus size={13} /> Create Team
-        </button>
-    );
-};

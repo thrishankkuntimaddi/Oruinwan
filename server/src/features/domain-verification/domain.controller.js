@@ -21,6 +21,9 @@ exports.generateDomainVerification = async (req, res) => {
         });
 
     } catch (err) {
+        if (err.status && err.status < 500) {
+            return res.status(err.status).json({ message: err.message });
+        }
         logger.error("GENERATE DOMAIN VERIFICATION ERROR:", err);
 
         if (err.message === 'Company not found') {
@@ -55,6 +58,9 @@ exports.verifyDomain = async (req, res) => {
         });
 
     } catch (err) {
+        if (err.status && err.status < 500) {
+            return res.status(err.status).json({ message: err.message });
+        }
         logger.error("VERIFY DOMAIN ERROR:", err);
 
         if (err.message === 'Company not found') {
@@ -90,6 +96,9 @@ exports.setAutoJoinPolicy = async (req, res) => {
         });
 
     } catch (err) {
+        if (err.status && err.status < 500) {
+            return res.status(err.status).json({ message: err.message });
+        }
         logger.error("SET AUTO-JOIN POLICY ERROR:", err);
 
         if (err.message === 'Company not found') {

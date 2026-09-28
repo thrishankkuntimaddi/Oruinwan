@@ -1,14 +1,17 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useRevokeObjectUrl } from '../hooks/useRevokeObjectUrl';
 import api from '@services/api';
 import {
-    Users, Mail, CheckCircle, ArrowRight, ArrowLeft, Upload,
-    Clock, Plus, X, Zap, Download, FileSpreadsheet, Image,
-    Trash2, Eye, AlertCircle, Target
+    Users, Mail, CheckCircle2, ArrowRight, ArrowLeft, Upload, Plus, X, Rocket, Download,
+    FileSpreadsheet, Image, Trash2, Info, Target, Sun, Moon, Loader2,
 } from 'lucide-react';
+import '../styles/gloss.css';
+import '../components/company-dash/dash.css';
+import './admin/platform/platform.css';
 
 const TIMEZONES = [
     { value: 'UTC', label: 'UTC — Universal Time' },
@@ -26,53 +29,47 @@ const TIMEZONES = [
 
 const PRESET_DEPTS = ['Engineering', 'Sales', 'Marketing', 'HR', 'Finance', 'Operations', 'Design', 'Legal'];
 const ROLES = ['member', 'manager', 'admin'];
-
 const STEPS = [
-    { id: 1, title: 'Identity', desc: 'Brand & Regional', icon: Target },
+    { id: 1, title: 'Identity', desc: 'Name, timezone, logo', icon: Target },
     { id: 2, title: 'Structure', desc: 'Departments', icon: Users },
-    { id: 3, title: 'People', desc: 'Team Invites', icon: Mail },
-    { id: 4, title: 'Launch', desc: 'Ready to go', icon: Zap },
+    { id: 3, title: 'People', desc: 'Team invites', icon: Mail },
+    { id: 4, title: 'Launch', desc: 'Review and go', icon: Rocket },
 ];
+const blankInvite = () => ({ name: '', email: '', phone: '', role: 'member', department: '' });
 
-const inp = 'w-full px-4 py-3 rounded-xl border text-sm font-medium transition-all outline-none ' +
-    'bg-white dark:bg-slate-800 ' +
-    'border-slate-200 dark:border-slate-700 ' +
-    'text-slate-800 dark:text-slate-100 ' +
-    'placeholder-slate-400 dark:placeholder-slate-500 ' +
-    'focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20';
-
+/** Four-step company setup after verification (/company/setup). */
 const CompanySetup = () => {
     const { user, refreshUser } = useAuth();
     const { showToast } = useToast();
+    const { resolvedTheme, toggleTheme } = useTheme() || {};
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    
     const [displayName, setDisplayName] = useState(user?.company?.name || user?.companyName || '');
-    const [timezone, setTimezone] = useState('Asia/Kolkata');
+    const [timezone, setTimezone] = useState(() => {
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        return TIMEZONES.some((t) => t.value === tz) ? tz : 'UTC';
+    });
     const [logoFile, setLogoFile] = useState(null);
     const [logoPreview, setLogoPreview] = useState(null);
     useRevokeObjectUrl(logoPreview);
     const logoInputRef = useRef();
 
-    
     const [departments, setDepartments] = useState(['Engineering', 'Sales', 'Marketing', 'HR']);
     const [newDeptInput, setNewDeptInput] = useState('');
 
-    
     const [excelFile, setExcelFile] = useState(null);
     const [parsedEmployees, setParsedEmployees] = useState(null);
-    const [manualInvites, setManualInvites] = useState([{ name: '', email: '', phone: '', role: 'member', department: '' }]);
+    const [manualInvites, setManualInvites] = useState([blankInvite()]);
     const excelInputRef = useRef();
 
-    
     const [launchSummary, setLaunchSummary] = useState(null);
 
     const companyId = user?.company?.id || user?.company?._id
         || (typeof user?.companyId === 'string' ? user.companyId : user?.companyId?._id || user?.companyId?.toString());
 
-    
     const handleLogoSelect = (file) => {
         if (!file) return;
         if (!file.type.startsWith('image/')) { showToast('Please upload an image file', 'error'); return; }
@@ -80,20 +77,15 @@ const CompanySetup = () => {
         setLogoFile(file);
         setLogoPreview(URL.createObjectURL(file));
     };
-    const handleLogoDrop = useCallback((e) => {
-        e.preventDefault();
-        handleLogoSelect(e.dataTransfer.files[0]);
-    }, []);
+    const handleLogoDrop = (e) => { e.preventDefault(); handleLogoSelect(e.dataTransfer.files[0]); };
 
-    
     const addDept = (name) => {
         const t = name.trim();
-        if (!t || departments.includes(t)) return;
-        setDepartments(p => [...p, t]);
+        if (!t || departments.some((d) => d.toLowerCase() === t.toLowerCase())) return;
+        setDepartments((p) => [...p, t]);
     };
-    const removeDept = (i) => departments.length > 1 && setDepartments(p => p.filter((_, idx) => idx !== i));
+    const removeDept = (i) => departments.length > 1 && setDepartments((p) => p.filter((_, idx) => idx !== i));
 
-    
     const handleExcelSelect = async (file) => {
         if (!file) return;
         setExcelFile(file);
@@ -103,455 +95,305 @@ const CompanySetup = () => {
             const wb = XLSX.read(buffer);
             const ws = wb.Sheets[wb.SheetNames[0]];
             const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-            
-            
+            // Template columns: First, Last, Email, Personal email, Job title, Join date, Mobile, Corp ID, Role, Department.
             const data = rows.slice(1)
-                .filter(r => r[2] && String(r[2]).includes('@'))   
-                .map(r => ({
-                    name:         `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
-                    email:        String(r[2] || '').trim().toLowerCase(),   
-                    personalEmail:String(r[3] || '').trim().toLowerCase(),   
-                    jobTitle:     String(r[4] || '').trim(),                 
-                    joiningDate:  String(r[5] || '').trim(),                 
-                    phone:        String(r[6] || '').trim(),                 
-                    corporateId:  String(r[7] || '').trim(),                 
-                    role:         String(r[8] || 'member').trim().toLowerCase(), 
-                    department:   String(r[9] || '').trim(),                 
+                .filter((r) => r[2] && String(r[2]).includes('@'))
+                .map((r) => ({
+                    name: `${String(r[0] || '').trim()} ${String(r[1] || '').trim()}`.trim(),
+                    email: String(r[2] || '').trim().toLowerCase(),
+                    personalEmail: String(r[3] || '').trim().toLowerCase(),
+                    jobTitle: String(r[4] || '').trim(),
+                    joiningDate: String(r[5] || '').trim(),
+                    phone: String(r[6] || '').trim(),
+                    corporateId: String(r[7] || '').trim(),
+                    role: String(r[8] || 'member').trim().toLowerCase(),
+                    department: String(r[9] || '').trim(),
                 }));
             setParsedEmployees(data);
-            showToast(`Parsed ${data.length} employee records`, 'success');
+            showToast(`Read ${data.length} people from the file`, 'success');
         } catch {
-            showToast('Could not parse file. Use the provided template.', 'error');
+            setParsedEmployees(null);
+            showToast('Could not read that file. Use the template.', 'error');
         }
     };
 
     const downloadTemplate = async () => {
         try {
-            const res = await api.get(
-                `/api/companies/${companyId}/setup/template`,
-                { responseType: 'blob' }
-            );
+            const res = await api.get(`/api/companies/${companyId}/setup/template`, { responseType: 'blob' });
             const url = URL.createObjectURL(res.data);
             const a = document.createElement('a');
             a.href = url; a.download = 'oruinwan_team_template.xlsx'; a.click();
             URL.revokeObjectURL(url);
-        } catch { showToast('Failed to download template', 'error'); }
+        } catch { showToast('Could not download the template', 'error'); }
     };
 
-    
-    const updateInvite = (i, field, val) =>
-        setManualInvites(p => { const c = [...p]; c[i] = { ...c[i], [field]: val }; return c; });
-    const removeInvite = (i) => manualInvites.length > 1 && setManualInvites(p => p.filter((_, idx) => idx !== i));
+    const updateInvite = (i, field, val) => setManualInvites((p) => { const c = [...p]; c[i] = { ...c[i], [field]: val }; return c; });
+    const removeInvite = (i) => manualInvites.length > 1 && setManualInvites((p) => p.filter((_, idx) => idx !== i));
 
-    
     const handleNext = async () => {
-        if (!companyId) { showToast('No company ID found', 'error'); return; }
+        if (!companyId) { setError('Your account is not linked to a company.'); return; }
+        if (step === 1 && !displayName.trim()) { setError('Enter the company name.'); return; }
         setIsLoading(true);
+        setError('');
         try {
             const formData = new FormData();
             formData.append('step', step);
-
             if (step === 1) {
-                formData.append('data', JSON.stringify({ displayName, timezone }));
+                formData.append('data', JSON.stringify({ displayName: displayName.trim(), timezone }));
                 if (logoFile) formData.append('logo', logoFile);
             } else if (step === 2) {
                 formData.append('data', JSON.stringify({ departments }));
             } else if (step === 3) {
-                if (excelFile) {
-                    formData.append('employeeFile', excelFile);
-                } else {
-                    const valid = manualInvites.filter(i => i.email);
-                    formData.append('data', JSON.stringify({ invites: valid }));
-                }
+                if (excelFile) formData.append('employeeFile', excelFile);
+                else formData.append('data', JSON.stringify({ invites: manualInvites.filter((i) => i.email.trim()) }));
             } else {
                 formData.append('data', JSON.stringify({}));
             }
 
-            const res = await api.put(
-                `/api/companies/${companyId}/setup`,
-                formData
-            );
+            const res = await api.put(`/api/companies/${companyId}/setup`, formData);
 
             if (step === 3) {
-                const r = res.data.results || {};
-                setLaunchSummary({ departments: departments.length, invites: r.created || 0 });
+                const r = res.data?.results || {};
+                setLaunchSummary({ invites: r.created || 0, skipped: r.skipped || 0, errors: Array.isArray(r.errors) ? r.errors.length : 0 });
             }
-
             if (step < 4) {
                 setStep(step + 1);
             } else {
-                await refreshUser();
-                navigate(res.data.redirectTo || '/admin/analytics');
+                await refreshUser?.();
+                navigate(res.data?.redirectTo || '/owner/dashboard');
             }
         } catch (err) {
-            showToast(err.response?.data?.message || 'Something went wrong', 'error');
+            setError(err.response?.data?.message || 'Something went wrong. Please try again.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    
     return (
-        <div className="h-screen w-full bg-slate-100 dark:bg-[#07090f] flex items-center justify-center overflow-hidden font-sans p-4">
-            <style>{`
-                @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-                .fade-up { animation: fadeUp 0.3s ease forwards; }
-            `}</style>
-
-            {}
-            <div className="w-full max-w-5xl h-full max-h-[92vh] rounded-3xl overflow-hidden shadow-2xl flex border border-slate-200 dark:border-slate-800">
-
-                {}
-                <div className="w-64 shrink-0 bg-[#0e1220] flex flex-col h-full">
-                    <div className="p-6 flex flex-col h-full">
-
-                        {}
-                        <div className="flex items-center gap-2.5 mb-8">
-                            <img
-                                src="/icons/oruinwan-128.png"
-                                alt="Oruinwan"
-                                className="h-9 w-9 rounded-xl object-cover"
-                                onError={e => { e.target.style.display = 'none'; }}
-                            />
-                            <span className="font-black text-xl text-white tracking-tight">Oruinwan</span>
-                        </div>
-
-                        {}
-                        <div className="space-y-1 flex-1">
-                            {STEPS.map(s => {
-                                const active = step === s.id;
-                                const done = step > s.id;
-                                return (
-                                    <div key={s.id} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300
-                                        ${active ? 'bg-white/10' : 'opacity-40'}`}>
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0
-                                            ${active ? 'bg-white text-indigo-700' : done ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-500'}`}>
-                                            {done ? <CheckCircle size={15} /> : <s.icon size={15} />}
-                                        </div>
-                                        <div>
-                                            <p className={`text-xs font-bold leading-none mb-0.5 ${active ? 'text-white' : 'text-slate-400'}`}>{s.title}</p>
-                                            <p className="text-[10px] text-slate-600">{s.desc}</p>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {}
-                        <div className="pt-4 border-t border-white/10">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Clock size={11} className="text-slate-500" />
-                                <p className="text-[10px] text-slate-500">Step {step} of 4</p>
-                            </div>
-                            <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-indigo-500 rounded-full transition-all duration-500"
-                                    style={{ width: `${(step / 4) * 100}%` }} />
-                            </div>
-                        </div>
+        <div className="pf-flow gl-ambient">
+            {toggleTheme && (
+                <button type="button" className="gl-icon-btn pf-flow-theme" onClick={() => toggleTheme()} aria-label={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}>
+                    {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                </button>
+            )}
+            <div className="gl-card pf-flow-card">
+                <aside className="pf-flow-aside">
+                    <div className="pf-flow-brand"><img src="/icons/oruinwan-128.png" alt="" /> Oruinwan</div>
+                    <ol className="pf-steps" aria-label="Setup steps" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                        {STEPS.map((s) => {
+                            const state = step === s.id ? 'active' : step > s.id ? 'done' : 'todo';
+                            return (
+                                <li key={s.id} className="pf-step" data-state={state} aria-current={state === 'active' ? 'step' : undefined}>
+                                    <span className="pf-step-mark">{state === 'done' ? <CheckCircle2 size={14} /> : <s.icon size={14} />}</span>
+                                    <span>
+                                        <span className="pf-step-title" style={{ display: 'block' }}>{s.title}</span>
+                                        <span className="pf-step-desc">{s.desc}</span>
+                                    </span>
+                                </li>
+                            );
+                        })}
+                    </ol>
+                    <div className="pf-flow-hide-sm">
+                        <div className="cd-hint" style={{ marginBottom: 6 }}>Step {step} of 4</div>
+                        <div className="pf-progress"><span style={{ width: `${(step / 4) * 100}%` }} /></div>
                     </div>
-                </div>
+                </aside>
 
-                {}
-                <div className="flex-1 bg-white dark:bg-slate-900 flex flex-col min-h-0">
-
-                    {}
-                    <div className="flex-1 overflow-y-auto px-10 py-8">
-                        <div className="max-w-xl mx-auto">
-
-                            {}
-                            {step === 1 && (
-                                <div className="fade-up space-y-5">
-                                    <div>
-                                        <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Company Profile</h1>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Personalise your workspace identity.</p>
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Company Name</label>
-                                        <input value={displayName} onChange={e => setDisplayName(e.target.value)}
-                                            className={inp} placeholder="e.g. Acme Corp" autoFocus />
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Timezone</label>
-                                        <div className="relative">
-                                            <Clock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                                            <select value={timezone} onChange={e => setTimezone(e.target.value)}
-                                                className={`${inp} pl-10 appearance-none cursor-pointer`}>
-                                                {TIMEZONES.map(tz => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Brand Logo</label>
-                                        {logoPreview ? (
-                                            <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                                                <img src={logoPreview} alt="Logo" className="w-16 h-16 object-contain rounded-lg border border-slate-200 dark:border-slate-600" />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-sm text-slate-800 dark:text-white truncate">{logoFile?.name}</p>
-                                                    <p className="text-xs text-slate-400">{(logoFile?.size / 1024).toFixed(1)} KB</p>
-                                                </div>
-                                                <button onClick={() => { setLogoFile(null); setLogoPreview(null); }}
-                                                    className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors">
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        ) : (
-                                            <div onDrop={handleLogoDrop} onDragOver={e => e.preventDefault()}
-                                                onClick={() => logoInputRef.current?.click()}
-                                                className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 rounded-xl p-8 flex flex-col items-center cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group">
-                                                <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                                    <Image size={22} className="text-indigo-500" />
-                                                </div>
-                                                <p className="font-bold text-sm text-slate-600 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">Click or drag to upload logo</p>
-                                                <p className="text-xs text-slate-400 mt-1">SVG, PNG, JPG — max 2 MB</p>
-                                            </div>
-                                        )}
-                                        <input ref={logoInputRef} type="file" accept="image/*" className="hidden"
-                                            onChange={e => handleLogoSelect(e.target.files[0])} />
-                                    </div>
+                <div className="pf-flow-main">
+                    <div className="pf-flow-body">
+                        {step === 1 && (
+                            <>
+                                <div>
+                                    <div className="gl-eyebrow">Step 1 · Identity</div>
+                                    <h1 className="gl-display pf-flow-title">Company profile</h1>
+                                    <p className="pf-flow-lead">How your company appears to everyone in Oruinwan.</p>
                                 </div>
-                            )}
+                                <div className="cd-field">
+                                    <label htmlFor="pf-setup-name">Company name</label>
+                                    <input id="pf-setup-name" className="gl-input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Acme Corp" autoFocus />
+                                </div>
+                                <div className="cd-field">
+                                    <label htmlFor="pf-setup-tz">Timezone</label>
+                                    <select id="pf-setup-tz" className="gl-input cd-select" value={timezone} onChange={(e) => setTimezone(e.target.value)}>
+                                        {TIMEZONES.map((tz) => <option key={tz.value} value={tz.value}>{tz.label}</option>)}
+                                    </select>
+                                </div>
+                                <div className="cd-field">
+                                    <span className="cd-label">Logo (optional)</span>
+                                    {logoPreview ? (
+                                        <div className="gl-card pf-file">
+                                            <img src={logoPreview} alt="Logo preview" />
+                                            <div className="cd-grow" style={{ flex: 1, minWidth: 0 }}>
+                                                <div className="cd-cell-title">{logoFile?.name}</div>
+                                                <div className="cd-cell-sub">{((logoFile?.size || 0) / 1024).toFixed(1)} KB</div>
+                                            </div>
+                                            <button type="button" className="gl-icon-btn" aria-label="Remove logo" onClick={() => { setLogoFile(null); setLogoPreview(null); }}><Trash2 size={15} /></button>
+                                        </div>
+                                    ) : (
+                                        <button type="button" className="pf-drop" onDrop={handleLogoDrop} onDragOver={(e) => e.preventDefault()} onClick={() => logoInputRef.current?.click()}>
+                                            <Image size={20} />
+                                            <strong style={{ fontSize: 13 }}>Click or drop an image</strong>
+                                            <span style={{ fontSize: 11.5 }}>SVG, PNG or JPG — up to 2 MB</span>
+                                        </button>
+                                    )}
+                                    <input ref={logoInputRef} type="file" accept="image/*" hidden onChange={(e) => handleLogoSelect(e.target.files[0])} />
+                                </div>
+                            </>
+                        )}
 
-                            {}
-                            {step === 2 && (
-                                <div className="fade-up space-y-5">
-                                    <div>
-                                        <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Departments</h1>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Organise your team into departments.</p>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Quick Add</p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {PRESET_DEPTS.filter(p => !departments.includes(p)).map(p => (
-                                                <button key={p} onClick={() => addDept(p)}
-                                                    className="px-3 py-1 text-xs font-medium rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all">
-                                                    + {p}
-                                                </button>
+                        {step === 2 && (
+                            <>
+                                <div>
+                                    <div className="gl-eyebrow">Step 2 · Structure</div>
+                                    <h1 className="gl-display pf-flow-title">Departments</h1>
+                                    <p className="pf-flow-lead">Group people into departments. You can change these later.</p>
+                                </div>
+                                {PRESET_DEPTS.some((p) => !departments.includes(p)) && (
+                                    <div className="cd-field">
+                                        <span className="cd-label">Quick add</span>
+                                        <div className="pf-pills">
+                                            {PRESET_DEPTS.filter((p) => !departments.includes(p)).map((p) => (
+                                                <button key={p} type="button" className="pf-pill" onClick={() => addDept(p)}>+ {p}</button>
                                             ))}
                                         </div>
                                     </div>
-
-                                    <div className="space-y-2">
-                                        {departments.map((d, i) => (
-                                            <div key={i} className="flex items-center gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl">
-                                                <Users size={15} className="text-indigo-500 shrink-0" />
-                                                <span className="flex-1 text-sm font-bold text-slate-800 dark:text-white">{d}</span>
-                                                <button onClick={() => removeDept(i)} disabled={departments.length === 1}
-                                                    className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors
-                                                        ${departments.length === 1 ? 'text-slate-200 dark:text-slate-700' : 'text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'}`}>
-                                                    <X size={14} />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    <div className="relative">
-                                        <Plus size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input value={newDeptInput} onChange={e => setNewDeptInput(e.target.value)}
-                                            onKeyDown={e => { if (e.key === 'Enter') { addDept(newDeptInput); setNewDeptInput(''); } }}
-                                            placeholder="Add department and press Enter..."
-                                            className={`${inp} pl-10 border-dashed border-2 bg-white dark:bg-slate-900`} />
-                                    </div>
+                                )}
+                                <div className="gl-card cd-list">
+                                    {departments.map((d, i) => (
+                                        <div className="cd-list-row" key={d}>
+                                            <Users size={14} style={{ color: 'var(--accent)' }} />
+                                            <span className="cd-grow" style={{ fontWeight: 600, fontSize: 13 }}>{d}</span>
+                                            <button type="button" className="gl-icon-btn" aria-label={`Remove ${d}`} disabled={departments.length === 1} onClick={() => removeDept(i)}><X size={14} /></button>
+                                        </div>
+                                    ))}
                                 </div>
-                            )}
+                                <form className="cd-toolbar" onSubmit={(e) => { e.preventDefault(); addDept(newDeptInput); setNewDeptInput(''); }}>
+                                    <input className="gl-input" style={{ flex: 1, minWidth: 0 }} value={newDeptInput} onChange={(e) => setNewDeptInput(e.target.value)} placeholder="Another department" aria-label="New department name" />
+                                    <button type="submit" className="gl-btn" disabled={!newDeptInput.trim()}><Plus size={13} /> Add</button>
+                                </form>
+                            </>
+                        )}
 
-                            {}
-                            {step === 3 && (
-                                <div className="fade-up space-y-5">
-                                    <div>
-                                        <h1 className="text-2xl font-black text-slate-900 dark:text-white mb-1">Team Invites</h1>
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Add your team via Excel upload or manually.</p>
+                        {step === 3 && (
+                            <>
+                                <div>
+                                    <div className="gl-eyebrow">Step 3 · People</div>
+                                    <h1 className="gl-display pf-flow-title">Invite your team</h1>
+                                    <p className="pf-flow-lead">Upload the spreadsheet template or add people one by one. You can skip this and invite people later.</p>
+                                </div>
+                                <div className="gl-card pf-banner">
+                                    <FileSpreadsheet size={18} style={{ color: 'var(--accent)' }} />
+                                    <div className="pf-grow">
+                                        <div className="pf-banner-title">Employee template</div>
+                                        <div className="pf-banner-sub">Name, work email, mobile, role, department</div>
                                     </div>
-
-                                    {}
-                                    <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800">
-                                        <div className="w-10 h-10 rounded-xl bg-white dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 border border-emerald-100 dark:border-emerald-800 shrink-0">
-                                            <FileSpreadsheet size={20} />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-sm text-slate-800 dark:text-white">Download Employee Template</p>
-                                            <p className="text-xs text-slate-500 dark:text-slate-400">Fill in: Name, Email, Phone, Role, Department</p>
-                                        </div>
-                                        <button onClick={downloadTemplate}
-                                            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shrink-0">
-                                            <Download size={13} /> Download
-                                        </button>
-                                    </div>
-
-                                    {}
-                                    <div className="space-y-2">
-                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bulk Upload (Excel / CSV)</label>
-                                        {excelFile ? (
-                                            <div className="space-y-3">
-                                                <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                                                    <FileSpreadsheet size={18} className="text-green-600 shrink-0" />
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="font-bold text-xs text-slate-700 dark:text-white truncate">{excelFile.name}</p>
-                                                        <p className="text-[11px] text-slate-400">{parsedEmployees?.length || 0} records</p>
-                                                    </div>
-                                                    <button onClick={() => { setExcelFile(null); setParsedEmployees(null); }}
-                                                        className="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 flex items-center justify-center">
-                                                        <X size={13} />
-                                                    </button>
-                                                </div>
-                                                {parsedEmployees?.length > 0 && (
-                                                    <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-                                                        <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
-                                                            <Eye size={12} className="text-slate-400" />
-                                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Preview — {parsedEmployees.length} rows</p>
-                                                        </div>
-                                                        <div className="overflow-x-auto max-h-40 overflow-y-auto">
-                                                            <table className="w-full text-xs">
-                                                                <thead className="bg-white dark:bg-slate-900 sticky top-0">
-                                                                    <tr>
-                                                                    {['Name', 'Work Email', 'Mobile', 'Role', 'Dept'].map(h => (
-                                                                            <th key={h} className="text-left px-3 py-2 text-[10px] font-bold text-slate-400 uppercase">{h}</th>
-                                                                        ))}
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                                    {parsedEmployees.slice(0, 8).map((emp, i) => (
-                                                                        <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                                                            <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-300">{emp.name}</td>
-                                                                            <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{emp.email}</td>
-                                                                            <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{emp.phone || '—'}</td>
-                                                                            <td className="px-3 py-2">
-                                                                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold
-                                                                                    ${emp.role === 'admin' ? 'bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                                                                                        emp.role === 'manager' ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400' :
-                                                                                            'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'}`}>
-                                                                                    {emp.role}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{emp.department || '—'}</td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div onClick={() => excelInputRef.current?.click()}
-                                                className="border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 rounded-xl p-6 flex flex-col items-center cursor-pointer hover:bg-indigo-50/30 dark:hover:bg-indigo-900/10 transition-all group">
-                                                <Upload size={22} className="text-indigo-500 mb-2" />
-                                                <p className="font-bold text-sm text-slate-600 dark:text-slate-300 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">Click to upload Excel / CSV</p>
-                                                <p className="text-xs text-slate-400 mt-1">.xlsx or .csv based on the template above</p>
-                                            </div>
-                                        )}
-                                        <input ref={excelInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden"
-                                            onChange={e => handleExcelSelect(e.target.files[0])} />
-                                    </div>
-
-                                    {}
-                                    {!excelFile && (
+                                    <button type="button" className="gl-btn gl-btn--sm" onClick={downloadTemplate}><Download size={13} /> Download</button>
+                                </div>
+                                <div className="cd-field">
+                                    <span className="cd-label">Bulk upload (Excel / CSV)</span>
+                                    {excelFile ? (
                                         <>
-                                            <div className="relative flex items-center gap-3">
-                                                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
-                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Or Add Manually</span>
-                                                <div className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+                                            <div className="gl-card pf-file">
+                                                <FileSpreadsheet size={18} style={{ color: 'var(--state-success)' }} />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div className="cd-cell-title">{excelFile.name}</div>
+                                                    <div className="cd-cell-sub">{parsedEmployees?.length || 0} people</div>
+                                                </div>
+                                                <button type="button" className="gl-icon-btn" aria-label="Remove file" onClick={() => { setExcelFile(null); setParsedEmployees(null); }}><X size={14} /></button>
                                             </div>
-
-                                            <div className="space-y-3">
-                                                {manualInvites.map((invite, i) => (
-                                                    <div key={i} className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl relative group">
-                                                        {manualInvites.length > 1 && (
-                                                            <button onClick={() => removeInvite(i)}
-                                                                className="absolute -top-2 -right-2 w-6 h-6 bg-white dark:bg-slate-700 shadow border border-slate-200 dark:border-slate-600 text-slate-400 hover:text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <X size={11} />
-                                                            </button>
-                                                        )}
-                                                        <div className="grid grid-cols-2 gap-2 mb-2">
-                                                            <input value={invite.name} onChange={e => updateInvite(i, 'name', e.target.value)}
-                                                                placeholder="Full Name" className={inp} />
-                                                            <input type="email" value={invite.email} onChange={e => updateInvite(i, 'email', e.target.value)}
-                                                                placeholder="Email" className={inp} />
-                                                        </div>
-                                                        <div className="grid grid-cols-3 gap-2">
-                                                            <input type="tel" value={invite.phone} onChange={e => updateInvite(i, 'phone', e.target.value)}
-                                                                placeholder="Phone (opt.)" className={inp} />
-                                                            <select value={invite.role} onChange={e => updateInvite(i, 'role', e.target.value)} className={`${inp} cursor-pointer`}>
-                                                                {ROLES.map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
-                                                            </select>
-                                                            <select value={invite.department} onChange={e => updateInvite(i, 'department', e.target.value)} className={`${inp} cursor-pointer`}>
-                                                                <option value="">Department</option>
-                                                                {departments.map((d, j) => <option key={j} value={d}>{d}</option>)}
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            <button onClick={() => setManualInvites(p => [...p, { name: '', email: '', phone: '', role: 'member', department: '' }])}
-                                                className="w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 text-sm font-bold rounded-xl hover:border-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all flex items-center justify-center gap-2">
-                                                <Plus size={15} /> Add Another Person
-                                            </button>
-
-                                            <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                                                <AlertCircle size={14} className="text-amber-500 shrink-0 mt-0.5" />
-                                                <p className="text-xs text-amber-700 dark:text-amber-400">Each person will receive an email with a temporary password and must change it on first login.</p>
-                                            </div>
+                                            {parsedEmployees?.length > 0 && (
+                                                <div className="gl-card cd-table-wrap" style={{ '--cd-table-max': '200px' }}>
+                                                    <table className="cd-table">
+                                                        <thead><tr>{['Name', 'Work email', 'Role', 'Department'].map((h) => <th key={h} scope="col">{h}</th>)}</tr></thead>
+                                                        <tbody>
+                                                            {parsedEmployees.slice(0, 20).map((emp) => (
+                                                                <tr key={emp.email}>
+                                                                    <td>{emp.name || '—'}</td>
+                                                                    <td className="cd-muted">{emp.email}</td>
+                                                                    <td><span className="cd-chip" data-tone={emp.role === 'admin' ? 'accent' : emp.role === 'manager' ? 'success' : undefined}>{emp.role}</span></td>
+                                                                    <td className="cd-muted">{emp.department || '—'}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
                                         </>
+                                    ) : (
+                                        <button type="button" className="pf-drop" onClick={() => excelInputRef.current?.click()}>
+                                            <Upload size={20} />
+                                            <strong style={{ fontSize: 13 }}>Choose an .xlsx or .csv file</strong>
+                                            <span style={{ fontSize: 11.5 }}>Based on the template above</span>
+                                        </button>
                                     )}
+                                    <input ref={excelInputRef} type="file" accept=".xlsx,.xls,.csv" hidden onChange={(e) => handleExcelSelect(e.target.files[0])} />
                                 </div>
-                            )}
-
-                            {}
-                            {step === 4 && (
-                                <div className="fade-up flex flex-col items-center text-center py-6">
-                                    <div className="relative w-24 h-24 mb-8">
-                                        <div className="absolute inset-0 rounded-full bg-emerald-100 dark:bg-emerald-900/30 animate-ping opacity-20" />
-                                        <div className="relative w-full h-full rounded-full bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-900/40 dark:to-teal-900/40 flex items-center justify-center border border-emerald-200 dark:border-emerald-800 shadow-xl">
-                                            <CheckCircle size={44} className="text-emerald-500" />
-                                        </div>
-                                    </div>
-                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">Configuration Complete!</h2>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 max-w-sm">
-                                        Your workspace is configured and ready. Click Launch to enter your dashboard.
-                                    </p>
-                                    <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 text-left relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-600" />
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Summary</p>
-                                        {[
-                                            { label: 'Company Profile', val: 'Configured ✓' },
-                                            { label: 'Departments Created', val: departments.length },
-                                            { label: 'Invites Sent', val: launchSummary?.invites ?? manualInvites.filter(i => i.email).length },
-                                        ].map((item, i) => (
-                                            <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 dark:border-slate-700 last:border-0">
-                                                <span className="text-sm text-slate-500 dark:text-slate-400">{item.label}</span>
-                                                <span className="font-black text-sm text-slate-900 dark:text-white">{item.val}</span>
+                                {!excelFile && (
+                                    <>
+                                        <div className="gl-section-label" style={{ padding: 0 }}>Or add people</div>
+                                        {manualInvites.map((inv, i) => (
+                                            <div key={i} className="gl-card pf-invite">
+                                                {manualInvites.length > 1 && (
+                                                    <button type="button" className="gl-icon-btn pf-invite-remove" aria-label="Remove person" onClick={() => removeInvite(i)}><X size={13} /></button>
+                                                )}
+                                                <div className="pf-row" style={{ paddingRight: manualInvites.length > 1 ? 30 : 0 }}>
+                                                    <input className="gl-input" value={inv.name} onChange={(e) => updateInvite(i, 'name', e.target.value)} placeholder="Full name" aria-label="Full name" />
+                                                    <input className="gl-input" type="email" value={inv.email} onChange={(e) => updateInvite(i, 'email', e.target.value)} placeholder="Work email" aria-label="Work email" />
+                                                </div>
+                                                <div className="pf-row" style={{ '--pf-cols': 3 }}>
+                                                    <input className="gl-input" type="tel" value={inv.phone} onChange={(e) => updateInvite(i, 'phone', e.target.value)} placeholder="Phone (optional)" aria-label="Phone" />
+                                                    <select className="gl-input cd-select" value={inv.role} onChange={(e) => updateInvite(i, 'role', e.target.value)} aria-label="Role">
+                                                        {ROLES.map((r) => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
+                                                    </select>
+                                                    <select className="gl-input cd-select" value={inv.department} onChange={(e) => updateInvite(i, 'department', e.target.value)} aria-label="Department">
+                                                        <option value="">No department</option>
+                                                        {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                                                    </select>
+                                                </div>
                                             </div>
                                         ))}
-                                    </div>
-                                </div>
-                            )}
+                                        <button type="button" className="gl-btn" onClick={() => setManualInvites((p) => [...p, blankInvite()])}><Plus size={13} /> Add another person</button>
+                                        <div className="gl-card pf-banner" style={{ alignItems: 'flex-start' }}>
+                                            <Info size={15} className="cd-muted" />
+                                            <div className="pf-grow pf-banner-sub" style={{ marginTop: 0 }}>Each person gets an email with a temporary password and changes it on first sign-in.</div>
+                                        </div>
+                                    </>
+                                )}
+                            </>
+                        )}
 
-                        </div>
+                        {step === 4 && (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 14, paddingTop: 12 }}>
+                                <span className="pf-done-mark"><CheckCircle2 size={30} /></span>
+                                <div>
+                                    <div className="gl-eyebrow" style={{ justifyContent: 'center' }}>Step 4 · Launch</div>
+                                    <h1 className="gl-display pf-flow-title">Ready to <span className="gl-sheen">launch</span></h1>
+                                    <p className="pf-flow-lead" style={{ margin: '6px auto 0' }}>Launching creates your departments and opens the owner dashboard.</p>
+                                </div>
+                                <div className="gl-card cd-list pf-summary">
+                                    <div className="cd-list-row"><span className="cd-muted">Company name</span><strong>{displayName || '—'}</strong></div>
+                                    <div className="cd-list-row"><span className="cd-muted">Timezone</span><strong>{timezone}</strong></div>
+                                    <div className="cd-list-row"><span className="cd-muted">Departments</span><strong>{departments.length}</strong></div>
+                                    <div className="cd-list-row"><span className="cd-muted">Invites sent</span><strong>{launchSummary ? launchSummary.invites : 0}</strong></div>
+                                    {launchSummary?.skipped > 0 && <div className="cd-list-row"><span className="cd-muted">Skipped (already members)</span><strong>{launchSummary.skipped}</strong></div>}
+                                    {launchSummary?.errors > 0 && <div className="cd-list-row"><span className="cd-muted">Could not invite</span><strong style={{ color: 'var(--state-danger)' }}>{launchSummary.errors}</strong></div>}
+                                </div>
+                            </div>
+                        )}
+                        {error && <div className="cd-error-text" role="alert">{error}</div>}
                     </div>
 
-                    {}
-                    <div className="shrink-0 px-10 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
+                    <div className="pf-flow-foot">
                         <div>
                             {step > 1 && step < 4 && (
-                                <button onClick={() => setStep(s => s - 1)}
-                                    className="group flex items-center gap-1.5 px-4 py-2.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
-                                    <ArrowLeft size={15} className="group-hover:-translate-x-1 transition-transform" /> Back
+                                <button type="button" className="gl-btn gl-btn--ghost" onClick={() => { setError(''); setStep((s) => s - 1); }} disabled={isLoading}>
+                                    <ArrowLeft size={14} /> Back
                                 </button>
                             )}
                         </div>
-                        <button onClick={handleNext} disabled={isLoading}
-                            className={`px-8 py-3 font-bold rounded-xl text-white text-sm flex items-center gap-2 transition-all hover:-translate-y-0.5 shadow-lg relative overflow-hidden group
-                                ${step === 4 ? 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-200 dark:shadow-indigo-900' : 'bg-slate-900 dark:bg-indigo-600 shadow-slate-200 dark:shadow-indigo-900'}`}>
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                            {isLoading
-                                ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                : <><span>{step === 4 ? '🚀 Launch Workspace' : 'Continue'}</span>
-                                    {step !== 4 && <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />}</>
-                            }
+                        <button type="button" className="gl-btn gl-btn--primary gl-btn--lg" onClick={handleNext} disabled={isLoading}>
+                            {isLoading && <Loader2 size={15} className="cd-spin" />}
+                            {step === 4 ? <>Launch workspace <Rocket size={15} /></> : step === 3 && !excelFile && !manualInvites.some((i) => i.email.trim()) ? <>Skip for now <ArrowRight size={15} /></> : <>Continue <ArrowRight size={15} /></>}
                         </button>
                     </div>
                 </div>

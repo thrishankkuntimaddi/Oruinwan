@@ -1,6 +1,10 @@
 const logger = require('../../../utils/logger');
 const { registry: defaultRegistry } = require('./huddleRegistry');
 
+/** Session history (MongoDB); required lazily so tests can inject a fake. */
+const defaultHistory = () => require('./huddleHistory.service').recorder;
+const defaultNotesOp = (args) => require('./huddleHistory.service').applyNotesOp(args);
+
 function notifyHuddle(io, socket, { recipientIds, workspaceId, channelId, dmSessionId, channelName, startedBy }) {
     if (!workspaceId) return;
     const notificationService = require('../notifications/notificationService');
@@ -116,7 +120,7 @@ function huddleError(socket, huddleId, code, message) {
     socket.emit('huddle:error', { huddleId, code, message });
 }
 
-function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope } = {}) {
+function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify = verifyScope, history = defaultHistory(), notesOp = defaultNotesOp } = {}) {
     const uid = () => String(socket.user.id);
 
     const announceEnded = (huddle, reason) => {
@@ -125,6 +129,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         // Only the conversation's own room: a DM or private-channel huddle must not be announced workspace-wide.
         const room = scopeRoom(huddle);
         if (room) io.to(room).emit('huddle:ended', payload);
+        history.ended(huddle.huddleId);
     };
 
     /** Remove this user from a huddle; ends the huddle when nobody is left. */
@@ -132,6 +137,7 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
         const { removed, ended, huddle } = registry.leave(huddleId, uid(), onlyThisSocket ? socket.id : undefined);
         socket.leave(`huddle:${huddleId}`);
         if (!removed || !huddle) return;
+        history.left(huddleId, uid());
         io.to(`huddle:${huddleId}`).emit('huddle:left', { huddleId, userId: uid(), reason, timestamp: new Date() });
         const room = scopeRoom(huddle);
         if (room) io.to(room).emit('huddle:participant_left', { huddleId, userId: uid() });
@@ -148,9 +154,11 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
 
             const username = await displayName(socket);
             const startedBy = { _id: uid(), username };
+            const existed = !!registry.get(huddleId);
             const { huddle, error } = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy, video: !!data.video });
             if (error) return huddleError(socket, huddleId, error, 'Huddle already exists elsewhere');
             huddle.workspaceId = huddle.workspaceId || check.scope.workspaceId || null;
+            if (!existed) history.started(registry.summary(huddle));
 
             const scope = registryScope(check.scope);
             const payload = {
@@ -192,15 +200,18 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
 
             const username = await displayName(socket);
             // A join for a huddle this process never saw (e.g. after a restart) re-creates it.
+            const existed = !!registry.get(huddleId);
             const ensured = registry.ensure(huddleId, registryScope(check.scope), { channelName: check.channelName, startedBy: { _id: uid(), username }, video: !!(data.video || videoEnabled) });
             if (ensured.error) return huddleError(socket, huddleId, ensured.error, 'This huddle belongs to a different conversation');
             ensured.huddle.workspaceId = ensured.huddle.workspaceId || check.scope.workspaceId || null;
+            if (!existed) history.started(registry.summary(ensured.huddle));
 
             const joined = registry.join(huddleId, { userId: uid(), username, audioEnabled, videoEnabled, socketId: socket.id });
             if (joined.error === 'HUDDLE_FULL') {
                 return huddleError(socket, huddleId, 'HUDDLE_FULL', `This huddle is full (max ${registry.maxParticipants} people).`);
             }
             if (joined.error) return huddleError(socket, huddleId, joined.error, 'Could not join huddle');
+            history.joined(huddleId, { userId: uid(), username });
 
             const room = `huddle:${huddleId}`;
             if (joined.replacedSocketId) {
@@ -291,6 +302,24 @@ function registerHuddleHandlers(io, socket, { registry = defaultRegistry, verify
     socket.on('huddle:offer', relay('huddle:offer', 'offer'));
     socket.on('huddle:answer', relay('huddle:answer', 'answer'));
     socket.on('huddle:ice-candidate', relay('huddle:ice-candidate', 'candidate'));
+
+    // Shared huddle notes: one small edit (a paragraph or an action item) at a
+    // time, applied on the server in order and relayed to everyone else in the call.
+    socket.on('huddle:notes_op', async (data = {}, ack) => {
+        const reply = typeof ack === 'function' ? ack : () => {};
+        const { huddleId, op } = data;
+        if (!huddleId || !op) return reply({ ok: false, message: 'huddleId and op are required' });
+        if (!registry.participant(huddleId, uid())) return reply({ ok: false, message: 'Not in this huddle' });
+        try {
+            const username = await displayName(socket);
+            const { noteId, applied } = await notesOp({ userId: uid(), username, huddleId, op, io });
+            socket.to(`huddle:${huddleId}`).emit('huddle:notes_op', { huddleId, noteId, applied, by: { userId: uid(), username } });
+            reply({ ok: true, noteId, applied });
+        } catch (err) {
+            if (!err.status) logger.error('[huddle:notes_op] failed:', err);
+            reply({ ok: false, message: err.status ? err.message : 'Could not save the notes' });
+        }
+    });
 
     // A dropped connection (closed tab, network loss) leaves every huddle it was in.
     socket.on('disconnect', () => {

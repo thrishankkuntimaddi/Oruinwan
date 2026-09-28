@@ -35,6 +35,7 @@ exports.inviteEmployee = async (req, res) => {
             jobTitle,
             departments,
             invitedById,
+            requesterRole: req.companyRole,
         });
 
         return res.status(201).json({ success: true, member });
@@ -85,6 +86,10 @@ exports.changeRole = async (req, res) => {
             requesterId,
             requesterRole,
         });
+        require('../security/security.service').logSecurityEvent({
+            companyId: req.companyId, actorId: requesterId, eventType: 'role_changed',
+            metadata: { targetId: String(req.params.id), newRole }, req,
+        });
 
         return res.json({ success: true, member });
     } catch (err) {
@@ -108,6 +113,12 @@ exports.updateStatus = async (req, res) => {
             requesterId,
             requesterRole,
         });
+        if (status === 'suspended') {
+            require('../security/security.service').logSecurityEvent({
+                companyId: req.companyId, actorId: requesterId, eventType: 'account_suspended',
+                metadata: { targetId: String(req.params.id), reason }, req,
+            });
+        }
 
         return res.json({ success: true, member });
     } catch (err) {

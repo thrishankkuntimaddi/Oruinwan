@@ -1,162 +1,77 @@
-import React, { useState, useEffect } from 'react';
-import { Building, MapPin, Globe as GlobeIcon, Users, Save, Loader } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Building, Save, Info } from 'lucide-react';
+import api from '@services/api';
 import { useCompany } from '../../../../contexts/CompanyContext';
 import { useToast } from '../../../../contexts/ToastContext';
-import api from '@services/api';
+import { Panel, Grid, Field, Btn, Chip, errorMessage } from '../../../../components/company-dash/dashUi';
+import '../../../OwnerDashboard/owner.css';
 
-const inputSt = {
-    width: '100%', padding: '10px 12px',
-    background: 'var(--bg-input)', border: '1px solid var(--border-default)',
-    color: 'var(--text-primary)', fontSize: '13px',
-    outline: 'none', fontFamily: 'Inter, system-ui, sans-serif',
-    boxSizing: 'border-box'
-};
+const title = (s) => (s ? String(s).charAt(0).toUpperCase() + String(s).slice(1) : '—');
 
-const iconInputSt = { ...inputSt, paddingLeft: '34px' };
-
+/**
+ * Company profile. Only fields the server stores are editable here
+ * (PUT /api/companies/:id/settings/profile keeps `name` and `website`).
+ */
 const CompanyProfile = () => {
-    const { company, refreshCompany } = useCompany();
+    const { company, refreshCompanyData, isCompanyAdmin } = useCompany();
     const { showToast } = useToast();
+    const [form, setForm] = useState({ name: '', website: '' });
     const [saving, setSaving] = useState(false);
-    const [formData, setFormData] = useState({ name: '', description: '', industry: '', size: '', location: '', website: '', phone: '', address: '' });
 
     useEffect(() => {
-        if (company) setFormData({
-            name: company.name || '', description: company.description || '', industry: company.industry || '',
-            size: company.size || '', location: company.location || '', website: company.website || '',
-            phone: company.phone || '', address: company.address || ''
-        });
+        if (company) setForm({ name: company.name || '', website: company.website || '' });
     }, [company]);
 
-    const handleChange = e => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const dirty = !!company && (form.name !== (company.name || '') || form.website !== (company.website || ''));
+    const canEdit = isCompanyAdmin();
 
-    const handleSubmit = async (e) => {
+    const save = async (e) => {
         e.preventDefault();
+        if (!form.name.trim()) { showToast('Company name is required', 'error'); return; }
         setSaving(true);
         try {
-            await api.put(`/api/companies/${company.id}/settings/profile`, formData);
-            await refreshCompany();
-            showToast('Company profile updated successfully', 'success');
-        } catch (error) {
-            showToast(error.response?.data?.message || 'Failed to update profile', 'error');
-        } finally { setSaving(false); }
+            await api.put(`/api/companies/${company._id}/settings/profile`, { name: form.name.trim(), website: form.website.trim() });
+            await refreshCompanyData?.();
+            showToast('Company profile saved', 'success');
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not save the profile'), 'error');
+        } finally {
+            setSaving(false);
+        }
     };
 
+    const limits = company?.settings || {};
+
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '4px' }}>Company Profile</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Basic information about your organization</p>
-            </div>
-
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {}
-                <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
-                    <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>Basic Information</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div>
-                            <FieldLabel text="Company Name" />
-                            <div style={{ position: 'relative' }}>
-                                <Building size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Your Company Name" style={iconInputSt} />
-                            </div>
+        <Grid cols="2">
+            <Panel title="Profile" icon={Building}>
+                <form className="od-form" onSubmit={save}>
+                    <Field label="Company name" htmlFor="co-name">
+                        <input id="co-name" className="gl-input" value={form.name} disabled={!canEdit} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} required />
+                    </Field>
+                    <Field label="Website" htmlFor="co-web" hint="Shown to people who join your company.">
+                        <input id="co-web" className="gl-input" type="url" placeholder="https://example.com" value={form.website} disabled={!canEdit} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} />
+                    </Field>
+                    {canEdit && (
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                            <Btn variant="ghost" disabled={!dirty || saving} onClick={() => setForm({ name: company?.name || '', website: company?.website || '' })}>Discard</Btn>
+                            <Btn type="submit" variant="primary" icon={Save} loading={saving} disabled={!dirty}>Save</Btn>
                         </div>
-
-                        <div>
-                            <FieldLabel text="Description" />
-                            <textarea name="description" value={formData.description} onChange={handleChange} rows={3} placeholder="Brief description of your company" style={{ ...inputSt, resize: 'none' }} />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <div>
-                                <FieldLabel text="Industry" />
-                                <select name="industry" value={formData.industry} onChange={handleChange} style={inputSt}>
-                                    <option value="">Select industry</option>
-                                    {['technology', 'finance', 'healthcare', 'education', 'retail', 'manufacturing', 'other'].map(i => (
-                                        <option key={i} value={i}>{i.charAt(0).toUpperCase() + i.slice(1)}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <FieldLabel text="Company Size" />
-                                <div style={{ position: 'relative' }}>
-                                    <Users size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                    <select name="size" value={formData.size} onChange={handleChange} style={iconInputSt}>
-                                        <option value="">Select size</option>
-                                        {['1-10', '11-50', '51-200', '201-500', '500+'].map(s => (
-                                            <option key={s} value={s}>{s} employees</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    )}
+                </form>
+            </Panel>
+            <Panel title="Account" icon={Info}>
+                <div className="od-kv">
+                    <div className="od-kv-row"><span>Verification</span><span><Chip tone={company?.verificationStatus === 'verified' ? 'success' : 'warning'}>{title(company?.verificationStatus)}</Chip></span></div>
+                    <div className="od-kv-row"><span>Plan</span><span>{title(company?.plan)}</span></div>
+                    <div className="od-kv-row"><span>Email domain</span><span>{company?.domain ? `@${company.domain}` : 'Not set'}</span></div>
+                    <div className="od-kv-row"><span>Seat limit</span><span>{limits.maxUsers ?? '—'}</span></div>
+                    <div className="od-kv-row"><span>Workspace limit</span><span>{limits.maxWorkspaces ?? '—'}</span></div>
+                    <div className="od-kv-row"><span>Data retention</span><span>{limits.dataRetentionDays ? `${limits.dataRetentionDays} days` : '—'}</span></div>
+                    <div className="od-kv-row"><span>Created</span><span>{company?.createdAt ? new Date(company.createdAt).toLocaleDateString() : '—'}</span></div>
                 </div>
-
-                {}
-                <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
-                    <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px', paddingBottom: '10px', borderBottom: '1px solid var(--border-subtle)' }}>Contact Information</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                        <div>
-                            <FieldLabel text="Website" />
-                            <div style={{ position: 'relative' }}>
-                                <GlobeIcon size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                <input type="url" name="website" value={formData.website} onChange={handleChange} placeholder="https://company.com" style={iconInputSt} />
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                            <div>
-                                <FieldLabel text="Phone" />
-                                <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" style={inputSt} />
-                            </div>
-                            <div>
-                                <FieldLabel text="Location" />
-                                <div style={{ position: 'relative' }}>
-                                    <MapPin size={13} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                                    <input type="text" name="location" value={formData.location} onChange={handleChange} placeholder="City, Country" style={iconInputSt} />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div>
-                            <FieldLabel text="Address" />
-                            <textarea name="address" value={formData.address} onChange={handleChange} rows={2} placeholder="Full business address" style={{ ...inputSt, resize: 'none' }} />
-                        </div>
-                    </div>
-                </div>
-
-                {}
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <SaveBtn saving={saving} />
-                </div>
-            </form>
-        </div>
-    );
-};
-
-const FieldLabel = ({ text }) => (
-    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>{text}</label>
-);
-
-const SaveBtn = ({ saving }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button
-            type="submit"
-            disabled={saving}
-            onMouseEnter={() => setHov(true)}
-            onMouseLeave={() => setHov(false)}
-            style={{
-                display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px',
-                background: hov ? 'var(--accent-hover)' : 'var(--accent)',
-                border: 'none', color: 'var(--bg-base)',
-                fontSize: '13px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
-                borderRadius: '2px', opacity: saving ? 0.7 : 1,
-                transition: 'background 150ms ease'
-            }}>
-            {saving ? <><Loader size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> Saving...</> : <><Save size={13} /> Save Changes</>}
-        </button>
+            </Panel>
+        </Grid>
     );
 };
 

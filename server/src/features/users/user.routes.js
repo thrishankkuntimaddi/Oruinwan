@@ -15,6 +15,11 @@ router.delete("/dm/:dmId/delete", requireAuth, userController.deleteDM);
 
 router.patch("/status", requireAuth, userController.updateStatus);
 
+// Profile card (mention popover / message headers): only for people you work with.
+const userCardController = require("./userCard.controller");
+router.get("/card", requireAuth, userCardController.getCardByUsername);
+router.get("/:id/card", requireAuth, userCardController.getCardById);
+
 router.delete("/me", requireAuth, userController.deleteAccount);
 
 module.exports = router;

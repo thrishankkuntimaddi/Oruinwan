@@ -38,6 +38,10 @@ async function main() {
     REFRESH_TOKEN_SECRET: E2E.refreshTokenSecret,
     GOOGLE_CLIENT_ID: 'e2e-google-client-id',
     SERVER_KEK: E2E.serverKek,
+    // Own 32-byte key-encryption key: never inherit CRYPTO_KEK_* from server/.env.
+    CRYPTO_KEK_ACTIVE_VERSION: '1',
+    CRYPTO_KEK_V1: 'e2e1'.repeat(16),
+    SERVER_CRYPTO_KEK: '',
     LOG_LEVEL: process.env.E2E_SERVER_LOG_LEVEL || 'warn',
     // Defined-but-empty values stop dotenv from loading real ones from server/.env.
     BREVO_API_KEY: '',

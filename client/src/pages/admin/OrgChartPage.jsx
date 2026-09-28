@@ -1,41 +1,79 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useMemo, useState } from 'react';
+import { GitBranch, RefreshCw, ChevronDown, ChevronRight, Building2, Users, UserX } from 'lucide-react';
 import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { GitBranch, RefreshCw, ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext';
+import {
+    DashPage, PageHead, Panel, KpiGrid, Kpi, FilterTabs, Btn, Avatar, RoleChip, SearchBox, Toolbar,
+    ErrorState, EmptyState, LoadingState, useAsync, errorMessage,
+} from '../../components/company-dash/dashUi';
+import { companyIdOf } from '../workspace-os/wosShared';
+import { isAdminUser } from '../../components/company-dash/dashNav';
 
-function OrgNode({ node, color, depth = 0 }) {
-    const [expanded, setExpanded] = useState(depth < 2);
-    const hasChildren = (node.teams && node.teams.length > 0) || (node.children && node.children.length > 0);
-
+function Toggle({ open, disabled, onClick, label }) {
     return (
-        <div style={{ marginLeft: depth === 0 ? 0 : 20, position: 'relative' }}>
-            {depth > 0 && (
-                <div style={{ position: 'absolute', left: -12, top: 20, width: 12, height: 1, background: 'var(--border-accent)' }} />
-            )}
-            <div
-                style={{ background: 'var(--bg-surface)', border: `1px solid ${color}`, padding: '10px 14px', display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: hasChildren ? 'pointer' : 'default', minWidth: '160px', userSelect: 'none', transition: 'border-color 150ms ease' }}
-                onClick={() => hasChildren && setExpanded(e => !e)}
-                onMouseEnter={e => { if (hasChildren) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'var(--bg-surface)'; }}>
-                <div>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1px' }}>{node.name}</p>
-                    {node.memberCount !== undefined && <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{node.memberCount} members</p>}
-                    {node.lead && <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Lead: {node.lead.username}</p>}
-                </div>
-                {hasChildren && (
-                    <div style={{ marginLeft: 'auto', color, flexShrink: 0 }}>
-                        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+        <button type="button" className="wo-node-toggle" disabled={disabled} onClick={onClick} aria-expanded={disabled ? undefined : open} aria-label={label}>
+            {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+        </button>
+    );
+}
+
+/** A department with its head, managers and teams (and each team's members). */
+function DeptNode({ dept }) {
+    const [open, setOpen] = useState(true);
+    const teams = dept.teams || [];
+    return (
+        <div>
+            <div className="wo-node" data-kind="department">
+                <Toggle open={open} disabled={!teams.length} onClick={() => setOpen((o) => !o)} label={`${dept.name} teams`} />
+                <Building2 size={15} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+                <div className="wo-node-main">
+                    <div className="wo-node-title">{dept.name}</div>
+                    <div className="wo-node-sub">
+                        {dept.memberCount} member{dept.memberCount === 1 ? '' : 's'}
+                        {dept.head ? ` · Head: ${dept.head.username}` : ' · No head'}
+                        {teams.length ? ` · ${teams.length} team${teams.length === 1 ? '' : 's'}` : ''}
                     </div>
+                </div>
+                {(dept.managers || []).length > 0 && (
+                    <span className="wo-node-side wo-avatars" title={`Managers: ${dept.managers.map((m) => m.username).join(', ')}`}>
+                        {dept.managers.slice(0, 4).map((m) => <Avatar key={m._id} user={m} size="sm" />)}
+                    </span>
                 )}
             </div>
+            {open && teams.length > 0 && (
+                <div className="wo-tree">
+                    {teams.map((t) => <TeamNode key={t.id} team={t} />)}
+                </div>
+            )}
+        </div>
+    );
+}
 
-            {expanded && hasChildren && (
-                <div style={{ marginTop: '8px', paddingLeft: '20px', borderLeft: `1px dashed ${color}`, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {(node.teams || []).map((team, ti) => (
-                        <OrgNode key={team.id} node={team} color={NODE_COLORS[(ti + 3) % NODE_COLORS.length]} depth={depth + 1} />
-                    ))}
-                    {(node.children || []).map((child, ci) => (
-                        <OrgNode key={child.id} node={child} color={NODE_COLORS[(ci + 1) % NODE_COLORS.length]} depth={depth + 1} />
+function TeamNode({ team }) {
+    const [open, setOpen] = useState(false);
+    const members = team.members || [];
+    return (
+        <div>
+            <div className="wo-node" data-kind="team">
+                <Toggle open={open} disabled={!members.length} onClick={() => setOpen((o) => !o)} label={`${team.name} members`} />
+                <Users size={14} style={{ color: 'var(--state-success)', flexShrink: 0 }} />
+                <div className="wo-node-main">
+                    <div className="wo-node-title">{team.name}</div>
+                    <div className="wo-node-sub">{team.memberCount} member{team.memberCount === 1 ? '' : 's'}{team.lead ? ` · Lead: ${team.lead.username}` : ''}</div>
+                </div>
+            </div>
+            {open && members.length > 0 && (
+                <div className="wo-tree">
+                    {members.map((m) => (
+                        <div key={m.id || m.username} className="wo-node" data-kind="person">
+                            <span className="wo-node-toggle" aria-hidden="true" />
+                            <Avatar user={m} size="sm" />
+                            <div className="wo-node-main">
+                                <div className="wo-node-title">{m.username}</div>
+                                <div className="wo-node-sub">{m.role}</div>
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}
@@ -44,165 +82,157 @@ function OrgNode({ node, color, depth = 0 }) {
 }
 
 /** People nested under their manager; admins can change who someone reports to. */
-function ReportingNode({ node, people, canEdit, onSetManager, depth = 0 }) {
-    const [expanded, setExpanded] = useState(depth < 3);
+function ReportingNode({ node, people, canEdit, onSetManager, savingId }) {
+    const [open, setOpen] = useState(true);
+    const reports = node.reports || [];
     return (
-        <div style={{ marginLeft: depth === 0 ? 0 : 20 }} data-testid={`report-${node.username}`}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', background: 'var(--bg-surface)', border: '1px solid var(--border-default)', maxWidth: 560 }}>
-                <button type="button" onClick={() => setExpanded(e => !e)} disabled={!node.reports.length}
-                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--text-muted)', cursor: node.reports.length ? 'pointer' : 'default', width: 14 }}>
-                    {node.reports.length ? (expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />) : null}
-                </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>{node.username}</p>
-                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: 0 }}>
-                        {node.companyRole || 'member'}{node.reports.length ? ` · ${node.reports.length} direct report${node.reports.length === 1 ? '' : 's'}` : ''}
-                    </p>
+        <div data-testid={`report-${node.username}`}>
+            <div className="wo-node" data-kind="person">
+                <Toggle open={open} disabled={!reports.length} onClick={() => setOpen((o) => !o)} label={`${node.username} reports`} />
+                <Avatar user={node} size="sm" />
+                <div className="wo-node-main">
+                    <div className="wo-node-title">{node.username}</div>
+                    <div className="wo-node-sub">
+                        <RoleChip role={node.companyRole} />
+                        {reports.length ? ` ${reports.length} direct report${reports.length === 1 ? '' : 's'}` : ''}
+                    </div>
                 </div>
                 {canEdit && (
-                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <label className="wo-node-side">
                         Reports to
-                        <select aria-label={`Manager of ${node.username}`} value={node.reportsTo || ''}
-                            onChange={e => onSetManager(node.id, e.target.value || null)}
-                            style={{ fontSize: '11px', padding: '3px 6px', background: 'var(--bg-input)', color: 'var(--text-primary)', border: '1px solid var(--border-default)' }}>
+                        <select
+                            className="gl-input cd-select"
+                            aria-label={`Manager of ${node.username}`}
+                            value={node.reportsTo ? String(node.reportsTo) : ''}
+                            disabled={savingId === String(node.id)}
+                            onChange={(e) => onSetManager(node.id, e.target.value || null)}
+                        >
                             <option value="">No one</option>
-                            {people.filter(p => String(p.id) !== String(node.id)).map(p => <option key={p.id} value={p.id}>{p.username}</option>)}
+                            {people.filter((p) => String(p.id) !== String(node.id)).map((p) => <option key={p.id} value={p.id}>{p.username}</option>)}
                         </select>
                     </label>
                 )}
             </div>
-            {expanded && node.reports.length > 0 && (
-                <div style={{ marginTop: 6, paddingLeft: 14, borderLeft: '1px dashed var(--border-accent)', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {node.reports.map(r => <ReportingNode key={r.id} node={r} people={people} canEdit={canEdit} onSetManager={onSetManager} depth={depth + 1} />)}
+            {open && reports.length > 0 && (
+                <div className="wo-tree">
+                    {reports.map((r) => <ReportingNode key={r.id} node={r} people={people} canEdit={canEdit} onSetManager={onSetManager} savingId={savingId} />)}
                 </div>
             )}
         </div>
     );
 }
 
-const flattenPeople = (nodes) => nodes.flatMap(n => [n, ...flattenPeople(n.reports || [])]);
+const flattenPeople = (nodes) => nodes.flatMap((n) => [n, ...flattenPeople(n.reports || [])]);
 
-const NODE_COLORS = ['var(--accent)', '#5aba8a', '#9b8ecf', '#e05252', '#7a7a7a', '#b8956a', '#5ab8ba', '#ba5a8a'];
-
+/** Company structure: departments → teams → people, and reporting lines. */
 export default function OrgChartPage() {
     const { user } = useAuth();
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const { showToast } = useToast();
+    const companyId = companyIdOf(user);
+    const canEdit = isAdminUser(user);
     const [view, setView] = useState('departments');
-    const [saveError, setSaveError] = useState(null);
-    const canEdit = ['owner', 'admin'].includes(user?.companyRole);
+    const [q, setQ] = useState('');
+    const [savingId, setSavingId] = useState(null);
 
-    const companyId = typeof user?.companyId === 'object' ? (user?.companyId?._id || user?.companyId?.id) : user?.companyId;
-
-    const fetchOrgChart = useCallback(async () => {
-        if (!companyId) { setError('No company found. Org chart is available for company accounts only.'); setLoading(false); return; }
-        try {
-            setLoading(true); setError(null);
-            const { data: orgData } = await api.get(`/api/companies/${companyId}/org-chart`);
-            setData(orgData);
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load org chart');
-        } finally { setLoading(false); }
-    }, [companyId]);
-
-    useEffect(() => { fetchOrgChart(); }, [fetchOrgChart]);
+    const { data, loading, error, reload } = useAsync(
+        () => api.get(`/api/companies/${companyId}/org-chart`).then((r) => r.data),
+        [companyId],
+        { enabled: !!companyId },
+    );
+    const people = useMemo(() => flattenPeople(data?.reportingLines || []), [data]);
+    const depts = useMemo(() => {
+        const s = q.trim().toLowerCase();
+        return (data?.departments || []).filter((d) => !s || d.name?.toLowerCase().includes(s)
+            || (d.teams || []).some((t) => t.name?.toLowerCase().includes(s)));
+    }, [data, q]);
 
     const setManager = async (employeeId, managerId) => {
-        setSaveError(null);
+        setSavingId(String(employeeId));
         try {
             await api.put(`/api/companies/${companyId}/employees/${employeeId}/manager`, { managerId });
-            await fetchOrgChart();
+            showToast('Reporting line updated', 'success');
+            await reload();
         } catch (err) {
-            setSaveError(err.response?.data?.message || 'Could not update the reporting line');
+            showToast(errorMessage(err, 'Could not update the reporting line'), 'error');
+        } finally {
+            setSavingId(null);
         }
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {}
-            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
-                <div>
-                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        <GitBranch size={16} style={{ color: 'var(--accent)' }} />
-                        Org Chart
-                    </h2>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>
-                        {data ? `${data.company?.name} · ${data.totalEmployees} employees · ${data.departments?.length} departments` : 'Company structure visualization'}
-                    </p>
-                </div>
-                <button onClick={fetchOrgChart}
-                    style={{ width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-active)', border: '1px solid var(--border-default)', color: 'var(--text-muted)', cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
-                    <RefreshCw size={13} style={{ animation: loading ? 'spin 1s linear infinite' : 'none' }} />
-                </button>
-            </header>
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow="Collaboration"
+                    title="Org chart"
+                    lead={data ? `${data.company?.name} · ${data.totalEmployees} people · ${data.departments?.length || 0} departments` : 'How the company is organised.'}
+                    actions={<Btn icon={RefreshCw} loading={loading} onClick={reload}>Refresh</Btn>}
+                />
+            )}
+        >
+            {!companyId ? (
+                <EmptyState icon={GitBranch} title="No company" text="The org chart is available for company accounts." />
+            ) : error && !data ? (
+                <ErrorState message={error} onRetry={reload} />
+            ) : !data ? (
+                <LoadingState label="Loading the org chart…" />
+            ) : (
+                <>
+                    <KpiGrid>
+                        <Kpi label="People" value={data.totalEmployees} icon={Users} />
+                        <Kpi label="Departments" value={data.departments?.length || 0} icon={Building2} />
+                        <Kpi label="Teams" value={(data.departments || []).reduce((n, d) => n + (d.teams?.length || 0), 0)} icon={GitBranch} />
+                        <Kpi label="Without a department" value={data.unassignedCount || 0} icon={UserX} tone={data.unassignedCount ? 'danger' : 'muted'} />
+                    </KpiGrid>
+                    <Toolbar>
+                        <FilterTabs
+                            value={view}
+                            onChange={setView}
+                            label="Org chart view"
+                            options={[{ value: 'departments', label: 'Departments & teams' }, { value: 'reporting', label: 'Reporting lines' }]}
+                        />
+                        {view === 'departments' && <SearchBox value={q} onChange={setQ} placeholder="Find a department or team…" />}
+                    </Toolbar>
 
-            {}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px' }} className="custom-scrollbar">
-                {loading && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
-                    <RefreshCw size={22} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} /></div>}
-
-                {error && <div style={{ padding: '12px 16px', background: 'rgba(224,82,82,0.08)', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '12px', marginBottom: '16px' }}>{error}</div>}
-
-                {data && !loading && (
-                    <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        {}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1px', background: 'var(--border-subtle)' }}>
-                            {[
-                                { label: 'Total Employees', value: data.totalEmployees },
-                                { label: 'Departments', value: data.departments?.length || 0 },
-                                { label: 'Unassigned', value: data.unassignedCount || 0, warn: data.unassignedCount > 0 },
-                            ].map(stat => (
-                                <div key={stat.label} style={{ background: 'var(--bg-surface)', padding: '18px 20px' }}>
-                                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', marginBottom: '4px' }}>{stat.label}</p>
-                                    <p style={{ fontSize: '28px', fontWeight: 700, color: stat.warn && stat.value > 0 ? 'var(--accent)' : 'var(--text-primary)', letterSpacing: '-0.02em' }}>{stat.value}</p>
+                    {view === 'departments' ? (
+                        <Panel>
+                            <div className="wo-org">
+                                <div className="wo-org-root">
+                                    <Building2 size={18} />
+                                    <div>
+                                        <div style={{ fontSize: 14, fontWeight: 700 }}>{data.company?.name}</div>
+                                        <div className="cd-muted" style={{ fontSize: 12 }}>{data.company?.industry || 'Company'}</div>
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
-
-                        <div role="tablist" style={{ display: 'flex', gap: 4 }}>
-                            {[['departments', 'Departments & teams'], ['reporting', 'Reporting lines']].map(([key, label]) => (
-                                <button key={key} role="tab" aria-selected={view === key} onClick={() => setView(key)}
-                                    style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid var(--border-default)', cursor: 'pointer', background: view === key ? 'var(--bg-active)' : 'var(--bg-surface)', color: view === key ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {view === 'reporting' && (
-                            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '24px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {saveError && <p style={{ fontSize: '12px', color: 'var(--state-danger)', margin: 0 }}>{saveError}</p>}
-                                {(data.reportingLines || []).length === 0
-                                    ? <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No employees yet.</p>
-                                    : (data.reportingLines || []).map(root => (
-                                        <ReportingNode key={root.id} node={root} people={flattenPeople(data.reportingLines)} canEdit={canEdit} onSetManager={setManager} />
-                                    ))}
+                                {depts.length === 0 ? (
+                                    <EmptyState
+                                        icon={Building2}
+                                        title={(data.departments || []).length ? 'No matches' : 'No departments yet'}
+                                        text={(data.departments || []).length ? 'Nothing matches your search.' : 'Add departments from the Departments page.'}
+                                    />
+                                ) : (
+                                    <div className="wo-tree" style={{ marginLeft: 14, paddingLeft: 14, borderLeft: '1px dashed var(--border-accent)' }}>
+                                        {depts.map((d) => <DeptNode key={d.id} dept={d} />)}
+                                    </div>
+                                )}
                             </div>
-                        )}
-
-                        {view === 'departments' && (
-                        <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '24px' }}>
-                            {}
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', background: 'var(--accent)', padding: '12px 20px', marginBottom: '24px' }}>
-                                <Users size={18} style={{ color: 'var(--bg-base)' }} />
-                                <div>
-                                    <p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--bg-base)', marginBottom: '1px' }}>{data.company?.name}</p>
-                                    <p style={{ fontSize: '11px', color: 'rgba(12,12,12,0.7)' }}>{data.company?.industry || 'Company'}</p>
+                        </Panel>
+                    ) : (
+                        <Panel>
+                            {(data.reportingLines || []).length === 0 ? (
+                                <EmptyState icon={Users} title="No people yet" />
+                            ) : (
+                                <div className="wo-tree">
+                                    {!canEdit && <p className="cd-muted" style={{ margin: 0, fontSize: 12 }}>Only owners and admins can change reporting lines.</p>}
+                                    {data.reportingLines.map((root) => (
+                                        <ReportingNode key={root.id} node={root} people={people} canEdit={canEdit} onSetManager={setManager} savingId={savingId} />
+                                    ))}
                                 </div>
-                            </div>
-
-                            {data.departments?.length === 0
-                                ? <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>No departments found. Add departments from the Departments page.</p>
-                                : <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {(data.departments || []).map((dept, idx) => (
-                                        <OrgNode key={dept.id} node={dept} color={NODE_COLORS[idx % NODE_COLORS.length]} depth={1} />
-                                    ))}
-                                </div>}
-                        </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
+                            )}
+                        </Panel>
+                    )}
+                </>
+            )}
+        </DashPage>
     );
 }

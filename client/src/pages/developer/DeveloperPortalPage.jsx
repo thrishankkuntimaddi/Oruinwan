@@ -852,7 +852,7 @@ export default function DeveloperPortalPage({ workspaceId }) {
           <div className="dp-header-icon"><Terminal size={22} /></div>
           <div>
             <h1>Developer Platform</h1>
-            <p>Build integrations, automate workflows, and extend Oruinwan for your team.</p>
+            <p>Build integrations, automate workflows, and extend Oruinwan for your team. <a href="/docs/developers/overview" target="_blank" rel="noopener noreferrer" className="dp-doc-link">Read the developer docs</a></p>
           </div>
         </div>
       </div>

@@ -11,13 +11,29 @@ import { registerDeviceToken, unregisterDeviceToken } from './api/notifications'
 const PUSH_TOKEN_KEY = 'chttrix_push_token';
 let registerPromise = null;
 
+// The chat screen that is open right now (set by useConversation). A push
+// about that conversation while the app is in the foreground stays silent:
+// the message is already on screen.
+let foregroundConversationId = null;
+export function setForegroundConversation(id) {
+  foregroundConversationId = id ? String(id) : null;
+}
+export function clearForegroundConversation(id) {
+  if (!id || foregroundConversationId === String(id)) foregroundConversationId = null;
+}
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification?.request?.content?.data || {};
+    const convId = data.dmSessionId || data.channelId;
+    const onScreen = !!convId && !!foregroundConversationId && String(convId) === foregroundConversationId;
+    return {
+      shouldShowBanner: !onScreen,
+      shouldShowList: !onScreen,
+      shouldPlaySound: !onScreen,
+      shouldSetBadge: true,
+    };
+  },
 });
 
 async function obtainToken() {

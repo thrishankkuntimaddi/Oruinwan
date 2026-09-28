@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, PhoneOff, ChevronDown, ChevronUp, Radio, Video, VideoOff } from 'lucide-react';
+import React, { useState, useEffect, useContext } from 'react';
+import { Mic, MicOff, PhoneOff, ChevronDown, ChevronUp, Radio, Video, VideoOff, PanelRight } from 'lucide-react';
+import { HuddleContext } from '../HuddleContext';
 import HuddleParticipants from './HuddleParticipants';
 import VideoTile from './VideoTile';
 
@@ -24,6 +25,11 @@ export default function HuddleOverlay({
 }) {
     const [minimised, setMinimised] = useState(false);
     const [elapsed, setElapsed] = useState(0);
+    // The app-wide call (when there is one): this overlay shows it, so the floating pill hides.
+    const ctx = useContext(HuddleContext);
+    const callId = active ? ctx?.huddleId : null;
+    const registerInlineUI = ctx?.registerInlineUI;
+    useEffect(() => (callId && registerInlineUI ? registerInlineUI(callId) : undefined), [callId, registerInlineUI]);
 
     
     useEffect(() => {
@@ -33,6 +39,10 @@ export default function HuddleOverlay({
     }, [active]);
 
     if (!active) return null;
+
+    // The call outlives this overlay (page changes), so show time since the call really started.
+    const startedAt = ctx?.session?.huddleId === callId && ctx?.session?.startedAt ? new Date(ctx.session.startedAt).getTime() : null;
+    const shownSeconds = startedAt ? Math.max(elapsed, Math.floor((Date.now() - startedAt) / 1000)) : elapsed;
 
     const btn = {
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '6px 10px',
@@ -57,7 +67,7 @@ export default function HuddleOverlay({
                     <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {channelName ? `# ${channelName.replace(/^#\s*/, '')}` : 'Huddle'}
                     </p>
-                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{formatDuration(elapsed)}</p>
+                    <p style={{ fontSize: '11px', color: 'var(--text-secondary)', fontVariantNumeric: 'tabular-nums' }}>{formatDuration(shownSeconds)}</p>
                 </div>
                 <button
                     onClick={() => setMinimised(m => !m)}
@@ -104,6 +114,19 @@ export default function HuddleOverlay({
                         style={{ ...btn, ...(cameraOn ? neutral : off) }}
                     >
                         {cameraOn ? <Video size={13} /> : <VideoOff size={13} />}
+                    </button>
+                )}
+
+                {ctx?.openWorkspace && (
+                    <button
+                        onClick={() => (ctx.workspaceOpen ? ctx.closeWorkspace() : ctx.openWorkspace())}
+                        title="Huddle workspace: notes, tasks, chat, wrap-up"
+                        aria-label="Huddle workspace"
+                        aria-pressed={!!ctx.workspaceOpen}
+                        data-testid="huddle-open-workspace"
+                        style={{ ...btn, ...(ctx.workspaceOpen ? { background: 'var(--accent)', color: '#0c0c0c', border: '1px solid var(--accent)' } : neutral) }}
+                    >
+                        <PanelRight size={13} />
                     </button>
                 )}
 

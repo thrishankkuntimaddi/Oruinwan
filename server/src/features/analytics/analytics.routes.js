@@ -6,16 +6,31 @@ const { requireAdmin } = require('../../shared/middleware/permissionMiddleware')
 const analyticsService = require('./analytics.service');
 const User = require('../../../models/User');
 
-router.get('/company/:companyId', requireAuth, requireAdmin, analyticsController.getCompanyAnalytics);
+const requireCompanyAdmin = require('../../shared/middleware/requireCompanyAdmin');
+const { scopedCompanyId } = requireCompanyAdmin;
 
-async function resolveCompanyId(userId) {
-    const user = await User.findById(userId).select('companyId').lean();
+// Own company only (platform staff may pick any).
+router.get('/company/:companyId', requireAuth, requireCompanyAdmin, (req, res, next) => {
+    const companyId = scopedCompanyId(req, res, req.params.companyId);
+    if (!companyId) return res.headersSent ? undefined : res.status(403).json({ message: 'Access denied' });
+    req.params.companyId = companyId;
+    next();
+}, analyticsController.getCompanyAnalytics);
+
+// requireAdmin replaces req.user with the database user (no `sub`), so read
+// the company from it, falling back to a lookup by id.
+async function resolveCompanyId(req) {
+    const c = req.user && req.user.companyId;
+    if (c) return String(c._id || c);
+    const id = req.user && (req.user.sub || req.user._id);
+    if (!id) return null;
+    const user = await User.findById(id).select('companyId').lean();
     return user?.companyId?.toString();
 }
 
 router.get('/', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const companyId = await resolveCompanyId(req.user.sub);
+        const companyId = await resolveCompanyId(req);
         if (!companyId) return res.status(400).json({ message: 'No company associated' });
 
         const { type, period: p } = req.query;
@@ -58,7 +73,7 @@ router.get('/', requireAuth, requireAdmin, async (req, res) => {
 
 router.get('/insights/team', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const companyId = await resolveCompanyId(req.user.sub);
+        const companyId = await resolveCompanyId(req);
         if (!companyId) return res.status(400).json({ message: 'No company' });
         const period = Math.min(parseInt(req.query.period) || 30, 365);
         res.json(await analyticsService.getTeamActivity(companyId, period));
@@ -67,7 +82,7 @@ router.get('/insights/team', requireAuth, requireAdmin, async (req, res) => {
 
 router.get('/insights/communication', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const companyId = await resolveCompanyId(req.user.sub);
+        const companyId = await resolveCompanyId(req);
         if (!companyId) return res.status(400).json({ message: 'No company' });
         const period = Math.min(parseInt(req.query.period) || 30, 365);
         res.json(await analyticsService.getCommunicationPatterns(companyId, period));
@@ -76,7 +91,7 @@ router.get('/insights/communication', requireAuth, requireAdmin, async (req, res
 
 router.get('/insights/productivity', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const companyId = await resolveCompanyId(req.user.sub);
+        const companyId = await resolveCompanyId(req);
         if (!companyId) return res.status(400).json({ message: 'No company' });
         const period = Math.min(parseInt(req.query.period) || 30, 365);
         res.json(await analyticsService.getTaskAnalytics(companyId, period));
@@ -85,7 +100,7 @@ router.get('/insights/productivity', requireAuth, requireAdmin, async (req, res)
 
 router.get('/insights/workload', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const companyId = await resolveCompanyId(req.user.sub);
+        const companyId = await resolveCompanyId(req);
         if (!companyId) return res.status(400).json({ message: 'No company' });
         const period = Math.min(parseInt(req.query.period) || 30, 365);
         res.json(await analyticsService.getWorkloadAnalysis(companyId, period));
@@ -94,7 +109,7 @@ router.get('/insights/workload', requireAuth, requireAdmin, async (req, res) => 
 
 router.get('/insights/engagement', requireAuth, requireAdmin, async (req, res) => {
     try {
-        const companyId = await resolveCompanyId(req.user.sub);
+        const companyId = await resolveCompanyId(req);
         if (!companyId) return res.status(400).json({ message: 'No company' });
         const period = Math.min(parseInt(req.query.period) || 30, 365);
         res.json(await analyticsService.getEngagementTrends(companyId, period));

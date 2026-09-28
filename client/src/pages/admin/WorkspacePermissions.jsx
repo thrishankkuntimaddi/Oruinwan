@@ -1,230 +1,189 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Lock, RefreshCw, Save } from 'lucide-react';
 import api from '@services/api';
+import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Settings, Save, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { isAdminUser } from '../../components/company-dash/dashNav';
+import {
+    DashPage, PageHead, Panel, Toolbar, FilterTabs, SelectBox, Btn, Chip, Field,
+    ErrorState, EmptyState, LoadingState, useAsync, errorMessage,
+} from '../../components/company-dash/dashUi';
+import { Switch } from '../workspace-os/wosShared';
 
 const FEATURES = [
-    { key: 'tasks',       label: 'Tasks',         desc: 'Create and assign tasks' },
-    { key: 'notes',       label: 'Notes',         desc: 'Collaborative notes' },
-    { key: 'polls',       label: 'Polls',         desc: 'Create channel polls' },
-    { key: 'ai',          label: 'AI Assistant',  desc: 'Smart replies & AI tools' },
-    { key: 'huddles',     label: 'Huddles',       desc: 'Voice huddles' },
-    { key: 'fileUploads', label: 'File Uploads',  desc: 'Share files in channels' },
-    { key: 'reactions',   label: 'Reactions',     desc: 'Message emoji reactions' },
-    { key: 'threads',     label: 'Threads',       desc: 'Message thread replies' },
-    { key: 'bookmarks',   label: 'Bookmarks',     desc: 'Bookmark messages' },
-    { key: 'reminders',   label: 'Reminders',     desc: 'Set message reminders' },
+    { key: 'tasks', label: 'Tasks', desc: 'Create and assign tasks' },
+    { key: 'notes', label: 'Notes', desc: 'Collaborative notes' },
+    { key: 'polls', label: 'Polls', desc: 'Polls in channels' },
+    { key: 'ai', label: 'AI assistant', desc: 'Smart replies and AI tools' },
+    { key: 'huddles', label: 'Huddles', desc: 'Voice and video huddles' },
+    { key: 'fileUploads', label: 'File uploads', desc: 'Share files in channels' },
+    { key: 'reactions', label: 'Reactions', desc: 'Emoji reactions on messages' },
+    { key: 'threads', label: 'Threads', desc: 'Threaded replies' },
+    { key: 'bookmarks', label: 'Bookmarks', desc: 'Save messages for later' },
+    { key: 'reminders', label: 'Reminders', desc: 'Message reminders' },
+];
+const ROLE_OPTIONS = [
+    { value: 'owner', label: 'Owners only' },
+    { value: 'admin', label: 'Admins and owners' },
+    { value: 'member', label: 'All members' },
 ];
 
-const INVITE_ROLES = ['owner', 'admin', 'member'];
-const CHANNEL_CREATE_ROLES = ['owner', 'admin', 'member'];
-
-const FlatToggle = ({ checked, onChange }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <div onClick={onChange} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{
-                width: '36px', height: '20px', position: 'relative', cursor: 'pointer',
-                border: `1px solid ${checked ? 'var(--accent)' : 'var(--border-accent)'}`,
-                background: checked ? 'var(--accent)' : 'var(--bg-active)',
-                borderRadius: '10px', transition: 'all 150ms ease', flexShrink: 0,
-                opacity: hov ? 0.85 : 1,
-            }}>
-            <div style={{
-                position: 'absolute', top: '50%', transform: 'translateY(-50%)',
-                left: checked ? 'calc(100% - 16px)' : '2px',
-                width: '14px', height: '14px', borderRadius: '50%',
-                background: checked ? 'var(--bg-base)' : 'var(--text-muted)',
-                transition: 'left 150ms ease',
-            }} />
-        </div>
-    );
-};
-
-const labelStyle = { fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-muted)', display: 'block', marginBottom: '6px' };
-
+/**
+ * Per-workspace feature toggles and who may invite / create channels. Lists the
+ * company's workspaces; changes need workspace-admin rights in that workspace.
+ */
 export default function WorkspacePermissions({ workspaceId: propWorkspaceId }) {
+    const { showToast } = useToast();
     const { user } = useAuth();
+    const queryWs = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('workspaceId') : null;
+    const [wsId, setWsId] = useState(propWorkspaceId || queryWs || '');
+    const [tab, setTab] = useState('features');
+    const [roles, setRoles] = useState(null);
+    const [savingKey, setSavingKey] = useState(null);
+    const [savingRoles, setSavingRoles] = useState(false);
 
-    const userWorkspaces = (user?.workspaces || []).map(ws => ({
-        id: typeof ws.workspace === 'object' ? (ws.workspace._id || ws.workspace.id || ws.workspace) : ws.workspace,
-        name: ws.workspace?.name || null, role: ws.role
-    })).filter(ws => ws.id);
+    const company = useAsync(() => api.get('/api/admin-dashboard/workspaces').then((r) => r.data?.workspaces || []));
+    const mine = useAsync(() => api.get('/api/workspaces/my').then((r) => r.data?.workspaces || []));
+    const myRole = useMemo(() => Object.fromEntries((mine.data || []).map((w) => [String(w.id), w.role])), [mine.data]);
+    const workspaces = useMemo(() => {
+        const list = (company.data || []).map((w) => ({ id: String(w._id), name: w.name }));
+        // Fall back to the user's own workspaces if the company list is unavailable.
+        if (!list.length && mine.data) return mine.data.map((w) => ({ id: String(w.id), name: w.name }));
+        return list;
+    }, [company.data, mine.data]);
 
-    const personalWs = user?.personalWorkspace;
-    const personalWsId = personalWs ? (typeof personalWs === 'object' ? personalWs._id || personalWs.id : personalWs) : null;
-    const allWorkspaces = personalWsId ? [{ id: personalWsId, name: 'Personal Workspace', role: 'owner' }, ...userWorkspaces] : userWorkspaces;
-    const queryWsId = new URLSearchParams(window.location.search).get('workspaceId');
+    useEffect(() => { if (!wsId && workspaces.length) setWsId(workspaces[0].id); }, [wsId, workspaces]);
 
-    const [selectedWsId, setSelectedWsId] = useState(propWorkspaceId || queryWsId || allWorkspaces[0]?.id || '');
-    useEffect(() => { if (!selectedWsId && allWorkspaces.length > 0) setSelectedWsId(String(allWorkspaces[0].id)); }, [user, selectedWsId]); 
+    const perms = useAsync(
+        () => api.get(`/api/workspaces/${wsId}/permissions`).then((r) => r.data?.permissions),
+        [wsId],
+        { enabled: !!wsId },
+    );
+    useEffect(() => {
+        if (perms.data) setRoles({ invitePermission: perms.data.invitePermission, channelCreationPermission: perms.data.channelCreationPermission });
+    }, [perms.data]);
 
-    const wsId = selectedWsId ? String(selectedWsId) : '';
-    const [permissions, setPermissions] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [saving, setSaving] = useState(false);
-    const [saved, setSaved] = useState(false);
-    const [activeTab, setActiveTab] = useState('features');
+    const role = myRole[wsId];
+    // Company owners/admins manage every company workspace; otherwise the workspace role decides.
+    const canEdit = isAdminUser(user) || role === 'owner' || role === 'admin';
+    const rolesDirty = perms.data && roles && (roles.invitePermission !== perms.data.invitePermission || roles.channelCreationPermission !== perms.data.channelCreationPermission);
 
-    const fetchPermissions = useCallback(async () => {
-        if (!wsId) { setError('No workspace selected'); setLoading(false); return; }
+    const toggle = async (key, value) => {
+        const prev = perms.data;
+        const featureToggles = { ...(prev?.featureToggles || {}), [key]: value };
+        perms.setData({ ...prev, featureToggles });
+        setSavingKey(key);
         try {
-            setLoading(true);
-            const { data } = await api.get(`/api/workspaces/${wsId}/permissions`);
-            setPermissions(data.permissions);
+            await api.put(`/api/workspaces/${wsId}/features`, { featureToggles });
+            showToast(`${FEATURES.find((f) => f.key === key)?.label} ${value ? 'on' : 'off'}`, 'success');
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to load permissions');
-        } finally { setLoading(false); }
-    }, [wsId]);
-
-    useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
-
-    const updateToggle = async (key, value) => {
-        if (!permissions) return;
-        const updated = { ...permissions.featureToggles, [key]: value };
-        setPermissions(p => ({ ...p, featureToggles: updated }));
-        try {
-            await api.put(`/api/workspaces/${wsId}/features`, { featureToggles: updated });
-            setSaved(true); setTimeout(() => setSaved(false), 2000);
-        } catch { fetchPermissions(); }
+            perms.setData(prev);
+            showToast(errorMessage(err, 'Could not change that feature'), 'error');
+        } finally {
+            setSavingKey(null);
+        }
     };
 
-    const savePermissions = async () => {
-        if (!permissions) return;
-        setSaving(true);
+    const saveRoles = async () => {
+        setSavingRoles(true);
         try {
-            await api.put(`/api/workspaces/${wsId}/permissions`, { invitePermission: permissions.invitePermission, channelCreationPermission: permissions.channelCreationPermission });
-            setSaved(true); setTimeout(() => setSaved(false), 2000);
-        } catch (err) { alert(err.response?.data?.message || 'Save failed'); }
-        finally { setSaving(false); }
+            await api.put(`/api/workspaces/${wsId}/permissions`, roles);
+            perms.setData((p) => ({ ...p, ...roles }));
+            showToast('Permissions saved', 'success');
+        } catch (err) {
+            showToast(errorMessage(err, 'Could not save permissions'), 'error');
+        } finally {
+            setSavingRoles(false);
+        }
     };
 
-    const tabs = [['features', 'Feature Toggles'], ['roles', 'Role Permissions']];
+    const loadingList = (company.loading || mine.loading) && !workspaces.length;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {}
-            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0, zIndex: 5 }}>
-                <div>
-                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        <Settings size={16} style={{ color: 'var(--accent)' }} />
-                        Workspace Permissions
-                    </h2>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Control feature access and role-based permissions</p>
-                </div>
-                {saved && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', background: 'rgba(90,186,138,0.1)', border: '1px solid var(--state-success)', color: 'var(--state-success)', fontSize: '11px', fontWeight: 700 }}>
-                        <CheckCircle2 size={12} /> Saved
-                    </span>
-                )}
-            </header>
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow="Collaboration"
+                    title="Workspace permissions"
+                    lead="Turn features on or off per workspace and choose who can invite people or create channels."
+                    actions={wsId && <Btn icon={RefreshCw} loading={perms.loading} onClick={perms.reload}>Refresh</Btn>}
+                />
+            )}
+        >
+            {loadingList ? (
+                <LoadingState label="Loading workspaces…" />
+            ) : !workspaces.length ? (
+                company.error ? <ErrorState message={company.error} onRetry={company.reload} /> : <EmptyState icon={Lock} title="No workspaces yet" text="Create a workspace first, then manage its permissions here." />
+            ) : (
+                <>
+                    <Toolbar>
+                        <SelectBox value={wsId} onChange={(v) => { setWsId(v); setRoles(null); }} label="Workspace" style={{ maxWidth: 280 }}>
+                            {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                        </SelectBox>
+                        {role ? <Chip tone={canEdit ? 'accent' : undefined}>You: workspace {role}</Chip> : <Chip>Not a member</Chip>}
+                        <span className="cd-toolbar-spacer" />
+                        <FilterTabs
+                            value={tab}
+                            onChange={setTab}
+                            label="Permission type"
+                            options={[{ value: 'features', label: 'Features' }, { value: 'roles', label: 'Roles' }]}
+                        />
+                    </Toolbar>
 
-            {}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
+                    {!canEdit && perms.data && (
+                        <p className="cd-muted" style={{ margin: 0, fontSize: 12 }}>
+                            You can view these settings. Only this workspace's owners and admins can change them.
+                        </p>
+                    )}
 
-                {}
-                {allWorkspaces.length > 1 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-                        <label style={{ ...labelStyle, marginBottom: 0 }}>Workspace:</label>
-                        <select value={selectedWsId} onChange={e => { setSelectedWsId(e.target.value); setPermissions(null); }}
-                            style={{ background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', padding: '7px 12px', outline: 'none', fontFamily: 'inherit', cursor: 'pointer', borderRadius: '0' }}>
-                            {allWorkspaces.map(ws => <option key={String(ws.id)} value={String(ws.id)}>{ws.name || String(ws.id)}</option>)}
-                        </select>
-                    </div>
-                )}
-
-                {!wsId && !loading && <div style={{ padding: '12px 16px', background: 'rgba(184,149,106,0.08)', border: '1px solid var(--accent)', color: 'var(--accent)', fontSize: '12px', marginBottom: '14px' }}>No workspace found. Please join or create a workspace first.</div>}
-                {error && <div style={{ padding: '10px 14px', background: 'rgba(224,82,82,0.08)', border: '1px solid var(--state-danger)', color: 'var(--state-danger)', fontSize: '12px', marginBottom: '12px' }}>{error}</div>}
-
-                {loading && <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
-                    <RefreshCw size={20} style={{ color: 'var(--text-muted)', animation: 'spin 1s linear infinite' }} /></div>}
-
-                {permissions && !loading && (
-                    <div style={{ maxWidth: '800px' }}>
-                        {}
-                        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)', marginBottom: '20px' }}>
-                            {tabs.map(([key, label]) => (
-                                <button key={key} onClick={() => setActiveTab(key)}
-                                    style={{
-                                        padding: '9px 18px', background: 'none', border: 'none', cursor: 'pointer',
-                                        color: activeTab === key ? 'var(--accent)' : 'var(--text-secondary)',
-                                        fontSize: '13px', fontWeight: activeTab === key ? 700 : 400,
-                                        borderBottom: `2px solid ${activeTab === key ? 'var(--accent)' : 'transparent'}`,
-                                        transition: 'all 150ms ease', fontFamily: 'inherit',
-                                    }}>
-                                    {label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {}
-                        {activeTab === 'features' && (
-                            <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
-                                <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-active)' }}>
-                                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Enable or disable features for this workspace. Changes take effect immediately for all members.</p>
-                                </div>
-                                {FEATURES.map((feat, idx) => (
-                                    <div key={feat.key} style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '14px 18px', borderBottom: idx < FEATURES.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-                                        <div style={{ flex: 1 }}>
-                                            <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '2px' }}>{feat.label}</p>
-                                            <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{feat.desc}</p>
+                    {perms.error && !perms.data ? (
+                        <ErrorState
+                            message={perms.error}
+                            onRetry={perms.reload}
+                        />
+                    ) : !perms.data ? (
+                        <LoadingState />
+                    ) : tab === 'features' ? (
+                        <Panel flush title="Features" icon={Lock}>
+                            <div className="wo-rows">
+                                {FEATURES.map((f) => (
+                                    <div key={f.key} className="wo-row" data-testid={`ws-feature-${f.key}`}>
+                                        <div className="wo-row-text">
+                                            <div className="wo-row-title">{f.label}</div>
+                                            <div className="wo-row-desc">{f.desc}</div>
                                         </div>
-                                        <FlatToggle checked={permissions.featureToggles?.[feat.key] !== false} onChange={() => updateToggle(feat.key, !(permissions.featureToggles?.[feat.key] !== false))} />
+                                        <Switch
+                                            label={f.label}
+                                            checked={perms.data.featureToggles?.[f.key] !== false}
+                                            disabled={!canEdit || savingKey === f.key}
+                                            onChange={(v) => toggle(f.key, v)}
+                                        />
                                     </div>
                                 ))}
                             </div>
-                        )}
-
-                        {}
-                        {activeTab === 'roles' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                {[
-                                    { label: 'Who can invite members?', key: 'invitePermission', options: INVITE_ROLES, desc: 'Minimum role required to generate invite links' },
-                                    { label: 'Who can create channels?', key: 'channelCreationPermission', options: CHANNEL_CREATE_ROLES, desc: 'Minimum role required to create new channels' },
-                                ].map(({ label, key, options, desc }) => (
-                                    <div key={key} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '18px 20px' }}>
-                                        <p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '3px' }}>{label}</p>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px' }}>{desc}</p>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            {options.map(role => {
-                                                const active = permissions[key] === role;
-                                                return (
-                                                    <RoleBtn key={role} label={role.charAt(0).toUpperCase() + role.slice(1) + '+'} active={active} onClick={() => setPermissions(p => ({ ...p, [key]: role }))} />
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                ))}
-                                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                                    <SaveBtn onClick={savePermissions} saving={saving} />
+                        </Panel>
+                    ) : (
+                        <Panel title="Roles" icon={Lock}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 520 }}>
+                                <Field label="Who can invite people" hint="Minimum workspace role that can create invites.">
+                                    <SelectBox value={roles?.invitePermission || 'admin'} onChange={(v) => setRoles((r) => ({ ...r, invitePermission: v }))} label="Who can invite people">
+                                        {ROLE_OPTIONS.map((o) => <option key={o.value} value={o.value} disabled={!canEdit}>{o.label}</option>)}
+                                    </SelectBox>
+                                </Field>
+                                <Field label="Who can create channels" hint="Minimum workspace role that can create channels.">
+                                    <SelectBox value={roles?.channelCreationPermission || 'member'} onChange={(v) => setRoles((r) => ({ ...r, channelCreationPermission: v }))} label="Who can create channels">
+                                        {ROLE_OPTIONS.map((o) => <option key={o.value} value={o.value} disabled={!canEdit}>{o.label}</option>)}
+                                    </SelectBox>
+                                </Field>
+                                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                    {rolesDirty && <Btn variant="ghost" onClick={() => setRoles({ invitePermission: perms.data.invitePermission, channelCreationPermission: perms.data.channelCreationPermission })}>Discard</Btn>}
+                                    <Btn variant="primary" icon={Save} loading={savingRoles} disabled={!canEdit || !rolesDirty} onClick={saveRoles}>Save</Btn>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                )}
-            </div>
-        </div>
+                        </Panel>
+                    )}
+                </>
+            )}
+        </DashPage>
     );
 }
-
-const RoleBtn = ({ label, active, onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ padding: '7px 18px', border: `1px solid ${active ? 'var(--accent)' : 'var(--border-default)'}`, background: active ? 'var(--accent)' : hov ? 'var(--bg-hover)' : 'var(--bg-active)', color: active ? 'var(--bg-base)' : 'var(--text-secondary)', fontSize: '12px', fontWeight: active ? 700 : 400, cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
-            {label}
-        </button>
-    );
-};
-
-const SaveBtn = ({ onClick, saving }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} disabled={saving} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 20px', background: saving ? 'var(--bg-active)' : hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: saving ? 'var(--text-muted)' : 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
-            {saving ? <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Save size={12} />}
-            {saving ? 'Saving…' : 'Save Permissions'}
-        </button>
-    );
-};

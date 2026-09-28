@@ -21,27 +21,34 @@ async function updateCompanyProfile(companyId, profileData) {
     return company;
 }
 
-async function updateSecuritySettings(companyId, securityData) {
-    const { passwordPolicy, twoFactorAuth, sessionTimeout, ipWhitelist } = securityData;
+/**
+ * Writes Company.securitySettings (the schema field). Accepts the schema names
+ * and the older client names (twoFactorAuth, sessionTimeout, ipWhitelist,
+ * passwordPolicy.minLength). Only provided fields change.
+ */
+async function updateSecuritySettings(companyId, securityData = {}) {
+    const d = securityData || {};
+    const pick = (...vals) => vals.find((v) => v !== undefined);
+    const set = {};
+    const mfa = pick(d.mfaRequired, d.twoFactorAuth?.required, typeof d.twoFactorAuth === 'boolean' ? d.twoFactorAuth : undefined);
+    if (mfa !== undefined) set['securitySettings.mfaRequired'] = !!mfa;
+    const minLen = pick(d.passwordMinLength, d.passwordPolicy?.minLength);
+    if (minLen !== undefined) set['securitySettings.passwordMinLength'] = Math.max(6, Math.min(128, Number(minLen) || 8));
+    const timeout = pick(d.sessionTimeoutMinutes, d.sessionTimeout);
+    if (timeout !== undefined) set['securitySettings.sessionTimeoutMinutes'] = Math.max(5, Math.min(43200, Number(timeout) || 1440));
+    const ips = pick(d.allowedIpRanges, d.ipWhitelist);
+    if (ips !== undefined) set['securitySettings.allowedIpRanges'] = (Array.isArray(ips) ? ips : []).map(String).filter(Boolean).slice(0, 100);
+    if (d.enforceSSO !== undefined) set['securitySettings.enforceSSO'] = !!d.enforceSSO;
 
-    const company = await Company.findByIdAndUpdate(
-        companyId,
-        {
-            'settings.security': {
-                passwordPolicy,
-                twoFactorAuth,
-                sessionTimeout,
-                ipWhitelist
-            }
-        },
-        { new: true, runValidators: true }
-    );
+    const company = Object.keys(set).length
+        ? await Company.findByIdAndUpdate(companyId, { $set: set }, { new: true, runValidators: true })
+        : await Company.findById(companyId);
 
     if (!company) {
         return null;
     }
 
-    return company.settings?.security;
+    return company.securitySettings;
 }
 
 async function updateDomainSettings(companyId, domainData) {

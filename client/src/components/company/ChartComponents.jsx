@@ -1,8 +1,9 @@
 import React from 'react';
+import { Kpi } from '../company-dash/dashUi';
 
-export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = true }) => {
+export const LineChart = ({ data, height = 200, color = 'var(--accent)', showDots = true }) => {
     if (!data || data.length === 0) {
-        return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
+        return <div className="flex items-center justify-center h-48 cd-muted">No data available</div>;
     }
 
     const maxValue = Math.max(...data.map(d => d.value), 1);
@@ -26,7 +27,7 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
                         y1={height - ratio * (height - padding * 2) - padding}
                         x2="100%"
                         y2={height - ratio * (height - padding * 2) - padding}
-                        stroke="#e5e7eb"
+                        stroke="var(--border-default)"
                         strokeWidth="1"
                         strokeDasharray="4"
                     />
@@ -59,7 +60,7 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
                             cx={`${x}%`}
                             cy={y}
                             r="4"
-                            fill="white"
+                            fill="var(--bg-surface)"
                             stroke={color}
                             strokeWidth="2"
                             className="hover:r-6 transition-all cursor-pointer"
@@ -71,7 +72,7 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
             </svg>
 
             {}
-            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500 -ml-8">
+            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs cd-muted -ml-8">
                 <span>{maxValue}</span>
                 <span>{Math.round(maxValue * 0.5)}</span>
                 <span>0</span>
@@ -80,9 +81,9 @@ export const LineChart = ({ data, height = 200, color = '#3b82f6', showDots = tr
     );
 };
 
-export const BarChart = ({ data, height = 200, color = '#8b5cf6' }) => {
+export const BarChart = ({ data, height = 200, color = 'var(--accent)' }) => {
     if (!data || data.length === 0) {
-        return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
+        return <div className="flex items-center justify-center h-48 cd-muted">No data available</div>;
     }
 
     const maxValue = Math.max(...data.map(d => d.value), 1);
@@ -95,7 +96,7 @@ export const BarChart = ({ data, height = 200, color = '#8b5cf6' }) => {
                     return (
                         <div key={index} className="flex-1 flex flex-col items-center group">
                             <div className="w-full flex flex-col items-center justify-end h-full">
-                                <div className="text-xs font-semibold text-gray-700 mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="text-xs font-semibold  mb-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     {item.value}
                                 </div>
                                 <div
@@ -108,7 +109,7 @@ export const BarChart = ({ data, height = 200, color = '#8b5cf6' }) => {
                                     title={`${item.label}: ${item.value}`}
                                 />
                             </div>
-                            <div className="text-xs text-gray-600 mt-2 text-center truncate w-full">
+                            <div className="text-xs cd-muted mt-2 text-center truncate w-full">
                                 {item.label}
                             </div>
                         </div>
@@ -121,15 +122,15 @@ export const BarChart = ({ data, height = 200, color = '#8b5cf6' }) => {
 
 export const PieChart = ({ data, size = 200 }) => {
     if (!data || data.length === 0) {
-        return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
+        return <div className="flex items-center justify-center h-48 cd-muted">No data available</div>;
     }
 
     const total = data.reduce((sum, item) => sum + item.value, 0);
     if (total === 0) {
-        return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
+        return <div className="flex items-center justify-center h-48 cd-muted">No data available</div>;
     }
 
-    const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#6366f1'];
+    const colors = ['var(--accent)', 'var(--state-success)', 'var(--color-warning)', 'var(--state-danger)', 'var(--text-secondary)', 'var(--border-accent)'];
     let currentAngle = -90; 
 
     const slices = data.map((item, index) => {
@@ -185,8 +186,8 @@ export const PieChart = ({ data, size = 200 }) => {
                             className="w-3 h-3 rounded-full flex-shrink-0"
                             style={{ backgroundColor: slice.color }}
                         />
-                        <span className="text-gray-700">{slice.label}</span>
-                        <span className="text-gray-500 ml-auto">{slice.percentage}%</span>
+                        <span className="">{slice.label}</span>
+                        <span className="cd-muted ml-auto">{slice.percentage}%</span>
                     </div>
                 ))}
             </div>
@@ -194,9 +195,9 @@ export const PieChart = ({ data, size = 200 }) => {
     );
 };
 
-export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
+export const AreaChart = ({ data, height = 200, color = 'var(--state-success)' }) => {
     if (!data || data.length === 0) {
-        return <div className="flex items-center justify-center h-48 text-gray-400">No data available</div>;
+        return <div className="flex items-center justify-center h-48 cd-muted">No data available</div>;
     }
 
     const maxValue = Math.max(...data.map(d => d.value), 1);
@@ -220,7 +221,7 @@ export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
                         y1={height - ratio * (height - padding * 2) - padding}
                         x2="100%"
                         y2={height - ratio * (height - padding * 2) - padding}
-                        stroke="#e5e7eb"
+                        stroke="var(--border-default)"
                         strokeWidth="1"
                         strokeDasharray="4"
                     />
@@ -245,7 +246,7 @@ export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
             </svg>
 
             {}
-            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-500 -ml-8">
+            <div className="absolute left-0 top-0 h-full flex flex-col justify-between text-xs cd-muted -ml-8">
                 <span>{maxValue}</span>
                 <span>{Math.round(maxValue * 0.5)}</span>
                 <span>0</span>
@@ -254,36 +255,13 @@ export const AreaChart = ({ data, height = 200, color = '#10b981' }) => {
     );
 };
 
-export const StatCard = ({ label, value, trend, icon: Icon, color = 'blue' }) => {
-    const colorClasses = {
-        blue: 'bg-blue-50 text-blue-600',
-        purple: 'bg-purple-50 text-purple-600',
-        green: 'bg-green-50 text-green-600',
-        orange: 'bg-orange-50 text-orange-600',
-        pink: 'bg-pink-50 text-pink-600'
-    };
-
-    return (
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-600 mb-2">{label}</p>
-                    <p className="text-3xl font-bold text-gray-900">{value}</p>
-                    {trend !== undefined && trend !== null && (
-                        <div className="flex items-center gap-1 mt-2">
-                            <span className={`text-sm font-medium ${trend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {trend >= 0 ? '+' : ''}{trend}%
-                            </span>
-                            <span className="text-xs text-gray-500">vs last period</span>
-                        </div>
-                    )}
-                </div>
-                {Icon && (
-                    <div className={`${colorClasses[color]} p-3 rounded-lg`}>
-                        <Icon className="w-6 h-6" />
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
+export const StatCard = ({ label, value, trend, icon }) => (
+    <Kpi
+        icon={icon}
+        label={label}
+        value={value}
+        delta={trend !== undefined && trend !== null ? `${trend >= 0 ? '+' : ''}${trend}%` : undefined}
+        deltaTone={trend >= 0 ? 'up' : 'down'}
+        hint={trend !== undefined && trend !== null ? 'vs last period' : undefined}
+    />
+);

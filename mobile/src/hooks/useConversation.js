@@ -17,6 +17,7 @@ import { on, toast } from '../services/events';
 import { useSocketEvent } from './useSocketEvent';
 import { useOfflineQueue } from './useOfflineQueue';
 import { errorMessage } from '../services/http';
+import { setForegroundConversation, clearForegroundConversation } from '../services/push';
 
 const PAGE = 40;
 export const idOf = (v) => (v == null ? null : String(v._id ?? v.id ?? v.user?._id ?? v.user ?? v));
@@ -37,6 +38,13 @@ function mergeMessages(prev, incoming) {
 
 export function useConversation({ type, id, workspaceId, otherUserId, me, e2eeStatus }) {
   const [convId, setConvId] = useState(type === 'channel' ? id : null);
+  // Pushes about this conversation stay silent while it is open.
+  useEffect(() => {
+    const open = convId || id;
+    if (!open) return undefined;
+    setForegroundConversation(open);
+    return () => clearForegroundConversation(open);
+  }, [convId, id]);
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

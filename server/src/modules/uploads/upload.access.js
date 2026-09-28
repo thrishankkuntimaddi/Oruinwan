@@ -88,7 +88,9 @@ async function canAccessFile(gcsPath, userId, objectMeta = {}) {
     if (wsFile && await isWorkspaceMember(wsFile.workspaceId, userId)) return true;
 
     // Same-company fallback for attachments on tasks/updates/tickets (uploaded with company metadata).
-    if (objectMeta.companyId) {
+    // Not for files shared in a chat: those follow the conversation's membership, so a
+    // coworker outside a DM or private channel can't open its files.
+    if (objectMeta.companyId && messages.length === 0) {
         const User = require('../../../models/User');
         const requester = await User.findById(userId).select('companyId').lean();
         if (requester && idEq(requester.companyId, objectMeta.companyId)) return true;

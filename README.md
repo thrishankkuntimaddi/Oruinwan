@@ -459,7 +459,13 @@ Fill in the values — see [Environment Variables](#-environment-variables) belo
 
 ### 4. Start Development Servers
 
+> Full guide (AI engine, database, stopping, troubleshooting): [docs/LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md)
+
 ```bash
+# Everything: MongoDB (if local) + Ollama AI engine + API + web
+npm run dev:all
+npm run dev:status   # what is running
+
 # From the root — starts both client and server concurrently
 npm run dev
 

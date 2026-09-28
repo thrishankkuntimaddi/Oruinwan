@@ -48,6 +48,8 @@ function registerSocketConnection(io) {
     });
 
     registerChatHandlers(io, socket);
+    // What this tab shows (notifications skip push for active web users).
+    require('../modules/notifications/viewingPresence').registerViewingHandlers(socket, socketUserId);
 
     // ── Async bootstrap ──
     (async () => {

@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './styles/gloss.css';
 import './desktop/bridge';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';

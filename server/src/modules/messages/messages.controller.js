@@ -9,6 +9,20 @@ const conversationKeysService = require('../conversations/conversationKeys.servi
 const mongoose = require('mongoose');
 const { canAccessMessage, loadAccessibleMessage } = require('./messageAccess');
 const { redactReadBy, readersHidingReceipts } = require('../../features/auth/privacy.service');
+const { sanitizeAttachments } = require('../uploads/attachmentSanitizer');
+
+// Validated attachments, or null after answering the request with the error.
+async function cleanAttachmentsOrRespond(res, attachments, senderId) {
+    try {
+        return await sanitizeAttachments(attachments, senderId);
+    } catch (err) {
+        if (err && err.status && err.status < 500) {
+            res.status(err.status).json({ message: err.message, code: err.code });
+            return null;
+        }
+        throw err;
+    }
+}
 
 function sendError(res, err, label) {
     if (err && err.status && err.status < 500) {
@@ -127,6 +141,12 @@ exports.sendDirectMessage = async (req, res) => {
             await DMSession.updateOne({ _id: dmSession._id }, { $set: { hiddenFor: [] } });
         }
 
+        const cleanAttachments = await cleanAttachmentsOrRespond(res, attachments, senderId);
+        if (!cleanAttachments) return undefined;
+        if (['image', 'video', 'file', 'voice'].includes(type) && cleanAttachments.length === 0) {
+            return res.status(400).json({ message: 'An attachment message needs a file' });
+        }
+
         const message = await messagesService.createMessage(
             {
                 type,
@@ -134,7 +154,7 @@ exports.sendDirectMessage = async (req, res) => {
                 workspace: dmSession.workspace,
                 dm: dmSession._id,
                 sender: senderId,
-                attachments,
+                attachments: cleanAttachments,
                 parentId: replyTo || null,
                 quotedMessageId: req.body.quotedMessageId || null,
                 ciphertext,
@@ -271,6 +291,18 @@ exports.getWorkspaceDMList = async (req, res) => {
         return res.json({ sessions });
     } catch (err) {
         return handleError(res, err, 'GET WORKSPACE DM LIST ERROR');
+    }
+};
+
+/** GET /workspace/:workspaceId/activity — see activity.service.js. */
+exports.getWorkspaceActivity = async (req, res) => {
+    try {
+        const { getWorkspaceActivity } = require('./activity.service');
+        const data = await getWorkspaceActivity(req.user.sub, req.params.workspaceId);
+        res.set('Cache-Control', 'no-store');
+        return res.json(data);
+    } catch (err) {
+        return sendError(res, err, 'GET WORKSPACE ACTIVITY ERROR');
     }
 };
 
@@ -420,6 +452,12 @@ exports.sendChannelMessage = async (req, res) => {
             }
         }
 
+        const cleanAttachments = await cleanAttachmentsOrRespond(res, attachments, senderId);
+        if (!cleanAttachments) return undefined;
+        if (['image', 'video', 'file', 'voice'].includes(type) && cleanAttachments.length === 0) {
+            return res.status(400).json({ message: 'An attachment message needs a file' });
+        }
+
         const message = await messagesService.createMessage(
             {
                 type,
@@ -427,7 +465,7 @@ exports.sendChannelMessage = async (req, res) => {
                 workspace: channel.workspace,
                 channel: channelId,
                 sender: senderId,
-                attachments,
+                attachments: cleanAttachments,
                 parentId: replyTo || null,
                 quotedMessageId: quotedMessageId || null,
                 ciphertext,
@@ -549,6 +587,11 @@ exports.forwardMessage = async (req, res) => {
             }
         }
 
+        // A photo/voice/file message is forwarded as the same kind of message (it has no
+        // encrypted text); anything else is forwarded as its encrypted text.
+        const ATTACHMENT_TYPES = ['image', 'video', 'file', 'voice'];
+        const forwardType = ATTACHMENT_TYPES.includes(originalMessage.type) ? originalMessage.type : 'message';
+
         let forwardedCount = 0;
         const errors = [];
 
@@ -574,7 +617,7 @@ exports.forwardMessage = async (req, res) => {
                     const srcMessageIv = originalMessage.payload?.messageIv || originalMessage.messageIv;
 
                     await messagesService.createMessage({
-                        type: 'message',
+                        type: forwardType,
                         company: channel.company,
                         workspace: channel.workspace,
                         channel: id,
@@ -605,7 +648,7 @@ exports.forwardMessage = async (req, res) => {
                     const srcMessageIv = originalMessage.payload?.messageIv || originalMessage.messageIv;
 
                     await messagesService.createMessage({
-                        type: 'message',
+                        type: forwardType,
                         company: dmSession.company,
                         workspace: dmSession.workspace,
                         dm: id,

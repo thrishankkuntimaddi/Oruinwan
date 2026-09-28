@@ -104,6 +104,11 @@ exports.sendTicketMessage = async (req, res) => {
         if (!ticket || !canAccessCompany(caller, ticket.companyId)) {
             return res.status(404).json({ message: 'Ticket not found' });
         }
+        // Personal-account tickets have no company room or SupportMessage company;
+        // platform admins reply to them through /api/admin/tickets/:id.
+        if (!ticket.companyId) {
+            return res.status(400).json({ message: 'Reply to personal-account requests from the Support Tickets console' });
+        }
 
         logger.info('[PLATFORM SUPPORT] Sending message to ticket:', {
             ticketId,

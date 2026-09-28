@@ -1,183 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { useOutletContext } from 'react-router-dom';
-import { Users, Building, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { FileBarChart, CheckCircle2, AlertTriangle, ListTodo, Percent, RefreshCw, Eye, EyeOff, Users, Download } from 'lucide-react';
 import api from '@services/api';
+import {
+    DashPage, PageHead, KpiGrid, Kpi, Grid, Panel, Meter, Btn, DataTable, Avatar, EmptyState, ErrorState, LoadingState, useAsync,
+} from '../company-dash/dashUi';
+import { useDepartment, DepartmentGate, pct } from './managerScope';
 
-const LABEL_ST = { fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' };
+const PRIORITIES = ['highest', 'high', 'medium', 'low', 'lowest'];
+const VISIBLE = ['Your department and its members', 'Tasks created by or assigned to the team', 'Workspaces you are a member of', 'Team activity counts (messages, tasks)'];
+const HIDDEN = ['Other departments', 'Billing and plan', 'Company security settings', 'Audit and compliance logs'];
 
-export default function ManagerReports() {
-    const { selectedDepartment } = useOutletContext();
-    const [info, setInfo] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        if (!selectedDepartment?._id) return;
-        setLoading(true);
-        api.get(`/api/manager/dashboard/metrics/${selectedDepartment._id}`)
-            .then(r => setInfo(r.data))
-            .catch(() => setInfo({
-                department: { name: selectedDepartment?.name || 'Department', description: '', head: null },
-                team: { total: 0, active: 0, pending: 0, managers: 0 }
-            }))
-            .finally(() => setLoading(false));
-    }, [selectedDepartment]);
-
-    
-    if (loading) return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            <div style={{ height: '56px', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', padding: '0 28px', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                <div><div className="sk" style={{ height: '13px', width: '150px', marginBottom: '5px' }} /><div className="sk" style={{ height: '9px', width: '250px' }} /></div>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-                <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {}
-                    <div style={{ display: 'flex', gap: '10px', padding: '14px 16px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
-                        <div className="sk" style={{ width: '14px', height: '14px', flexShrink: 0, marginTop: '1px' }} />
-                        <div style={{ flex: 1 }}><div className="sk" style={{ height: '11px', width: '160px', marginBottom: '6px' }} /><div className="sk" style={{ height: '9px', width: '100%', marginBottom: '3px' }} /><div className="sk" style={{ height: '9px', width: '80%' }} /></div>
-                    </div>
-                    {}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        {[1,2].map(i => (
-                            <div key={i} style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', borderTop: '2px solid var(--border-accent)', padding: '16px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '12px' }}><div className="sk" style={{ width: '13px', height: '13px' }} /><div className="sk" style={{ height: '9px', width: '120px' }} /></div>
-                                {[1,2,3,4].map(j => (
-                                    <div key={j} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg-active)', marginBottom: '6px' }}>
-                                        <div className="sk" style={{ width: '12px', height: '12px', flexShrink: 0 }} />
-                                        <div className="sk" style={{ height: '9px', flex: 1 }} />
-                                    </div>
-                                ))}
-                            </div>
-                        ))}
-                    </div>
-                    {}
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
-                        <div className="sk" style={{ height: '9px', width: '180px', marginBottom: '16px' }} />
-                        <div className="sk" style={{ height: '24px', width: '200px', marginBottom: '14px' }} />
-                        <div className="sk" style={{ height: '9px', width: '300px', marginBottom: '16px' }} />
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', paddingTop: '14px', borderTop: '1px solid var(--border-subtle)' }}>
-                            {[1,2,3,4].map(i => (
-                                <div key={i} style={{ background: 'var(--bg-surface)', padding: '12px 14px', textAlign: 'center' }}>
-                                    <div className="sk" style={{ height: '9px', width: '50px', margin: '0 auto 6px' }} />
-                                    <div className="sk" style={{ height: '24px', width: '40px', margin: '0 auto' }} />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
-    const d = info || { department: { name: '—', head: null }, team: { total: 0, active: 0, pending: 0, managers: 0 } };
-
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-            {}
-            <header style={{ height: '56px', padding: '0 28px', display: 'flex', alignItems: 'center', background: 'var(--bg-surface)', borderBottom: '1px solid var(--border-subtle)', flexShrink: 0 }}>
-                <div>
-                    <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-                        <Eye size={16} style={{ color: 'var(--accent)' }} /> Limited Visibility
-                    </h2>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '1px', marginLeft: '24px' }}>Basic department information · View-only access</p>
-                </div>
-            </header>
-
-            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }} className="custom-scrollbar">
-                <div style={{ maxWidth: '760px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {}
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '14px 16px', background: 'rgba(184,149,106,0.05)', border: '1px solid rgba(184,149,106,0.25)' }}>
-                        <AlertCircle size={14} style={{ color: 'var(--accent)', flexShrink: 0, marginTop: '1px' }} />
-                        <div>
-                            <p style={{ fontSize: '12px', fontWeight: 700, color: 'var(--accent)', marginBottom: '3px' }}>Manager Permissions</p>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-                                As a manager, you have limited visibility into department settings. Contact an admin or owner for billing, security settings, or organizational changes.
-                            </p>
-                        </div>
-                    </div>
-
-                    {}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                        <VisCard icon={Eye} color="var(--state-success)" title="What You Can See" items={[
-                            { Icon: Building, label: 'Department name and description' },
-                            { Icon: Users,    label: 'Department team members' },
-                            { Icon: Shield,   label: 'Your managed workspaces' },
-                            { Icon: Eye,      label: 'Basic team metrics' },
-                        ]} />
-                        <VisCard icon={EyeOff} color="var(--state-danger)" title="What You Cannot Change" items={[
-                            { Icon: EyeOff, label: 'Department structure' },
-                            { Icon: EyeOff, label: 'Billing & subscriptions' },
-                            { Icon: EyeOff, label: 'Security settings' },
-                            { Icon: EyeOff, label: 'Admin configurations' },
-                        ]} />
-                    </div>
-
-                    {}
-                    <div style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', padding: '20px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-secondary)', marginBottom: '16px' }}>Department Information (Read-Only)</p>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                            <div>
-                                <span style={LABEL_ST}>Department Name</span>
-                                <p style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>{d.department?.name}</p>
-                            </div>
-                            {d.department?.description && (
-                                <div><span style={LABEL_ST}>Description</span>
-                                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>{d.department.description}</p>
-                                </div>
-                            )}
-                            {d.department?.head && (
-                                <div><span style={LABEL_ST}>Department Head</span>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
-                                        <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'rgba(184,149,106,0.1)', border: '1px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--accent)' }}>
-                                            {d.department.head.username?.charAt(0)?.toUpperCase()}
-                                        </div>
-                                        <div>
-                                            <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{d.department.head.username}</p>
-                                            <p style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{d.department.head.email}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'var(--border-subtle)', paddingTop: '14px', borderTop: '1px solid var(--border-subtle)' }}>
-                                {[
-                                    { label: 'Total', val: d.team?.total || 0, color: 'var(--text-primary)' },
-                                    { label: 'Active', val: d.team?.active || 0, color: 'var(--state-success)' },
-                                    { label: 'Pending', val: d.team?.pending || 0, color: 'var(--accent)' },
-                                    { label: 'Managers', val: d.team?.managers || 0, color: '#9b8ecf' },
-                                ].map(s => (
-                                    <div key={s.label} style={{ background: 'var(--bg-surface)', padding: '12px 14px', textAlign: 'center' }}>
-                                        <span style={LABEL_ST}>{s.label}</span>
-                                        <p style={{ fontSize: '24px', fontWeight: 700, color: s.color }}>{s.val}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    {}
-                    <div style={{ padding: '20px', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
-                        <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>Need More Access?</p>
-                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '14px', lineHeight: '1.6' }}>Contact your admin or owner to request additional permissions or changes to department settings.</p>
-                        <button style={{ padding: '8px 20px', background: 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>Contact Admin</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+function toCsv(rows) {
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    return rows.map((r) => r.map(esc).join(',')).join('\n');
 }
 
-const VisCard = ({ icon: Icon, color, title, items }) => (
-    <div style={{ background: 'var(--bg-surface)', border: 'var(--border-subtle) solid 1px', padding: '16px', borderTop: `2px solid ${color}` }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', marginBottom: '12px' }}>
-            <Icon size={13} style={{ color }} />
-            <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{title}</p>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {items.map(({ Icon: I, label }) => (
-                <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', background: 'var(--bg-active)', border: `1px solid ${color}22` }}>
-                    <I size={12} style={{ color, flexShrink: 0 }} />
-                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{label}</span>
+/** Department report computed from the real task list and team metrics. */
+export default function ManagerReports() {
+    const scope = useDepartment();
+    const { departmentId, department } = scope;
+    const tasks = useAsync(
+        () => api.get(`/api/manager/tasks/${departmentId}`).then((r) => r.data),
+        [departmentId],
+        { enabled: !!departmentId },
+    );
+    const metrics = useAsync(
+        () => api.get(`/api/manager/dashboard/metrics/${departmentId}`).then((r) => r.data),
+        [departmentId],
+        { enabled: !!departmentId },
+    );
+
+    const report = useMemo(() => {
+        const g = tasks.data?.tasks;
+        if (!g) return null;
+        const all = [...g.open, ...g.inProgress, ...g.completed];
+        const overdueIds = new Set(g.overdue.map((t) => t._id));
+        const people = new Map();
+        const bump = (u, key) => {
+            const id = String(u?._id || 'none');
+            const row = people.get(id) || { _id: id, user: u, open: 0, done: 0, overdue: 0 };
+            row[key] += 1;
+            people.set(id, row);
+        };
+        all.forEach((t) => {
+            const assignees = (t.assignedTo || []).length ? t.assignedTo : [null];
+            assignees.forEach((u) => {
+                bump(u, t.status === 'done' ? 'done' : 'open');
+                if (overdueIds.has(t._id)) bump(u, 'overdue');
+            });
+        });
+        const byPriority = PRIORITIES.map((p) => [p, all.filter((t) => (t.priority || 'medium') === p).length]);
+        return {
+            total: all.length,
+            done: g.completed.length,
+            open: g.open.length + g.inProgress.length,
+            overdue: g.overdue.length,
+            completion: pct(g.completed.length, all.length),
+            people: [...people.values()].sort((a, b) => (b.open + b.done) - (a.open + a.done)),
+            byPriority,
+        };
+    }, [tasks.data]);
+
+    const exportCsv = () => {
+        if (!report) return;
+        const rows = [['Member', 'Email', 'Open', 'Done', 'Overdue'], ...report.people.map((p) => [p.user?.username || 'Unassigned', p.user?.email || '', p.open, p.done, p.overdue])];
+        const blob = new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${(department?.name || 'department').toLowerCase().replace(/\s+/g, '-')}-workload.csv`;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    };
+
+    const refresh = () => { tasks.reload(); metrics.reload(); };
+    const columns = [
+        {
+            key: 'member', label: 'Member', render: (p) => p.user ? (
+                <div className="cd-cell-user">
+                    <Avatar user={p.user} size="sm" />
+                    <div><div className="cd-cell-title">{p.user.username}</div><div className="cd-cell-sub">{p.user.email}</div></div>
                 </div>
-            ))}
-        </div>
-    </div>
-);
+            ) : <span className="cd-muted">Unassigned</span>,
+        },
+        { key: 'open', label: 'Open', className: 'cd-num', render: (p) => p.open },
+        { key: 'done', label: 'Done', className: 'cd-num', render: (p) => p.done },
+        { key: 'overdue', label: 'Overdue', className: 'cd-num', render: (p) => (p.overdue ? <span style={{ color: 'var(--state-danger)', fontWeight: 700 }}>{p.overdue}</span> : 0) },
+        {
+            key: 'rate', label: 'Completion', className: 'cd-hide-sm', render: (p) => {
+                const v = pct(p.done, p.open + p.done);
+                return <div className="mg-load"><div className="mg-load-top"><span>{v ?? 0}%</span></div><Meter value={v ?? 0} tone="success" label="Completion" /></div>;
+            },
+        },
+    ];
+
+    return (
+        <DashPage
+            head={(
+                <PageHead
+                    eyebrow="Manager console"
+                    title="Reports"
+                    lead={`Task completion and workload${department?.name ? ` for ${department.name}` : ''}.`}
+                    actions={departmentId && (
+                        <>
+                            <Btn icon={RefreshCw} loading={tasks.loading || metrics.loading} onClick={refresh}>Refresh</Btn>
+                            <Btn icon={Download} onClick={exportCsv} disabled={!report || report.total === 0}>Export CSV</Btn>
+                        </>
+                    )}
+                />
+            )}
+        >
+            <DepartmentGate scope={scope}>
+                {tasks.error && !report ? (
+                    <ErrorState message={tasks.error} onRetry={tasks.reload} />
+                ) : !report ? (
+                    <LoadingState label="Building the report…" />
+                ) : (
+                    <>
+                        <KpiGrid>
+                            <Kpi label="Tasks" value={report.total} icon={ListTodo} />
+                            <Kpi label="Completion" value={report.completion == null ? null : `${report.completion}%`} icon={Percent} tone="success" hint={report.total ? `${report.done} of ${report.total} done` : 'No tasks yet'} />
+                            <Kpi label="Open" value={report.open} icon={CheckCircle2} hint="To do + in progress" />
+                            <Kpi label="Overdue" value={report.overdue} icon={AlertTriangle} tone={report.overdue ? 'danger' : 'muted'} />
+                        </KpiGrid>
+
+                        <Grid cols="2">
+                            <Panel title="By priority" icon={FileBarChart}>
+                                {report.total === 0 ? <p className="cd-muted" style={{ margin: 0, fontSize: 13 }}>No tasks yet.</p> : report.byPriority.map(([p, n]) => (
+                                    <div key={p} className="mg-bar-row">
+                                        <span className="mg-bar-label" style={{ textTransform: 'capitalize' }}>{p}</span>
+                                        <Meter value={pct(n, report.total) ?? 0} tone={p === 'highest' ? 'danger' : undefined} label={`${p} priority`} />
+                                        <span className="cd-num">{n}</span>
+                                    </div>
+                                ))}
+                            </Panel>
+                            <Panel title="Team" icon={Users}>
+                                {metrics.error && !metrics.data ? (
+                                    <p className="cd-muted" style={{ margin: 0, fontSize: 13 }}>{metrics.error}</p>
+                                ) : (
+                                    <dl className="mg-kv">
+                                        <dt>Members</dt><dd>{metrics.data?.team?.total ?? '—'}</dd>
+                                        <dt>Active</dt><dd>{metrics.data?.team?.active ?? '—'}</dd>
+                                        <dt>Pending</dt><dd>{metrics.data?.team?.pending ?? '—'}</dd>
+                                        <dt>Messages / 7d</dt><dd>{metrics.data?.activity?.messagesThisWeek ?? '—'}</dd>
+                                    </dl>
+                                )}
+                            </Panel>
+                        </Grid>
+
+                        <DataTable
+                            columns={columns}
+                            rows={report.people}
+                            empty={<EmptyState icon={ListTodo} title="No workload yet" text="Workload appears once tasks are assigned." />}
+                        />
+
+                        <Grid cols="2">
+                            <Panel title="What you can see" icon={Eye}>
+                                <ul className="mg-scope-list">{VISIBLE.map((v) => <li key={v}><Eye size={13} style={{ color: 'var(--state-success)' }} />{v}</li>)}</ul>
+                            </Panel>
+                            <Panel title="Owner and admin only" icon={EyeOff}>
+                                <ul className="mg-scope-list">{HIDDEN.map((v) => <li key={v}><EyeOff size={13} />{v}</li>)}</ul>
+                            </Panel>
+                        </Grid>
+                    </>
+                )}
+            </DepartmentGate>
+        </DashPage>
+    );
+}

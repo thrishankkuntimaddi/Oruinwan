@@ -1,108 +1,94 @@
-import React, { useState } from "react";
-import { X, Mail, Loader } from "lucide-react";
-import { API_BASE } from '@services/api';
-import { useToast } from "../../contexts/ToastContext";
+import React, { useEffect, useState } from 'react';
+import { Send } from 'lucide-react';
+import api from '@services/api';
+import { useToast } from '../../contexts/ToastContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { isOwnerUser } from '../company-dash/dashNav';
+import { Dialog, Btn, Field, errorMessage } from '../company-dash/dashUi';
 
-const InviteUserModal = ({ isOpen, onClose, companyId, workspaces = [] }) => {
+/**
+ * Invite one person by email (POST /api/companies/:id/invite).
+ * Only owners/co-owners may invite an admin; owner is never offered.
+ */
+const InviteUserModal = ({ isOpen, onClose, companyId, departments = [], onInvited }) => {
     const { showToast } = useToast();
-    const [email, setEmail] = useState("");
-    const [role, setRole] = useState("member");
-    const [workspaceId, setWorkspaceId] = useState("");
-    const [loading, setLoading] = useState(false);
+    const { user } = useAuth();
+    const owner = isOwnerUser(user);
+    const [email, setEmail] = useState('');
+    const [role, setRole] = useState('member');
+    const [departmentId, setDepartmentId] = useState('');
+    const [jobTitle, setJobTitle] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState(null);
 
-    if (!isOpen) return null;
+    useEffect(() => {
+        if (isOpen) { setEmail(''); setRole('member'); setDepartmentId(''); setJobTitle(''); setError(null); }
+    }, [isOpen]);
 
-    const handleInvite = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+    const submit = async (e) => {
+        e?.preventDefault();
+        if (!companyId) return;
+        setBusy(true);
+        setError(null);
         try {
-            const res = await fetch(`${API_BASE}/api/companies/${companyId}/invite`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${localStorage.getItem("accessToken")}`
-                },
-                body: JSON.stringify({ email, role, workspaceId: workspaceId || null })
+            await api.post(`/api/companies/${companyId}/invite`, {
+                email: email.trim(),
+                role,
+                departmentId: departmentId || null,
+                jobTitle: jobTitle.trim() || undefined,
             });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.message);
-
-            showToast("Invitation sent successfully!", "success");
-            setEmail("");
+            showToast(`Invitation sent to ${email.trim()}`, 'success');
+            onInvited?.();
             onClose();
         } catch (err) {
-            showToast(err.message, "error");
+            setError(errorMessage(err, 'Could not send the invitation'));
         } finally {
-            setLoading(false);
+            setBusy(false);
         }
     };
 
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-fadeIn">
-                <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                        <Mail size={20} className="text-indigo-600" />
-                        Invite Team Member
-                    </h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700">
-                        <X size={20} />
-                    </button>
+        <Dialog
+            open={isOpen}
+            title="Invite a person"
+            lead="They get an email with a link to join the company."
+            onClose={onClose}
+            busy={busy}
+            footer={(
+                <>
+                    <Btn variant="ghost" onClick={onClose} disabled={busy}>Cancel</Btn>
+                    <Btn variant="primary" icon={Send} loading={busy} disabled={!valid} onClick={submit}>Send invite</Btn>
+                </>
+            )}
+        >
+            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <Field label="Work email" htmlFor="ad-invite-email" error={error}>
+                    <input id="ad-invite-email" className="gl-input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@company.com" autoComplete="off" />
+                </Field>
+                <div className="ad-row">
+                    <Field label="Role" htmlFor="ad-invite-role" hint={owner ? undefined : 'Only the owner can invite admins.'}>
+                        <select id="ad-invite-role" className="gl-input cd-select" value={role} onChange={(e) => setRole(e.target.value)}>
+                            <option value="member">Member</option>
+                            <option value="manager">Manager</option>
+                            <option value="guest">Guest</option>
+                            {owner && <option value="admin">Admin</option>}
+                        </select>
+                    </Field>
+                    <Field label="Department" htmlFor="ad-invite-dept">
+                        <select id="ad-invite-dept" className="gl-input cd-select" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)}>
+                            <option value="">None</option>
+                            {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+                        </select>
+                    </Field>
                 </div>
-
-                <form onSubmit={handleInvite} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Email Address</label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-900 dark:text-white bg-gray-50 dark:bg-slate-900 focus:bg-white dark:focus:bg-slate-800"
-                            placeholder="colleague@company.com"
-                            required
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Role</label>
-                            <select
-                                value={role}
-                                onChange={(e) => setRole(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
-                            >
-                                <option value="member">Member</option>
-                                <option value="manager">Manager</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Workspace</label>
-                            <select
-                                value={workspaceId}
-                                onChange={(e) => setWorkspaceId(e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
-                            >
-                                <option value="">None (General)</option>
-                                {workspaces.map(ws => (
-                                    <option key={ws._id} value={ws._id}>{ws.name}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="pt-2">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-3.5 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg shadow-gray-200 flex items-center justify-center gap-2"
-                        >
-                            {loading ? <Loader className="animate-spin" size={20} /> : "Send Invitation"}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                <Field label="Job title (optional)" htmlFor="ad-invite-title">
+                    <input id="ad-invite-title" className="gl-input" value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder="e.g. Product designer" />
+                </Field>
+                <button type="submit" hidden aria-hidden="true" />
+            </form>
+        </Dialog>
     );
 };
 

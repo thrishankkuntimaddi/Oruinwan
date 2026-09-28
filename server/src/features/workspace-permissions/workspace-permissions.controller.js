@@ -6,13 +6,12 @@ const { handleError } = require('../../../utils/responseHelpers');
 exports.getPermissions = async (req, res) => {
   try {
     const workspaceId = req.params.id;
-    const userId = req.user?.sub;
-
+    
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
-    const isMember = workspace.members.some(m => String(m.user) === String(userId));
-    if (!isMember) return res.status(403).json({ message: 'Not a workspace member' });
+    // Access was checked by the route (workspace member or company admin).
+    if (!req.workspaceRole) return res.status(403).json({ message: 'Not a workspace member' });
 
     let perms = await WorkspacePermission.findOne({ workspace: workspaceId });
 
@@ -38,8 +37,7 @@ exports.updatePermissions = async (req, res) => {
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
-    const member = workspace.members.find(m => String(m.user) === String(userId));
-    if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+    if (!['admin', 'owner'].includes(req.workspaceRole)) {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
@@ -83,13 +81,12 @@ exports.updatePermissions = async (req, res) => {
 exports.getFeatureToggles = async (req, res) => {
   try {
     const workspaceId = req.params.id;
-    const userId = req.user?.sub;
-
+    
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
-    const isMember = workspace.members.some(m => String(m.user) === String(userId));
-    if (!isMember) return res.status(403).json({ message: 'Not a workspace member' });
+    // Access was checked by the route (workspace member or company admin).
+    if (!req.workspaceRole) return res.status(403).json({ message: 'Not a workspace member' });
 
     const perms = await WorkspacePermission.findOne({ workspace: workspaceId }).select('featureToggles');
     const defaultToggles = { tasks: true, notes: true, polls: true, ai: true, huddles: true, fileUploads: true, reactions: true, threads: true, bookmarks: true, reminders: true };
@@ -109,8 +106,7 @@ exports.updateFeatureToggles = async (req, res) => {
     const workspace = await Workspace.findById(workspaceId);
     if (!workspace) return res.status(404).json({ message: 'Workspace not found' });
 
-    const member = workspace.members.find(m => String(m.user) === String(userId));
-    if (!member || (member.role !== 'admin' && member.role !== 'owner')) {
+    if (!['admin', 'owner'].includes(req.workspaceRole)) {
       return res.status(403).json({ message: 'Admin access required' });
     }
 

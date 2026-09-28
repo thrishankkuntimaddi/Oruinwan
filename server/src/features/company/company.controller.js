@@ -39,16 +39,16 @@ exports.getCompany = async (req, res) => {
 exports.updateCompany = async (req, res) => {
     try {
         const companyId = req.params.id;
-        const userId = req.user.sub;
-        const updates = req.body;
-
-        
-        const { isAdmin } = await companyService.checkIsAdmin(userId, companyId);
-        if (!isAdmin) {
-            return res.status(403).json({ message: "Only admins can update company settings" });
+        if (String(companyId) !== String(req.companyId)) {
+            return res.status(403).json({ message: "Access denied: that company is not yours" });
         }
 
-        
+        const { updates, error, status } = companyService.sanitizeCompanyUpdates(req.body, req.companyRole);
+        if (error) return res.status(status).json({ message: error });
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ message: "No editable fields in the request" });
+        }
+
         const company = await companyService.updateCompany(companyId, updates);
         if (!company) {
             return res.status(404).json({ message: "Company not found" });
@@ -58,6 +58,9 @@ exports.updateCompany = async (req, res) => {
 
     } catch (err) {
         logger.error("UPDATE COMPANY ERROR:", err);
+        if (err.name === 'ValidationError' || err.name === 'CastError') {
+            return res.status(400).json({ message: err.message });
+        }
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -81,7 +84,7 @@ exports.getCompanyMembers = async (req, res) => {
 
         
         logger.info(`[COMPANY] Fetching members for company ${companyId}`);
-        const members = await companyService.getCompanyMembers(companyId);
+        const members = await companyService.getCompanyMembers(companyId, { callerRole: req.companyRole });
         logger.info(`[COMPANY] Found ${members.length} members`);
 
         return res.json({ members });
@@ -94,30 +97,27 @@ exports.getCompanyMembers = async (req, res) => {
 exports.updateMemberRole = async (req, res) => {
     try {
         const { id: companyId, userId: targetUserId } = req.params;
+        if (String(companyId) !== String(req.companyId)) {
+            return res.status(403).json({ message: "Access denied: that company is not yours" });
+        }
         const requesterId = req.user.sub;
-        const { role } = req.body;
+        const newRole = req.body.role || req.body.newRole;
 
-        
         const result = await companyService.updateMemberRole({
             companyId,
             targetUserId,
             requesterId,
-            role,
+            newRole,
             req
         });
 
         return res.json(result);
 
     } catch (err) {
+        if (err.status && err.status < 500) {
+            return res.status(err.status).json({ message: err.message });
+        }
         logger.error("UPDATE MEMBER ROLE ERROR:", err);
-
-        if (err.message.includes('not found') || err.message.includes('Invalid')) {
-            return res.status(400).json({ message: err.message });
-        }
-        if (err.message.includes('Only') || err.message.includes('cannot')) {
-            return res.status(403).json({ message: err.message });
-        }
-
         return res.status(500).json({ message: "Server error" });
     }
 };
@@ -295,11 +295,11 @@ exports.downloadTemplate = async (req, res) => {
             'Department'    
         ];
         const samples = [
-            ['Aarav',  'Sharma',  'aarav.sharma@kt.com',  'kthrishank.9@gmail.com',   'Software Engineer',    '2024-06-10', '9876543210', 'KT1001', 'admin',   'Engineering'],
-            ['Neha',   'Reddy',   'neha.reddy@kt.com',    'kthrishank10@gmail.com',   'Engineering Manager',  '2023-03-15', '9876543211', 'KT1002', 'manager', 'Engineering'],
-            ['Rohan',  'Mehta',   'rohan.mehta@kt.com',   'tkuntimaddi@gmail.com',    'Engineering Manager',  '2023-07-21', '9876543212', 'KT1003', 'manager', 'Engineering'],
-            ['Isha',   'Kapoor',  'isha.kapoor@kt.com',   'kuntimaddit@gmail.com',    'Backend Engineer',     '2024-01-05', '9876543213', 'KT1004', 'member',  'Engineering'],
-            ['Vikram', 'Nair',    'vikram.nair@kt.com',   'kthrishank2003@gmail.com', 'Frontend Engineer',    '2024-02-11', '9876543214', 'KT1005', 'member',  'Engineering'],
+            ['Aarav',  'Sharma',  'aarav.sharma@example.com',  'aarav.personal@example.com',   'Software Engineer',    '2024-06-10', '9876543210', 'KT1001', 'admin',   'Engineering'],
+            ['Neha',   'Reddy',   'neha.reddy@example.com',    'neha.personal@example.com',   'Engineering Manager',  '2023-03-15', '9876543211', 'KT1002', 'manager', 'Engineering'],
+            ['Rohan',  'Mehta',   'rohan.mehta@example.com',   'rohan.personal@example.com',    'Engineering Manager',  '2023-07-21', '9876543212', 'KT1003', 'manager', 'Engineering'],
+            ['Isha',   'Kapoor',  'isha.kapoor@example.com',   'isha.personal@example.com',    'Backend Engineer',     '2024-01-05', '9876543213', 'KT1004', 'member',  'Engineering'],
+            ['Vikram', 'Nair',    'vikram.nair@example.com',   'vikram.personal@example.com', 'Frontend Engineer',    '2024-02-11', '9876543214', 'KT1005', 'member',  'Engineering'],
         ];
 
         const ws = XLSX.utils.aoa_to_sheet([headers, ...samples]);

@@ -56,6 +56,11 @@ const LandingNav = () => {
                                 {l.label}
                             </a>
                         ))}
+                        <a href="/docs" onClick={(e) => { e.preventDefault(); navigate('/docs'); }}
+                            className={`orw-nav__link${pathname.startsWith('/docs') ? ' is-active' : ''}`}
+                            aria-current={pathname.startsWith('/docs') ? 'page' : undefined}>
+                            Docs
+                        </a>
                     </nav>
 
                     <div className="orw-nav__actions">
@@ -78,6 +83,9 @@ const LandingNav = () => {
                         {l.label} <ArrowRight size={16} />
                     </a>
                 ))}
+                <a href="/docs" onClick={(e) => { e.preventDefault(); setOpen(false); navigate('/docs'); }} className="orw-drawer__link">
+                    Docs <ArrowRight size={16} />
+                </a>
                 <div className="orw-drawer__actions">
                     <button type="button" className="orw-btn orw-btn--ghost orw-btn--lg" onClick={() => navigate('/login')}>Log in</button>
                     <button type="button" className="orw-btn orw-btn--primary orw-btn--lg" onClick={() => navigate('/login?mode=signup')}>Get started</button>

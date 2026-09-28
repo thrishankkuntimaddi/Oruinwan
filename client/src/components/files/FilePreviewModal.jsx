@@ -1,6 +1,37 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { X, Download, MessageCircle, Tag, Clock, User, ChevronRight, Send, ExternalLink, FileText, Film, Image as ImageIcon, File } from 'lucide-react';
+import { X, Download, MessageCircle, Tag, Clock, User, ChevronRight, Send, FileText, Film, Image as ImageIcon, File } from 'lucide-react';
 import { useFiles } from '../../hooks/useFiles';
+import { useMediaUrl, getMediaUrl } from '../../utils/mediaUrl';
+import { downloadAttachment } from '../../utils/uploadFile';
+
+/**
+ * Stored files are served by the API behind auth, so media elements get a short-lived
+ * signed URL. PDFs are loaded into a blob: frame (the file server's strict headers keep
+ * the browser's PDF viewer out of a cross-origin frame).
+ */
+function PdfFrame({ file }) {
+    const [src, setSrc] = useState(null);
+    const [failed, setFailed] = useState(false);
+    useEffect(() => {
+        let blobUrl = null;
+        let cancelled = false;
+        (async () => {
+            try {
+                const url = await getMediaUrl({ url: file.url });
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(String(res.status));
+                blobUrl = URL.createObjectURL(new Blob([await res.blob()], { type: 'application/pdf' }));
+                if (!cancelled) setSrc(blobUrl);
+            } catch {
+                if (!cancelled) setFailed(true);
+            }
+        })();
+        return () => { cancelled = true; if (blobUrl) URL.revokeObjectURL(blobUrl); };
+    }, [file.url]);
+    if (failed) return <p className="text-sm text-red-500 text-center pt-8">Couldn’t load the preview.</p>;
+    if (!src) return <div className="animate-pulse text-gray-400 text-center pt-8">Loading preview…</div>;
+    return <iframe src={`${src}#navpanes=0`} title={file.name} className="w-full h-full rounded-xl border border-gray-200 dark:border-gray-700" />;
+}
 
 function mimeCategory(mime = '') {
     if (mime.startsWith('image/')) return 'image';
@@ -37,8 +68,15 @@ export default function FilePreviewModal({ fileId, onClose }) {
     const [newComment, setNewComment] = useState('');
     const [tab, setTab] = useState('preview'); 
     const [loading, setLoading] = useState(true);
+    const { url: mediaUrl } = useMediaUrl(file ? { url: file.url } : null);
+    const download = useCallback(async (e) => {
+        e?.preventDefault();
+        if (!file) return;
+        try { await downloadAttachment({ url: file.url, name: file.name }); }
+        catch { if (mediaUrl) window.open(mediaUrl, '_blank', 'noopener,noreferrer'); }
+    }, [file, mediaUrl]);
 
-    
+
     useEffect(() => {
         if (!fileId) return;
         let active = true;
@@ -78,26 +116,20 @@ export default function FilePreviewModal({ fileId, onClose }) {
         if (cat === 'image') {
             return (
                 <div className="flex h-full items-center justify-center bg-gray-900 rounded-xl overflow-hidden">
-                    <img src={file.url} alt={file.name} className="max-h-full max-w-full object-contain" />
+                    {mediaUrl && <img src={mediaUrl} alt={file.name} className="max-h-full max-w-full object-contain" />}
                 </div>
             );
         }
 
         if (cat === 'pdf') {
-            return (
-                <iframe
-                    src={`${file.url}#navpanes=0`}
-                    title={file.name}
-                    className="w-full h-full rounded-xl border border-gray-200 dark:border-gray-700"
-                />
-            );
+            return <PdfFrame file={file} />;
         }
 
         if (cat === 'video') {
             return (
                 <div className="flex h-full items-center justify-center bg-black rounded-xl">
                     {}
-                    <video controls src={file.url} className="max-h-full max-w-full" />
+                    {mediaUrl && <video controls playsInline src={mediaUrl} className="max-h-full max-w-full" />}
                 </div>
             );
         }
@@ -106,7 +138,7 @@ export default function FilePreviewModal({ fileId, onClose }) {
             return (
                 <div className="flex h-full items-center justify-center">
                     {}
-                    <audio controls src={file.url} className="w-full" />
+                    {mediaUrl && <audio controls src={mediaUrl} className="w-full" />}
                 </div>
             );
         }
@@ -116,14 +148,13 @@ export default function FilePreviewModal({ fileId, onClose }) {
             <div className="flex flex-col h-full items-center justify-center gap-4 text-center">
                 <MimeIcon mime={file.mimeType} size={56} />
                 <p className="text-gray-500 dark:text-gray-400 text-sm">No preview available for this file type.</p>
-                <a
-                    href={file.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                <button
+                    type="button"
+                    onClick={download}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                    <ExternalLink size={14} /> Open file
-                </a>
+                    <Download size={14} /> Download file
+                </button>
             </div>
         );
     };
@@ -170,14 +201,15 @@ export default function FilePreviewModal({ fileId, onClose }) {
                         <h2 className="font-semibold text-gray-900 dark:text-white text-sm truncate">{file.name}</h2>
                         <span className="text-xs text-gray-400">{formatSize(file.size)}</span>
                     </div>
-                    <a
-                        href={file.url}
-                        download={file.name}
+                    <button
+                        type="button"
+                        onClick={download}
                         className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                         title="Download"
+                        aria-label="Download"
                     >
                         <Download size={16} />
-                    </a>
+                    </button>
                     <button
                         onClick={onClose}
                         className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"

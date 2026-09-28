@@ -54,7 +54,12 @@ const TaskActivitySchema = new mongoose.Schema({
             
             'transfer_requested',
             'transfer_approved',
-            'transfer_rejected'
+            'transfer_rejected',
+
+            // Integrations: PR / issue events ("PR #12 opened by octocat") and AI review notes.
+            // metadata: { provider, kind, url, text }
+            'integration_event',
+            'ai_note'
         ]
     },
 

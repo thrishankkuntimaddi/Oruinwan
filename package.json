@@ -18,7 +18,10 @@
     "build": "npm run build --workspace=client",
     "lint:ai": "cd ai && eslint .",
     "lint:sdk": "cd sdk && eslint .",
-    "test:e2e": "npm test --workspace=e2e"
+    "test:e2e": "npm test --workspace=e2e",
+    "dev:services": "bash scripts/dev-services.sh",
+    "dev:status": "bash scripts/dev-status.sh",
+    "dev:all": "bash scripts/dev-services.sh && npm run dev"
   },
   "engines": {
     "node": ">=20"

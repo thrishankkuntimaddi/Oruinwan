@@ -1,175 +1,117 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { CheckSquare, FileText, CheckCircle2, AlertTriangle, ArrowLeft, Sun, Moon, ArrowRight } from 'lucide-react';
+import api from '@services/api';
 import { useAuth } from '../../contexts/AuthContext';
-import { useToast } from '../../contexts/ToastContext';
-import { CheckSquare, FileText, Activity, ArrowLeft, Plus } from 'lucide-react';
-import { DashboardCard, StatsWidget } from '../../components/company';
-import { getEmployeePersonalData } from '../../services/dashboardService';
-import logger from '../../utils/logger';
+import { useTheme } from '../../contexts/ThemeContext';
+import {
+    DashPage, PageHead, KpiGrid, Kpi, Grid, Panel, Chip, Btn, IconBtn, EmptyState, ErrorState, LoadingState,
+    useAsync, timeAgo,
+} from '../../components/company-dash/dashUi';
+import '../../styles/gloss.css';
+import '../../components/company-dash/dash.css';
 
+const OPEN = ['backlog', 'todo', 'in_progress', 'review', 'blocked'];
+const STATUS_LABEL = { backlog: 'Backlog', todo: 'To do', in_progress: 'In progress', review: 'In review', blocked: 'Blocked', done: 'Done', cancelled: 'Cancelled' };
+const STATUS_TONE = { in_progress: 'accent', review: 'warning', blocked: 'danger', done: 'success' };
+const idOf = (v) => (v && typeof v === 'object' ? v._id : v);
+
+/**
+ * Personal dashboard (/employee/dashboard): the signed-in person's own tasks
+ * and notes, from the same APIs the workspace Tasks and Notes pages use.
+ */
 const EmployeeDashboard = () => {
     const { user } = useAuth();
-    const { showToast } = useToast();
+    const { resolvedTheme, toggleTheme } = useTheme() || {};
     const navigate = useNavigate();
+    const tasks = useAsync(() => api.get('/api/v2/tasks/my').then((r) => r.data?.tasks || []));
+    const notes = useAsync(() => api.get('/api/v2/notes').then((r) => r.data?.notes || []));
 
-    const [loading, setLoading] = useState(true);
-    const [personalData, setPersonalData] = useState({
-        myTasks: [],
-        myNotes: [],
-        recentUpdates: [],
-        stats: {
-            totalTasks: 0,
-            completedTasks: 0,
-            totalNotes: 0
-        }
-    });
-
-    useEffect(() => {
-        if (!user?._id) return;
-
-        const fetchPersonalData = async () => {
-            try {
-                setLoading(true);
-                const data = await getEmployeePersonalData(user._id);
-                setPersonalData(data);
-            } catch (error) {
-                logger.error('Error fetching personal data:', error);
-                showToast('Failed to load dashboard', 'error');
-            } finally {
-                setLoading(false);
-            }
+    const firstWs = idOf(user?.workspaces?.[0]?.workspace);
+    const list = useMemo(() => tasks.data || [], [tasks.data]);
+    const stats = useMemo(() => {
+        const now = Date.now();
+        return {
+            open: list.filter((t) => OPEN.includes(t.status)).length,
+            done: list.filter((t) => t.status === 'done').length,
+            overdue: list.filter((t) => OPEN.includes(t.status) && t.dueDate && new Date(t.dueDate).getTime() < now).length,
         };
+    }, [list]);
+    const openTasks = list.filter((t) => OPEN.includes(t.status)).slice(0, 8);
+    const recentNotes = [...(notes.data || [])].sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)).slice(0, 8);
 
-        fetchPersonalData();
-    }, [user?._id, showToast]);
+    const openTask = (t) => { const ws = idOf(t.workspace) || firstWs; if (ws) navigate(`/workspace/${ws}/tasks`); };
+    const openNote = (n) => { const ws = idOf(n.workspace) || firstWs; if (ws) navigate(`/workspace/${ws}/notes`); };
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            {}
-            <div className="bg-white border-b border-gray-200">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() => navigate('/workspaces')}
-                                className="p-2 hover:bg-gray-100 rounded-lg"
-                            >
-                                <ArrowLeft className="w-5 h-5" />
-                            </button>
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-900">My Dashboard</h1>
-                                <p className="text-sm text-gray-500">Welcome back, {user?.username}!</p>
-                            </div>
-                        </div>
-                        <button
-                            onClick={() => navigate('/workspace/:workspaceId/tasks')}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                        >
-                            <Plus className="w-4 h-4 inline mr-2" />
-                            New Task
-                        </button>
+        <div className="cd-shell">
+            <div className="cd-main">
+                <header className="cd-top gl-glass-bar">
+                    <IconBtn label="Back to workspaces" onClick={() => navigate('/workspaces')}><ArrowLeft size={16} /></IconBtn>
+                    <div className="cd-top-titles">
+                        <span className="cd-top-kicker">Oruinwan</span>
+                        <span className="cd-top-title">My dashboard</span>
                     </div>
-                </div>
-            </div>
-
-            {}
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {loading ? (
-                    <div className="py-6 animate-pulse space-y-4">
-                        {}
-                        <div className="grid grid-cols-3 gap-4">
-                            {[1, 2, 3].map(i => (
-                                <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700">
-                                    <div className="h-3 w-20 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
-                                    <div className="h-8 w-12 bg-gray-300 dark:bg-gray-600 rounded-lg" />
-                                </div>
-                            ))}
-                        </div>
-                        {}
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-3">
-                            {[75, 55, 85, 60].map((w, i) => (
-                                <div key={i} className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
-                                    <div className="flex-1 space-y-1.5">
-                                        <div className="h-2.5 bg-gray-200 dark:bg-gray-700 rounded" style={{ width: `${w}%` }} />
-                                        <div className="h-2 bg-gray-100 dark:bg-gray-700/50 rounded" style={{ width: `${w - 20}%` }} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="cd-top-actions">
+                        {toggleTheme && (
+                            <IconBtn label={resolvedTheme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} onClick={() => toggleTheme()}>
+                                {resolvedTheme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                            </IconBtn>
+                        )}
                     </div>
-                ) : (
-                    <div className="space-y-8">
-                        {}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <StatsWidget
-                                icon={CheckSquare}
-                                label="My Tasks"
-                                value={personalData.stats?.totalTasks || 0}
-                                bgColor="bg-blue-50"
-                                iconColor="text-blue-600"
+                </header>
+                <main className="cd-content">
+                    <DashPage
+                        head={(
+                            <PageHead
+                                eyebrow="Personal"
+                                title={`Welcome back${user?.username ? `, ${user.username}` : ''}`}
+                                lead="Your assigned tasks and your notes across workspaces."
+                                actions={firstWs && <Btn variant="primary" icon={CheckSquare} onClick={() => navigate(`/workspace/${firstWs}/tasks`)}>Open tasks</Btn>}
                             />
-                            <StatsWidget
-                                icon={FileText}
-                                label="My Notes"
-                                value={personalData.stats?.totalNotes || 0}
-                                bgColor="bg-purple-50"
-                                iconColor="text-purple-600"
-                            />
-                            <StatsWidget
-                                icon={Activity}
-                                label="Completed"
-                                value={personalData.stats?.completedTasks || 0}
-                                bgColor="bg-green-50"
-                                iconColor="text-green-600"
-                            />
-                        </div>
-
-                        {}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <DashboardCard title="My Tasks" icon={CheckSquare}>
-                                {personalData.myTasks?.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {personalData.myTasks.slice(0, 5).map(task => (
-                                            <div key={task._id} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
-                                                <p className="font-medium text-gray-900">{task.title}</p>
-                                                <p className="text-sm text-gray-500 mt-1">{task.description}</p>
-                                            </div>
+                        )}
+                    >
+                        <KpiGrid>
+                            <Kpi label="Open tasks" icon={CheckSquare} loading={tasks.loading && !tasks.data} value={tasks.error ? undefined : stats.open} />
+                            <Kpi label="Overdue" icon={AlertTriangle} tone={stats.overdue ? 'danger' : 'muted'} loading={tasks.loading && !tasks.data} value={tasks.error ? undefined : stats.overdue} />
+                            <Kpi label="Completed" icon={CheckCircle2} tone="success" loading={tasks.loading && !tasks.data} value={tasks.error ? undefined : stats.done} />
+                            <Kpi label="Notes" icon={FileText} loading={notes.loading && !notes.data} value={notes.error ? undefined : (notes.data || []).length} />
+                        </KpiGrid>
+                        <Grid cols="2">
+                            <Panel title="My open tasks" icon={CheckSquare} flush>
+                                {tasks.loading && !tasks.data ? <LoadingState /> : tasks.error ? <ErrorState message={tasks.error} onRetry={tasks.reload} /> : openTasks.length === 0 ? (
+                                    <EmptyState icon={CheckSquare} title="Nothing assigned" text="Tasks assigned to you in any workspace show up here." action={firstWs && <Btn size="sm" onClick={() => navigate(`/workspace/${firstWs}/tasks`)}>Go to tasks <ArrowRight size={13} /></Btn>} />
+                                ) : (
+                                    <div className="cd-list">
+                                        {openTasks.map((t) => (
+                                            <button key={t._id} type="button" className="cd-list-row gl-item" style={{ margin: 0, width: '100%', borderRadius: 0, minHeight: 52 }} onClick={() => openTask(t)}>
+                                                <div className="cd-grow">
+                                                    <div className="cd-cell-title">{t.title}</div>
+                                                    <div className="cd-cell-sub">{t.workspace?.name || 'Workspace'}{t.dueDate ? ` · due ${new Date(t.dueDate).toLocaleDateString()}` : ''}</div>
+                                                </div>
+                                                <Chip tone={STATUS_TONE[t.status]}>{STATUS_LABEL[t.status] || t.status}</Chip>
+                                            </button>
                                         ))}
                                     </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-500">No tasks assigned</p>
-                                        <button
-                                            onClick={() => navigate('/workspace/:workspaceId/tasks')}
-                                            className="mt-4 text-blue-600 hover:underline text-sm font-medium"
-                                        >
-                                            Create your first task
-                                        </button>
-                                    </div>
                                 )}
-                            </DashboardCard>
-
-                            <DashboardCard title="My Notes" icon={FileText}>
-                                {personalData.myNotes?.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {personalData.myNotes.slice(0, 5).map(note => (
-                                            <div key={note._id} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
-                                                <p className="font-medium text-gray-900">{note.title}</p>
-                                            </div>
+                            </Panel>
+                            <Panel title="Recent notes" icon={FileText} flush>
+                                {notes.loading && !notes.data ? <LoadingState /> : notes.error ? <ErrorState message={notes.error} onRetry={notes.reload} /> : recentNotes.length === 0 ? (
+                                    <EmptyState icon={FileText} title="No notes yet" text="Notes you write in a workspace appear here." />
+                                ) : (
+                                    <div className="cd-list">
+                                        {recentNotes.map((n) => (
+                                            <button key={n._id} type="button" className="cd-list-row gl-item" style={{ margin: 0, width: '100%', borderRadius: 0, minHeight: 48 }} onClick={() => openNote(n)}>
+                                                <div className="cd-grow"><div className="cd-cell-title">{n.title || 'Untitled'}</div></div>
+                                                <span className="cd-muted" style={{ fontSize: 12 }}>{timeAgo(n.updatedAt || n.createdAt)}</span>
+                                            </button>
                                         ))}
                                     </div>
-                                ) : (
-                                    <div className="text-center py-12">
-                                        <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-500">No notes yet</p>
-                                    </div>
                                 )}
-                            </DashboardCard>
-                        </div>
-                    </div>
-                )}
+                            </Panel>
+                        </Grid>
+                    </DashPage>
+                </main>
             </div>
         </div>
     );

@@ -3,6 +3,7 @@ import { Bell, MessageCircle, GitBranch, CheckSquare, Calendar, Mail, Monitor, S
 import api from '@services/api';
 import logger from '../../../utils/logger';
 import SettingSwitch from '../../../components/ui/SettingSwitch';
+import { WORKSPACE_PREFS_EVENT } from '../accountNotificationPrefs';
 
 const T = {
     bg:          'var(--bg-surface)',
@@ -57,6 +58,7 @@ export default function NotificationPreferences({ workspaceId }) {
         try {
             const { data } = await api.patch('/api/notifications/preferences', prefs, { params: { workspaceId } });
             if (data.preferences) setPrefs(p => ({ ...p, ...data.preferences }));
+            try { window.dispatchEvent(new CustomEvent(WORKSPACE_PREFS_EVENT, { detail: { workspaceId, preferences: data.preferences } })); } catch { /* non-browser */ }
             setSaved(true);
             setTimeout(() => setSaved(false), 2500);
         } catch (err) {

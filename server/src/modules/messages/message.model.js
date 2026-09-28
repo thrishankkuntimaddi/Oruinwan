@@ -20,8 +20,39 @@ const AttachmentSchema = new mongoose.Schema({
   name: String,
   size: Number,
   mimeType: String,   
-  duration: Number,   
+  duration: Number,   // seconds (voice notes, videos)
   thumbnail: String,   
+  width: Number,       // pixels, when known (images/videos), to reserve space before load
+  height: Number,
+  variant: { type: String, enum: ['video_note', 'screen_recording'], default: undefined },
+}, { _id: false });
+
+// Plaintext metadata of an integration card (GitHub / Jira). The human summary
+// line is still stored end-to-end encrypted in `payload` like any text message.
+const IntegrationCardSchema = new mongoose.Schema({
+  provider:     { type: String, enum: ['github', 'gitlab', 'jira'], required: true },
+  kind:         { type: String, enum: ['pull_request', 'pr_review', 'issue', 'push', 'checks', 'jira_issue'], required: true },
+  action:       { type: String, default: null },
+  repo:         { type: String, default: null },   // owner/name (GitHub) or project key (Jira)
+  number:       { type: Number, default: null },
+  key:          { type: String, default: null },   // Jira issue key, e.g. ABC-12
+  url:          { type: String, default: null },
+  title:        { type: String, default: null },
+  state:        { type: String, default: null },   // open | closed | merged | draft (Jira: status name)
+  author:       { type: String, default: null },
+  authorAvatar: { type: String, default: null },
+  branch:       { type: String, default: null },
+  base:         { type: String, default: null },
+  additions:    { type: Number, default: null },
+  deletions:    { type: Number, default: null },
+  changedFiles: { type: Number, default: null },
+  commits:      { type: Number, default: null },
+  reviewState:  { type: String, default: null },
+  checks:       { type: mongoose.Schema.Types.Mixed, default: null }, // { status, conclusion }
+  taskIds:      [{ type: mongoose.Schema.Types.ObjectId, ref: 'Task' }],
+  taskKeys:     [{ type: String }],
+  extra:        { type: mongoose.Schema.Types.Mixed, default: null },  // push: { commitCount, compareUrl, headCommit }
+  updatedAt:    { type: Date, default: Date.now },
 }, { _id: false });
 
 const MessageSchema = new mongoose.Schema({
@@ -47,6 +78,7 @@ const MessageSchema = new mongoose.Schema({
       'meeting',          
       'checklist',        
       'screen_recording', 
+      'integration',      // card posted by an integration bot (GitHub PR, Jira issue, ...)
     ],
     default: 'message'
   },
@@ -115,6 +147,9 @@ const MessageSchema = new mongoose.Schema({
     meetingLink: String,
     participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
   },
+
+  
+  integration: { type: IntegrationCardSchema, default: undefined },
 
   
   linkPreview: {
@@ -199,6 +234,8 @@ MessageSchema.index({ parentId: 1 });
 MessageSchema.index({ createdAt: -1 });
 
 MessageSchema.index({ channel: 1, _id: 1 });
+// One integration card per external object (PR / issue URL) per channel.
+MessageSchema.index({ 'integration.url': 1, channel: 1 }, { sparse: true });
 MessageSchema.index({ dm: 1, _id: 1 });
 
 MessageSchema.pre("save", function (next) {

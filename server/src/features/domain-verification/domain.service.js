@@ -4,6 +4,9 @@ const crypto = require('crypto');
 const Company = require('../../../models/Company');
 const { logAction } = require('../../../utils/historyLogger');
 
+// Errors carry an HTTP status so the controller never turns them into a 500.
+const fail = (message, status) => Object.assign(new Error(message), { status });
+
 function generateDomainVerificationToken() {
     const token = crypto.randomBytes(32).toString('hex');
     const txtRecord = `chttrix-verification=${token}`;
@@ -25,23 +28,21 @@ async function verifyDomainTXT(domain, expectedToken) {
 
         return false;
     } catch (err) {
-        logger.error(`DNS lookup failed for ${domain}:`, err.message);
-        return false;
+        logger.warn(`DNS lookup failed for ${domain}:`, err.code || err.message);
+        // ENOTFOUND / ENODATA / timeouts: the record simply isn't visible yet.
+        throw fail(`Could not find TXT records for ${domain} (${err.code || 'lookup failed'}). DNS changes can take a while to propagate — try again later.`, 400);
     }
 }
 
-async function generateVerification({ companyId, userId }) {
+async function generateVerification({ companyId }) {
     const company = await Company.findById(companyId);
     if (!company) {
-        throw new Error('Company not found');
+        throw fail('Company not found', 404);
     }
-
-    if (!company.isAdmin(userId)) {
-        throw new Error('Only company admins can verify domain');
-    }
+    // Admin rights are checked by the route (current role from the database).
 
     if (!company.domain) {
-        throw new Error('Company domain not set');
+        throw fail('Company domain not set. Add your domain in the company profile first.', 400);
     }
 
     
@@ -70,26 +71,23 @@ async function generateVerification({ companyId, userId }) {
 async function verifyDomain({ companyId, userId, req }) {
     const company = await Company.findById(companyId);
     if (!company) {
-        throw new Error('Company not found');
+        throw fail('Company not found', 404);
     }
-
-    if (!company.isAdmin(userId)) {
-        throw new Error('Only company admins can verify domain');
-    }
+    // Admin rights are checked by the route (current role from the database).
 
     if (!company.domainVerificationToken || !company.domainVerificationExpires) {
-        throw new Error('No verification token generated. Please generate one first.');
+        throw fail('No verification token generated. Please generate one first.', 400);
     }
 
     if (company.domainVerificationExpires < new Date()) {
-        throw new Error('Verification token expired. Please generate a new one.');
+        throw fail('Verification token expired. Please generate a new one.', 400);
     }
 
     
     const verified = await verifyDomainTXT(company.domain, company.domainVerificationToken);
 
     if (!verified) {
-        throw new Error('Domain verification failed. TXT record not found or incorrect.');
+        throw fail('Domain verification failed. TXT record not found or incorrect.', 400);
     }
 
     
@@ -118,15 +116,11 @@ async function verifyDomain({ companyId, userId, req }) {
 async function setAutoJoinPolicy({ companyId, userId, enabled, req }) {
     const company = await Company.findById(companyId);
     if (!company) {
-        throw new Error('Company not found');
-    }
-
-    if (!company.isAdmin(userId)) {
-        throw new Error('Only company admins can change auto-join policy');
+        throw fail('Company not found', 404);
     }
 
     if (enabled && !company.domainVerified) {
-        throw new Error('Domain must be verified before enabling auto-join');
+        throw fail('Domain must be verified before enabling auto-join', 400);
     }
 
     company.autoJoinByDomain = enabled;

@@ -79,8 +79,13 @@ async function writeObject(objectPath, buffer, { contentType, metadata }) {
     await fs.promises.writeFile(`${full}.meta.json`, JSON.stringify({ contentType, metadata }));
 }
 
+// Image formats most browsers cannot draw in an <img> (HEIC/HEIF from iPhones, TIFF),
+// or that are never served inline (SVG can carry script): shared as files instead.
+const NON_DISPLAYABLE_IMAGES = /^image\/(heic|heif|heic-sequence|heif-sequence|tiff|svg\+xml|x-icon|vnd\.)/i;
+
 function resolveAttachmentType(mimeType = '') {
-    if (mimeType.startsWith('image/')) return 'image';
+    mimeType = String(mimeType || '').toLowerCase();
+    if (mimeType.startsWith('image/')) return NON_DISPLAYABLE_IMAGES.test(mimeType) ? 'file' : 'image';
     if (mimeType.startsWith('video/')) return 'video';
     if (mimeType.startsWith('audio/')) return 'voice';
     return 'file';
@@ -238,4 +243,4 @@ async function deleteObject(objectPath) {
     await fs.promises.rm(`${full}.meta.json`, { force: true });
 }
 
-module.exports = { uploadToGCS, streamGCSFile, BUCKET_NAME, isInlineSafe, buildSafeHeaders, storageDriver, writeObject, objectHandle, deleteObject };
+module.exports = { uploadToGCS, streamGCSFile, resolveAttachmentType, BUCKET_NAME, isInlineSafe, buildSafeHeaders, storageDriver, writeObject, objectHandle, deleteObject };

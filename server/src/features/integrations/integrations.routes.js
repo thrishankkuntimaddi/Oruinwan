@@ -36,6 +36,85 @@ function requireWorkspaceAdmin(req, res, next) {
 const member = [validWorkspaceId, requireWorkspaceMember];
 const admin = [...member, requireWorkspaceAdmin];
 
+// ── Incoming provider webhooks (no user session: authenticated per provider) ──
+// GitHub: X-Hub-Signature-256 HMAC of the raw body; GitLab: X-Gitlab-Token;
+// Jira and everything else: ?token=. The workspace must have a connected
+// integration of that type. See webhook.verify.js.
+
+const Integration = require('./integration.model');
+const { verifyIncoming } = require('./webhook.verify');
+const logger = require('../../../utils/logger');
+const rateLimit = require('express-rate-limit');
+
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: Number(process.env.INTEGRATIONS_WEBHOOK_PER_MIN || 600),
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => `wh:${req.params.type}:${req.query.workspaceId || 'none'}`,
+  validate: false,
+  handler: (_req, res) => res.status(429).json({ message: 'Too many webhook deliveries' }),
+});
+
+function runAutomations(req, type, workspaceId, payload) {
+  try {
+    const automationService = require('../automations/automation.service');
+    const io = req.app.get('io');
+    const isMergedPR = type === 'github' && payload.action === 'closed' && payload.pull_request?.merged;
+    if (isMergedPR) {
+      automationService.processEvent('github.pr_merged', {
+        workspaceId,
+        repo: payload.repository?.name || '',
+        title: payload.pull_request?.title || '',
+        actor: payload.pull_request?.merged_by?.login || '',
+        event: payload
+      }, io);
+    }
+    automationService.processEvent('webhook.received', { workspaceId, webhookType: type, event: payload }, io);
+  } catch (autoErr) {
+    logger.error('[IntegrationWebhook] Automation processEvent failed:', autoErr.message);
+  }
+}
+
+router.post('/webhook/:type', integrationsFlag, webhookLimiter, async (req, res) => {
+  const { type } = req.params;
+  const { workspaceId } = req.query;
+  try {
+    if (!workspaceId || !mongoose.Types.ObjectId.isValid(String(workspaceId))) {
+      return res.status(401).json({ message: 'Unknown workspace' });
+    }
+    const integration = await Integration.findOne({ workspaceId, type }).lean();
+    const check = verifyIncoming(type, req, integration);
+    if (!check.ok) return res.status(check.status).json({ message: check.message });
+
+    let payload = req.body || {};
+    // GitHub "application/x-www-form-urlencoded" deliveries wrap the JSON in `payload`.
+    if (typeof payload.payload === 'string') {
+      try { payload = JSON.parse(payload.payload); } catch { return res.status(400).json({ message: 'Invalid payload' }); }
+    }
+
+    if (payload?.type === 'url_verification') return res.json({ challenge: payload.challenge });
+
+    const io = req.app.get('io');
+    let result;
+    if (type === 'github') {
+      const event = req.get('x-github-event') || '';
+      result = await require('./github/github.events').processGithubEvent({ integration, event, payload, io });
+    } else if (type === 'jira') {
+      result = await require('./jira/jira.events').processJiraEvent({ integration, payload, io });
+    } else {
+      result = await integrationService.handleWebhook({ type, payload, headers: req.headers, workspaceId });
+    }
+
+    Integration.updateOne({ _id: integration._id }, { lastEventAt: new Date() }).catch(() => {});
+    runAutomations(req, type, workspaceId, payload);
+    res.json(result);
+  } catch (err) {
+    logger.error({ err: err.message, type }, '[IntegrationWebhook] processing failed');
+    res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : 'Webhook processing failed' });
+  }
+});
+
 router.use(requireAuth);
 
 router.get('/', integrationsFlag, ...member, async (req, res) => {
@@ -50,10 +129,19 @@ router.get('/', integrationsFlag, ...member, async (req, res) => {
   }
 });
 
+const devService = require('./integration.dev.service');
+const { isDevType } = require('./integration.config');
+
 router.post('/connect', integrationsFlag, ...admin, async (req, res) => {
   try {
     const { workspaceId, type, config, label } = req.body;
     if (!workspaceId || !type) return res.status(400).json({ message: 'workspaceId and type required' });
+
+    // GitHub / Jira / Zoom: same as PUT /:type/config.
+    if (isDevType(type)) {
+      const result = await devService.saveConfig({ workspaceId, type, patch: config || {}, label, userId: req.user.sub, req });
+      return res.status(201).json({ integration: result, ...result });
+    }
 
     const integration = await integrationService.connectIntegration({
       workspaceId,
@@ -80,58 +168,111 @@ router.post('/disconnect', integrationsFlag, ...admin, async (req, res) => {
   }
 });
 
-router.post('/webhook/:type', integrationsFlag, async (req, res) => {
+// ── Developer integrations: GitHub, Jira, Zoom ───────────────────────────────
+
+const User = require('../../../models/User');
+const ghService = require('./github/github.service');
+const { requireAIAccess: aiAccess } = require('../ai/ai.access');
+
+const isAdminReq = (req) => ADMIN_ROLES.includes(req.workspaceRole);
+
+function sendError(res, err) {
+  const status = err.statusCode || err.status || 500;
+  if (status >= 500 && !err.code) logger.error({ err: err.message }, '[integrations] request failed');
+  res.status(status).json({ message: status >= 500 && !err.code ? 'Integration request failed' : err.message, ...(err.code && { code: err.code }) });
+}
+
+async function actorOf(req) {
+  const u = await User.findById(req.user.sub).select('username').lean().catch(() => null);
+  return { id: req.user.sub, name: u?.username || null };
+}
+
+function devType(req, res, next) {
+  if (!isDevType(req.params.type)) return res.status(404).json({ message: `Unknown integration type: ${req.params.type}` });
+  next();
+}
+
+// Members get a redacted view; admins also see the Jira webhook URL (token masked).
+router.get('/:type/config', integrationsFlag, devType, ...member, async (req, res) => {
   try {
-    const { type } = req.params;
-    const { workspaceId } = req.query;
+    res.json(await devService.getConfig({ workspaceId: req.query.workspaceId, type: req.params.type, req, isAdmin: isAdminReq(req) }));
+  } catch (err) { sendError(res, err); }
+});
 
-    
-    if (req.body?.type === 'url_verification') {
-      return res.json({ challenge: req.body.challenge });
-    }
+router.put('/:type/config', integrationsFlag, devType, ...admin, async (req, res) => {
+  try {
+    const { workspaceId, label, ...patch } = req.body || {};
+    res.json(await devService.saveConfig({ workspaceId, type: req.params.type, patch, label, userId: req.user.sub, req }));
+  } catch (err) { sendError(res, err); }
+});
 
-    const result = await integrationService.handleWebhook({
-      type,
-      payload: req.body,
-      headers: req.headers,
-      workspaceId
-    });
+router.post('/:type/rotate-secret', integrationsFlag, devType, ...admin, async (req, res) => {
+  try {
+    res.json(await devService.rotateSecret({ workspaceId: req.body.workspaceId, type: req.params.type, req }));
+  } catch (err) { sendError(res, err); }
+});
 
-    
-    if (workspaceId) {
-      try {
-        const automationService = require('../automations/automation.service');
-        const io = req.app.get('io');
+router.post('/:type/test', integrationsFlag, devType, ...admin, async (req, res) => {
+  try {
+    const { workspaceId, ...patch } = req.body || {};
+    res.json(await devService.testConnection({ workspaceId, type: req.params.type, patch }));
+  } catch (err) { sendError(res, err); }
+});
 
-        
-        const payload = req.body || {};
-        const isMergedPR = type === 'github' && payload.action === 'closed' && payload.pull_request?.merged;
-        if (isMergedPR) {
-          automationService.processEvent('github.pr_merged', {
-            workspaceId,
-            repo:   payload.repository?.name || '',
-            title:  payload.pull_request?.title || '',
-            actor:  payload.pull_request?.merged_by?.login || '',
-            event:  payload
-          }, io);
-        }
+router.get('/github/pr', integrationsFlag, ...member, async (req, res) => {
+  try {
+    const { workspaceId, repo, number } = req.query;
+    res.json(await ghService.getPullView({ workspaceId, repo, number, userId: req.user.sub }));
+  } catch (err) { sendError(res, err); }
+});
 
-        
-        automationService.processEvent('webhook.received', {
-          workspaceId,
-          webhookType: type,
-          event: payload
-        }, io);
-      } catch (autoErr) {
-        
-        require('../../../utils/logger').error('[IntegrationWebhook] Automation processEvent failed:', autoErr.message);
-      }
-    }
+router.get('/github/file', integrationsFlag, ...member, async (req, res) => {
+  try {
+    const { workspaceId, repo, ref, path } = req.query;
+    const file = await ghService.getFileText({ workspaceId, repo, ref, path });
+    res.set('Content-Type', 'text/plain; charset=utf-8');
+    res.set('X-File-Language', file.language);
+    res.set('X-File-Truncated', String(file.truncated));
+    res.set('Cache-Control', 'private, max-age=60');
+    res.send(file.text);
+  } catch (err) { sendError(res, err); }
+});
 
-    res.json(result);
-  } catch (err) {
-    res.status(err.statusCode || 500).json({ message: err.message });
-  }
+router.get('/github/prs', integrationsFlag, ...member, async (req, res) => {
+  try {
+    res.json(await ghService.listOpenPulls({ workspaceId: req.query.workspaceId, repo: req.query.repo || null }));
+  } catch (err) { sendError(res, err); }
+});
+
+router.post('/github/issue', integrationsFlag, ...member, async (req, res) => {
+  try {
+    const { workspaceId, repo, title, body, taskId } = req.body || {};
+    res.status(201).json(await ghService.createIssue({ workspaceId, repo, title, body, taskId, user: await actorOf(req), io: req.app.get('io') }));
+  } catch (err) { sendError(res, err); }
+});
+
+// Members of the workspace, with AI enabled for it; rate-limited per workspace in github.review.
+router.post('/github/pr/review', integrationsFlag, ...member, aiAccess(), async (req, res) => {
+  try {
+    const { workspaceId, repo, number, messageId } = req.body || {};
+    if (messageId && !mongoose.Types.ObjectId.isValid(String(messageId))) return res.status(400).json({ message: 'Invalid messageId' });
+    const r = await require('./github/github.review').runReview({ workspaceId, repo, number, messageId: messageId || null, userId: req.user.sub, io: req.app.get('io') });
+    res.json({ review: r.review, summary: r.summary, risk: r.risk, filesReviewed: r.filesReviewed, skipped: r.skipped, messageId: r.messageId, replyId: r.replyId });
+  } catch (err) { sendError(res, err); }
+});
+
+router.post('/jira/issue', integrationsFlag, ...member, async (req, res) => {
+  try {
+    const { workspaceId, projectKey, summary, description, issueType, taskId } = req.body || {};
+    res.status(201).json(await devService.createJiraIssue({ workspaceId, projectKey, summary, description, issueType, taskId, user: await actorOf(req), io: req.app.get('io') }));
+  } catch (err) { sendError(res, err); }
+});
+
+router.post('/zoom/meeting', integrationsFlag, ...member, async (req, res) => {
+  try {
+    const { workspaceId, topic, start, durationMinutes } = req.body || {};
+    res.status(201).json(await devService.createZoomMeeting({ workspaceId, topic, start, durationMinutes }));
+  } catch (err) { sendError(res, err); }
 });
 
 // ── Outgoing webhooks ────────────────────────────────────────────────────────

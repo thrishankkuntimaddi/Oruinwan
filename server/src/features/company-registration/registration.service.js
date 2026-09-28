@@ -145,7 +145,7 @@ async function registerCompany(params) {
         ownerEmail: personalEmail || adminEmail,
         ownerPhone: phone || null,
         verificationStatus: 'pending',
-        verificationDocuments: processedDocuments,
+        documents: processedDocuments,
         metadata: {
             requestedDepartments: departments,
             requestedWorkspaceName: workspaceName,
@@ -169,7 +169,7 @@ async function registerCompany(params) {
         userType: 'company',
         companyId: company._id,
         companyRole: (role || 'owner').toLowerCase(), 
-        phone: phone || null,
+        phone: phone || undefined,
         phoneCode: params.phoneCode || '+91',
         profile: {
             name: adminName

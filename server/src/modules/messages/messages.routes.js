@@ -52,6 +52,9 @@ router.get(
     messagesController.getWorkspaceDMList
 );
 
+// Home → Activity: unread DMs and channels with ciphertext previews.
+router.get('/workspace/:workspaceId/activity', messagesController.getWorkspaceActivity);
+
 router.post('/channel', messagesController.sendChannelMessage);
 
 router.post('/poll', requireWorkspaceFeature('polls', resolvers.fromBodyConversation), messagesController.createPollMessage);

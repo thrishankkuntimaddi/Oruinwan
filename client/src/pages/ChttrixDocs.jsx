@@ -1,382 +1,472 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, NavLink, useLocation, useParams } from 'react-router-dom';
 import {
-    BookOpen, MessageSquare, Hash, GitBranch, CheckSquare, FileText,
-    Shield, Sparkles, BellRing, Settings, Building2, Zap, Search, ArrowRight, X,
+    BookOpen, Rocket, Building2, MessageSquare, Sparkles, CheckSquare, NotebookPen, Headphones, Bell,
+    Plug, Code2, Settings as SettingsIcon, ShieldCheck, MonitorSmartphone, ChevronRight, ChevronDown,
+    ArrowLeft, ArrowRight, Menu, X, ThumbsUp, ThumbsDown, LifeBuoy, List,
 } from 'lucide-react';
 import PublicPageShell from '../components/layout/PublicPageShell';
-import { PageHero, DocLayout, Callout } from '../components/public/PublicKit';
-import BRAND from '../shared/brand';
+import { useAuth } from '../contexts/AuthContext';
+import { openHelp } from '../components/help/helpStore';
+import {
+    SECTIONS, GROUPS, getSection, getPage, neighbours, headingsOf, docsPath,
+} from '../content/docs';
+import DocsBlocks, { Inline } from './docs/DocsBlocks';
+import DocsSearch from './docs/DocsSearch';
+import DocsFigure from './docs/DocsFigures';
+import { prefersReducedMotion } from './landing/hooks';
+import './docs/docs.css';
 
-const AI_HANDLE = `@${BRAND.ai.replace(/\s+/g, '')}`;
+/*
+ * Oruinwan documentation site.
+ *   /docs                   home: search, sections, how it fits together
+ *   /docs/:section          section overview
+ *   /docs/:section/:page    a page (content in content/docs/<section>.js)
+ * Left: grouped nav (a drawer on phones). Right: "On this page" with scroll-spy.
+ */
 
-const Code = ({ children }) => <code>{children}</code>;
-const Kbd = ({ children }) => <kbd className="orw-code">{children}</kbd>;
-const List = ({ items }) => <ul>{items.map(t => <li key={t}>{t}</li>)}</ul>;
-const Steps = ({ items }) => <ol className="orw-steps-list">{items.map(t => <li key={t}>{t}</li>)}</ol>;
-
-// Wide tables scroll inside their own box so the page never scrolls sideways.
-const TableWrap = ({ children }) => <div style={{ overflowX: 'auto', margin: '18px 0' }}>{children}</div>;
-
-const SECTIONS = [
-    {
-        id: 'intro', icon: BookOpen, title: 'Introduction',
-        content: (
-            <>
-                <p>{BRAND.name} is an all-in-one workspace OS designed for modern teams. It combines real-time messaging, voice huddles, task management, collaborative notes, and an AI layer into a single unified platform.</p>
-                <p>Unlike traditional tools that require switching between Slack, Notion, Jira, and Zoom, {BRAND.name} keeps everything in context: conversations next to tasks, notes next to channels, and AI woven throughout.</p>
-                <Callout type="good">New to {BRAND.name}? Start with <strong>Getting Started</strong> below to create your first workspace and invite your team.</Callout>
-                <h3>Core concepts</h3>
-                <List items={[
-                    'Workspace: your company\'s root environment, managed by an Owner and Admins',
-                    'Channels: topic-based rooms for structured team conversations',
-                    'Threads: replies to specific messages that keep discussions organized',
-                    'Huddles: instant voice calls, no scheduling required',
-                    'Tasks: native project management with Kanban and assignment',
-                    'Notes: collaborative documents that live alongside channels',
-                    `${BRAND.ai}: the intelligence layer that understands your workspace context`,
-                ]} />
-            </>
-        ),
-    },
-    {
-        id: 'getting-started', icon: Zap, title: 'Getting Started',
-        content: (
-            <>
-                <p>Getting your team onto {BRAND.name} takes less than 5 minutes. Here’s the fastest path from sign-up to full team collaboration.</p>
-                <h3>Option A: Personal Workspace</h3>
-                <Steps items={[
-                    'Visit oruinwan.com and click "Log In → Sign Up"',
-                    'Enter your email and create a password',
-                    'Verify your email address',
-                    'Your personal workspace is ready immediately',
-                ]} />
-                <h3>Option B: Company HQ</h3>
-                <Steps items={[
-                    'Go to oruinwan.com and click "Register Company HQ"',
-                    'Fill in your organization details (name, domain, size)',
-                    'Create the Owner account; this is your superadmin',
-                    'Invite Admins and configure departments',
-                    'Admins then onboard team members via invite links',
-                ]} />
-                <Callout>Company HQ includes the full Admin dashboard with org chart, department management, permission matrix, and audit logs. Personal workspaces are single-user by default.</Callout>
-            </>
-        ),
-    },
-    {
-        id: 'workspaces', icon: Building2, title: 'Workspaces',
-        content: (
-            <>
-                <p>A Workspace is the root container for your organization on {BRAND.name}. Every channel, member, file, and conversation lives inside a workspace.</p>
-                <h3>Workspace roles</h3>
-                <List items={[
-                    'Owner: full platform control, billing, and security settings',
-                    'Admin: manage members, departments, channels, and integrations',
-                    'Manager: oversee teams, projects, and direct reports',
-                    'Employee: standard workspace member',
-                ]} />
-                <h3>Workspace settings</h3>
-                <p>Access workspace settings from <Code>Admin Dashboard → Settings</Code>. Here you can configure: company profile, branding, billing plan, SSO/domain, notification defaults, security policies, and data privacy settings.</p>
-            </>
-        ),
-    },
-    {
-        id: 'channels', icon: Hash, title: 'Channels',
-        content: (
-            <>
-                <p>Channels are the backbone of {BRAND.name}: topic-based spaces for team communication. Every message in a channel is persistent, searchable, and threaded.</p>
-                <h3>Channel types</h3>
-                <List items={[
-                    'Public: anyone in the workspace can join and browse',
-                    'Private: invite-only, content hidden from non-members',
-                    'Announcement: only admins can post, everyone can read',
-                    'Project: linked to a task board for project-specific work',
-                ]} />
-                <h3>Creating a channel</h3>
-                <p>Click the <Code>+</Code> button next to “Channels” in the sidebar. Give it a name, choose public or private, add a purpose, and select initial members. Channel names should be lowercase, hyphenated, and descriptive (e.g., <Code>#engineering-backend</Code>, <Code>#design-reviews</Code>).</p>
-                <Callout type="good">Use the <Code>#general</Code> channel for company-wide announcements and the <Code>#random</Code> channel for casual conversations. Keep project channels focused.</Callout>
-            </>
-        ),
-    },
-    {
-        id: 'messaging', icon: MessageSquare, title: 'Messaging & DMs',
-        content: (
-            <>
-                <p>{BRAND.name} supports real-time messaging in channels, 1:1 DMs, and group DMs. All messages support rich formatting, reactions, file sharing, and inline tasks.</p>
-                <p>Messages in channels and DMs are end-to-end encrypted on your device (X25519 key exchange with AES-GCM) before they are sent.</p>
-                <h3>Message formatting</h3>
-                <TableWrap>
-                    <table>
-                        <thead><tr><th scope="col">Type this</th><th scope="col">To get</th></tr></thead>
-                        <tbody>
-                            <tr><td><Code>**bold**</Code> / <Code>*italic*</Code></td><td>Bold and italic markdown</td></tr>
-                            <tr><td><Code>`code`</Code> / <Code>```block```</Code></td><td>Inline code and code blocks</td></tr>
-                            <tr><td><Code>@name</Code> / <Code>@channel</Code></td><td>Mention a user, or notify everyone in the channel</td></tr>
-                            <tr><td><Code>#channel-name</Code></td><td>Link to another channel</td></tr>
-                            <tr><td><Code>:emoji:</Code></td><td>Emoji shortcodes for reactions</td></tr>
-                        </tbody>
-                    </table>
-                </TableWrap>
-                <h3>Direct messages</h3>
-                <p>Start a DM from the sidebar by clicking “Direct Messages → New DM.” You can DM individuals or create group DMs with up to 8 people. DMs are private and not visible to admins.</p>
-            </>
-        ),
-    },
-    {
-        id: 'threads', icon: GitBranch, title: 'Threads',
-        content: (
-            <>
-                <p>Threads let you reply to a specific message without cluttering the main channel. Hover any message and click the <Code>Reply in thread</Code> icon.</p>
-                <p>Threads appear in the right-side panel. Members who are part of the thread or @mentioned receive notifications. Thread activity is tracked in your Threads inbox.</p>
-                <Callout type="good">Use threads for decisions, code reviews, and in-depth discussions. Keep the main channel for high-level updates and quick questions.</Callout>
-            </>
-        ),
-    },
-    {
-        id: 'tasks', icon: CheckSquare, title: 'Tasks',
-        content: (
-            <>
-                <p>{BRAND.name} Tasks is a native project management system that lives alongside your conversations. No separate tool needed.</p>
-                <h3>Key features</h3>
-                <List items={[
-                    'Kanban boards with customizable columns',
-                    'Task assignment, due dates, and priority levels',
-                    'Subtasks and checklists',
-                    'Convert any message into a task in one click',
-                    'Task comments sync back to the linked channel thread',
-                ]} />
-                <h3>Creating tasks</h3>
-                <p>Access Tasks from the left sidebar. Create a task board per project or per team. You can also ask <Code>{AI_HANDLE}</Code> to “create tasks from the last 10 messages” and it’ll auto-generate a structured task list.</p>
-            </>
-        ),
-    },
-    {
-        id: 'notes', icon: FileText, title: 'Notes',
-        content: (
-            <>
-                <p>Notes are collaborative, rich-text documents that live inside channels. Think of them as wikis, specs, meeting minutes, and runbooks, all in the same context as your conversations.</p>
-                <List items={[
-                    'Rich text editing with headings, bullet lists, tables, and code blocks',
-                    'Share notes with teammates',
-                    'Link notes to tasks, channels, or other notes',
-                    'Version history and change tracking',
-                    'Download as PDF',
-                ]} />
-            </>
-        ),
-    },
-    {
-        id: 'ai', icon: Sparkles, title: BRAND.ai,
-        content: (
-            <>
-                <p>{BRAND.ai} is the workspace-aware AI assistant built into every part of the platform. It understands your channel history, tasks, and notes to provide relevant, contextual assistance.</p>
-                <h3>How to use {BRAND.ai}</h3>
-                <List items={[
-                    `Mention ${AI_HANDLE} in any channel or DM`,
-                    'Use the AI panel in the right sidebar for deeper queries',
-                    'Highlight any text and click "Ask AI" for inline assistance',
-                    'AI automatically summarizes long threads if you\'ve been inactive',
-                ]} />
-                <h3>Capabilities</h3>
-                <List items={[
-                    'Summarize threads, channels, and meeting notes',
-                    'Generate tasks from conversations',
-                    'Draft messages, reports, and documentation',
-                    'Answer questions using workspace context',
-                    'Identify blockers and suggest next actions',
-                ]} />
-                <Callout type="warn">{BRAND.ai} processes data within your isolated tenant environment. It does not share your data across tenants or use it to train shared models without explicit opt-in.</Callout>
-            </>
-        ),
-    },
-    {
-        id: 'search', icon: Search, title: 'Search',
-        content: (
-            <>
-                <p>Global search covers all channels, DMs, messages, files, tasks, and notes you have access to.</p>
-                <h3>Keyboard shortcuts</h3>
-                <TableWrap>
-                    <table>
-                        <thead><tr><th scope="col">Action</th><th scope="col">Mac</th><th scope="col">Windows / Linux</th></tr></thead>
-                        <tbody>
-                            <tr><td>Open search</td><td><Kbd>⌘K</Kbd></td><td><Kbd>Ctrl+K</Kbd></td></tr>
-                        </tbody>
-                    </table>
-                </TableWrap>
-                <h3>Search filters</h3>
-                <List items={[
-                    'Filter results by type: messages, files, people, channels, tasks, notes, or knowledge',
-                    'Narrow results to a date range',
-                    'Filter by tags',
-                    'Toggle AI-powered semantic search on or off',
-                ]} />
-            </>
-        ),
-    },
-    {
-        id: 'notifications', icon: BellRing, title: 'Notifications',
-        content: (
-            <>
-                <p>{BRAND.name} has granular notification controls at the channel, workspace, and keyword level.</p>
-                <List items={[
-                    'Desktop notifications for @mentions and DMs',
-                    'Per-channel notification preferences (All / Mentions / Nothing)',
-                    'Mute channels or conversations temporarily or permanently',
-                    'Set Do Not Disturb schedules by timezone',
-                    'Custom keyword notifications for alerts on specific terms',
-                ]} />
-                <p>Access notification settings via your avatar → <Code>Settings → Notifications</Code>.</p>
-            </>
-        ),
-    },
-    {
-        id: 'security', icon: Shield, title: 'Security & Roles',
-        content: (
-            <>
-                <p>{BRAND.name} uses a role-based access control (RBAC) model at the workspace, department, and channel level.</p>
-                <h3>Permission hierarchy</h3>
-                <List items={[
-                    'Owner: workspace superadmin, billing, security policy',
-                    'Admin: member management, channel creation, integrations',
-                    'Manager: team oversight, report access',
-                    'Employee: standard member access per channel permissions',
-                ]} />
-                <Callout>Security settings are managed in <Code>Owner Dashboard → Security</Code>. Enterprise plans support SAML 2.0 SSO and custom IP allowlists.</Callout>
-            </>
-        ),
-    },
-    {
-        id: 'settings', icon: Settings, title: 'Settings',
-        content: (
-            <>
-                <p>Personal settings are accessible via your avatar in the bottom-left corner. Workspace settings are in the Admin Dashboard.</p>
-                <h3>Personal settings</h3>
-                <List items={[
-                    'Profile: name, avatar, status, bio',
-                    'Notifications: all notification preferences',
-                    'Security: password, 2FA, active sessions',
-                    'Appearance: theme, density, font size',
-                    'Privacy: data controls and AI preferences',
-                ]} />
-                <h3>Admin settings</h3>
-                <List items={[
-                    'Company Profile: name, logo, website',
-                    'Branding: colors and custom logo',
-                    'Billing Plan: subscription and usage',
-                    'Domain & SSO: SAML integration',
-                    'Security: password policy, 2FA enforcement',
-                    'Data & Privacy: retention, exports, compliance',
-                ]} />
-            </>
-        ),
-    },
-];
-
-// Plain text of a JSX tree, so search matches exactly what the section shows.
-const textOf = (node) => {
-    if (node == null || typeof node === 'boolean') return '';
-    if (typeof node === 'string' || typeof node === 'number') return String(node);
-    if (Array.isArray(node)) return node.map(textOf).join(' ');
-    if (React.isValidElement(node)) {
-        const { children, items } = node.props;
-        return [textOf(children), Array.isArray(items) ? items.join(' ') : ''].join(' ');
-    }
-    return '';
+export const SECTION_ICONS = {
+    start: Rocket, company: Building2, messaging: MessageSquare, ai: Sparkles, tasks: CheckSquare,
+    notes: NotebookPen, huddles: Headphones, notifications: Bell, integrations: Plug, developers: Code2,
+    settings: SettingsIcon, security: ShieldCheck, platforms: MonitorSmartphone,
 };
 
-const INDEX = SECTIONS.map(s => ({ ...s, haystack: `${s.title} ${textOf(s.content)}`.toLowerCase() }));
+const storage = {
+    get(key) { try { return window.localStorage.getItem(key); } catch { return null; } },
+    set(key, v) { try { window.localStorage.setItem(key, v); } catch { /* private mode: ignore */ } },
+};
 
-const isTypingTarget = (el) =>
-    el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName));
+// ── Progressive-enhancement reveal & figure playback ───────────────────────
+// Content is visible by default. Only elements the observer reports as below
+// the fold are hidden (.is-pending) and faded in when they scroll into view,
+// so if the observer never fires nothing is ever hidden.
+function useDocsMotion(rootRef, key) {
+    useEffect(() => {
+        const root = rootRef.current;
+        if (!root || !('IntersectionObserver' in window)) return undefined;
+        const reduce = prefersReducedMotion();
+        const seen = new WeakSet();
+        const reveal = new IntersectionObserver((entries) => {
+            entries.forEach((e) => {
+                const el = e.target;
+                if (e.isIntersecting) {
+                    if (el.classList.contains('is-pending')) { el.classList.remove('is-pending'); el.classList.add('is-in'); }
+                    reveal.unobserve(el);
+                } else if (!seen.has(el) && e.boundingClientRect.top > 0) {
+                    el.classList.add('is-pending');
+                }
+                seen.add(el);
+            });
+        }, { rootMargin: '0px 0px -8% 0px', threshold: 0.01 });
+        const play = new IntersectionObserver((entries) => {
+            entries.forEach((e) => e.target.classList.toggle('is-playing', e.isIntersecting));
+        }, { threshold: 0.2 });
+        if (!reduce) root.querySelectorAll('[data-docs-reveal]').forEach((n) => reveal.observe(n));
+        root.querySelectorAll('[data-docs-play]').forEach((n) => play.observe(n));
+        // Printing or saving the page must never leave anything hidden.
+        const showAll = () => root.querySelectorAll('.is-pending').forEach((n) => n.classList.remove('is-pending'));
+        window.addEventListener('beforeprint', showAll);
+        return () => { reveal.disconnect(); play.disconnect(); window.removeEventListener('beforeprint', showAll); showAll(); };
+    }, [rootRef, key]);
+}
 
-const ChttrixDocs = () => {
-    const [query, setQuery] = useState('');
-    const inputRef = useRef(null);
+function useScrollSpy(ids) {
+    const [active, setActive] = useState(ids[0] || null);
+    const key = ids.join('|');
+    useEffect(() => {
+        setActive(ids[0] || null);
+        if (!ids.length || !('IntersectionObserver' in window)) return undefined;
+        const visible = new Map();
+        const els = ids.map((id) => document.getElementById(id)).filter(Boolean);
+        const ob = new IntersectionObserver((entries) => {
+            entries.forEach((e) => visible.set(e.target.id, e.isIntersecting));
+            const firstVisible = ids.find((id) => visible.get(id));
+            if (firstVisible) { setActive(firstVisible); return; }
+            // Between headings: the last heading above the viewport top wins.
+            let last = null;
+            for (const el of els) if (el.getBoundingClientRect().top < 140) last = el.id;
+            if (last) setActive(last);
+        }, { rootMargin: '-120px 0px -55% 0px' });
+        els.forEach((el) => ob.observe(el));
+        return () => ob.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [key]);
+    return active;
+}
 
-    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    const termKey = terms.join(' ');
-    const visible = useMemo(() => {
-        const t = termKey ? termKey.split(' ') : [];
-        return t.length ? INDEX.filter(s => t.every(w => s.haystack.includes(w))) : INDEX;
-    }, [termKey]);
+// ── Sidebar ─────────────────────────────────────────────────────────────────
+function Sidebar({ sectionId, onNavigate }) {
+    const [openIds, setOpenIds] = useState(() => new Set(sectionId ? [sectionId] : []));
+    useEffect(() => { if (sectionId) setOpenIds((s) => (s.has(sectionId) ? s : new Set([...s, sectionId]))); }, [sectionId]);
+    const toggle = (id) => setOpenIds((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    return (
+        <nav className="docs-nav" aria-label="Documentation">
+            <NavLink end to="/docs" className="docs-nav__home" onClick={onNavigate}><BookOpen size={15} aria-hidden="true" /> Docs home</NavLink>
+            {GROUPS.map((g) => (
+                <div key={g.title} className="docs-nav__group">
+                    <p className="docs-nav__label">{g.title}</p>
+                    <ul>
+                        {g.sections.map((sid) => {
+                            const s = getSection(sid);
+                            const Icon = SECTION_ICONS[sid] || BookOpen;
+                            const open = openIds.has(sid);
+                            return (
+                                <li key={sid} className={`docs-nav__sec${sid === sectionId ? ' is-current' : ''}`}>
+                                    <button type="button" className="docs-nav__toggle" aria-expanded={open} aria-controls={`docs-nav-${sid}`} onClick={() => toggle(sid)}>
+                                        <Icon size={15} aria-hidden="true" /><span>{s.title}</span>
+                                        <ChevronDown size={14} className="docs-nav__chev" aria-hidden="true" />
+                                    </button>
+                                    <ul id={`docs-nav-${sid}`} className="docs-nav__pages" hidden={!open}>
+                                        {s.pages.map((p) => (
+                                            <li key={p.id}>
+                                                <NavLink to={docsPath(sid, p.id)} onClick={onNavigate}
+                                                    className={({ isActive }) => `docs-nav__link${isActive ? ' is-active' : ''}`}>
+                                                    {p.title}
+                                                </NavLink>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            ))}
+        </nav>
+    );
+}
 
-    // "/" focuses the search, unless the user is already typing somewhere.
+// ── "On this page" ──────────────────────────────────────────────────────────
+function Toc({ heads, active, compact }) {
+    if (!heads.length) return null;
+    const list = (
+        <ol className="docs-toc__list">
+            {heads.map((h) => (
+                <li key={h.id} className={h.level === 3 ? 'is-sub' : ''}>
+                    <a href={`#${h.id}`} className={active === h.id ? 'is-active' : ''} aria-current={active === h.id ? 'location' : undefined}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            const el = document.getElementById(h.id);
+                            if (!el) return;
+                            el.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'start' });
+                            el.focus({ preventScroll: true });
+                            window.history.replaceState(null, '', `#${h.id}`);
+                        }}>
+                        <Inline text={h.text} />
+                    </a>
+                </li>
+            ))}
+        </ol>
+    );
+    if (compact) {
+        return (
+            <details className="docs-toc-inline">
+                <summary><List size={14} aria-hidden="true" /> On this page</summary>
+                {list}
+            </details>
+        );
+    }
+    return (
+        <nav className="docs-toc" aria-label="On this page">
+            <p className="docs-toc__label">On this page</p>
+            {list}
+        </nav>
+    );
+}
+
+// ── Page furniture ──────────────────────────────────────────────────────────
+function Breadcrumbs({ section, page }) {
+    return (
+        <nav className="docs-crumbs" aria-label="Breadcrumb">
+            <ol>
+                <li><Link to="/docs">Docs</Link></li>
+                {section && <li><ChevronRight size={12} aria-hidden="true" />{page ? <Link to={docsPath(section.id)}>{section.title}</Link> : <span aria-current="page">{section.title}</span>}</li>}
+                {page && <li><ChevronRight size={12} aria-hidden="true" /><span aria-current="page">{page.title}</span></li>}
+            </ol>
+        </nav>
+    );
+}
+
+function Feedback({ path }) {
+    const { user } = useAuth() || {};
+    const key = `orw-docs-helpful:${path}`;
+    const [vote, setVote] = useState(() => storage.get(key));
+    useEffect(() => { setVote(storage.get(key)); }, [key]);
+    const cast = (v) => { storage.set(key, v); setVote(v); };
+    return (
+        <section className="docs-feedback" aria-label="Page feedback">
+            <div>
+                {vote
+                    ? <p className="docs-feedback__q" role="status">{vote === 'yes' ? 'Thanks! Glad it helped.' : 'Thanks for telling us. Report what was missing so we can fix it.'}</p>
+                    : <p className="docs-feedback__q">Was this page helpful?</p>}
+                {!vote && (
+                    <div className="docs-feedback__btns">
+                        <button type="button" className="orw-btn orw-btn--ghost" onClick={() => cast('yes')}><ThumbsUp size={14} aria-hidden="true" /> Yes</button>
+                        <button type="button" className="orw-btn orw-btn--ghost" onClick={() => cast('no')}><ThumbsDown size={14} aria-hidden="true" /> No</button>
+                    </div>
+                )}
+            </div>
+            {user
+                ? <button type="button" className="docs-feedback__report" onClick={() => openHelp({ view: 'contact', category: 'problem' })}><LifeBuoy size={14} aria-hidden="true" /> Report a problem with this page</button>
+                : <Link to="/contact" className="docs-feedback__report"><LifeBuoy size={14} aria-hidden="true" /> Report a problem with this page</Link>}
+        </section>
+    );
+}
+
+function PrevNext({ sectionId, pageId }) {
+    const { prev, next } = neighbours(sectionId, pageId);
+    return (
+        <nav className="docs-pn" aria-label="Previous and next page">
+            {prev ? (
+                <Link to={prev.path} className="docs-pn__link" rel="prev">
+                    <span className="docs-pn__dir"><ArrowLeft size={13} aria-hidden="true" /> Previous</span>
+                    <span className="docs-pn__title">{prev.page.title}</span>
+                    <span className="docs-pn__sec">{prev.section.title}</span>
+                </Link>
+            ) : <span />}
+            {next ? (
+                <Link to={next.path} className="docs-pn__link docs-pn__link--next" rel="next">
+                    <span className="docs-pn__dir">Next <ArrowRight size={13} aria-hidden="true" /></span>
+                    <span className="docs-pn__title">{next.page.title}</span>
+                    <span className="docs-pn__sec">{next.section.title}</span>
+                </Link>
+            ) : <span />}
+        </nav>
+    );
+}
+
+// ── Views ───────────────────────────────────────────────────────────────────
+const POPULAR = [
+    ['start', 'create-account'], ['start', 'workspaces'], ['messaging', 'threads'], ['ai', 'in-conversations'],
+    ['notifications', 'how-it-works'], ['integrations', 'github'], ['developers', 'public-api'], ['security', 'encryption'],
+];
+
+function DocsHome({ searchRef }) {
+    return (
+        <div className="docs-home">
+            <header className="docs-home__hero">
+                <p className="docs-eyebrow">Oruinwan documentation</p>
+                <h1 className="docs-home__title">Learn Oruinwan, <span className="orw-gloss-text">end to end.</span></h1>
+                <p className="docs-home__lead">
+                    Step-by-step guides for new members, admins and developers: workspaces and company HQ, messaging,
+                    Oruinwan AI, tasks, huddles, notifications, integrations, the public API and how your data is protected.
+                </p>
+                <div className="docs-home__search"><DocsSearch ref={searchRef} large /></div>
+                <p className="docs-home__popular">
+                    <span>Popular:</span>
+                    {POPULAR.map(([s, p]) => {
+                        const page = getPage(s, p);
+                        return page ? <Link key={`${s}/${p}`} to={docsPath(s, p)}>{page.title}</Link> : null;
+                    })}
+                </p>
+            </header>
+
+            <section aria-labelledby="docs-start-h" className="docs-home__block">
+                <h2 id="docs-start-h" className="docs-home__h2">New here? Start in three steps</h2>
+                <ol className="docs-home__path">
+                    <li data-docs-reveal><Link to={docsPath('start', 'create-account')}><b>1. Create your account</b><span>Sign up and verify your email.</span></Link></li>
+                    <li data-docs-reveal style={{ '--d': '80ms' }}><Link to={docsPath('start', 'create-or-join')}><b>2. Create or join a workspace</b><span>Start your own, or open an invite link.</span></Link></li>
+                    <li data-docs-reveal style={{ '--d': '160ms' }}><Link to={docsPath('messaging', 'channels')}><b>3. Say hello in a channel</b><span>Then try threads, huddles and @Oruinwan.</span></Link></li>
+                </ol>
+            </section>
+
+            <section aria-labelledby="docs-sec-h" className="docs-home__block">
+                <h2 id="docs-sec-h" className="docs-home__h2">Browse by topic</h2>
+                {GROUPS.map((g) => (
+                    <div key={g.title} className="docs-home__group">
+                        <h3 className="docs-home__glabel">{g.title}</h3>
+                        <ul className="docs-home__grid">
+                            {g.sections.map((sid, i) => {
+                                const s = getSection(sid);
+                                const Icon = SECTION_ICONS[sid] || BookOpen;
+                                return (
+                                    <li key={sid} data-docs-reveal style={{ '--d': `${i * 60}ms` }}>
+                                        <Link to={docsPath(sid)} className="docs-home__card">
+                                            <span className="docs-home__icon"><Icon size={18} aria-hidden="true" /></span>
+                                            <b>{s.title}</b>
+                                            <span className="docs-home__blurb">{s.blurb}</span>
+                                            <span className="docs-home__count">{s.pages.length} pages <ArrowRight size={13} aria-hidden="true" /></span>
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                ))}
+            </section>
+
+            <section aria-labelledby="docs-shape-h" className="docs-home__block">
+                <h2 id="docs-shape-h" className="docs-home__h2">How Oruinwan fits together</h2>
+                <p className="docs-home__p">
+                    Everyone has one account. An account belongs to one or more <Link to={docsPath('start', 'workspaces')}>workspaces</Link>, each
+                    with its own channels, DMs, tasks, notes and huddles. A <Link to={docsPath('company', 'overview')}>company</Link> adds a
+                    headquarters above them: a verified domain, departments, admins and audit logs.
+                </p>
+                <div className="docs-home__figs">
+                    <DocsFigure id="workspace-tree" caption="A personal account in two workspaces." />
+                    <DocsFigure id="company-tree" caption="A company HQ: departments, their workspaces and channels." />
+                </div>
+            </section>
+        </div>
+    );
+}
+
+function SectionIndex({ section }) {
+    const Icon = SECTION_ICONS[section.id] || BookOpen;
+    return (
+        <article className="docs-article" aria-labelledby="docs-title">
+            <Breadcrumbs section={section} />
+            <header className="docs-article__head">
+                <span className="docs-article__icon"><Icon size={20} aria-hidden="true" /></span>
+                <h1 id="docs-title" className="docs-article__title" tabIndex={-1}>{section.title}</h1>
+                <p className="docs-article__summary">{section.blurb}</p>
+            </header>
+            <ol className="docs-secindex">
+                {section.pages.map((p, i) => (
+                    <li key={p.id} data-docs-reveal style={{ '--d': `${Math.min(i, 8) * 40}ms` }}>
+                        <Link to={docsPath(section.id, p.id)} className="docs-secindex__link">
+                            <span className="docs-secindex__n">{String(i + 1).padStart(2, '0')}</span>
+                            <span><b>{p.title}</b><span>{p.summary}</span></span>
+                            <ArrowRight size={15} aria-hidden="true" />
+                        </Link>
+                    </li>
+                ))}
+            </ol>
+        </article>
+    );
+}
+
+function DocsPage({ section, page, heads, active }) {
+    const path = docsPath(section.id, page.id);
+    return (
+        <article className="docs-article" aria-labelledby="docs-title">
+            <Breadcrumbs section={section} page={page} />
+            <header className="docs-article__head">
+                <p className="docs-eyebrow">{section.title}</p>
+                <h1 id="docs-title" className="docs-article__title" tabIndex={-1}>{page.title}</h1>
+                {page.summary && <p className="docs-article__summary"><Inline text={page.summary} /></p>}
+            </header>
+            <div className="docs-toc-mobile"><Toc heads={heads} active={active} compact /></div>
+            <div className="docs-prose">
+                <DocsBlocks page={page} />
+            </div>
+            <Feedback path={path} />
+            <PrevNext sectionId={section.id} pageId={page.id} />
+        </article>
+    );
+}
+
+function NotFound({ searchRef }) {
+    return (
+        <article className="docs-article" aria-labelledby="docs-title">
+            <Breadcrumbs />
+            <header className="docs-article__head">
+                <h1 id="docs-title" className="docs-article__title" tabIndex={-1}>We couldn’t find that page</h1>
+                <p className="docs-article__summary">The page may have moved. Search the docs, or start from the <Link to="/docs">docs home</Link>.</p>
+            </header>
+            <DocsSearch ref={searchRef} large />
+        </article>
+    );
+}
+
+// ── Shell ───────────────────────────────────────────────────────────────────
+export default function ChttrixDocs() {
+    // Mounted at /docs/*: the rest of the path is "section/page".
+    const [sectionId, pageId, extra] = (useParams()['*'] || '').split('/').filter(Boolean);
+    const { pathname } = useLocation();
+    const section = sectionId ? getSection(sectionId) : null;
+    const page = section && pageId ? getPage(section.id, pageId) : null;
+    const notFound = (sectionId && !section) || (pageId && !page) || !!extra;
+    const view = notFound ? 'missing' : page ? 'page' : section ? 'section' : 'home';
+
+    const heads = useMemo(() => (page ? headingsOf(page) : []), [page]);
+    const active = useScrollSpy(heads.map((h) => h.id));
+    const rootRef = useRef(null);
+    const searchRef = useRef(null);
+    const barSearchRef = useRef(null);
+    const drawerRef = useRef(null);
+    const menuBtnRef = useRef(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    useDocsMotion(rootRef, pathname);
+
+    const title = page ? page.title : section ? section.title : notFound ? 'Page not found' : 'Documentation';
+
+    // New page: close the drawer and move focus to the heading for screen readers
+    // (but not on first load, so the page doesn't jump).
+    const lastPath = useRef(pathname);
+    useEffect(() => {
+        setMenuOpen(false);
+        if (lastPath.current === pathname) return;
+        lastPath.current = pathname;
+        if (!window.location.hash) document.getElementById('docs-title')?.focus({ preventScroll: true });
+    }, [pathname]);
+
+    // ⌘K / Ctrl+K or "/" focuses search (the big one on the home page).
     useEffect(() => {
         const onKey = (e) => {
-            if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || isTypingTarget(e.target)) return;
-            e.preventDefault();
-            inputRef.current?.focus();
+            const t = e.target;
+            const typing = t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
+            const mod = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k';
+            if (mod || (e.key === '/' && !typing && !e.metaKey && !e.ctrlKey && !e.altKey)) {
+                e.preventDefault();
+                const el = (searchRef.current && searchRef.current.offsetParent !== null) ? searchRef.current : barSearchRef.current;
+                el?.focus();
+                el?.select?.();
+            }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
     }, []);
 
-    const clear = () => { setQuery(''); inputRef.current?.focus(); };
-
-    const search = (
-        <div style={{ marginBottom: 16 }}>
-            <label htmlFor="docs-search" className="orw-sr">Search the docs</label>
-            <div className="orw-input-wrap">
-                <input
-                    ref={inputRef}
-                    id="docs-search"
-                    type="search"
-                    className="orw-input orw-toc__search"
-                    style={{ marginBottom: 0, paddingRight: query ? 46 : 12 }}
-                    placeholder="Search docs  ( / )"
-                    autoComplete="off"
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Escape' && query) { e.preventDefault(); setQuery(''); } }}
-                    aria-describedby="docs-search-status"
-                />
-                {query && (
-                    <button type="button" className="orw-input-wrap__btn" onClick={clear} aria-label="Clear search">
-                        <X size={15} aria-hidden="true" />
-                    </button>
-                )}
-            </div>
-            <p id="docs-search-status" aria-live="polite" style={{ fontSize: 12, color: 'var(--o-text-3)', marginTop: 8, minHeight: 18 }}>
-                {terms.length ? `${visible.length} of ${SECTIONS.length} sections match` : ''}
-            </p>
-        </div>
-    );
-
-    const empty = visible.length === 0 && (
-        <div className="orw-callout" role="status" style={{ alignItems: 'center', flexWrap: 'wrap' }}>
-            <Search size={16} aria-hidden="true" />
-            <div style={{ flex: 1, minWidth: 180, overflowWrap: 'anywhere' }}>
-                No results for <strong>“{query.trim()}”</strong>. Try a different word, or browse all sections.
-            </div>
-            <button type="button" className="orw-btn orw-btn--ghost" onClick={clear}>Clear search</button>
-        </div>
-    );
+    // Mobile drawer: Esc closes, focus moves in and back out.
+    const closeMenu = useCallback(() => { setMenuOpen(false); menuBtnRef.current?.focus(); }, []);
+    useEffect(() => {
+        if (!menuOpen) return undefined;
+        drawerRef.current?.querySelector('a, button')?.focus();
+        const onKey = (e) => { if (e.key === 'Escape') closeMenu(); };
+        const mq = window.matchMedia('(min-width: 1025px)');
+        const onMq = (e) => { if (e.matches) setMenuOpen(false); };
+        window.addEventListener('keydown', onKey);
+        mq.addEventListener?.('change', onMq);
+        return () => { window.removeEventListener('keydown', onKey); mq.removeEventListener?.('change', onMq); };
+    }, [menuOpen, closeMenu]);
 
     return (
-        <PublicPageShell title="Docs">
-            {/*
-              * Kit candidates: keep headings clear of the sticky nav when jumping to a
-              * section, and restore the container gutter that `.orw-doc { padding: 64px 0 … }` resets.
-              */}
-            <PageHero
-                eyebrow="Documentation"
-                icon={BookOpen}
-                title={<>{BRAND.name} <span className="orw-gloss-text">Docs</span></>}
-                lead={`Everything you need to get the most out of ${BRAND.name}, from setting up your first workspace to mastering ${BRAND.ai} and enterprise security.`}
-                actions={
-                    <>
-                        <Link to="/login?mode=signup" className="orw-btn orw-btn--primary orw-btn--lg">
-                            Get started <ArrowRight size={16} aria-hidden="true" />
-                        </Link>
-                        <Link to="/contact" className="orw-btn orw-btn--ghost orw-btn--lg">Contact support</Link>
-                    </>
-                }
-            />
-            <div className="orw-docs">
-                <DocLayout sections={visible} tocLabel="Sections" tocTop={search} footer={empty} />
+        <PublicPageShell title={title}>
+            <div className={`docs docs--${view}`} ref={rootRef}>
+                <div className="docs-bar">
+                    <div className="docs-bar__inner">
+                        <button ref={menuBtnRef} type="button" className="docs-bar__menu" aria-expanded={menuOpen} aria-controls="docs-drawer"
+                            onClick={() => setMenuOpen((o) => !o)}>
+                            {menuOpen ? <X size={16} aria-hidden="true" /> : <Menu size={16} aria-hidden="true" />}
+                            <span>{menuOpen ? 'Close' : 'Menu'}</span>
+                        </button>
+                        <Link to="/docs" className="docs-bar__brand"><BookOpen size={15} aria-hidden="true" /> Docs</Link>
+                        <div className="docs-bar__search"><DocsSearch ref={barSearchRef} /></div>
+                        <a href="/help" className="docs-bar__link">Help center</a>
+                    </div>
+                </div>
+
+                <div className={`docs-grid${heads.length ? '' : ' docs-grid--wide'}`}>
+                    <div id="docs-drawer" ref={drawerRef} className={`docs-side${menuOpen ? ' is-open' : ''}`}>
+                        <Sidebar sectionId={section?.id} onNavigate={() => setMenuOpen(false)} />
+                    </div>
+                    {menuOpen && <button type="button" className="docs-scrim" aria-label="Close menu" onClick={closeMenu} />}
+
+                    <div className="docs-main">
+                        {view === 'home' && <DocsHome searchRef={searchRef} />}
+                        {view === 'section' && <SectionIndex section={section} />}
+                        {view === 'page' && <DocsPage section={section} page={page} heads={heads} active={active} />}
+                        {view === 'missing' && <NotFound searchRef={searchRef} />}
+                    </div>
+
+                    {view === 'page' && heads.length > 0 && (
+                        <aside className="docs-aside"><Toc heads={heads} active={active} /></aside>
+                    )}
+                </div>
             </div>
         </PublicPageShell>
     );
-};
+}
 
-export default ChttrixDocs;
+export { SECTIONS };

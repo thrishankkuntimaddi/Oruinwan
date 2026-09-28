@@ -1,140 +1,103 @@
 import React from 'react';
-import { User, ArrowRight, Plus, Shield, Lock, Crown } from 'lucide-react';
+import { User, ArrowRight, Plus, Shield, Lock, Crown, Users, Bell, SearchX, PauseCircle } from 'lucide-react';
 import { WorkspaceIcon } from '../../utils/workspaceIcons';
+import { getCreatePolicy } from './createPolicy';
 
 const ROLE_LABEL = { owner: 'Owner', admin: 'Admin', member: 'Member' };
+const ROLE_ICON = { owner: Crown, admin: Shield, member: User };
 
-const WorkspaceGrid = ({ workspaces, onWorkspaceClick, onCreateClick, user }) => {
-    const ownedWorkspacesCount = workspaces.filter(ws => ws.isOwner).length;
-    const isLimitReached = user?.userType === 'personal' && ownedWorkspacesCount >= 3;
-    const isCompanyMember = user?.companyRole === 'member' && user?.userType !== 'personal';
-    const companyName = user?.companyName || 'your company';
+const STATUS_LABEL = { suspended: 'Suspended', invited: 'Invited', pending: 'Pending' };
 
-    const cardBase = {
-        display: 'flex', flexDirection: 'column', height: '200px',
-        background: 'var(--bg-surface)', border: '1px solid var(--border-default)',
-        borderRadius: '2px', padding: '20px', textAlign: 'left',
-        cursor: 'pointer', fontFamily: 'var(--font)',
-        transition: 'background 150ms ease, border-color 150ms ease',
-        overflow: 'hidden', position: 'relative',
-    };
+function WorkspaceCard({ ws, unread, onOpen }) {
+    const role = ws.isOwner ? 'owner' : (ws.role || 'member');
+    const RoleIcon = ROLE_ICON[role] || User;
+    const status = ws.membershipStatus && ws.membershipStatus !== 'active' ? ws.membershipStatus : null;
+    const members = ws.members;
 
     return (
-        // Fixed-width tracks centred under the centred heading (no left-aligned leftovers).
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 300px))', justifyContent: 'center', gap: '16px' }}>
-            {workspaces.map((ws) => {
-                const role = ws.isOwner ? 'owner' : (ws.role || 'member');
-                const RoleIcon = role === 'owner' ? Crown : role === 'admin' ? Shield : User;
-                const suspended = ws.membershipStatus && ws.membershipStatus !== 'active';
-                return (
-                    <button key={ws.id} onClick={() => onWorkspaceClick(ws.id)}
-                        className="ws-card"
-                        onMouseEnter={e => {
-                            e.currentTarget.style.background = 'var(--bg-hover)';
-                            e.currentTarget.style.outline = '1px solid var(--border-accent)';
-                            const arrow = e.currentTarget.querySelector('.ws-arrow');
-                            if (arrow) { arrow.style.opacity = '1'; arrow.style.transform = 'translateX(3px)'; }
-                            const title = e.currentTarget.querySelector('.ws-name');
-                            if (title) title.style.color = 'var(--text-primary)';
-                        }}
-                        onMouseLeave={e => {
-                            e.currentTarget.style.background = 'var(--bg-surface)';
-                            e.currentTarget.style.outline = '1px solid var(--border-default)';
-                            const arrow = e.currentTarget.querySelector('.ws-arrow');
-                            if (arrow) { arrow.style.opacity = '0'; arrow.style.transform = 'translateX(0)'; }
-                            const title = e.currentTarget.querySelector('.ws-name');
-                            if (title) title.style.color = 'var(--text-secondary)';
-                        }}
-                        style={{ ...cardBase, border: 'none', outline: '1px solid var(--border-default)' }}
-                    >
-                        <div style={{ flex: 1 }}>
-                            <div style={{ width: '36px', height: '36px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ws.color ? '#fff' : 'var(--text-primary)', marginBottom: '14px', background: ws.color || 'var(--bg-active)', border: ws.color ? 'none' : '1px solid var(--border-default)', flexShrink: 0 }}>
-                                <WorkspaceIcon icon={ws.icon} size={18} />
-                            </div>
-
-                            <h3 className="ws-name" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'color 150ms ease', margin: '0 0 6px' }}>
-                                {ws.name}
-                            </h3>
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                                <div data-testid="ws-role" style={{ display: 'flex', alignItems: 'center', gap: '4px', color: role === 'member' ? 'var(--text-muted)' : 'var(--accent)' }}>
-                                    <RoleIcon size={11} />
-                                    {ROLE_LABEL[role] || 'Member'}
-                                </div>
-                                <div style={{ width: '3px', height: '3px', background: 'var(--border-accent)', borderRadius: '50%' }} />
-                                <div>{ws.members} member{ws.members !== 1 && 's'}</div>
-                                {suspended && (
-                                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--state-danger)', border: '1px solid var(--state-danger)', borderRadius: '2px', padding: '1px 5px' }}>
-                                        Suspended
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="ws-arrow" style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 500, color: 'var(--accent)', opacity: 0, transform: 'translateX(0)', transition: 'opacity 150ms ease, transform 150ms ease' }}>
-                            Open Workspace <ArrowRight size={13} />
-                        </div>
-                    </button>
-                );
-            })}
-
-            {}
-            {isCompanyMember ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', border: '1px dashed var(--border-default)', borderRadius: '2px', background: 'var(--bg-surface)', cursor: 'not-allowed', userSelect: 'none', padding: '24px', textAlign: 'center' }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--bg-active)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', border: '1px solid var(--border-default)' }}>
-                        <Lock size={16} style={{ color: 'var(--text-muted)' }} />
-                    </div>
-                    <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '5px' }}>Create Workspace</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '10px', display: 'block' }}>
-                        Only admins &amp; owners can create workspaces in <span style={{ color: 'var(--text-secondary)' }}>{companyName}</span>.
+        <button
+            type="button"
+            onClick={() => onOpen(ws.id)}
+            className={`gl-card gl-card--interactive gl-wsp-card${status ? ' is-suspended' : ''}`}
+            style={ws.color ? { '--wsp-tint': ws.color } : undefined}
+            aria-label={`Open ${ws.name}${status ? ` (${STATUS_LABEL[status] || status})` : ''}`}
+        >
+            <div className="gl-wsp-card__top">
+                <span className={`gl-wsp-tile${ws.color ? '' : ' is-plain'}`} style={ws.color ? { background: ws.color } : undefined} aria-hidden="true">
+                    <WorkspaceIcon icon={ws.icon} size={20} />
+                </span>
+                <span className="gl-wsp-badges">
+                    {status && (
+                        <span className="gl-wsp-badge is-warn"><PauseCircle size={11} /> {STATUS_LABEL[status] || status}</span>
+                    )}
+                    <span data-testid="ws-role" className={`gl-wsp-badge is-${role}`}>
+                        <RoleIcon size={11} /> {ROLE_LABEL[role] || 'Member'}
                     </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.08em', textTransform: 'uppercase', border: '1px solid var(--border-default)', padding: '4px 10px', borderRadius: '2px' }}>
-                        <Shield size={11} /> Contact your Admin or Owner
-                    </span>
-                </div>
-            ) : (
-                
-                <button
-                    onClick={() => { if (!isLimitReached) onCreateClick(); }}
-                    disabled={isLimitReached}
-                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', border: `1px dashed ${isLimitReached ? 'var(--border-subtle)' : 'var(--border-default)'}`, borderRadius: '2px', background: 'transparent', cursor: isLimitReached ? 'not-allowed' : 'pointer', opacity: isLimitReached ? 0.45 : 1, padding: '24px', textAlign: 'center', transition: 'background 150ms ease, border-color 150ms ease', fontFamily: 'var(--font)' }}
-                    onMouseEnter={e => {
-                        if (!isLimitReached) {
-                            e.currentTarget.style.background = 'var(--bg-hover)';
-                            e.currentTarget.style.borderColor = 'var(--accent)';
-                            const icon = e.currentTarget.querySelector('.create-icon');
-                            if (icon) icon.style.color = 'var(--accent)';
-                            const label = e.currentTarget.querySelector('.create-label');
-                            if (label) label.style.color = 'var(--text-primary)';
-                        }
-                    }}
-                    onMouseLeave={e => {
-                        if (!isLimitReached) {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.borderColor = 'var(--border-default)';
-                            const icon = e.currentTarget.querySelector('.create-icon');
-                            if (icon) icon.style.color = 'var(--text-muted)';
-                            const label = e.currentTarget.querySelector('.create-label');
-                            if (label) label.style.color = 'var(--text-secondary)';
-                        }
-                    }}
-                >
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', background: 'var(--bg-active)', border: '1px solid var(--border-default)' }}>
-                        {isLimitReached
-                            ? <Shield size={18} className="create-icon" style={{ color: 'var(--text-muted)', transition: 'color 150ms ease' }} />
-                            : <Plus size={18} className="create-icon" style={{ color: 'var(--text-muted)', transition: 'color 150ms ease' }} />
-                        }
-                    </div>
-                    <span className="create-label" style={{ fontSize: '14px', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px', transition: 'color 150ms ease' }}>
-                        {isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}
-                    </span>
-                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block' }}>
-                        {isLimitReached ? 'You have reached the limit of 3 workspaces on the personal plan.' : 'Start a new project or team'}
-                    </span>
-                </button>
-            )}
-        </div>
+                </span>
+            </div>
+
+            <h3 className="gl-wsp-card__name">{ws.name}</h3>
+            {ws.description && <p className="gl-wsp-card__desc">{ws.description}</p>}
+
+            <div className="gl-wsp-card__meta">
+                <span><Users size={12} /> {members} member{members !== 1 && 's'}</span>
+                {unread > 0 && (
+                    <span className="is-unread" title="Unread notifications"><Bell size={12} /> {unread > 99 ? '99+' : unread} unread</span>
+                )}
+            </div>
+
+            <div className="gl-wsp-card__foot">
+                <span>{ws.isOwner ? 'Created by you' : ws.ownerName && ws.ownerName !== 'Unknown' ? `Owned by ${ws.ownerName}` : 'Workspace'}</span>
+                <span className="gl-wsp-card__open">Open <ArrowRight size={13} /></span>
+            </div>
+        </button>
     );
-};
+}
+
+export function CreateTile({ user, workspaces, onCreateClick }) {
+    const { isLimitReached, isCompanyMember, companyName } = getCreatePolicy(user, workspaces);
+
+    if (isCompanyMember) {
+        return (
+            <div className="gl-wsp-create is-locked" aria-disabled="true">
+                <span className="gl-wsp-create__mark"><Lock size={18} /></span>
+                <span className="gl-wsp-create__title">Create Workspace</span>
+                <span className="gl-wsp-create__text">
+                    Only admins &amp; owners can create workspaces in <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{companyName}</strong>.
+                </span>
+                <span className="gl-wsp-create__hint"><Shield size={11} /> Contact your Admin or Owner</span>
+            </div>
+        );
+    }
+
+    return (
+        <button type="button" className="gl-wsp-create" onClick={() => { if (!isLimitReached) onCreateClick(); }} disabled={isLimitReached}>
+            <span className="gl-wsp-create__mark">{isLimitReached ? <Shield size={18} /> : <Plus size={20} />}</span>
+            <span className="gl-wsp-create__title">{isLimitReached ? 'Plan Limit Reached' : 'Create New Workspace'}</span>
+            <span className="gl-wsp-create__text">
+                {isLimitReached ? 'You have reached the limit of 3 workspaces on the personal plan.' : 'Start a new project or team'}
+            </span>
+        </button>
+    );
+}
+
+const WorkspaceGrid = ({ workspaces, allWorkspaces = workspaces, query = '', unreadByWs = {}, onWorkspaceClick, onCreateClick, onClearSearch, user }) => (
+    <div className="gl-wsp-grid">
+        {workspaces.map(ws => (
+            <WorkspaceCard key={ws.id} ws={ws} unread={unreadByWs[String(ws.id)] || 0} onOpen={onWorkspaceClick} />
+        ))}
+
+        {query && workspaces.length === 0 && (
+            <div className="gl-card gl-empty gl-wsp-noresults">
+                <span className="gl-empty-mark"><SearchX size={18} /></span>
+                <p className="gl-empty-title">No workspaces match “{query}”</p>
+                <p className="gl-empty-text">Check the spelling, or clear the search to see all of them.</p>
+                <button type="button" className="gl-btn gl-btn--sm" style={{ marginTop: 8 }} onClick={onClearSearch}>Clear search</button>
+            </div>
+        )}
+
+        {!query && <CreateTile user={user} workspaces={allWorkspaces} onCreateClick={onCreateClick} />}
+    </div>
+);
 
 export default WorkspaceGrid;

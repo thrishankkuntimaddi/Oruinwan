@@ -15,10 +15,12 @@ export function isStoredFile(url) {
 export function useBlockMediaUrl(content, { allowDataImage = false } = {}) {
     const stored = isStoredFile(content);
     const signed = useMediaUrl(stored ? { url: content } : null);
-    if (!content) return { url: null, error: null };
-    if (stored) return signed;
-    if (!isSafeUrl(content, { allowDataImage })) return { url: null, error: new Error('Unsupported URL') };
-    return { url: content, error: null };
+    const noop = () => {};
+    if (!content) return { url: null, error: null, onMediaError: noop };
+    // Signed links expire after a few minutes: a media element that fails re-signs once.
+    if (stored) return { ...signed, onMediaError: signed.attempt < 1 ? signed.refresh : noop };
+    if (!isSafeUrl(content, { allowDataImage })) return { url: null, error: new Error('Unsupported URL'), onMediaError: noop };
+    return { url: content, error: null, onMediaError: noop };
 }
 
 export function fileNameOf(block, fallback = 'file') {

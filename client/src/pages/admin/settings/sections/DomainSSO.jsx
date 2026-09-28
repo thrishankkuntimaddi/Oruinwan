@@ -1,153 +1,105 @@
 import React, { useState } from 'react';
-import { CheckCircle, Copy, Save, AlertCircle } from 'lucide-react';
+import { Globe, Copy, ShieldCheck, RefreshCw, UserPlus } from 'lucide-react';
+import api from '@services/api';
 import { useCompany } from '../../../../contexts/CompanyContext';
 import { useToast } from '../../../../contexts/ToastContext';
+import { Panel, Grid, Btn, IconBtn, Chip, errorMessage } from '../../../../components/company-dash/dashUi';
+import SettingSwitch from '../../../../components/ui/SettingSwitch';
+import '../../../OwnerDashboard/owner.css';
 
+/**
+ * Email domain: prove ownership with a DNS TXT record, then optionally let
+ * people with that domain join automatically. Uses /api/companies/:id/domain/*.
+ */
 const DomainSSO = () => {
-    const { company } = useCompany();
+    const { company, refreshCompanyData, isCompanyAdmin } = useCompany();
     const { showToast } = useToast();
-    const [settings, setSettings] = useState({ autoJoin: false, ssoEnabled: false, ssoProvider: 'saml' });
-    const verificationCode = 'chttrix-verify-abc123';
+    const [record, setRecord] = useState(null);
+    const [busy, setBusy] = useState('');
+    const id = company?._id;
+    const canEdit = isCompanyAdmin();
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(verificationCode);
-        showToast('Verification code copied', 'success');
+    const run = async (key, fn) => {
+        setBusy(key);
+        try { await fn(); } catch (err) { showToast(errorMessage(err, 'Something went wrong'), 'error'); } finally { setBusy(''); }
     };
-    const handleSave = () => showToast('Domain & SSO settings saved', 'success');
+
+    const generate = () => run('gen', async () => {
+        const { data } = await api.post(`/api/companies/${id}/domain/generate`);
+        setRecord(data);
+        showToast('Verification record created', 'success');
+    });
+    const verify = () => run('verify', async () => {
+        await api.post(`/api/companies/${id}/domain/verify`);
+        setRecord(null);
+        await refreshCompanyData?.();
+        showToast('Domain verified', 'success');
+    });
+    const setAutoJoin = (enabled) => run('auto', async () => {
+        await api.put(`/api/companies/${id}/domain/auto-join`, { autoJoinByDomain: enabled });
+        await refreshCompanyData?.();
+        showToast(enabled ? 'Auto-join turned on' : 'Auto-join turned off', 'success');
+    });
+    const copy = async (text) => {
+        try { await navigator.clipboard.writeText(text); showToast('Copied', 'success'); } catch { showToast('Could not copy', 'error'); }
+    };
+
+    if (!company) return null;
+    const verified = !!company.domainVerified;
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
-            <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.015em', marginBottom: '4px' }}>Domain & SSO</h2>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Manage domain verification and single sign-on</p>
-            </div>
-
-            {}
-            <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
-                <SectionHeader text="Domain Verification" />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)' }}>
-                        <div>
-                            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{company?.domain || 'company.com'}</p>
-                            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Company domain</p>
+        <Grid cols="2">
+            <Panel title="Email domain" icon={Globe} action={<Chip tone={verified ? 'success' : company.domain ? 'warning' : undefined}>{verified ? 'Verified' : company.domain ? 'Not verified' : 'Not set'}</Chip>}>
+                {!company.domain ? (
+                    <p className="cd-muted" style={{ margin: 0, fontSize: 13, lineHeight: 1.55 }}>
+                        No email domain is on record for your company. It is set when the company is registered; contact Oruinwan support to add one.
+                    </p>
+                ) : (
+                    <div className="od-form">
+                        <div className="od-kv">
+                            <div className="od-kv-row"><span>Domain</span><span className="od-mono">{company.domain}</span></div>
                         </div>
-                        {company?.domainVerified ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--state-success)' }}>
-                                <CheckCircle size={14} /> Verified
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: 'var(--accent)' }}>
-                                <AlertCircle size={14} /> Not Verified
-                            </div>
+                        {!verified && (
+                            <>
+                                <p className="cd-muted" style={{ margin: 0, fontSize: 12.5, lineHeight: 1.55 }}>
+                                    Add a TXT record to your DNS to prove you own <strong>{company.domain}</strong>, then check it here. DNS changes can take a while to appear.
+                                </p>
+                                {record?.txtRecord && (
+                                    <div className="od-code">
+                                        <code className="od-mono">{record.txtRecord}</code>
+                                        <IconBtn label="Copy record" onClick={() => copy(record.txtRecord)}><Copy size={14} /></IconBtn>
+                                    </div>
+                                )}
+                                {record?.expiresAt && <span className="cd-hint">Valid until {new Date(record.expiresAt).toLocaleString()}</span>}
+                                {canEdit && (
+                                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                        <Btn icon={RefreshCw} loading={busy === 'gen'} onClick={generate}>{record ? 'New record' : 'Create TXT record'}</Btn>
+                                        <Btn variant="primary" icon={ShieldCheck} loading={busy === 'verify'} onClick={verify}>Check DNS</Btn>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
-
-                    {!company?.domainVerified && (
-                        <div style={{ padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)' }}>
-                            <p style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                                Add this TXT record to your DNS:
-                            </p>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: 'var(--bg-base)', border: '1px solid var(--border-default)' }}>
-                                <code style={{ flex: 1, fontSize: '12px', color: 'var(--text-primary)', fontFamily: 'monospace' }}>
-                                    {verificationCode}
-                                </code>
-                                <CopyBtn onClick={handleCopy} />
-                            </div>
-                        </div>
-                    )}
-
-                    <ToggleRow
-                        label="Auto-join by Email Domain"
-                        desc={`Allow users with @${company?.domain || 'company.com'} to join automatically`}
-                        checked={settings.autoJoin}
-                        disabled={!company?.domainVerified}
-                        onChange={v => setSettings(p => ({ ...p, autoJoin: v }))}
+                )}
+            </Panel>
+            <Panel title="Join by domain" icon={UserPlus}>
+                <div className="od-switch">
+                    <div>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>Auto-join</p>
+                        <p className="cd-muted" style={{ fontSize: 12, marginTop: 2, lineHeight: 1.5 }}>
+                            People who sign up with an @{company.domain || 'your-domain'} address join the company without an invite.
+                            {!verified && ' Verify the domain first.'}
+                        </p>
+                    </div>
+                    <SettingSwitch
+                        checked={!!company.autoJoinByDomain}
+                        disabled={!canEdit || !verified || busy === 'auto'}
+                        onChange={(v) => setAutoJoin(typeof v === 'boolean' ? v : !company.autoJoinByDomain)}
+                        label="Auto-join by domain"
                     />
                 </div>
-            </div>
-
-            {}
-            <div style={{ border: '1px solid var(--border-subtle)', background: 'var(--bg-surface)', padding: '20px' }}>
-                <SectionHeader text="Single Sign-On (SSO)" />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <ToggleRow
-                        label="Enable SSO"
-                        desc="Allow sign-in via identity provider"
-                        checked={settings.ssoEnabled}
-                        onChange={v => setSettings(p => ({ ...p, ssoEnabled: v }))}
-                    />
-
-                    {settings.ssoEnabled && (
-                        <>
-                            <div>
-                                <FieldLabel text="SSO Provider" />
-                                <select
-                                    value={settings.ssoProvider}
-                                    onChange={e => setSettings(p => ({ ...p, ssoProvider: e.target.value }))}
-                                    style={{ width: '100%', padding: '10px 12px', background: 'var(--bg-input)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', fontFamily: 'inherit' }}
-                                >
-                                    <option value="saml">SAML 2.0</option>
-                                    <option value="oauth">OAuth 2.0</option>
-                                    <option value="oidc">OpenID Connect</option>
-                                </select>
-                            </div>
-                            <div style={{ padding: '12px 14px', background: 'var(--bg-active)', border: '1px solid var(--border-accent)', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
-                                <strong style={{ color: 'var(--text-primary)' }}>Note:</strong> SSO configuration requires additional setup with your identity provider. Contact support for assistance.
-                            </div>
-                        </>
-                    )}
-                </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                <SaveBtn onClick={handleSave} />
-            </div>
-        </div>
-    );
-};
-
-const SectionHeader = ({ text }) => (
-    <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', paddingBottom: '12px', marginBottom: '14px', borderBottom: '1px solid var(--border-subtle)' }}>{text}</div>
-);
-
-const FieldLabel = ({ text }) => (
-    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '6px' }}>{text}</label>
-);
-
-const ToggleRow = ({ label, desc, checked, disabled, onChange }) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: '14px', background: 'var(--bg-active)', border: '1px solid var(--border-subtle)', opacity: disabled ? 0.5 : 1 }}>
-        <div>
-            <p style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</p>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{desc}</p>
-        </div>
-        <button
-            type="button"
-            disabled={disabled}
-            onClick={() => !disabled && onChange(!checked)}
-            style={{ width: '40px', height: '22px', borderRadius: '11px', flexShrink: 0, background: checked ? 'var(--accent)' : 'var(--border-accent)', border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', position: 'relative', transition: 'background 200ms ease' }}
-        >
-            <span style={{ position: 'absolute', top: '3px', left: checked ? '21px' : '3px', width: '16px', height: '16px', borderRadius: '50%', background: checked ? 'var(--bg-base)' : 'var(--text-muted)', transition: 'left 200ms ease' }} />
-        </button>
-    </div>
-);
-
-const CopyBtn = ({ onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ padding: '6px', background: hov ? 'var(--bg-hover)' : 'transparent', border: 'none', color: hov ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease', borderRadius: '2px' }}>
-            <Copy size={14} />
-        </button>
-    );
-};
-
-const SaveBtn = ({ onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '10px 20px', background: hov ? 'var(--accent-hover)' : 'var(--accent)', border: 'none', color: 'var(--bg-base)', fontSize: '13px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'background 150ms ease' }}>
-            <Save size={14} /> Save Changes
-        </button>
+            </Panel>
+        </Grid>
     );
 };
 

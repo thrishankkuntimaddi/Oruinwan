@@ -1,0 +1,450 @@
+/*
+ * "Monolith Gloss" for the signed-in app — the landing page's language brought
+ * inside: monolith (sharp corners, hairlines, heavy titles, near-black slabs)
+ * + gloss (glass gradients, a specular top edge, soft accent light).
+ *
+ * Built on the app theme tokens (index.css) so light and dark both work.
+ * Everything is a class prefixed `gl-`; nothing here restyles bare elements.
+ */
+
+:root {
+    --ws-panel-w: 272px;          /* every workspace side panel has this width */
+    --ws-panel-head-h: 52px;      /* …and this header height */
+    --gl-radius: 3px;
+    --gl-line: rgba(255, 255, 255, 0.07);
+    --gl-line-2: rgba(255, 255, 255, 0.12);
+    --gl-glass: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.012) 100%);
+    --gl-glass-strong: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
+    --gl-spec: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    --gl-spec-strong: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    --gl-drop: 0 24px 60px -24px rgba(0, 0, 0, 0.75);
+    --gl-accent-grad: linear-gradient(180deg, #d9b98f 0%, #b8956a 55%, #a5835a 100%);
+    --gl-accent-glow: 0 8px 24px -10px rgba(200, 162, 116, 0.55);
+    --gl-accent-soft: rgba(200, 162, 116, 0.1);
+    --gl-accent-line: rgba(200, 162, 116, 0.35);
+    --gl-grid: rgba(255, 255, 255, 0.03);
+    --gl-aurora: rgba(200, 162, 116, 0.1);
+    --gl-aurora-cool: rgba(142, 166, 255, 0.06);
+    --gl-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+html.light {
+    --gl-line: rgba(20, 16, 10, 0.08);
+    --gl-line-2: rgba(20, 16, 10, 0.14);
+    --gl-glass: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.55) 100%);
+    --gl-glass-strong: linear-gradient(180deg, #ffffff 0%, rgba(255, 255, 255, 0.7) 100%);
+    --gl-spec: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    --gl-spec-strong: inset 0 1px 0 #ffffff;
+    --gl-drop: 0 24px 60px -28px rgba(40, 30, 15, 0.28);
+    --gl-accent-glow: 0 8px 22px -12px rgba(150, 110, 60, 0.55);
+    --gl-accent-soft: rgba(184, 149, 106, 0.12);
+    --gl-grid: rgba(20, 16, 10, 0.035);
+    --gl-aurora: rgba(200, 162, 116, 0.16);
+    --gl-aurora-cool: rgba(120, 140, 220, 0.07);
+}
+
+/* ── Ambient light for large empty areas (welcome screens, page backdrops) ── */
+.gl-ambient {
+    position: relative;
+    isolation: isolate;
+}
+.gl-ambient::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+        linear-gradient(to right, var(--gl-grid) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--gl-grid) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 25%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 0%, #000 25%, transparent 75%);
+}
+.gl-ambient::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(600px 380px at 85% -10%, var(--gl-aurora), transparent 70%),
+        radial-gradient(520px 360px at 5% 20%, var(--gl-aurora-cool), transparent 70%);
+}
+
+/* Heavy display type with the landing's metallic sheen. */
+.gl-display {
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    color: var(--text-primary);
+}
+.gl-sheen {
+    background: linear-gradient(180deg, #f3e2c4 0%, #c8a274 60%, #9c7a50 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+html.light .gl-sheen { background: linear-gradient(180deg, #b8895a 0%, #8a6a44 100%); -webkit-background-clip: text; background-clip: text; }
+
+.gl-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+}
+.gl-eyebrow::before { content: ''; width: 18px; height: 1px; background: currentColor; opacity: 0.8; }
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+.gl-card {
+    background: var(--bg-surface);
+    background-image: var(--gl-glass);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius);
+    box-shadow: var(--gl-spec);
+}
+.gl-card--interactive { transition: border-color 180ms ease, transform 220ms var(--gl-ease), box-shadow 220ms ease; cursor: pointer; }
+.gl-card--interactive:hover { border-color: var(--border-accent); transform: translateY(-2px); box-shadow: var(--gl-spec-strong), var(--gl-drop); }
+.gl-card--interactive:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.gl-glass-bar {
+    background: var(--bg-base);
+    background-image: var(--gl-glass);
+    box-shadow: var(--gl-spec);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.gl-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-primary);
+    background: var(--bg-active);
+    background-image: var(--gl-glass);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius);
+    box-shadow: var(--gl-spec);
+    cursor: pointer;
+    transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+.gl-btn:hover:not(:disabled) { border-color: var(--border-accent); }
+.gl-btn:active:not(:disabled) { transform: translateY(1px); }
+.gl-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gl-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.gl-btn--sm { height: 28px; padding: 0 10px; font-size: 12px; }
+.gl-btn--lg { height: 40px; padding: 0 18px; font-size: 13.5px; }
+.gl-btn--block { width: 100%; }
+.gl-btn--primary {
+    color: #120e08;
+    background: var(--gl-accent-grad);
+    border-color: rgba(255, 230, 190, 0.35);
+    box-shadow: var(--gl-spec-strong), var(--gl-accent-glow);
+}
+.gl-btn--primary:hover:not(:disabled) { border-color: rgba(255, 236, 205, 0.6); filter: brightness(1.05); }
+.gl-btn--ghost { background: transparent; background-image: none; border-color: transparent; box-shadow: none; color: var(--text-secondary); }
+.gl-btn--ghost:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); border-color: transparent; }
+
+.gl-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    color: var(--text-secondary);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--gl-radius);
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.gl-icon-btn:hover:not(:disabled) { background: var(--bg-hover); color: var(--text-primary); }
+.gl-icon-btn[aria-pressed='true'], .gl-icon-btn[aria-expanded='true'], .gl-icon-btn.is-active {
+    color: var(--accent);
+    background: var(--gl-accent-soft);
+    border-color: var(--gl-accent-line);
+}
+.gl-icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Inputs ─────────────────────────────────────────────────────────────── */
+.gl-input {
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    background: var(--bg-input);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius);
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.gl-input::placeholder { color: var(--text-secondary); opacity: 0.65; }
+.gl-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--input-ring); }
+.gl-search { position: relative; }
+.gl-search > svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none; }
+.gl-search > .gl-input { padding-left: 30px; }
+
+/* ── Segmented tabs (panel tabs, view switchers) ────────────────────────── */
+.gl-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    background: var(--bg-active);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius);
+}
+.gl-tab {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 26px;
+    padding: 0 10px;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease;
+}
+.gl-tab:hover { color: var(--text-primary); }
+.gl-tab[aria-selected='true'], .gl-tab.is-active {
+    color: var(--text-primary);
+    background: var(--bg-surface);
+    background-image: var(--gl-glass-strong);
+    box-shadow: var(--gl-spec), 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.gl-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gl-count {
+    min-width: 18px;
+    height: 16px;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+    border-radius: 999px;
+}
+
+/* ── Workspace side panel (see components/layout/WorkspacePanel.jsx) ───── */
+.gl-panel {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    font-family: var(--font);
+    color: var(--text-primary);
+    background: var(--bg-base);
+}
+.gl-panel-head {
+    height: var(--ws-panel-head-h);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 10px 0 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    background-image: var(--gl-glass);
+    box-shadow: var(--gl-spec);
+    position: relative;
+}
+.gl-panel-mark {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    background: var(--gl-accent-soft);
+    border: 1px solid var(--gl-accent-line);
+    border-radius: var(--gl-radius);
+}
+.gl-panel-titles { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.gl-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+}
+button.gl-panel-title {
+    padding: 2px 4px;
+    margin-left: -4px;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    background: none;
+    border: none;
+    border-radius: var(--gl-radius);
+    cursor: pointer;
+    max-width: 100%;
+}
+button.gl-panel-title:hover { background: var(--bg-hover); }
+button.gl-panel-title:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-panel-title > span { overflow: hidden; text-overflow: ellipsis; }
+.gl-panel-sub {
+    font-size: 11px;
+    line-height: 1.3;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.gl-panel-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.gl-panel-tools {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.gl-panel-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 6px 0 12px; }
+.gl-panel-foot {
+    flex-shrink: 0;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border-subtle);
+    font-size: 11.5px;
+    color: var(--text-secondary);
+}
+
+.gl-section-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 14px 4px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+/* A row in a panel list (channel, DM, note, file…). */
+.gl-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: calc(100% - 12px);
+    min-height: 30px;
+    margin: 1px 6px;
+    padding: 4px 8px;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 13px;
+    text-align: left;
+    color: var(--text-secondary);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: var(--gl-radius);
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.gl-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.gl-item.is-active, .gl-item[aria-current='page'] {
+    color: var(--text-primary);
+    background: var(--bg-active);
+    background-image: var(--gl-glass);
+    border-color: var(--border-default);
+    box-shadow: var(--gl-spec);
+}
+.gl-item.is-active::before, .gl-item[aria-current='page']::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 7px;
+    bottom: 7px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--accent);
+}
+.gl-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* ── Empty / welcome states ─────────────────────────────────────────────── */
+.gl-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 28px 18px;
+    text-align: center;
+    font-family: var(--font);
+}
+.gl-empty-mark {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    background: var(--bg-surface);
+    background-image: var(--gl-glass-strong);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius);
+    box-shadow: var(--gl-spec-strong);
+}
+.gl-empty-title { margin: 0; font-size: 13.5px; font-weight: 650; color: var(--text-primary); }
+.gl-empty-text { margin: 0; max-width: 260px; font-size: 12px; line-height: 1.55; color: var(--text-secondary); }
+
+/* ── Full-width page header (Apps, Notifications, Tasks…) ───────────────── */
+.gl-page-head {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 24px 28px 18px;
+    border-bottom: 1px solid var(--border-subtle);
+}
+.gl-page-title { margin: 6px 0 0; font-size: 22px; font-weight: 750; letter-spacing: -0.025em; color: var(--text-primary); }
+.gl-page-lead { margin: 4px 0 0; font-size: 13px; color: var(--text-secondary); }
+
+@media (max-width: 768px) {
+    .gl-page-head { padding: 18px 16px 14px; }
+    .gl-page-title { font-size: 19px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gl-card--interactive, .gl-btn { transition: none; }
+    .gl-card--interactive:hover { transform: none; }
+}

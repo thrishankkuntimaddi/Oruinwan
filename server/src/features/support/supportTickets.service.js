@@ -4,8 +4,11 @@
  * Support tickets as the platform (Oruinwan) admins see them.
  *
  * Company users create tickets through /api/platform/support, which stores the
- * ticket in SupportTicket and every message in SupportMessage. The admin views
- * read and reply through here so both sides work on the same records.
+ * ticket in SupportTicket and every message in SupportMessage. Anyone (company or
+ * personal account) can also open a request from the in-app Help panel through
+ * /api/support. Personal tickets have companyId null; since SupportMessage rows
+ * require a company, replies on those tickets are stored on the ticket itself
+ * (ticket.messages), which buildThread already merges.
  */
 
 const SupportTicket = require('../../../models/SupportTicket');
@@ -107,7 +110,11 @@ async function adminUpdate(id, { status, message, adminId, io }) {
 
   let reply = null;
   const text = typeof message === 'string' ? message.trim() : '';
-  if (text) {
+  if (text && !ticket.companyId) {
+    ticket.messages.push({ sender: adminId, content: text, isFromAdmin: true, createdAt: new Date() });
+    reply = ticket.messages[ticket.messages.length - 1];
+    if (!status && ticket.status === 'open') ticket.status = 'in-progress';
+  } else if (text) {
     reply = await SupportMessage.create({
       ticket: ticket._id,
       company: ticket.companyId,
@@ -121,7 +128,7 @@ async function adminUpdate(id, { status, message, adminId, io }) {
 
   await ticket.save();
 
-  if (io) {
+  if (io && ticket.companyId) {
     const companyRoom = `company_${ticket.companyId}`;
     if (reply) {
       io.to(companyRoom).emit('support-message', { ticketId: String(ticket._id), message: reply });
@@ -138,4 +145,32 @@ async function adminUpdate(id, { status, message, adminId, io }) {
   return getTicket(ticket._id);
 }
 
-module.exports = { listTickets, getTicket, adminUpdate, countOpenTickets, buildThread, STATUSES, LIVE_CHAT_SUBJECT };
+/**
+ * A user's own requests for the Help panel: status plus support's replies.
+ * Internal notes, company details and admin emails are left out.
+ */
+async function listTicketsForCreator(userId, { limit = 20 } = {}) {
+  const tickets = await SupportTicket.find({ creatorId: userId })
+    .select('subject description category status priority createdAt updatedAt resolvedAt closedAt messages creatorId')
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .lean();
+  const threaded = await withThreads(tickets);
+  return threaded.map((t) => ({
+    _id: t._id,
+    subject: t.subject,
+    description: t.description,
+    category: t.category || 'question',
+    status: t.status,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+    replies: t.messages.map((m) => ({
+      _id: m._id,
+      message: m.message,
+      fromSupport: m.senderRole === 'platform',
+      createdAt: m.createdAt,
+    })),
+  }));
+}
+
+module.exports = { listTicketsForCreator, listTickets, getTicket, adminUpdate, countOpenTickets, buildThread, STATUSES, LIVE_CHAT_SUBJECT };

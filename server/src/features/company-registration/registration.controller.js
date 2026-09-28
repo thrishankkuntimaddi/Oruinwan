@@ -144,7 +144,8 @@ exports.startSetup = async (req, res) => {
         }
 
         
-        if (plan) company.plan = plan.toLowerCase(); 
+        // The plan is an owner decision.
+        if (plan && req.companyRole === 'owner') company.plan = plan.toLowerCase();
         if (acceptedTerms) company.metadata = { ...company.metadata, acceptedTermsAt: new Date(), acceptedTermsBy: userId };
 
         

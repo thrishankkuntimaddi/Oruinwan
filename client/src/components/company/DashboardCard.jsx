@@ -1,28 +1,11 @@
 import React from 'react';
+import { Panel } from '../company-dash/dashUi';
 
-const DashboardCard = ({
-    title,
-    children,
-    icon: Icon,
-    className = '',
-    headerActions = null
-}) => {
-    return (
-        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden ${className}`}>
-            {title && (
-                <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        {Icon && <Icon className="w-5 h-5 text-gray-400" />}
-                        <h3 className="font-bold text-gray-900">{title}</h3>
-                    </div>
-                    {headerActions}
-                </div>
-            )}
-            <div className="p-6">
-                {children}
-            </div>
-        </div>
-    );
-};
+/** Titled card (kept for existing callers) — a kit Panel. */
+const DashboardCard = ({ title, children, icon, className = '', headerActions = null }) => (
+    <Panel title={title} icon={icon} action={headerActions} className={className}>
+        {children}
+    </Panel>
+);
 
 export default DashboardCard;

@@ -1,8 +1,12 @@
 import React from 'react';
 import UserAvatarImage from '../../../../shared/components/ui/UserAvatarImage';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Lock, Megaphone, Star } from 'lucide-react';
+import { Lock, Megaphone, Star, Check } from 'lucide-react';
+import '../../../layout/shell.css';
 
+const PRESENCE = { active: 'is-online', online: 'is-online', away: 'is-away', dnd: 'is-busy', busy: 'is-busy' };
+
+/** A channel or DM row in the Home panel. */
 const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, toggleFavorite }) => {
     const location = useLocation();
     const navigate = useNavigate();
@@ -15,6 +19,7 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
         : `/workspace/${workspaceId}${isHome ? '/home' : ''}/dm/${item.id}`;
     const isActive = currentPath === itemPath;
     const isSelected = selectedItems.has(item.id);
+    const isAnnouncements = (item.label || '').toLowerCase() === 'announcements';
 
     const handleClick = (e) => {
         if (isSelectionMode) {
@@ -27,125 +32,65 @@ const ListItem = ({ item, isSelectionMode, selectedItems, setSelectedItems, togg
         }
     };
 
-    
-    const statusColor = {
-        active: 'var(--state-success)', online: 'var(--state-success)',
-        away: '#e59e0c', dnd: 'var(--state-danger)', busy: 'var(--state-danger)',
-    }[item.status] || 'var(--border-default)';
+    const onKeyDown = (e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(e); }
+    };
+
+    const classes = ['gl-item', 'gl-shell-row'];
+    if (isActive && !isSelectionMode) classes.push('is-active');
+    if (isSelected) classes.push('is-selected');
 
     return (
         <div
+            role="link"
+            tabIndex={0}
             onClick={handleClick}
-            style={{
-                padding: '5px 10px 5px 14px', display: 'flex', alignItems: 'center',
-                justifyContent: 'space-between', cursor: 'pointer', position: 'relative',
-                transition: 'background 150ms ease',
-                background: isSelected
-                    ? 'var(--bg-hover)'
-                    : isActive
-                        ? 'var(--bg-hover)'
-                        : 'none',
-                fontFamily: 'var(--font)',
-            }}
-            className="group"
-            onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-            onMouseLeave={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'none'; }}
+            onKeyDown={onKeyDown}
+            className={classes.join(' ')}
+            aria-current={isActive && !isSelectionMode ? 'page' : undefined}
         >
-            {}
-            {isActive && !isSelectionMode && (
-                <div style={{ position: 'absolute', left: 0, top: '20%', height: '60%', width: '2px', background: 'var(--accent)', borderRadius: '0 2px 2px 0' }} />
+            {isSelectionMode && (
+                <span className={`gl-shell-check${isSelected ? ' is-on' : ''}`} aria-hidden="true">
+                    {isSelected && <Check size={10} strokeWidth={3} />}
+                </span>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0, gap: '8px' }}>
-                {}
-                {isSelectionMode && (
-                    <div style={{
-                        width: '14px', height: '14px', borderRadius: '2px', flexShrink: 0,
-                        border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border-default)',
-                        background: isSelected ? 'var(--accent)' : 'var(--bg-input)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: '150ms ease',
-                    }}>
-                        {isSelected && <span style={{ width: '8px', height: '8px', background: 'var(--bg-base)', borderRadius: '1px', display: 'block' }} />}
-                    </div>
-                )}
-
-                {}
-                <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {item.type === 'dm' ? (
-                        <div style={{ position: 'relative' }}>
-                            <UserAvatarImage
-                                userId={item.userId}
-                                name={item.label}
-                                src={item.avatar}
-                                size={28}
-                                style={{ border: `1px solid ${isActive ? 'var(--border-accent)' : 'var(--border-default)'}`, boxSizing: 'border-box' }}
-                                initialStyle={{
-                                    background: isActive ? 'var(--bg-active)' : 'var(--bg-surface)',
-                                    color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                                }}
-                            />
-                            {}
-                            <div style={{
-                                position: 'absolute', bottom: '-1px', right: '-1px',
-                                width: '8px', height: '8px', borderRadius: '50%',
-                                background: statusColor,
-                                border: '1.5px solid var(--bg-base)',
-                            }} />
-                        </div>
-                    ) : (
-                        <div style={{
-                            width: '24px', height: '24px', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: `1px solid ${isActive
-                                ? 'var(--border-accent)'
-                                : item.label.toLowerCase() === 'announcements'
-                                    ? 'rgba(184,149,106,0.3)'
-                                    : item.isPrivate
-                                        ? 'var(--border-default)'
-                                        : 'var(--border-subtle)'}`,
-                            color: isActive
-                                ? 'var(--accent)'
-                                : item.label.toLowerCase() === 'announcements'
-                                    ? 'var(--accent)'
-                                    : 'var(--text-muted)',
-                            transition: '150ms ease',
-                        }}>
-                            {item.isPrivate ? (
-                                <Lock size={11} strokeWidth={2.5} />
-                            ) : item.label.toLowerCase() === 'announcements' ? (
-                                <Megaphone size={11} strokeWidth={2.5} />
-                            ) : (
-                                <span style={{ fontSize: '12px', fontWeight: 700, lineHeight: 1 }}>#</span>
-                            )}
-                        </div>
-                    )}
-                </div>
-
-                {}
-                <span style={{
-                    fontSize: '13px', fontWeight: isActive ? 600 : 500,
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    transition: 'color 150ms ease', letterSpacing: '-0.01em',
-                }}>
-                    {item.type === 'channel' ? item.label.replace(/^#/, '') : item.label}
+            {item.type === 'dm' ? (
+                <span className="gl-shell-avatar">
+                    <UserAvatarImage
+                        userId={item.userId}
+                        name={item.label}
+                        src={item.avatar}
+                        size={24}
+                        style={{ border: `1px solid ${isActive ? 'var(--gl-accent-line)' : 'var(--border-default)'}`, boxSizing: 'border-box' }}
+                        initialStyle={{
+                            background: isActive ? 'var(--gl-accent-soft)' : 'var(--bg-active)',
+                            color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                        }}
+                    />
+                    <span className={`gl-shell-presence ${PRESENCE[item.status] || ''}`} aria-hidden="true" />
                 </span>
-            </div>
+            ) : (
+                <span className={`gl-shell-glyph${isAnnouncements ? ' gl-shell-glyph--accent' : ''}`} aria-hidden="true">
+                    {item.isPrivate ? <Lock size={11} strokeWidth={2.5} />
+                        : isAnnouncements ? <Megaphone size={11} strokeWidth={2.5} />
+                            : '#'}
+                </span>
+            )}
 
-            {}
+            <span className="gl-shell-row-label">
+                {item.type === 'channel' ? item.label.replace(/^#/, '') : item.label}
+            </span>
+
             {!isSelectionMode && (
                 <button
+                    type="button"
+                    className={`gl-shell-star${item.isFavorite ? ' is-on' : ''}`}
                     onClick={e => { e.stopPropagation(); toggleFavorite(item.id); }}
-                    style={{
-                        width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        background: 'none', border: 'none', cursor: 'pointer', borderRadius: '2px',
-                        color: item.isFavorite ? 'var(--accent)' : 'var(--text-muted)',
-                        opacity: item.isFavorite ? 1 : 0.3,
-                        transition: 'opacity 120ms ease, color 120ms ease', flexShrink: 0,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.color = 'var(--accent)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.opacity = item.isFavorite ? '1' : '0.3'; e.currentTarget.style.color = item.isFavorite ? 'var(--accent)' : 'var(--text-muted)'; }}
                     title={item.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                    aria-label={item.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                    aria-pressed={!!item.isFavorite}
                 >
                     <Star size={12} fill={item.isFavorite ? 'currentColor' : 'none'} strokeWidth={2} />
                 </button>

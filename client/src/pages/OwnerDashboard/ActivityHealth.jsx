@@ -1,137 +1,60 @@
 import React from 'react';
-import { MessageSquare, Briefcase, Zap, Moon } from 'lucide-react';
+import { Zap, MessageSquare, Briefcase, Moon } from 'lucide-react';
+import { Section, KpiGrid, Kpi, Panel, Meter } from '../../components/company-dash/dashUi';
 
-const ActivityHealth = ({ data }) => {
-    const stats = data || {
-        messages: { last7days: 0, last30days: 0, trend: 'stable' },
-        activeWorkspaces: 0,
-        dormantWorkspaces: 0,
-        engagementScore: 0
-    };
-
-    const MetricCard = ({ icon: Icon, title, children }) => (
-        <div style={{
-            background: 'var(--bg-surface)',
-            border: '1px solid var(--border-subtle)',
-            padding: '20px',
-            transition: 'background 150ms ease'
-        }}
-            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'var(--bg-surface)'}
-        >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-                <Icon size={14} style={{ color: 'var(--text-muted)' }} />
-                <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-secondary)' }}>{title}</span>
-            </div>
-            {children}
-        </div>
-    );
+/** Engagement KPIs from GET /api/owner-dashboard/activity-health. */
+const ActivityHealth = ({ data, loading }) => {
+    const m = data?.messages || {};
+    const weeklyAvg = m.last30days ? Math.round(m.last30days / 4.3) : 0;
+    const trend = m.last7days == null ? null
+        : m.last7days > weeklyAvg ? { text: 'above', tone: 'up' }
+            : m.last7days < weeklyAvg ? { text: 'below', tone: 'down' } : { text: 'level with', tone: undefined };
+    const score = data?.engagementScore;
+    const total = (data?.activeWorkspaces || 0) + (data?.dormantWorkspaces || 0);
 
     return (
-        <section>
-            <div style={{ marginBottom: '16px' }}>
-                <h3 style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    color: 'var(--text-muted)',
-                    letterSpacing: '0.13em',
-                    textTransform: 'uppercase',
-                    margin: '0 0 4px'
-                }}>Activity & Health</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>
-                    Platform engagement metrics
-                </p>
-            </div>
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(4, 1fr)',
-                gap: '1px',
-                background: 'var(--border-subtle)'
-            }}>
-                {}
-                <MetricCard icon={Zap} title="Engagement Score">
-                    <div style={{
-                        fontSize: '26px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        letterSpacing: '-0.02em',
-                        marginBottom: '12px'
-                    }}>
-                        {stats.engagementScore}%
+        <Section title="Activity & health" lead="How much your workspaces are actually used">
+            <KpiGrid>
+                <Panel>
+                    <div className="cd-kpi-top" style={{ marginBottom: 6 }}>
+                        <span className="cd-kpi-label">Engagement</span>
+                        <span className="cd-kpi-icon"><Zap size={14} /></span>
                     </div>
-                    <div style={{
-                        width: '100%',
-                        height: '2px',
-                        background: 'var(--border-default)',
-                        borderRadius: '1px',
-                        overflow: 'hidden'
-                    }}>
-                        <div style={{
-                            width: `${stats.engagementScore}%`,
-                            height: '100%',
-                            background: 'var(--accent)',
-                            borderRadius: '1px',
-                            transition: 'width 260ms cubic-bezier(0.16,1,0.3,1)'
-                        }} />
+                    <div className="cd-kpi-value" style={{ marginBottom: 10 }}>
+                        {loading ? '…' : score == null ? '—' : `${score}%`}
                     </div>
-                </MetricCard>
-
-                {}
-                <MetricCard icon={MessageSquare} title="Message Volume">
-                    <div style={{
-                        fontSize: '26px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        letterSpacing: '-0.02em',
-                        marginBottom: '4px'
-                    }}>
-                        {stats.messages.last7days}
+                    <Meter value={score || 0} label="Engagement score" tone={score >= 60 ? 'success' : score < 25 ? 'danger' : undefined} />
+                    <div className="cd-kpi-hint" style={{ marginTop: 8 }}>
+                        {total ? `${data.activeWorkspaces} of ${total} workspaces had messages this week` : 'No workspaces yet'}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '6px' }}>
-                        Last 7 days vs {Math.round(stats.messages.last30days / 4)} avg
-                    </div>
-                    <div style={{
-                        fontSize: '11px',
-                        fontWeight: 500,
-                        color: stats.messages.trend === 'up' ? 'var(--state-success)' : 'var(--text-muted)'
-                    }}>
-                        {stats.messages.trend === 'up' ? '↗ Trending Up' : '— Stable'}
-                    </div>
-                </MetricCard>
-
-                {}
-                <MetricCard icon={Briefcase} title="Active Workspaces">
-                    <div style={{
-                        fontSize: '26px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        letterSpacing: '-0.02em',
-                        marginBottom: '4px'
-                    }}>
-                        {stats.activeWorkspaces}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        Workspaces with activity this week
-                    </div>
-                </MetricCard>
-
-                {}
-                <MetricCard icon={Moon} title="Dormant">
-                    <div style={{
-                        fontSize: '26px',
-                        fontWeight: 600,
-                        color: 'var(--text-primary)',
-                        letterSpacing: '-0.02em',
-                        marginBottom: '4px'
-                    }}>
-                        {stats.dormantWorkspaces}
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                        No activity &gt; 7 days
-                    </div>
-                </MetricCard>
-            </div>
-        </section>
+                </Panel>
+                <Kpi
+                    label="Messages · 7 days"
+                    icon={MessageSquare}
+                    value={m.last7days}
+                    loading={loading}
+                    delta={trend && m.last30days ? trend.text : null}
+                    deltaTone={trend?.tone}
+                    hint={m.last30days ? `the weekly average (${weeklyAvg.toLocaleString()})` : 'no messages in the last 30 days'}
+                />
+                <Kpi
+                    label="Active workspaces"
+                    icon={Briefcase}
+                    tone="success"
+                    value={data?.activeWorkspaces}
+                    loading={loading}
+                    hint="with messages this week"
+                />
+                <Kpi
+                    label="Dormant workspaces"
+                    icon={Moon}
+                    tone="muted"
+                    value={data?.dormantWorkspaces}
+                    loading={loading}
+                    hint="no messages in 7 days"
+                />
+            </KpiGrid>
+        </Section>
     );
 };
 

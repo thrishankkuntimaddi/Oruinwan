@@ -1,0 +1,158 @@
+/*
+ * Platform staff console + company onboarding flow. `pf-` prefix; tokens only
+ * (index.css + gloss.css + company-dash/dash.css).
+ */
+
+/* A view that still renders its own layout (Support tickets) gets page padding. */
+.pf-legacy { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 28px 48px; }
+@media (max-width: 640px) { .pf-legacy { padding: 14px 14px 32px; } }
+
+/* Status strip (health / pending notice). */
+.pf-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; flex-wrap: wrap; }
+.pf-banner > .pf-grow { flex: 1; min-width: 180px; }
+.pf-banner-title { font-size: 13.5px; font-weight: 650; color: var(--text-primary); }
+.pf-banner-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+.pf-banner[data-tone='success'] { border-color: color-mix(in srgb, var(--state-success) 40%, var(--border-default)); }
+.pf-banner[data-tone='danger'] { border-color: color-mix(in srgb, var(--state-danger) 45%, var(--border-default)); }
+.pf-banner[data-tone='accent'] { border-color: var(--gl-accent-line); }
+.pf-banner svg { flex-shrink: 0; }
+
+/* Key/value facts. */
+.pf-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 20px; margin: 0; }
+.pf-facts dt { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+.pf-facts dd { margin: 3px 0 0; font-size: 13px; color: var(--text-primary); overflow-wrap: anywhere; }
+
+/* Quick actions. */
+.pf-action { display: flex; flex-direction: column; gap: 6px; padding: 14px 16px; text-align: left; font: inherit; color: var(--text-primary); }
+.pf-action svg { color: var(--accent); }
+.pf-action-title { font-size: 13.5px; font-weight: 650; }
+.pf-action-desc { font-size: 12px; color: var(--text-secondary); }
+
+/* Pending company card. */
+.pf-company { padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.pf-company-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.pf-company-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-doc { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--accent); text-decoration: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pf-doc:hover { text-decoration: underline; }
+
+/* Target picker (broadcast). */
+.pf-choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.pf-choice {
+    display: flex; flex-direction: column; gap: 4px; padding: 10px 12px; text-align: left; font: inherit; cursor: pointer;
+    color: var(--text-primary); background: var(--bg-input); border: 1px solid var(--border-default); border-radius: var(--gl-radius);
+}
+.pf-choice:hover { border-color: var(--border-accent); }
+.pf-choice[aria-pressed='true'] { border-color: var(--accent); background: var(--gl-accent-soft); }
+.pf-choice svg { color: var(--accent); }
+.pf-choice-label { font-size: 13px; font-weight: 600; }
+.pf-choice-sub { font-size: 11.5px; color: var(--text-secondary); }
+.pf-checklist { max-height: 220px; overflow-y: auto; border: 1px solid var(--border-default); border-radius: var(--gl-radius); }
+.pf-checklist label { display: flex; align-items: center; gap: 10px; padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--border-subtle); font-size: 13px; }
+.pf-checklist label:last-child { border-bottom: 0; }
+.pf-checklist label:hover { background: var(--bg-hover); }
+.pf-checklist input { accent-color: var(--accent); }
+.pf-preview-text { white-space: pre-wrap; font-size: 13px; line-height: 1.55; margin: 0; color: var(--text-primary); }
+
+/* Broadcast / billing two-column layouts. */
+.pf-split { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .pf-split { grid-template-columns: minmax(0, 1fr); } }
+
+/* Health bars. */
+.pf-bar-row { display: flex; flex-direction: column; gap: 6px; }
+.pf-bar-top { display: flex; justify-content: space-between; gap: 8px; font-size: 12.5px; color: var(--text-secondary); }
+.pf-bar-top strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+/* Direct messages. */
+.pf-chat { flex: 1; min-height: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr); overflow: hidden; }
+.pf-chat-list { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border-subtle); background: var(--bg-surface); background-image: var(--gl-glass); }
+.pf-chat-list-head { padding: 14px; border-bottom: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 10px; }
+.pf-chat-list-head .gl-search .gl-input { width: 100%; }
+.pf-chat-list-body { flex: 1; min-height: 0; overflow-y: auto; }
+.pf-chat-person {
+    display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; text-align: left; font: inherit; cursor: pointer;
+    color: var(--text-primary); background: none; border: 0; border-bottom: 1px solid var(--border-subtle); border-left: 2px solid transparent;
+}
+.pf-chat-person:hover { background: var(--bg-hover); }
+.pf-chat-person[aria-current='true'] { background: var(--bg-active); border-left-color: var(--accent); }
+.pf-chat-person .cd-grow { flex: 1; min-width: 0; }
+.pf-unread { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; color: var(--bg-base); background: var(--accent); }
+.pf-chat-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.pf-chat-head { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); }
+.pf-chat-back { display: none; }
+.pf-chat-msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+.pf-msg { display: flex; flex-direction: column; gap: 3px; max-width: min(72%, 560px); align-self: flex-start; }
+.pf-msg[data-mine='true'] { align-self: flex-end; align-items: flex-end; }
+.pf-msg-bubble { padding: 9px 12px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-primary); background: var(--bg-surface); background-image: var(--gl-glass); border: 1px solid var(--border-default); border-radius: var(--gl-radius); }
+.pf-msg[data-mine='true'] .pf-msg-bubble { background: var(--gl-accent-soft); border-color: var(--gl-accent-line); }
+.pf-msg-meta { font-size: 10.5px; color: var(--text-secondary); }
+.pf-chat-compose { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--border-subtle); }
+.pf-chat-compose .gl-input { flex: 1; min-width: 0; }
+@media (max-width: 760px) {
+    .pf-chat { grid-template-columns: minmax(0, 1fr); }
+    .pf-chat[data-has-selection='true'] .pf-chat-list { display: none; }
+    .pf-chat:not([data-has-selection='true']) .pf-chat-main { display: none; }
+    .pf-chat-back { display: inline-flex; }
+}
+
+/* ── Company onboarding flow (/company/confirm, /company/setup) ─────────── */
+.pf-flow {
+    position: relative; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px; box-sizing: border-box; font-family: var(--font); color: var(--text-primary); background: var(--bg-base);
+}
+.pf-flow > * { position: relative; z-index: 1; }
+.pf-flow-theme { position: absolute; top: 14px; right: 14px; z-index: 2; }
+.pf-flow-card { width: 100%; max-width: 1040px; display: grid; grid-template-columns: 300px minmax(0, 1fr); overflow: hidden; box-shadow: var(--gl-spec), var(--gl-drop); }
+.pf-flow-card[data-narrow='true'] { max-width: 980px; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); }
+.pf-flow-aside { padding: 28px 24px; display: flex; flex-direction: column; gap: 20px; border-right: 1px solid var(--border-subtle); background: var(--bg-active); background-image: var(--gl-glass-strong); }
+.pf-flow-brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 750; letter-spacing: -0.02em; }
+.pf-flow-brand img { width: 30px; height: 30px; object-fit: cover; }
+.pf-flow-main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+.pf-flow-body { flex: 1; min-height: 0; overflow-y: auto; padding: 32px 36px; display: flex; flex-direction: column; gap: 18px; }
+.pf-flow-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 36px; border-top: 1px solid var(--border-subtle); }
+.pf-flow-title { margin: 6px 0 0; font-size: clamp(24px, 3.2vw, 34px); }
+.pf-flow-lead { margin: 6px 0 0; font-size: 13.5px; line-height: 1.6; color: var(--text-secondary); max-width: 520px; }
+.pf-steps { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.pf-step { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--gl-radius); color: var(--text-secondary); }
+.pf-step[data-state='active'] { color: var(--text-primary); background: var(--bg-surface); background-image: var(--gl-glass); border-color: var(--border-default); box-shadow: var(--gl-spec); }
+.pf-step[data-state='done'] { color: var(--text-primary); }
+.pf-step-mark { width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border-default); border-radius: var(--gl-radius); background: var(--bg-input); }
+.pf-step[data-state='active'] .pf-step-mark, .pf-step[data-state='done'] .pf-step-mark { color: var(--accent); background: var(--gl-accent-soft); border-color: var(--gl-accent-line); }
+.pf-step-title { font-size: 12.5px; font-weight: 650; line-height: 1.2; }
+.pf-step-desc { font-size: 11px; color: var(--text-secondary); }
+.pf-drop {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 22px 16px; text-align: center; cursor: pointer; font: inherit; width: 100%;
+    color: var(--text-secondary); background: var(--bg-input); border: 1px dashed var(--border-accent); border-radius: var(--gl-radius);
+}
+.pf-drop:hover, .pf-drop:focus-visible { border-color: var(--accent); color: var(--text-primary); outline: none; }
+.pf-drop svg { color: var(--accent); }
+.pf-file { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+.pf-file img { width: 48px; height: 48px; object-fit: contain; border: 1px solid var(--border-default); border-radius: var(--gl-radius); background: var(--bg-input); }
+.pf-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pf-pill { height: 26px; padding: 0 10px; font: inherit; font-size: 12px; cursor: pointer; color: var(--text-secondary); background: var(--bg-input); border: 1px solid var(--border-default); border-radius: 999px; }
+.pf-pill:hover { color: var(--accent); border-color: var(--gl-accent-line); }
+.pf-row { display: grid; gap: 8px; grid-template-columns: repeat(var(--pf-cols, 2), minmax(0, 1fr)); }
+.pf-invite { position: relative; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.pf-invite-remove { position: absolute; top: 6px; right: 6px; }
+.pf-terms { max-height: 170px; overflow-y: auto; padding: 12px 14px; font-size: 12px; line-height: 1.6; color: var(--text-secondary); display: flex; flex-direction: column; gap: 10px; }
+.pf-terms strong { color: var(--text-primary); display: block; }
+.pf-check { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid var(--border-subtle); cursor: pointer; font-size: 12.5px; }
+.pf-check input { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
+.pf-summary { width: 100%; max-width: 420px; }
+.pf-summary .cd-list-row { justify-content: space-between; }
+.pf-done-mark { width: 64px; height: 64px; display: inline-flex; align-items: center; justify-content: center; color: var(--state-success); border: 1px solid color-mix(in srgb, var(--state-success) 40%, transparent); background: color-mix(in srgb, var(--state-success) 10%, transparent); border-radius: var(--gl-radius); }
+.pf-feature { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-secondary); }
+.pf-feature svg { color: var(--accent); flex-shrink: 0; }
+.pf-progress { height: 3px; background: var(--border-default); border-radius: 2px; overflow: hidden; }
+.pf-progress > span { display: block; height: 100%; background: var(--accent); transition: width 400ms var(--gl-ease); }
+@media (max-width: 860px) {
+    .pf-flow { align-items: flex-start; padding: 12px; }
+    .pf-flow-card, .pf-flow-card[data-narrow='true'] { grid-template-columns: minmax(0, 1fr); }
+    .pf-flow-aside { border-right: 0; border-bottom: 1px solid var(--border-subtle); padding: 18px 16px; gap: 14px; }
+    .pf-steps { flex-direction: row; overflow-x: auto; }
+    .pf-step { flex-shrink: 0; }
+    .pf-step .pf-step-desc { display: none; }
+    .pf-flow-body { padding: 20px 16px; }
+    .pf-flow-foot { padding: 12px 16px; }
+    .pf-flow-hide-sm { display: none !important; }
+    .pf-row { grid-template-columns: minmax(0, 1fr); }
+}

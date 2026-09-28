@@ -21,6 +21,7 @@ import { MessageMoreMenu, EditedBadge, MessageBadges, TranslationBlock, InlineMe
 import { hasEditHistory } from '../../../../utils/messageActionUtils';
 
 import MessageMarkdown from '../../../../shared/components/messages/MessageMarkdown';
+import ProfileTrigger from '../../../profileCard/ProfileTrigger';
 import logger from '../../../../utils/logger';
 
 function DMMessageItem({
@@ -174,21 +175,23 @@ function DMMessageItem({
 
             {}
             <div style={{ flexShrink: 0, paddingTop: '2px' }}>
-                <Avatar
-                    src={avatarUrl}
-                    username={msg.senderName}
-                    fallback={initial}
-                    alt={msg.senderName}
-                    size="sm"
-                    style={isMe ? { outline: '2px solid var(--accent)', outlineOffset: '1px' } : {}}
-                />
+                <ProfileTrigger userId={senderId} username={msg.senderName}>
+                    <Avatar
+                        src={avatarUrl}
+                        username={msg.senderName}
+                        fallback={initial}
+                        alt={msg.senderName}
+                        size="sm"
+                        style={isMe ? { outline: '2px solid var(--accent)', outlineOffset: '1px' } : {}}
+                    />
+                </ProfileTrigger>
             </div>
 
             {}
             <div style={{ flex: 1, minWidth: 0, paddingRight: '96px', position: 'relative' }}>
                 {}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: 0 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', lineHeight: 1.4 }}>{msg.senderName || 'Unknown'}</span>
+                    <ProfileTrigger userId={senderId} username={msg.senderName}><span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '13px', lineHeight: 1.4 }}>{msg.senderName || 'Unknown'}</span></ProfileTrigger>
                     {msg.isPinned && <Pin size={10} style={{ color: 'var(--accent)', transform: 'rotate(45deg)', flexShrink: 0 }} title={msg.pinnedByName ? `Pinned by ${msg.pinnedByName}` : 'Pinned'} />}
                 </div>
 

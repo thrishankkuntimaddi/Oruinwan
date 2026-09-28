@@ -142,21 +142,25 @@ router.get('/billing-summary', requireFlag('billing'), requireAuth, requireOwner
             return res.status(404).json({ message: 'Company not found' });
         }
 
-        const totalUsers = await User.countDocuments({ companyId: company._id });
+        const totalUsers = await User.countDocuments({ companyId: company._id, accountStatus: { $ne: 'removed' } });
+        const seatLimit = company.settings?.maxUsers || null;
+        const address = company.settings?.address;
 
+        // Amount and renewal date are not stored on the company (no payment
+        // provider yet): null, never invented.
         res.json({
-            currentPlan: company.plan || 'Free',
+            currentPlan: company.plan || 'free',
             seatUsage: {
                 used: totalUsers,
-                total: company.maxUsers || 10,
-                percentage: company.maxUsers ? Math.round((totalUsers / company.maxUsers) * 100) : 0
+                total: seatLimit,
+                percentage: seatLimit ? Math.round((totalUsers / seatLimit) * 100) : null
             },
-            monthlyCost: company.billing?.amount || 0,
-            renewalDate: company.billing?.renewalDate || null,
+            monthlyCost: null,
+            renewalDate: null,
             billingContact: {
-                email: company.billingEmail || company.email || null,
-                address: company.address
-                    ? [company.address.city, company.address.state, company.address.country].filter(Boolean).join(', ')
+                email: company.billingEmail || company.ownerEmail || null,
+                address: address
+                    ? [address.city, address.state, address.country].filter(Boolean).join(', ') || null
                     : null,
             },
         });
@@ -173,40 +177,43 @@ router.get('/security-risk', requireAuth, requireOwner, async (req, res) => {
         const companyId = user.companyId;
 
         
+        const SecurityEvent = require('../../../models/SecurityEvent');
+        const HistoryLog = require('../../../models/HistoryLog');
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const activeSessions = await User.countDocuments({
-            companyId,
-            lastLogin: { $gte: oneDayAgo }
-        });
-
-        
-        const AuditLog = require('../../../models/AuditLog');
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-        const [totalAuditLogs, criticalActions] = await Promise.all([
-            AuditLog.countDocuments({
-                companyId,
-                createdAt: { $gte: sevenDaysAgo }
-            }),
-            AuditLog.countDocuments({
-                companyId,
-                action: { $in: ['user_suspended', 'user_removed', 'role_changed'] },
-                createdAt: { $gte: sevenDaysAgo }
-            })
+        // Critical = role changes, suspensions and removals, as actually
+        // recorded: SecurityEvent (role_changed / account_suspended) and the
+        // history log (user_role_changed / member_removed / user_left_company).
+        const [activeSessions, totalAuditLogs, criticalEvents, criticalHistory, warnings, failed] = await Promise.all([
+            User.countDocuments({ companyId, lastLoginAt: { $gte: oneDayAgo } }),
+            AuditLog.countDocuments({ companyId, createdAt: { $gte: sevenDaysAgo } }),
+            SecurityEvent.countDocuments({ companyId, eventType: { $in: ['role_changed', 'account_suspended'] }, createdAt: { $gte: sevenDaysAgo } }),
+            HistoryLog.countDocuments({ company: companyId, action: { $in: ['user_role_changed', 'member_removed', 'user_left_company'] }, timestamp: { $gte: sevenDaysAgo } }),
+            SecurityEvent.countDocuments({ companyId, severity: 'warning', createdAt: { $gte: sevenDaysAgo } }),
+            SecurityEvent.find({ companyId, eventType: 'login_failure', createdAt: { $gte: oneDayAgo } })
+                .sort({ createdAt: -1 }).limit(20).select('metadata ipAddress userAgent createdAt').lean(),
         ]);
 
-        const company = await Company.findById(companyId).select('emailDomain domain email').lean();
-        const emailDomain = company?.emailDomain || company?.domain || company?.email?.split('@')[1] || null;
+        const company = await Company.findById(companyId).select('domain ownerEmail').lean();
+        const emailDomain = company?.domain || company?.ownerEmail?.split('@')[1] || null;
 
         res.json({
             activeSessions,
-            suspiciousLogins: [], 
+            suspiciousLogins: failed.map((e) => ({
+                email: e.metadata?.email || null,
+                attempts: e.metadata?.attempts ?? null,
+                ipAddress: e.ipAddress || null,
+                userAgent: e.userAgent || null,
+                at: e.createdAt,
+            })),
             auditSummary: {
                 lastWeek: totalAuditLogs,
-                critical: criticalActions,
-                warnings: 0
+                critical: criticalEvents + criticalHistory,
+                warnings
             },
-            complianceScore: 95,
+            // No compliance scoring exists yet; never a made-up number.
+            complianceScore: null,
             emailDomain,
         });
     } catch (error) {

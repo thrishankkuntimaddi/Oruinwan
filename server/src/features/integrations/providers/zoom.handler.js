@@ -1,4 +1,3 @@
-const axios = require('axios');
 
 async function verify(config) {
   if (!config.apiKey || !config.apiSecret) {
@@ -7,18 +6,15 @@ async function verify(config) {
   return config;
 }
 
+// Real meetings are created by zoom/zoom.client.js (Server-to-Server OAuth); see
+// POST /api/v2/integrations/zoom/meeting. Kept for the legacy handler interface.
 async function createMeeting({ topic, startTime, duration, config }) {
-  
-  
-  return {
-    source: 'zoom',
-    meetingId: `zoom-${Date.now()}`,
-    topic,
-    startTime,
-    duration,
-    joinUrl: `https://zoom.us/j/${Date.now()}`, 
-    hostUrl: `https://zoom.us/s/${Date.now()}`
-  };
+  const { readSecret } = require('../integration.config');
+  const m = await require('../zoom/zoom.client').createMeeting(
+    { accountId: config?.accountId, clientId: config?.clientId, clientSecret: readSecret(config, 'clientSecret') },
+    { topic, start: startTime, durationMinutes: duration }
+  );
+  return { source: 'zoom', meetingId: m.id, topic: m.topic, startTime: m.start, duration: m.durationMinutes, joinUrl: m.joinUrl, hostUrl: m.startUrl };
 }
 
 async function handleWebhook(payload, headers, integration) {

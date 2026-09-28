@@ -1,0 +1,92 @@
+/* Profile popover for @mentions and message headers. Theme tokens from index.css,
+   buttons from gloss.css (gl-btn / gl-icon-btn). */
+
+.pc-trigger { cursor: pointer; }
+.pc-trigger:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+.pc-mention { cursor: pointer; }
+.pc-mention:hover { filter: brightness(1.08); text-decoration: underline; text-underline-offset: 2px; }
+
+.pc-pop {
+    position: fixed;
+    z-index: 1200;
+    width: 312px;
+    max-width: calc(100vw - 16px);
+    background: var(--bg-surface);
+    background-image: var(--gl-glass);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius, 3px);
+    box-shadow: var(--gl-spec), var(--gl-drop, 0 24px 60px -24px rgba(0, 0, 0, 0.6));
+    color: var(--text-primary);
+    font-family: Inter, system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+    animation: pc-in 140ms var(--gl-ease, ease-out);
+}
+.pc-pop:focus { outline: none; }
+@keyframes pc-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+.pc-banner { height: 44px; background: linear-gradient(120deg, var(--gl-accent-soft, rgba(200,162,116,.12)), transparent 70%), var(--bg-active); border-bottom: 1px solid var(--border-subtle, var(--border-default)); }
+.pc-body { padding: 0 16px 14px; }
+.pc-head { display: flex; align-items: flex-end; gap: 12px; margin-top: -26px; }
+.pc-avatar { position: relative; width: 60px; height: 60px; flex-shrink: 0; border-radius: 50%; border: 3px solid var(--bg-surface); background: var(--bg-active); overflow: hidden; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; color: var(--text-secondary); }
+.pc-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pc-avatar-wrap { position: relative; }
+.pc-dot { position: absolute; right: 3px; bottom: 3px; width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--bg-surface); background: var(--text-muted); }
+.pc-dot[data-state='online'] { background: var(--state-success, #5aba8a); }
+.pc-dot[data-state='away'] { background: var(--state-warning, #e0b24f); }
+.pc-dot[data-state='busy'] { background: var(--state-danger, #e05252); }
+.pc-close { margin-left: auto; margin-bottom: 18px; }
+
+.pc-name { margin: 10px 0 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.25; word-break: break-word; }
+.pc-handle { color: var(--text-muted); font-size: 12px; margin-top: 1px; }
+.pc-status { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+.pc-status i { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); display: inline-block; }
+.pc-status i[data-state='online'] { background: var(--state-success, #5aba8a); }
+.pc-status i[data-state='away'] { background: var(--state-warning, #e0b24f); }
+.pc-status i[data-state='busy'] { background: var(--state-danger, #e05252); }
+.pc-title { margin-top: 8px; color: var(--text-primary); font-size: 13px; }
+.pc-title span { color: var(--text-muted); }
+
+.pc-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.pc-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; border: 1px solid var(--border-default); color: var(--text-secondary); background: var(--bg-active); }
+.pc-badge--accent { color: var(--accent); border-color: var(--gl-accent-line, var(--border-accent)); background: var(--gl-accent-soft, transparent); }
+
+.pc-rows { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--border-subtle, var(--border-default)); padding-top: 10px; }
+.pc-row { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--text-secondary); font-size: 12.5px; }
+.pc-row svg { flex-shrink: 0; color: var(--text-muted); }
+.pc-row .pc-row-text { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pc-row a { color: inherit; text-decoration: none; }
+.pc-row a:hover { color: var(--accent); text-decoration: underline; }
+.pc-copy { width: 24px; height: 24px; }
+.pc-about { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: var(--text-secondary); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+.pc-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; margin-top: 14px; }
+.pc-actions .gl-btn { min-width: 0; }
+
+.pc-skel { background: var(--bg-hover); border-radius: 2px; animation: pc-pulse 1.1s ease-in-out infinite; }
+@keyframes pc-pulse { 50% { opacity: 0.55; } }
+
+.pc-empty { padding: 18px 16px; text-align: center; }
+.pc-empty h3 { margin: 8px 0 4px; font-size: 14px; font-weight: 700; }
+.pc-empty p { margin: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+.pc-empty-icon { width: 44px; height: 44px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--bg-active); color: var(--text-muted); }
+
+.pc-backdrop { display: none; }
+
+/* Phones: a bottom sheet over a dimmed page. */
+@media (max-width: 639px) {
+    .pc-backdrop { display: block; position: fixed; inset: 0; z-index: 1199; background: rgba(0, 0, 0, 0.45); animation: pc-fade 140ms ease-out; }
+    .pc-pop.pc-sheet {
+        left: 0 !important; right: 0; top: auto !important; bottom: 0;
+        width: 100%; max-width: none; max-height: 85vh; overflow-y: auto;
+        border-radius: 12px 12px 0 0; border-bottom: none;
+        padding-bottom: env(safe-area-inset-bottom, 0);
+        animation: pc-up 200ms var(--gl-ease, ease-out);
+    }
+    .pc-sheet .pc-grip { display: block; width: 36px; height: 4px; border-radius: 2px; background: var(--border-default); margin: 8px auto 0; }
+    .pc-sheet .pc-actions .gl-btn { height: 40px; }
+}
+.pc-grip { display: none; }
+@keyframes pc-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes pc-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pc-pop, .pc-backdrop, .pc-skel { animation: none; } }

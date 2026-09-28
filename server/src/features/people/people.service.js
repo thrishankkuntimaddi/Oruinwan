@@ -2,8 +2,10 @@ const logger = require('../../../utils/logger');
 const User = require('../../../models/User');
 const bcrypt = require('bcryptjs');
 const sendEmail = require('../../../utils/sendEmail');
+const { assignRoleError, manageUserError, assertCompanyDepartments, syncCompanyAdmins } = require('../../shared/roleCeiling');
 
-const VALID_ROLES = ['owner', 'admin', 'manager', 'member', 'guest'];
+const fail = (message, status) => Object.assign(new Error(message), { status });
+
 const VALID_STATUSES = ['active', 'suspended', 'removed'];
 
 function generateTempPassword() {
@@ -50,8 +52,11 @@ async function sendInviteEmail({ to, name, companyName, tempPassword }) {
     }
 }
 
-async function inviteEmployee({ companyId, email, firstName, lastName, companyRole, jobTitle, departments, invitedById }) {
-    
+async function inviteEmployee({ companyId, email, firstName, lastName, companyRole, jobTitle, departments, invitedById, requesterRole }) {
+    const roleError = assignRoleError({ companyRole: requesterRole }, companyRole || 'member');
+    if (roleError) throw fail(roleError, roleError.startsWith('Invalid') ? 400 : 403);
+    departments = await assertCompanyDepartments(companyId, departments || []);
+
     const existing = await User.findOne({ email: email.toLowerCase() });
     if (existing) {
         const err = new Error(`A user with email "${email}" already exists.`);
@@ -66,7 +71,7 @@ async function inviteEmployee({ companyId, email, firstName, lastName, companyRo
     const baseUsername = name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
     const username = `${baseUsername}_${Math.random().toString(36).slice(2, 6)}`;
 
-    const role = VALID_ROLES.includes(companyRole) ? companyRole : 'member';
+    const role = companyRole || 'member';
 
     const newUser = await User.create({
         username,
@@ -144,39 +149,16 @@ async function getMember(memberId, companyId) {
 }
 
 async function changeRole({ companyId, targetId, newRole, managedDepartments, requesterId, requesterRole }) {
-    if (!VALID_ROLES.includes(newRole)) {
-        const err = new Error(`Invalid role "${newRole}". Must be one of: ${VALID_ROLES.join(', ')}`);
-        err.status = 400;
-        throw err;
-    }
+    const roleError = assignRoleError({ companyRole: requesterRole }, newRole);
+    if (roleError) throw fail(roleError, roleError.startsWith('Invalid') ? 400 : 403);
 
     const target = await User.findOne({ _id: targetId, companyId });
-    if (!target) {
-        const err = new Error('Member not found in this company.');
-        err.status = 404;
-        throw err;
-    }
+    if (!target) throw fail('Member not found in this company.', 404);
 
-    
-    if (target.companyRole === 'owner') {
-        const err = new Error('The company owner\'s role cannot be changed.');
-        err.status = 403;
-        throw err;
-    }
+    const manageError = manageUserError({ _id: requesterId, companyId, companyRole: requesterRole }, target);
+    if (manageError) throw fail(manageError, 403);
 
-    
-    if (newRole === 'owner' && requesterRole !== 'owner') {
-        const err = new Error('Only a company owner can assign the owner role.');
-        err.status = 403;
-        throw err;
-    }
-
-    
-    if (targetId.toString() === requesterId.toString() && requesterRole === 'admin' && newRole !== 'admin' && newRole !== 'owner') {
-        const err = new Error('Admins cannot demote their own role.');
-        err.status = 403;
-        throw err;
-    }
+    if (managedDepartments) managedDepartments = await assertCompanyDepartments(companyId, managedDepartments);
 
     target.companyRole = newRole;
 
@@ -188,6 +170,7 @@ async function changeRole({ companyId, targetId, newRole, managedDepartments, re
     }
 
     await target.save();
+    await syncCompanyAdmins(companyId, target._id, newRole);
 
     return {
         _id: target._id,
@@ -206,25 +189,10 @@ async function updateStatus({ companyId, targetId, newStatus, reason, requesterI
     }
 
     const target = await User.findOne({ _id: targetId, companyId });
-    if (!target) {
-        const err = new Error('Member not found in this company.');
-        err.status = 404;
-        throw err;
-    }
+    if (!target) throw fail('Member not found in this company.', 404);
 
-    
-    if (target.companyRole === 'owner') {
-        const err = new Error('The company owner\'s status cannot be changed.');
-        err.status = 403;
-        throw err;
-    }
-
-    
-    if (target.companyRole === 'admin' && requesterRole !== 'owner') {
-        const err = new Error('Only a company owner can suspend or remove another admin.');
-        err.status = 403;
-        throw err;
-    }
+    const manageError = manageUserError({ _id: requesterId, companyId, companyRole: requesterRole }, target);
+    if (manageError) throw fail(manageError, 403);
 
     target.accountStatus = newStatus;
 

@@ -53,13 +53,16 @@ test.describe('composer', () => {
 
   test('voice message records, sends and plays back', async () => {
     const before = await bob.locator('[id^="msg-"] audio').count();
+    // The recorder starts recording as soon as it opens.
     await alice.locator('button[title="Voice note"]').click();
-    await alice.locator('button[title="Start recording"]').click();
+    await expect(alice.getByTestId('voice-timer')).toBeVisible();
     await alice.waitForTimeout(1500);
     await alice.locator('button[title="Stop recording"]').click();
-    await alice.locator('button[title="Send voice message"]').click();
+    await alice.locator('button[title="Send voice note"]').click();
     await expect(bob.locator('[id^="msg-"] audio')).toHaveCount(before + 1, { timeout: 20_000 });
-    await expect(alice.locator('button[title="Send voice message"]')).toHaveCount(0);
+    await expect(alice.locator('button[title="Send voice note"]')).toHaveCount(0);
+    // The receiver sees the recorded length (WebM files don't carry one).
+    await expect(bob.getByTestId('voice-time').last()).toHaveText(/^0:0[1-4]$/);
   });
 
   test('bold formatting is sent as bold', async () => {
@@ -122,7 +125,8 @@ test.describe('composer', () => {
 
   test('voice recorder can be cancelled', async () => {
     await alice.locator('button[title="Voice note"]').click();
-    await alice.locator('button[title="Cancel"]').click();
-    await expect(alice.locator('button[title="Start recording"]')).toHaveCount(0);
+    await expect(alice.getByTestId('voice-timer')).toBeVisible();
+    await alice.locator('button[title="Discard recording"]').click();
+    await expect(alice.getByTestId('voice-recorder')).toHaveCount(0);
   });
 });

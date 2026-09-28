@@ -1,0 +1,337 @@
+/*
+ * Small additions to gloss.css for the Notes / Huddles / Files / Knowledge /
+ * Updates panels and the Tasks, Apps and Notifications pages. Everything is
+ * prefixed `gl-x-` and built on the same theme tokens, so light and dark work.
+ * Import it after gloss.css.
+ */
+
+/* ── Filter chips (panel filters, page categories) ──────────────────────── */
+.gl-x-chips {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+.gl-x-chips::-webkit-scrollbar { display: none; }
+.gl-x-chips--wrap { flex-wrap: wrap; overflow: visible; }
+.gl-x-chip {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 9px;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--gl-radius);
+    cursor: pointer;
+    transition: color 150ms ease, border-color 150ms ease, background 150ms ease;
+}
+.gl-x-chip--lg { height: 28px; padding: 0 12px; font-size: 12px; }
+.gl-x-chip:hover { color: var(--text-primary); border-color: var(--border-default); }
+.gl-x-chip.is-active, .gl-x-chip[aria-pressed='true'] {
+    color: var(--accent);
+    background: var(--gl-accent-soft);
+    border-color: var(--gl-accent-line);
+    box-shadow: var(--gl-spec);
+}
+.gl-x-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-x-chip.is-active .gl-count { color: var(--accent); background: var(--gl-accent-soft); }
+
+/* Tabs that size to their content (view switchers, page tab rows). */
+.gl-tabs.gl-x-tabs-fit { display: inline-flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.gl-tabs.gl-x-tabs-fit::-webkit-scrollbar { display: none; }
+.gl-x-tabs-fit .gl-tab { flex: 0 0 auto; }
+.gl-tab .gl-count { height: 15px; min-width: 16px; font-size: 9.5px; }
+.gl-tab.is-active .gl-count, .gl-tab[aria-selected='true'] .gl-count { color: var(--accent); background: var(--gl-accent-soft); }
+
+/* ── Richer panel rows ──────────────────────────────────────────────────── */
+.gl-item.gl-x-tall { align-items: flex-start; padding-top: 6px; padding-bottom: 6px; }
+.gl-x-item-icon { flex-shrink: 0; color: var(--text-muted); }
+.gl-item.gl-x-tall .gl-x-item-icon { margin-top: 2px; }
+.gl-item.is-active .gl-x-item-icon, .gl-item[aria-current='page'] .gl-x-item-icon, .gl-item[aria-pressed='true'] .gl-x-item-icon { color: var(--accent); }
+.gl-x-item-main { flex: 1; min-width: 0; }
+.gl-x-item-row { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.gl-x-item-title {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.4;
+    color: var(--text-primary);
+}
+.gl-item.is-active .gl-x-item-title, .gl-item[aria-current='page'] .gl-x-item-title { font-weight: 650; }
+.gl-x-item-time { flex-shrink: 0; font-size: 10px; color: var(--text-muted); }
+.gl-x-item-sub {
+    margin: 1px 0 0;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.gl-x-item-tags { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-size: 10px; color: var(--text-muted); min-width: 0; overflow: hidden; }
+.gl-x-item-tags > span { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.gl-x-accent { color: var(--accent); }
+.gl-item > .gl-count { flex-shrink: 0; }
+.gl-item.is-active > .gl-count, .gl-item[aria-current='page'] > .gl-count, .gl-item[aria-pressed='true'] > .gl-count { color: var(--accent); background: var(--gl-accent-soft); }
+.gl-item[aria-pressed='true'] { color: var(--text-primary); background: var(--bg-active); border-color: var(--border-default); }
+.gl-x-emoji { flex-shrink: 0; width: 16px; text-align: center; font-size: 13px; line-height: 1; }
+
+/* Actions that appear when a row is hovered or focused. */
+.gl-x-reveal { opacity: 0; transition: opacity 120ms ease; }
+.gl-item:hover .gl-x-reveal, .gl-item:focus-within .gl-x-reveal, .gl-x-reveal:focus-visible,
+.gl-x-row:hover .gl-x-reveal, .gl-x-row:focus-within .gl-x-reveal { opacity: 1; }
+@media (hover: none) { .gl-x-reveal { opacity: 1; } }
+.gl-icon-btn.gl-x-xs { width: 22px; height: 22px; }
+
+/* Indented tree rows (knowledge pages, canvas tabs, notes by type). */
+.gl-x-indent { padding-left: calc(8px + var(--gl-x-depth, 0) * 14px); }
+.gl-x-caret { flex-shrink: 0; display: inline-flex; width: 12px; color: var(--text-muted); }
+
+/* ── Collapsible footer sections (Notes: By type / Archive) ─────────────── */
+.gl-x-flushfoot > .gl-panel-foot { padding: 0; }
+.gl-x-acc + .gl-x-acc { border-top: 1px solid var(--border-subtle); }
+.gl-x-acc-head {
+    width: 100%;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px 0 14px;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 120ms ease, color 120ms ease;
+}
+.gl-x-acc-head:hover, .gl-x-acc-head[aria-expanded='true'] { background: var(--bg-hover); color: var(--text-primary); }
+.gl-x-acc-head:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gl-x-acc-body { max-height: 256px; overflow-y: auto; padding: 4px 0 6px; scrollbar-width: thin; }
+
+/* ── Inline input row (Notes "new group") ───────────────────────────────── */
+.gl-x-inline-field { display: flex; align-items: center; gap: 6px; }
+.gl-x-inline-field > .gl-input { flex: 1; }
+
+/* ── Menus and small dialogs ────────────────────────────────────────────── */
+.gl-x-menu {
+    z-index: 60;
+    min-width: 180px;
+    padding: 4px;
+    font-family: var(--font);
+    background: var(--bg-surface);
+    background-image: var(--gl-glass-strong);
+    border: 1px solid var(--border-default);
+    border-radius: var(--gl-radius);
+    box-shadow: var(--gl-spec), var(--gl-drop);
+}
+.gl-x-menu-label { padding: 6px 8px 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); }
+.gl-x-menu-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 30px;
+    padding: 0 8px;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 12.5px;
+    text-align: left;
+    color: var(--text-secondary);
+    background: none;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+}
+.gl-x-menu-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+.gl-x-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gl-x-menu-item.is-active { color: var(--accent); font-weight: 600; }
+.gl-x-menu-item--danger, .gl-x-menu-item--danger:hover { color: var(--state-danger); }
+.gl-x-menu-item--danger:hover { background: color-mix(in srgb, var(--state-danger) 10%, transparent); }
+.gl-x-menu-sep { height: 1px; margin: 4px 2px; background: var(--border-subtle); }
+
+.gl-x-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 16px; background: var(--bg-overlay); }
+.gl-x-dialog { width: 100%; max-width: 340px; padding: 22px; box-shadow: var(--gl-spec-strong), var(--gl-drop); font-family: var(--font); }
+.gl-x-dialog h3 { margin: 12px 0 6px; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.gl-x-dialog p { margin: 0 0 18px; font-size: 12px; line-height: 1.55; color: var(--text-secondary); }
+.gl-x-dialog-actions { display: flex; gap: 8px; }
+.gl-x-dialog-actions > * { flex: 1; }
+
+.gl-btn.gl-x-danger { color: var(--state-danger); border-color: color-mix(in srgb, var(--state-danger) 40%, transparent); }
+.gl-btn.gl-x-danger:hover:not(:disabled) { border-color: var(--state-danger); }
+.gl-btn.gl-x-danger-solid { color: #fff; background: var(--state-danger); background-image: none; border-color: var(--state-danger); }
+.gl-btn.gl-x-danger-solid:hover:not(:disabled) { border-color: var(--state-danger); filter: brightness(1.08); }
+.gl-icon-btn.gl-x-danger:hover:not(:disabled) { color: var(--state-danger); background: color-mix(in srgb, var(--state-danger) 10%, transparent); }
+
+/* ── Cards inside a panel (Huddles) ─────────────────────────────────────── */
+.gl-x-pcard { position: relative; margin: 0 10px 8px; padding: 10px 12px; overflow: hidden; font-family: var(--font); }
+.gl-x-pcard-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--accent); }
+.gl-x-pcard-bar.is-live { background: var(--state-success); }
+.gl-x-pcard-title { flex: 1; min-width: 0; margin: 0; font-size: 12.5px; font-weight: 600; color: var(--text-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gl-x-pcard-meta { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 11px; color: var(--text-secondary); }
+.gl-x-live { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; color: var(--state-success); }
+.gl-x-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    font: inherit;
+    font-family: var(--font);
+    font-size: 11.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    color: var(--accent);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+}
+.gl-x-link:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 3px; }
+.gl-x-link:disabled { opacity: 0.5; cursor: not-allowed; }
+.gl-x-link--muted { color: var(--text-secondary); }
+.gl-x-link--muted:hover:not(:disabled) { color: var(--text-primary); }
+.gl-x-link--danger:hover:not(:disabled) { color: var(--state-danger); }
+.gl-x-status { display: flex; align-items: center; gap: 8px; }
+
+.gl-x-banner {
+    margin: 10px 10px 0;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-left: 2px solid var(--state-success);
+}
+
+/* ── Loading ────────────────────────────────────────────────────────────── */
+.gl-x-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: gl-x-spin 0.8s linear infinite;
+}
+.gl-x-center { display: flex; justify-content: center; padding: 32px 0; }
+@keyframes gl-x-spin { to { transform: rotate(360deg); } }
+
+/* ── Tasks page (left views panel + header) ─────────────────────────────── */
+.gl-x-tasks-side { width: var(--ws-panel-w); flex-shrink: 0; height: 100%; min-height: 0; border-right: 1px solid var(--border-subtle); }
+.gl-x-tasks-side.is-mobile { width: 100%; border-right: none; }
+.gl-x-tasks-head { position: relative; flex-shrink: 0; background: var(--bg-base); border-bottom: 1px solid var(--border-subtle); font-family: var(--font); }
+.gl-x-tasks-top {
+    height: var(--ws-panel-head-h);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px 0 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    background-image: var(--gl-glass);
+    box-shadow: var(--gl-spec);
+}
+.gl-x-tasks-title { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.gl-x-tasks-title h1 { margin: 0; flex-shrink: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.015em; color: var(--text-primary); white-space: nowrap; }
+.gl-x-tasks-title p { margin: 0; min-width: 0; font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gl-x-tasks-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 20px; }
+.gl-x-tasks-toolbar .gl-search { flex: 1 1 180px; max-width: 280px; min-width: 140px; }
+.gl-x-tasks-toolbar select.gl-input { width: auto; flex: 0 0 auto; padding-right: 6px; cursor: pointer; }
+.gl-x-vs .tk-vs-label { display: none; }
+@container tasksmain (min-width: 900px) { .gl-x-vs .tk-vs-label { display: inline; } }
+.gl-x-tasks-count { margin-left: auto; font-size: 11px; color: var(--text-secondary); white-space: nowrap; }
+@media (max-width: 768px) {
+    .gl-x-tasks-top { padding: 0 10px 0 6px; }
+    .gl-x-tasks-toolbar { padding: 10px 12px; }
+}
+
+/* ── Full-width pages (Apps, Notifications) ─────────────────────────────── */
+.gl-x-page { flex: 1; display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--bg-base); font-family: var(--font); }
+.gl-x-page-top { flex-shrink: 0; border-bottom: 1px solid var(--border-subtle); }
+.gl-x-page-top > .gl-page-head { border-bottom: none; }
+.gl-x-page-body { flex: 1; min-height: 0; overflow-y: auto; }
+.gl-x-wrap { width: 100%; max-width: var(--gl-x-page-w, 956px); margin: 0 auto; box-sizing: border-box; }
+.gl-x-page-tabs { padding: 0 28px 14px; }
+.gl-x-page-pad { padding: 24px 28px 40px; }
+.gl-x-head-row { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.gl-x-head-mark {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    background: var(--bg-surface);
+    background-image: var(--gl-glass-strong);
+    border: 1px solid var(--gl-accent-line);
+    border-radius: var(--gl-radius);
+    box-shadow: var(--gl-spec-strong), var(--gl-accent-glow);
+}
+.gl-x-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.gl-x-note { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
+.gl-x-note--accent { border-color: var(--gl-accent-line); background-color: var(--gl-accent-soft); }
+.gl-x-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.gl-x-skeleton { height: 180px; background: var(--bg-active); border: 1px solid var(--border-subtle); border-radius: var(--gl-radius); }
+.gl-x-group-label { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; padding: 0 2px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); }
+.gl-x-group-label::after { content: ''; flex: 1; height: 1px; background: var(--border-subtle); }
+.gl-x-row { position: relative; }
+.gl-x-badge { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 1px 6px; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); background: var(--bg-hover); border: 1px solid var(--border-subtle); border-radius: 2px; white-space: nowrap; }
+.gl-x-badge--accent { color: var(--accent); background: var(--gl-accent-soft); border-color: var(--gl-accent-line); }
+.gl-x-badge--ok { color: var(--state-success); background: color-mix(in srgb, var(--state-success) 12%, transparent); border-color: color-mix(in srgb, var(--state-success) 30%, transparent); }
+.gl-x-app-icon {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    background: var(--gl-accent-soft);
+    border: 1px solid var(--gl-accent-line);
+    border-radius: var(--gl-radius);
+    box-shadow: var(--gl-spec);
+    object-fit: cover;
+}
+
+/* Notification rows */
+.gl-x-notif {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 150ms ease, background-color 150ms ease;
+}
+.gl-x-notif:hover { border-color: var(--border-accent); }
+.gl-x-notif:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gl-x-notif.is-unread { background-color: var(--highlight-bg-weak, var(--bg-surface)); }
+.gl-x-notif.is-unread::before { content: ''; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 2px; background: var(--accent); }
+.gl-x-notif-icon { width: 34px; height: 34px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-active); border: 1px solid var(--border-default); border-radius: var(--gl-radius); box-shadow: var(--gl-spec); }
+.gl-x-confirm { display: flex; align-items: center; gap: 6px; padding: 3px 3px 3px 10px; font-size: 12px; color: var(--text-primary); }
+
+@media (max-width: 768px) {
+    .gl-x-page-tabs { padding: 0 16px 12px; }
+    .gl-x-page-pad { padding: 16px 16px 32px; }
+    .gl-x-head-mark { width: 36px; height: 36px; }
+}
+
+/* Card whose border lights up on hover without lifting (cards that hold buttons). */
+.gl-x-hovercard { transition: border-color 150ms ease; }
+.gl-x-hovercard:hover { border-color: var(--border-accent); }

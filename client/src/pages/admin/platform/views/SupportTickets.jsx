@@ -94,8 +94,13 @@ const SupportTickets = () => {
                         </div>
                         <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', margin: '0 0 4px' }}>{selectedTicket.subject}</h2>
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                            From <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{selectedTicket.creatorId?.username}</span> ({selectedTicket.companyId?.name})
+                            From <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{selectedTicket.creatorId?.username}</span> ({selectedTicket.companyId?.name || 'Personal account'}) · {selectedTicket.category || 'question'}
                         </p>
+                        {(selectedTicket.context?.path || selectedTicket.context?.userAgent) && (
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {[selectedTicket.context.path, selectedTicket.context.appVersion, selectedTicket.context.userAgent].filter(Boolean).join(' · ')}
+                            </p>
+                        )}
                     </div>
 
                     {}
@@ -182,7 +187,7 @@ const TicketListItem = ({ ticket, selected, onClick }) => {
             <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ticket.subject}</div>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: '8px' }}>{ticket.description}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{ticket.companyId?.name}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{ticket.companyId?.name || 'Personal account'}{ticket.category ? ` · ${ticket.category}` : ''}</span>
                 <StatusBadge status={ticket.status} />
             </div>
         </div>

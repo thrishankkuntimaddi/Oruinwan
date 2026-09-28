@@ -20,6 +20,9 @@ exports.sendMessage = async (req, res) => {
         }
 
         
+        if (!require('mongoose').Types.ObjectId.isValid(String(recipientId))) {
+            return res.status(400).json({ message: 'Invalid recipient' });
+        }
         const recipient = await User.findById(recipientId);
         if (!recipient) {
             return res.status(404).json({ message: 'Recipient not found' });

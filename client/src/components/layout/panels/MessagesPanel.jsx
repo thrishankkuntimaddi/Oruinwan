@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import UserAvatarImage from '../../../shared/components/ui/UserAvatarImage';
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { Plus, Search, Trash2, CheckSquare, Megaphone, Settings2, X } from "lucide-react";
+import { Plus, Search, Trash2, Check, Megaphone, Settings2, X, MessageSquare } from "lucide-react";
+import WorkspacePanel, { PanelEmpty } from "../WorkspacePanel";
+import "../shell.css";
 import { useWorkspace } from "../../../contexts/WorkspaceContext";
 import { useSocket } from "../../../contexts/SocketContext";
 import { useToast } from "../../../contexts/ToastContext";
@@ -23,6 +25,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     const seedConversationUnread = notif?.seedConversationUnread;
 
     const [searchQuery, setSearchQuery] = useState("");
+    const [reloadKey, setReloadKey] = useState(0);
     const [showCreateDM, setShowCreateDM] = useState(false);
     const [showBroadcast, setShowBroadcast] = useState(false);
     const [broadcasts, setBroadcasts] = useState([]);
@@ -37,6 +40,8 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     const activeChatId = dmId || channelId || null;
 
     const [contacts, setContacts] = useState([]);
+    const contactsRef = useRef(contacts);
+    contactsRef.current = contacts;
     const [isLoading, setIsLoading] = useState(false);
 
     const { socket } = useSocket();
@@ -76,7 +81,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
             setContacts(prev => {
                 const idx = prev.findIndex(c => String(c.id) === dmId);
                 if (idx === -1) return prev;
-                const updated = { ...prev[idx], lastMessage: text || prev[idx].lastMessage };
+                const updated = { ...prev[idx], lastMessage: text || prev[idx].lastMessage, lastMessageId: msg._id ? String(msg._id) : prev[idx].lastMessageId };
                 return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
             });
         };
@@ -87,7 +92,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     useEffect(() => {
         const loadDMs = async () => {
             if (!workspaceId) return;
-            setIsLoading(true);
+            if (!contactsRef.current.length) setIsLoading(true); // quiet refresh when a list is already shown
             try {
                 const res = await api.get(`/api/v2/messages/workspace/${workspaceId}/dms`);
                 const formatted = (res.data.sessions || []).map(session => {
@@ -107,6 +112,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                         unread: session.unreadCount || 0,
                         lastMessage: session.lastMessagePreview ? "" : (sanitizePreview(session.lastMessage) || ""),
                         preview: session.lastMessagePreview,
+                        lastMessageId: session.lastMessageId ? String(session.lastMessageId) : null,
                         type: "dm"
                     };
                 });
@@ -121,7 +127,22 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         };
 
         loadDMs();
-    }, [workspaceId, activeWorkspace?.currentUserId]);
+    }, [workspaceId, activeWorkspace?.currentUserId, reloadKey]);
+
+    // A deleted last message must not linger as the preview: reload the list
+    // (the server skips deleted messages) when the deleted one was a preview.
+    useEffect(() => {
+        if (!socket) return undefined;
+        const onDeleted = (e) => {
+            const id = String(e?.messageId || '');
+            if (!id) return;
+            const hit = contactsRef.current.some(c => c.lastMessageId === id || (e.dm && String(c.id) === String(e.dm) && !c.lastMessageId));
+            if (hit) setReloadKey(k => k + 1);
+        };
+        socket.on('message-deleted', onDeleted);
+        socket.on('message:deleted', onDeleted);
+        return () => { socket.off('message-deleted', onDeleted); socket.off('message:deleted', onDeleted); };
+    }, [socket]);
 
     
     useEffect(() => {
@@ -147,6 +168,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
     const displayList = [...broadcasts, ...contacts];
 
     const unreadFor = (item) => (item.type === 'dm' && notif ? notif.getUnread('dm', item.id) : item.unread || 0);
+    const totalUnread = displayList.reduce((n, item) => n + (unreadFor(item) > 0 ? 1 : 0), 0);
 
     const filteredList = displayList.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -250,7 +272,10 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         setShowDeleteConfirm(false);
     };
 
-    const Item = ({ item }) => {
+    const PRESENCE = { active: 'is-online', online: 'is-online', away: 'is-away', dnd: 'is-busy', busy: 'is-busy' };
+    const avatarSize = isMobile ? 40 : 30;
+
+    const renderItem = (item) => {
         const isBroadcast = item.type === "broadcast";
         const isSelected = selectedItems.has(item.id);
 
@@ -269,8 +294,6 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                 }
                 setSelectedItems(newSelected);
             } else {
-                
-                
                 const targetPath = isBroadcast
                     ? `/workspace/${workspaceId}/messages/broadcast/${item.id}`
                     : `/workspace/${workspaceId}/messages/dm/${item.id}`;
@@ -280,169 +303,145 @@ const MessagesPanel = ({ title, isMobile = false }) => {
         };
 
         const unread = unreadFor(item);
-
-        const rowStyle = {
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            padding: isMobile ? '10px 14px' : '8px 10px',
-            minHeight: isMobile ? '60px' : 'auto',
-            cursor: 'pointer', border: '1px solid transparent',
-            background: isSelected ? 'rgba(184,149,106,0.12)'
-                : isActive ? 'rgba(184,149,106,0.08)'
-                    : 'transparent',
-            borderColor: isActive ? 'rgba(184,149,106,0.2)' : 'transparent',
-            transition: 'all 150ms ease',
-            WebkitTapHighlightColor: 'transparent',
-        };
-
-        const statusColor = item.status === 'active' || item.status === 'online' ? '#22c55e'
-            : item.status === 'away' ? '#f59e0b'
-                : item.status === 'dnd' || item.status === 'busy' ? '#ef4444'
-                    : 'rgba(228,228,228,0.2)';
-
-        const avatarBg = isActive ? 'rgba(184,149,106,0.15)' : 'rgba(255,255,255,0.07)';
-        const avatarColor = isActive ? '#b8956a' : 'rgba(228,228,228,0.6)';
+        const classes = ['gl-item', 'gl-shell-row', 'gl-shell-row--tall'];
+        if (isActive && !isSelectionMode) classes.push('is-active');
+        if (isSelected) classes.push('is-selected');
+        if (unread > 0) classes.push('is-unread');
 
         return (
             <div
                 key={item.id}
                 data-testid={item.type === 'dm' ? 'dm-row' : undefined}
+                role="link"
+                tabIndex={0}
+                className={classes.join(' ')}
+                aria-current={isActive && !isSelectionMode ? 'page' : undefined}
                 onClick={handleClick}
-                style={rowStyle}
-                onMouseEnter={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                onMouseLeave={e => { if (!isActive && !isSelected) e.currentTarget.style.background = 'transparent'; }}
+                onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); handleClick(e); } }}
+                style={{ gap: '10px', minHeight: isMobile ? '60px' : undefined, WebkitTapHighlightColor: 'transparent' }}
             >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
-                    {isSelectionMode && (
-                        <div style={{ width: '14px', height: '14px', border: `1px solid ${isSelected ? '#b8956a' : 'rgba(255,255,255,0.2)'}`, background: isSelected ? '#b8956a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {isSelected && <CheckSquare size={9} style={{ color: '#0c0c0c' }} />}
-                        </div>
+                {isSelectionMode && (
+                    <span className={`gl-shell-check${isSelected ? ' is-on' : ''}`} aria-hidden="true">
+                        {isSelected && <Check size={10} strokeWidth={3} />}
+                    </span>
+                )}
+                <span className="gl-shell-avatar">
+                    {isBroadcast ? (
+                        <span className="gl-shell-avatar-round" style={{ width: avatarSize, height: avatarSize }}>
+                            <Megaphone size={isMobile ? 17 : 13} />
+                        </span>
+                    ) : (
+                        <UserAvatarImage
+                            userId={item.userId}
+                            name={item.name}
+                            src={item.avatar}
+                            size={avatarSize}
+                            initialStyle={{
+                                background: isActive ? 'var(--gl-accent-soft)' : 'var(--bg-active)',
+                                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
+                                fontFamily: 'var(--font)',
+                            }}
+                        />
                     )}
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                        {isBroadcast ? (
-                            <div style={{ width: isMobile ? '42px' : '34px', height: isMobile ? '42px' : '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: avatarBg, color: avatarColor }}>
-                                <Megaphone size={isMobile ? 17 : 14} />
-                            </div>
-                        ) : (
-                            <UserAvatarImage
-                                userId={item.userId}
-                                name={item.name}
-                                src={item.avatar}
-                                size={isMobile ? 42 : 34}
-                                initialStyle={{ background: avatarBg, color: avatarColor, fontFamily: 'Inter, system-ui, sans-serif' }}
-                            />
-                        )}
-                        {!isBroadcast && (
-                            <div style={{ position: 'absolute', bottom: '-1px', right: '-1px', width: isMobile ? '11px' : '9px', height: isMobile ? '11px' : '9px', borderRadius: '50%', background: statusColor, border: '2px solid #0c0c0c' }} />
-                        )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '13px', fontWeight: isActive || unread > 0 ? 600 : 400, color: isActive || unread > 0 ? '#e4e4e4' : 'rgba(228,228,228,0.7)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                            {item.name}
-                        </div>
-                        <div style={{ fontSize: '11px', color: unread > 0 ? 'var(--text-secondary)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                            {item.lastMessage || 'No messages yet'}
-                        </div>
-                    </div>
-                </div>
+                    {!isBroadcast && <span className={`gl-shell-presence ${PRESENCE[item.status] || ''}`} aria-hidden="true" />}
+                </span>
+                <span className="gl-shell-row-text">
+                    <span className="gl-shell-row-label">{item.name}</span>
+                    <span className="gl-shell-row-sub">{item.lastMessage || 'No messages yet'}</span>
+                </span>
 
                 {unread > 0 && !isSelectionMode && (
-                    <div style={{ minWidth: '18px', height: '18px', borderRadius: '9px', background: '#b8956a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#0c0c0c', fontWeight: 700, fontFamily: 'Inter, system-ui, sans-serif', padding: '0 4px' }}>
+                    <span className="gl-shell-unread" title={`${unread} unread`}>
                         {unread > 99 ? '99+' : unread}
-                    </div>
+                    </span>
                 )}
             </div>
         );
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-base)' }}>
-            {}
-            <div style={{ height: isMobile ? '48px' : '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', background: 'var(--bg-base)', flexShrink: 0, borderBottom: '1px solid var(--border-subtle)' }}>
-                <h2 style={{ fontWeight: 700, fontSize: '15px', color: 'var(--text-primary)', fontFamily: 'Inter, system-ui, sans-serif' }}>Messages</h2>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <button onClick={() => setIsSelectionMode(!isSelectionMode)}
-                        style={{ padding: '6px', background: isSelectionMode ? 'rgba(184,149,106,0.1)' : 'transparent', border: isSelectionMode ? '1px solid rgba(184,149,106,0.2)' : '1px solid transparent', color: isSelectionMode ? '#b8956a' : 'rgba(228,228,228,0.4)', cursor: 'pointer', transition: 'all 150ms ease' }}
+        <WorkspacePanel
+            icon={MessageSquare}
+            title="Messages"
+            subtitle={activeWorkspace?.name || title || 'Direct messages'}
+            actions={(
+                <>
+                    <button type="button" className="gl-icon-btn"
+                        onClick={() => { setIsSelectionMode(!isSelectionMode); if (isSelectionMode) setSelectedItems(new Set()); }}
+                        aria-pressed={isSelectionMode}
                         title="Manage Messages"
-                        onMouseEnter={e => { if (!isSelectionMode) e.currentTarget.style.color = '#e4e4e4'; }}
-                        onMouseLeave={e => { if (!isSelectionMode) e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
-                    ><Settings2 size={18} /></button>
-                    <button onClick={() => setShowCreateDM(true)}
-                        style={{ padding: '6px', background: 'transparent', border: '1px solid transparent', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
+                        aria-label="Manage messages"
+                    ><Settings2 size={15} /></button>
+                    <button type="button" className="gl-icon-btn"
+                        onClick={handleBroadcast}
+                        title="New Broadcast"
+                        aria-label="New broadcast"
+                    ><Megaphone size={15} /></button>
+                    <button type="button" className="gl-icon-btn"
+                        onClick={() => setShowCreateDM(true)}
                         title="New Message"
-                        onMouseEnter={e => { e.currentTarget.style.color = '#b8956a'; }}
-                        onMouseLeave={e => { e.currentTarget.style.color = 'rgba(228,228,228,0.4)'; }}
-                    ><Plus size={18} /></button>
-                </div>
-            </div>
-
-            {}
-            <div style={{ padding: '10px 12px 4px' }}>
-                <div style={{ position: 'relative' }}>
-                    <Search style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} size={13} />
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search messages..."
-                        style={{ width: '100%', paddingLeft: '30px', paddingRight: '10px', paddingTop: '6px', paddingBottom: '6px', background: 'var(--bg-hover)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', fontSize: '12px', outline: 'none', fontFamily: 'Inter, system-ui, sans-serif', boxSizing: 'border-box' }} />
-                </div>
-            </div>
-
-            {}
-            <div style={{ padding: '6px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                    {['all', 'unread'].map(f => (
-                        <button key={f} onClick={() => setFilter(f)}
-                            style={{ padding: '3px 10px', fontSize: '11px', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', background: filter === f ? 'rgba(184,149,106,0.12)' : 'rgba(255,255,255,0.04)', border: `1px solid ${filter === f ? 'rgba(184,149,106,0.25)' : 'rgba(255,255,255,0.08)'}`, color: filter === f ? '#b8956a' : 'rgba(228,228,228,0.4)', transition: 'all 150ms ease' }}>
-                            {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </button>
-                    ))}
-                </div>
-                <button onClick={handleBroadcast}
-                    style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', transition: 'all 150ms ease' }}
-                    title="New Broadcast"
-                    onMouseEnter={e => e.currentTarget.style.color = '#b8956a'}
-                    onMouseLeave={e => e.currentTarget.style.color = 'rgba(228,228,228,0.4)'}
-                ><Megaphone size={15} /></button>
-            </div>
-
-            {}
+                        aria-label="New message"
+                    ><Plus size={16} /></button>
+                </>
+            )}
+            tools={(
+                <>
+                    <div className="gl-search">
+                        <Search size={13} />
+                        <input type="text" className="gl-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="Search messages..." aria-label="Search conversations" />
+                    </div>
+                    <div className="gl-tabs" role="tablist" aria-label="Filter conversations">
+                        {['all', 'unread'].map(f => (
+                            <button key={f} type="button" role="tab" className="gl-tab" aria-selected={filter === f} onClick={() => setFilter(f)}>
+                                {f.charAt(0).toUpperCase() + f.slice(1)}
+                                {f === 'unread' && totalUnread > 0 && <span className="gl-count" style={{ color: 'var(--accent)', background: 'var(--gl-accent-soft)' }}>{totalUnread > 99 ? '99+' : totalUnread}</span>}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+            bodyClassName="custom-scrollbar"
+            bodyProps={{ style: { paddingTop: isSelectionMode ? 0 : undefined } }}
+        >
             {isSelectionMode && (
-                <div style={{ padding: '8px 16px', background: 'rgba(184,149,106,0.08)', borderBottom: '1px solid rgba(184,149,106,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10 }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#b8956a', fontFamily: 'Inter, system-ui, sans-serif' }}>{selectedItems.size} selected</span>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => setShowDeleteConfirm(true)} disabled={selectedItems.size === 0}
-                            style={{ padding: '5px', background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: selectedItems.size === 0 ? 0.4 : 1 }} title="Delete">
-                            <Trash2 size={15} /></button>
-                        <button onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
-                            style={{ padding: '5px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }} title="Cancel">
-                            <X size={15} /></button>
+                <div className="gl-shell-selbar">
+                    <span>{selectedItems.size} selected</span>
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                        <button type="button" className="gl-icon-btn is-danger" onClick={() => setShowDeleteConfirm(true)} disabled={selectedItems.size === 0}
+                            title="Delete" aria-label="Delete selected">
+                            <Trash2 size={14} /></button>
+                        <button type="button" className="gl-icon-btn" onClick={() => { setIsSelectionMode(false); setSelectedItems(new Set()); }}
+                            title="Cancel" aria-label="Cancel selection">
+                            <X size={14} /></button>
                     </div>
                 </div>
             )}
 
-            {}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '4px 4px 8px' }}>
-                <p style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', padding: '4px 12px 8px', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                    {activeWorkspace?.name || 'Workspace'} Conversations
-                </p>
-
-                {isLoading ? (
-                    <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {[60, 75, 50, 85, 65].map((w, i) => (
-                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px' }}>
-                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--bg-active)', flexShrink: 0 }} />
-                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ height: '10px', background: 'var(--bg-active)', width: `${w}%` }} />
-                                    <div style={{ height: '8px', background: 'var(--bg-hover)', width: `${w * 0.6}%` }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                ) : filteredList.length > 0 ? (
-                    filteredList.map((item) => <Item key={item.id} item={item} />)
-                ) : (
-                    <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'Inter, system-ui, sans-serif' }}>
-                        {searchQuery ? 'No conversations found' : 'No conversations yet'}
-                    </div>
-                )}
-            </div>
+            {isLoading ? (
+                <div aria-busy="true" aria-label="Loading conversations" style={{ paddingTop: '6px' }}>
+                    {[60, 75, 50, 85, 65].map((w, i) => (
+                        <div key={i} className="gl-shell-skel is-round"><i /><i style={{ width: `${w}%` }} /></div>
+                    ))}
+                </div>
+            ) : filteredList.length > 0 ? (
+                filteredList.map(renderItem)
+            ) : searchQuery ? (
+                <PanelEmpty icon={Search} title="No conversations found" text="Try a different name." />
+            ) : filter === 'unread' ? (
+                <PanelEmpty icon={MessageSquare} title="You're all caught up" text="No unread conversations." />
+            ) : (
+                <PanelEmpty
+                    icon={MessageSquare}
+                    title="No conversations yet"
+                    text="Start a direct message with someone in this workspace."
+                    action={(
+                        <button type="button" className="gl-btn gl-btn--primary gl-btn--sm" onClick={() => setShowCreateDM(true)}>
+                            <Plus size={13} /> New message
+                        </button>
+                    )}
+                />
+            )}
 
             {}
             <ConfirmationModal
@@ -470,7 +469,7 @@ const MessagesPanel = ({ title, isMobile = false }) => {
                     onSendBroadcast={handleSendBroadcast}
                 />
             )}
-        </div>
+        </WorkspacePanel>
     );
 };
 

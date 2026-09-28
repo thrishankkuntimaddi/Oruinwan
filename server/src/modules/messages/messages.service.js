@@ -30,6 +30,9 @@ async function createMessage(messageData, io = null) {
         meeting = null,
         checklistCount = 0,
         linkPreview = null,
+        // Integration cards (type 'integration') are created only by the integrations
+        // feature; the controllers never forward this field from a client request.
+        integration = null,
         
         mentionText = '',
     } = messageData;
@@ -41,9 +44,12 @@ async function createMessage(messageData, io = null) {
     
     
     // Checklists are encrypted too: their title and items live in the ciphertext.
-    const TEXT_TYPES = ['message', 'checklist'];
+    const TEXT_TYPES = ['message', 'checklist', 'integration'];
     if (TEXT_TYPES.includes(type) && (!ciphertext || !messageIv)) {
         throw new Error('E2EE required for text messages: missing ciphertext or messageIv');
+    }
+    if (type === 'integration' && !integration) {
+        throw Object.assign(new Error('Integration messages can only be posted by an integration'), { statusCode: 400, status: 400 });
     }
 
     
@@ -77,6 +83,7 @@ async function createMessage(messageData, io = null) {
         messageDoc.checklist = Array.from({ length: n }, (_, order) => ({ order, checked: false }));
     }
     if (linkPreview) messageDoc.linkPreview = linkPreview;
+    if (type === 'integration') messageDoc.integration = integration;
 
     logger.debug({ type }, `Creating message${type === 'message' ? ' 🔐' : ''}`);
 
@@ -211,7 +218,7 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
     }
     if (recipientIds.length === 0) return;
 
-    const isText = type === 'message';
+    const isText = type === 'message' || type === 'integration';
     const preview = isText && message.payload?.ciphertext
         ? { ciphertext: message.payload.ciphertext, messageIv: message.payload.messageIv }
         : null;
@@ -277,6 +284,7 @@ async function fanOutMessage(message, { channel, dm, workspace, sender, type, pa
         notificationService.emitToUser(io, recipientId, 'conversation:activity', {
             ...activity,
             isMention: broadcastTo(recipientId) || mentionedSet.has(recipientId),
+            isDirectMention: mentionedSet.has(recipientId),
             muted: mutedIds.has(recipientId),
         });
     }
@@ -615,12 +623,19 @@ async function getUserDMSessions(userId, workspaceId) {
     const sessionList = await Promise.all(
         sessions.map(async (session) => {
             const cleared = (session.clearedAt || []).find(c => String(c.user) === String(userId));
+            // The preview is the newest top-level message this user can still see
+            // (not deleted for everyone, not hidden with "delete for me", not a system line).
             const lastMsg = await Message.findOne({
                 dm: session._id,
+                parentId: null,
+                type: { $ne: 'system' },
+                isDeleted: { $ne: true },
+                isDeletedUniversally: { $ne: true },
+                hiddenFor: { $ne: userId },
                 ...(cleared?.clearedAt ? { createdAt: { $gt: cleared.clearedAt } } : {}),
             })
                 .sort({ createdAt: -1 })
-                .select('payload type text createdAt sender')
+                .select('_id payload type text createdAt sender')
                 .populate('sender', 'username');
 
             
@@ -667,6 +682,7 @@ async function getUserDMSessions(userId, workspaceId) {
                 lastMessagePreview: lastMsg?.type === 'message' && lastMsg.payload?.ciphertext
                     ? { ciphertext: lastMsg.payload.ciphertext, messageIv: lastMsg.payload.messageIv }
                     : null,
+                lastMessageId: lastMsg?._id || null,
                 lastMessageAt: lastMsg?.createdAt || session.createdAt,
                 unreadCount
             };
@@ -899,6 +915,8 @@ async function deleteMessage(messageId, userId, io, scope = 'everyone', socketId
     if (io) {
         io.to(room).emit('message:deleted', {
             messageId,
+            dm: message.dm || null,
+            channel: message.channel || null,
             deletedBy: userId,
             deletedByName: message.sender?.username || null,
             deletedAt: message.deletedAt

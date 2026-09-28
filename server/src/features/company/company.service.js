@@ -9,8 +9,12 @@ const sendEmail = require('../../../utils/sendEmail');
 const XLSX = require('xlsx');
 const { uploadToGCS } = require('../../modules/uploads/upload.service');
 
+// Never sent to clients: OTPs, verification tokens, SSO secrets, uploaded documents.
+const COMPANY_SECRET_FIELDS = '-phoneOTP -phoneOTPExpiresAt -domainVerificationToken -domainVerificationExpires -ssoConfig -documents -metadata';
+
 async function getCompanyById(companyId) {
     const company = await Company.findById(companyId)
+        .select(COMPANY_SECRET_FIELDS)
         .populate('admins.user', 'username email profilePicture')
         .populate('defaultWorkspace', 'name')
         .populate({
@@ -32,8 +36,8 @@ async function checkUserAccess(userId, companyId) {
         return { hasAccess: false, user: null };
     }
 
-    
-    const hasAccess = !user.companyId || user.companyId.toString() === companyId;
+    // Only members of this very company (no shortcut for company-less accounts).
+    const hasAccess = !!user.companyId && user.companyId.toString() === String(companyId);
 
     return { hasAccess, user };
 }
@@ -45,11 +49,40 @@ async function checkIsAdmin(userId, companyId) {
         return { isAdmin: false, user: null };
     }
 
-    const isAdmin = user.companyId &&
-        user.companyId.toString() === companyId &&
-        (user.companyRole === 'owner' || user.companyRole === 'admin');
+    const isCoOwner = user.coOwnerOf && user.companyId && String(user.coOwnerOf) === String(user.companyId);
+    const isAdmin = !!user.companyId &&
+        user.companyId.toString() === String(companyId) &&
+        (user.companyRole === 'owner' || user.companyRole === 'admin' || !!isCoOwner);
 
     return { isAdmin, user };
+}
+
+const PROFILE_FIELDS = ['name', 'displayName', 'logo', 'website', 'industry', 'description'];
+const SETTINGS_FIELDS = ['timezone', 'theme', 'logo', 'phone', 'address', 'socialLinks', 'allowMemberWorkspaceCreation', 'allowPersonalWorkspaces'];
+const INVITE_POLICY_FIELDS = ['requireInvite', 'allowExternalInvite', 'defaultRole'];
+const OWNER_ONLY_FIELDS = ['plan', 'billingEmail'];
+
+/**
+ * Turns a PUT /api/companies/:id body into a safe $set. Profile fields and a
+ * few settings only; plan/billing need an owner; verification, domain, admins,
+ * activation and SSO are never changed through this route (silently dropped).
+ * Returns { updates } or { error, status }.
+ */
+function sanitizeCompanyUpdates(body = {}, requesterRole) {
+    const updates = {};
+    for (const k of PROFILE_FIELDS) if (body[k] !== undefined) updates[k] = body[k];
+    if (body.settings && typeof body.settings === 'object') {
+        for (const k of SETTINGS_FIELDS) if (body.settings[k] !== undefined) updates[`settings.${k}`] = body.settings[k];
+    }
+    if (body.invitePolicy && typeof body.invitePolicy === 'object') {
+        for (const k of INVITE_POLICY_FIELDS) if (body.invitePolicy[k] !== undefined) updates[`invitePolicy.${k}`] = body.invitePolicy[k];
+    }
+    const ownerOnly = OWNER_ONLY_FIELDS.filter((k) => body[k] !== undefined);
+    if (ownerOnly.length) {
+        if (requesterRole !== 'owner') return { error: `Only the company owner can change: ${ownerOnly.join(', ')}`, status: 403 };
+        for (const k of ownerOnly) updates[k] = body[k];
+    }
+    return { updates };
 }
 
 async function updateCompany(companyId, updates) {
@@ -58,13 +91,14 @@ async function updateCompany(companyId, updates) {
         { $set: updates },
         { new: true, runValidators: true }
     )
+        .select(COMPANY_SECRET_FIELDS)
         .populate('admins.user', 'username email profilePicture')
         .populate('defaultWorkspace', 'name');
 
     return company;
 }
 
-async function getCompanyMembers(companyId) {
+async function getCompanyMembers(companyId, { callerRole } = {}) {
     const members = await User.find({
         companyId,
         accountStatus: { $ne: 'removed' }, 
@@ -80,6 +114,9 @@ async function getCompanyMembers(companyId) {
         .populate('workspaces.workspace', 'name')
         .lean();
 
+    if (callerRole === 'guest') {
+        return members.map(({ phone, corporateId, ...rest }) => rest); // eslint-disable-line no-unused-vars
+    }
     return members;
 }
 
@@ -101,39 +138,22 @@ async function getCompanyMetrics(companyId) {
 }
 
 async function updateMemberRole({ companyId, targetUserId, requesterId, newRole, req }) {
-    const validRoles = ['owner', 'admin', 'manager', 'member', 'guest'];
+    const { assignRoleError, manageUserError } = require('../../shared/roleCeiling');
+    const fail = (message, status) => Object.assign(new Error(message), { status });
 
-    if (!validRoles.includes(newRole)) {
-        throw new Error('Invalid role');
-    }
-
-    
     const company = await Company.findById(companyId);
-    if (!company) {
-        throw new Error('Company not found');
-    }
+    if (!company) throw fail('Company not found', 404);
 
-    
-    if (!company.isAdmin(requesterId)) {
-        throw new Error('Only company admins can change roles');
-    }
+    // Roles come from the database, not the stored admins list (it can be stale).
+    const requester = await User.findById(requesterId).select('companyId companyRole coOwnerOf').lean();
+    const roleError = assignRoleError(requester, newRole);
+    if (roleError) throw fail(roleError, roleError.startsWith('Invalid') ? 400 : 403);
 
-    
-    const requester = await User.findById(requesterId);
     const targetUser = await User.findById(targetUserId);
+    if (!targetUser || String(targetUser.companyId) !== String(companyId)) throw fail('User not found', 404);
 
-    if (!targetUser) {
-        throw new Error('User not found');
-    }
-
-    if (targetUser.companyId.toString() !== companyId) {
-        throw new Error('User does not belong to this company');
-    }
-
-    
-    if (newRole === 'owner' && requester.companyRole !== 'owner') {
-        throw new Error('Only owners can assign owner role');
-    }
+    const manageError = manageUserError(requester, targetUser);
+    if (manageError) throw fail(manageError, 403);
 
     
     const oldRole = targetUser.companyRole;
@@ -180,6 +200,8 @@ async function updateMemberRole({ companyId, targetUserId, requesterId, newRole,
 }
 
 module.exports = {
+    sanitizeCompanyUpdates,
+    COMPANY_SECRET_FIELDS,
     getCompanyById,
     checkUserAccess,
     checkIsAdmin,

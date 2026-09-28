@@ -6,6 +6,8 @@ import ChecklistMessage from '../ChecklistMessage';
 import { useTranslation } from '../../../hooks/useTranslation';
 import { useAutoTranslateLang } from '../../../utils/autoTranslate';
 import { useDateFormatter } from '../../../hooks/useUserPreferences';
+import PrLinkChips from '../../integrations/PrLinkChips';
+import { useFlag } from '../../../contexts/FeatureFlagsContext';
 
 
 function MessageEvent({
@@ -26,6 +28,7 @@ function MessageEvent({
     const { getTranslation, requestTranslation, clearTranslation } = useTranslation();
     // Message times follow Settings → Language & region (time zone, 12/24-hour).
     const formatTime = useDateFormatter().time;
+    const integrationsOn = useFlag('integrations');
     
     
     
@@ -262,10 +265,13 @@ function MessageEvent({
     };
 
     const Item = isDM ? DMMessageItem : ChannelMessageItem;
+    // Pasted GitHub pull request links get a "View changes" button (integrations flag).
+    const showPrLinks = integrationsOn && msgType === 'message' && !enrichedMessage.isDeleted && /github\.com\/[^\s/]+\/[^\s/]+\/pull\/\d/i.test(messageText || '');
 
     return (
         <>
             <Item {...itemProps} />
+            {showPrLinks && <PrLinkChips text={messageText} messageId={enrichedMessage._id} />}
             {renderChecklist && (
                 <div style={{ paddingLeft: isDM ? 52 : 56, paddingRight: 16, paddingBottom: 4 }}>
                     <ChecklistMessage

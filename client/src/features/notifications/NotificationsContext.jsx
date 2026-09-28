@@ -8,7 +8,16 @@ import { useDesktopNotification } from './useDesktopNotification';
 import logger from '../../utils/logger';
 import { useToast } from '../../contexts/ToastContext';
 import { decryptTextOrNull } from '../../services/messageEncryptionService';
-import { NOTIFICATION_PREF_DEFAULTS, PREFS_EVENT, fetchAccountNotificationPrefs } from './accountNotificationPrefs';
+import { NOTIFICATION_PREF_DEFAULTS, PREFS_EVENT, WORKSPACE_PREFS_EVENT, fetchAccountNotificationPrefs } from './accountNotificationPrefs';
+import {
+    COALESCE_WINDOW_MS, burstTitle, conversationInPath, createBurstCounter,
+    decideMessageAlert, decideReminderAlert, decideStoredAlert, notificationConversation,
+} from './notificationPolicy';
+import {
+    anotherTabIsActive, getOpenThread, isLeaderTab, onAttentionChange, startTabCoordination,
+    tabHasFocus, tabIsActive, tabIsVisible,
+} from './attention';
+import { closeOsNotifications, osNotificationsAvailable, playChime, showOsNotification } from './osNotifier';
 
 const NotificationsContext = createContext(null);
 
@@ -44,31 +53,18 @@ export function notificationHref(n, workspaceId) {
     return `/workspace/${ws}${link.startsWith('/') ? link : `/${link}`}`;
 }
 
-/** The conversation open in the URL, if any ({ type: 'dm'|'channel', id }). */
-function conversationInPath(pathname) {
-    const m = /\/(dm|channel)\/([a-f0-9]{24})(?:\/|$)/.exec(pathname || '');
-    return m ? { type: m[1], id: m[2] } : null;
-}
-
 /** Does this stored notification belong to that conversation? */
 function isAboutConversation(n, conv) {
     if (!conv) return false;
-    const meta = n?.meta || {};
-    if (conv.type === 'dm') return String(meta.dmSessionId || '') === conv.id;
-    return String(meta.channelId || '') === conv.id && !meta.dmSessionId;
-}
-
-/** Is the given conversation the one currently on screen? */
-function isViewing(pathname, type, id) {
-    if (!id) return false;
-    return pathname.includes(`/${type}/${id}`);
+    const own = notificationConversation(n);
+    return !!own && own.type === conv.type && own.id === conv.id;
 }
 
 export function NotificationsProvider({ children }) {
     const { addNotificationListener, socket } = useSocket();
     const { activeWorkspace } = useWorkspace();
     const { accessToken, user } = useAuth();
-    const { triggerDesktopNotification } = useDesktopNotification();
+    useDesktopNotification(); // asks for OS notification permission once
     const { showToast } = useToast();
     const location = useLocation();
     const navigate = useNavigate();
@@ -105,6 +101,23 @@ export function NotificationsProvider({ children }) {
         window.addEventListener(PREFS_EVENT, onPrefs);
         return () => { cancelled = true; window.removeEventListener(PREFS_EVENT, onPrefs); };
     }, [accessToken]);
+
+    // Per-workspace toggles (Notifications page → Settings): `message: false`
+    // silences message alerts here too (the server already skips the bell).
+    const workspacePrefsRef = useRef(null);
+    useEffect(() => {
+        workspacePrefsRef.current = null;
+        if (!accessToken || !workspaceId) return undefined;
+        let cancelled = false;
+        api.get('/api/notifications/preferences', { params: { workspaceId } })
+            .then(({ data }) => { if (!cancelled) workspacePrefsRef.current = data?.preferences || null; })
+            .catch(() => { /* defaults: everything on */ });
+        const onWsPrefs = (e) => {
+            if (e?.detail && String(e.detail.workspaceId) === String(workspaceId)) workspacePrefsRef.current = e.detail.preferences;
+        };
+        window.addEventListener(WORKSPACE_PREFS_EVENT, onWsPrefs);
+        return () => { cancelled = true; window.removeEventListener(WORKSPACE_PREFS_EVENT, onWsPrefs); };
+    }, [accessToken, workspaceId]);
     useEffect(() => {
         seenNotificationIdsRef.current = new Set(notifications.map(n => n._id).filter(Boolean));
     }, [notifications]);
@@ -220,22 +233,68 @@ export function NotificationsProvider({ children }) {
         return totals;
     }, [conversationUnread]);
 
-    const notifyNative = useCallback((title, body, route = {}) => {
-        const prefs = prefsRef.current;
-        if (!prefs.desktopPush) return;
-        try {
-            if (window.chttrixDesktop) {
-                window.chttrixDesktop.notify({ type: route.type || 'system', title, body, silent: !prefs.sound, ...route });
-            } else {
-                triggerDesktopNotification(title, body, undefined, { silent: !prefs.sound });
-            }
-        } catch (err) {
-            logger.warn('[NotificationsContext] native notification failed:', err);
-        }
-    }, [triggerDesktopNotification]);
+    // ── Where the user is looking (see notificationPolicy.js) ─────────────
+    useEffect(() => { startTabCoordination(); }, []);
+    const toastBurstRef = useRef(createBurstCounter(COALESCE_WINDOW_MS));
+    const osBurstRef = useRef(createBurstCounter(Infinity));
 
-    // New message anywhere in the workspace: bump the badge and, for DMs and
-    // mentions, show a compact toast (unless that conversation is on screen).
+    const policyContext = useCallback((extra = {}) => ({
+        currentUserId,
+        workspaceId,
+        pathname: pathnameRef.current,
+        visible: tabIsVisible(),
+        focused: tabHasFocus(),
+        otherTabActive: anotherTabIsActive(),
+        isLeader: isLeaderTab(),
+        canNotifyOs: osNotificationsAvailable(),
+        openThreadId: getOpenThread(),
+        ...extra,
+    }), [currentUserId, workspaceId]);
+
+    const policyPrefs = () => ({ ...prefsRef.current, workspace: workspacePrefsRef.current });
+
+    // Back in the app: the OS notifications have done their job.
+    useEffect(() => onAttentionChange((active) => {
+        if (!active) return;
+        closeOsNotifications();
+        osBurstRef.current.reset();
+    }), []);
+
+    // Tell the server what this tab shows, so it can skip mobile push for a
+    // conversation already on screen (re-sent while active, and on reconnect).
+    const openConvForPresence = conversationInPath(location.pathname);
+    const presenceConvKey = openConvForPresence ? convKey(openConvForPresence.type, openConvForPresence.id) : '';
+    useEffect(() => {
+        if (!socket) return undefined;
+        const report = () => {
+            if (!socket.connected) return;
+            const [type, id] = presenceConvKey ? presenceConvKey.split(':') : [null, null];
+            socket.emit('presence:viewing', {
+                conversationType: type,
+                conversationId: id,
+                visible: tabIsVisible(),
+                focused: tabHasFocus(),
+            });
+        };
+        report();
+        const off = onAttentionChange(report);
+        const timer = setInterval(() => { if (tabIsActive()) report(); }, 60000);
+        socket.on('connect', report);
+        return () => { off(); clearInterval(timer); socket.off('connect', report); };
+    }, [socket, presenceConvKey]);
+
+    const notifyOs = useCallback(({ title, body, tag, onClick, route }) => {
+        showOsNotification({
+            title,
+            body,
+            tag,
+            silent: prefsRef.current.sound === false,
+            onClick,
+            route,
+        });
+    }, []);
+
+    // New top-level message anywhere in the workspace: badge + (maybe) alert.
     useEffect(() => {
         const unsubscribe = addNotificationListener(async (event, payload) => {
             if (event === 'conversation:read') {
@@ -245,19 +304,15 @@ export function NotificationsProvider({ children }) {
                 return;
             }
             if (event !== 'conversation:activity' || !payload) return;
-            if (String(payload.workspaceId) !== String(workspaceId)) return;
-            if (String(payload.senderId) === String(currentUserId)) return;
 
+            const decision = decideMessageAlert(payload, policyContext(), policyPrefs());
             const { conversationType: type, conversationId: id } = payload;
-            const viewing = isViewing(pathnameRef.current, type, id) && document.visibilityState === 'visible';
-            if (viewing) return;
-
             const k = convKey(type, id);
-            setConversationUnread(prev => ({ ...prev, [k]: (prev[k] || 0) + 1 }));
-            if (payload.isMention) setMentionedConversations(prev => ({ ...prev, [k]: true }));
-
-            const wantsAlert = type === 'dm' ? prefsRef.current.dmNotifications !== false : !!payload.isMention;
-            if (!wantsAlert) return;
+            if (decision.count) {
+                setConversationUnread(prev => ({ ...prev, [k]: (prev[k] || 0) + 1 }));
+                if (payload.isMention) setMentionedConversations(prev => ({ ...prev, [k]: true }));
+            }
+            if (!decision.toast && !decision.os) return;
 
             let text = payload.kindLabel || null;
             if (!text && payload.preview?.ciphertext) {
@@ -268,26 +323,39 @@ export function NotificationsProvider({ children }) {
             const where = type === 'channel' && payload.channelName ? ` · #${payload.channelName}` : '';
             const path = conversationPath(workspaceId, type, id);
 
-            showToast(body, 'message', 4500, {
-                title: `${sender}${where}`,
-                avatar: payload.senderAvatar || null,
-                key: k,
-                onClick: () => navigate(path),
-            });
-            if (document.visibilityState !== 'visible') {
-                notifyNative(`${sender}${where}`, body, {
-                    type: payload.isMention ? 'mention' : 'message',
-                    workspaceId: String(workspaceId),
-                    channelId: type === 'channel' ? String(id) : undefined,
-                    dmSessionId: type === 'dm' ? String(id) : undefined,
+            if (decision.toast) {
+                const count = toastBurstRef.current.hit(k);
+                showToast(body, 'message', 4500, {
+                    title: burstTitle(sender, count, where),
+                    avatar: payload.senderAvatar || null,
+                    key: k,
+                    onClick: () => navigate(path),
+                });
+                if (decision.sound) playChime();
+            }
+            if (decision.os) {
+                const count = osBurstRef.current.hit(k);
+                notifyOs({
+                    title: burstTitle(sender, count, where),
+                    body,
+                    tag: `oruinwan:${k}`,
+                    onClick: () => navigate(path),
+                    route: {
+                        type: payload.isMention ? 'mention' : 'message',
+                        senderName: sender,
+                        channelName: payload.channelName || undefined,
+                        workspaceId: String(workspaceId),
+                        channelId: type === 'channel' ? String(id) : undefined,
+                        dmSessionId: type === 'dm' ? String(id) : undefined,
+                    },
                 });
             }
         });
         return unsubscribe;
-    }, [addNotificationListener, workspaceId, currentUserId, clearConversationUnread, showToast, navigate, notifyNative]);
+    }, [addNotificationListener, workspaceId, clearConversationUnread, showToast, navigate, notifyOs, policyContext]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Stored notifications (bell). DM/mention alerts were already surfaced by
-    // the activity handler, so only other types get a native notification here.
+    // Stored notifications (bell). DM/mention alerts are surfaced by the
+    // activity handler above; this one alerts for everything else.
     useEffect(() => {
         const unsubscribe = addNotificationListener(async (event, payload) => {
             if (event !== 'notification:new') return;
@@ -299,34 +367,50 @@ export function NotificationsProvider({ children }) {
                 if (seenNotificationIdsRef.current.has(nid)) return;
                 seenNotificationIdsRef.current.add(nid);
             }
-            const notification = await enrichPreview(raw);
-            setNotifications(prev => (nid && prev.some(n => n._id === nid)) ? prev : [notification, ...prev]);
-            setUnreadCount(c => c + 1);
+            const href = notificationHref(raw, workspaceId);
+            const decision = decideStoredAlert(raw, policyContext({ href }), policyPrefs());
+            const enriched = await enrichPreview(raw);
 
-            if (notification.type === 'dm' || notification.type === 'mention') return;
-            // "Only mentions and direct messages": everything else stays in the bell only.
-            if (prefsRef.current.mentionsOnly) return;
-            const meta = notification.meta || {};
-            const href = notificationHref(notification, workspaceId);
-            const isConversational = ['reaction', 'thread_reply'].includes(notification.type);
-            if (!isConversational) {
-                showToast(notification.body || '', 'message', 4500, {
-                    title: notification.title,
-                    key: `notif:${notification.type}`,
+            if (decision.markRead) {
+                // On screen already: store it read, never count it.
+                const notification = { ...enriched, read: true };
+                setNotifications(prev => (nid && prev.some(n => n._id === nid)) ? prev : [notification, ...prev]);
+                if (nid) api.patch(`/api/notifications/${nid}/read`).catch(() => {});
+                return;
+            }
+            setNotifications(prev => (nid && prev.some(n => n._id === nid)) ? prev : [enriched, ...prev]);
+            if (decision.count) setUnreadCount(c => c + 1);
+
+            const meta = enriched.meta || {};
+            if (decision.toast) {
+                showToast(enriched.body || '', 'message', 4500, {
+                    title: enriched.title,
+                    key: `notif:${enriched.type}`,
                     onClick: href ? () => navigate(href) : undefined,
                 });
+                if (decision.sound) playChime();
             }
-            if (document.visibilityState !== 'visible') {
-                notifyNative(notification.title, notification.body || 'Oruinwan', {
-                    type: notification.type.startsWith('task') ? 'task' : 'system',
-                    workspaceId: String(notification.workspaceId),
-                    channelId: meta.channelId ? String(meta.channelId) : undefined,
-                    dmSessionId: meta.dmSessionId ? String(meta.dmSessionId) : undefined,
+            if (decision.os) {
+                const tag = enriched.type === 'thread_reply' && meta.parentMessageId
+                    ? `oruinwan:thread:${meta.parentMessageId}`
+                    : `oruinwan:notif:${nid || enriched.type}`;
+                const count = enriched.type === 'thread_reply' ? osBurstRef.current.hit(tag) : 1;
+                notifyOs({
+                    title: count > 1 ? `${count} new thread replies` : enriched.title,
+                    body: enriched.body || 'Oruinwan',
+                    tag,
+                    onClick: href ? () => navigate(href) : undefined,
+                    route: {
+                        type: 'system',
+                        workspaceId: String(enriched.workspaceId),
+                        channelId: meta.channelId ? String(meta.channelId) : undefined,
+                        dmSessionId: meta.dmSessionId ? String(meta.dmSessionId) : undefined,
+                    },
                 });
             }
         });
         return unsubscribe;
-    }, [addNotificationListener, workspaceId, enrichPreview, showToast, navigate, notifyNative]);
+    }, [addNotificationListener, workspaceId, enrichPreview, showToast, navigate, notifyOs, policyContext]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // "Remind me" reminders fire from the server cron as 'reminder-fired'.
     useEffect(() => {
@@ -345,11 +429,15 @@ export function NotificationsProvider({ children }) {
             preview = preview || message.text || null;
             const snippet = preview ? `"${clip(preview)}"` : 'a message';
             const body = [payload.note, `${sender ? `${sender}: ` : ''}${snippet}`].filter(Boolean).join(' · ');
-            showToast(body, 'message', 8000, { title: 'Reminder' });
-            notifyNative('Reminder', body);
+            const decision = decideReminderAlert(policyContext(), policyPrefs());
+            if (decision.toast) showToast(body, 'message', 8000, { title: 'Reminder' });
+            if (decision.sound) playChime();
+            if (decision.os) {
+                notifyOs({ title: 'Reminder', body, tag: `oruinwan:reminder:${message._id || Date.now()}` });
+            }
         });
         return unsubscribe;
-    }, [addNotificationListener, showToast, notifyNative]);
+    }, [addNotificationListener, showToast, notifyOs, policyContext]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Latest rendered list, for counting what an update changes (updaters stay pure).
     const notificationsRef = useRef(notifications);

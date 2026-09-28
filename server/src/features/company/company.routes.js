@@ -7,6 +7,7 @@ const requireAuth = require("../../shared/middleware/auth");
 
 const requireCompanyMember = require("../../shared/middleware/requireCompanyMember");
 const { requireCompanyRole } = require("../../shared/utils/companyRole");
+const requireOwnCompany = require("../../shared/middleware/requireOwnCompany");
 
 router.post("/check-name", companyController.checkCompanyName);
 
@@ -39,6 +40,7 @@ router.get(
     "/:id/members",
     requireAuth,
     requireCompanyMember,
+    requireOwnCompany("id"),
     companyController.getCompanyMembers
 );
 
@@ -54,6 +56,7 @@ router.post(
     "/:id/start-setup",
     requireAuth,
     requireCompanyMember,
+    requireOwnCompany("id"),
     requireCompanyRole("admin"),
     companyController.startSetup
 );
@@ -62,6 +65,7 @@ router.put(
     "/:id/setup",
     requireAuth,
     requireCompanyMember,
+    requireOwnCompany("id"),
     requireCompanyRole("admin"),
     companyController.handleSetup
 );
@@ -70,6 +74,7 @@ router.get(
     "/:id/setup/template",
     requireAuth,
     requireCompanyMember,
+    requireOwnCompany("id"),
     requireCompanyRole("admin"),
     companyController.downloadTemplate
 );

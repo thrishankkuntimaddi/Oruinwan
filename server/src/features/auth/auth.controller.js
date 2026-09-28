@@ -116,7 +116,7 @@ exports.signup = async (req, res) => {
       if (invite) {
         userType = "company";
         companyId = invite.company;
-        companyRole = invite.role || "member";
+        companyRole = invite.role && invite.role !== "owner" ? invite.role : "member"; // never grants ownership
         assignedDepartment = invite.department;
         assignedManager = invite.metadata?.managerId;
 

@@ -14,7 +14,7 @@ const requireCompanyMember = async (req, res, next) => {
 
         
         const dbUser = await User.findById(jwtPayload.sub)
-            .select("companyId companyRole accountStatus username email profilePicture")
+            .select("companyId companyRole coOwnerOf managedDepartments accountStatus username email profilePicture")
             .lean();
 
         if (!dbUser) {
@@ -46,7 +46,10 @@ const requireCompanyMember = async (req, res, next) => {
 
         
         req.companyId = dbUser.companyId.toString();
-        req.companyRole = dbUser.companyRole || "member";
+        // A co-owner of this company acts with owner rights.
+        const isCoOwner = !!(dbUser.coOwnerOf && String(dbUser.coOwnerOf) === String(dbUser.companyId));
+        req.isCoOwner = isCoOwner;
+        req.companyRole = isCoOwner ? "owner" : (dbUser.companyRole || "member");
 
         
         req.user._dbUser = dbUser;

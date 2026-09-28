@@ -1,38 +1,28 @@
 import React from 'react';
 import { Activity } from 'lucide-react';
+import { Panel, Meter } from '../company-dash/dashUi';
 
-const PulseWidget = ({ className = '' }) => {
+/**
+ * Small metric list with bars. It used to show invented numbers (2.4h, 94%,
+ * 99.9%); now it only renders what the caller passes:
+ *   metrics = [{ label, value: '2.4h', percent: 75, tone }]
+ */
+const PulseWidget = ({ className = '', title = 'Pulse', metrics = [] }) => {
+    if (!metrics.length) return null;
     return (
-        <div className={`bg-white rounded-xl shadow-sm border border-gray-200 p-6 ${className}`}>
-            <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                <Activity size={18} className="text-indigo-500" /> Pulse
-            </h3>
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-500 font-medium">Avg Response</span>
-                    <span className="font-bold text-gray-900">2.4h</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-indigo-500 h-full w-3/4 rounded-full"></div>
-                </div>
-
-                <div className="flex justify-between items-center pt-1">
-                    <span className="text-sm text-gray-500 font-medium">Satisfaction</span>
-                    <span className="font-bold text-green-600">94%</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-green-500 h-full w-[94%] rounded-full"></div>
-                </div>
-
-                <div className="flex justify-between items-center pt-1">
-                    <span className="text-sm text-gray-500 font-medium">System Health</span>
-                    <span className="font-bold text-blue-600">99.9%</span>
-                </div>
-                <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-blue-500 h-full w-[99%] rounded-full"></div>
-                </div>
+        <Panel title={title} icon={Activity} className={className}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {metrics.map((m) => (
+                    <div key={m.label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                            <span className="cd-muted">{m.label}</span>
+                            <strong>{m.value}</strong>
+                        </div>
+                        {m.percent !== undefined && <Meter value={m.percent} tone={m.tone} label={m.label} />}
+                    </div>
+                ))}
             </div>
-        </div>
+        </Panel>
     );
 };
 

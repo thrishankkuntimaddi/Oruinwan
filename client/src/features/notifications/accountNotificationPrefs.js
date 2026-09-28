@@ -17,6 +17,8 @@ export const NOTIFICATION_PREF_DEFAULTS = Object.freeze({
 });
 
 export const PREFS_EVENT = 'oruinwan:notification-prefs';
+/** Per-workspace NotificationPreference saved: detail { workspaceId, preferences }. */
+export const WORKSPACE_PREFS_EVENT = 'oruinwan:workspace-notification-prefs';
 const ENDPOINT = '/api/auth/me/preferences/notifications';
 
 const normalize = (data) => ({ ...NOTIFICATION_PREF_DEFAULTS, ...(data && typeof data === 'object' ? data : {}) });

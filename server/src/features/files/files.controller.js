@@ -1,7 +1,7 @@
 const filesService = require('./files.service');
-const multer = require('multer');
-
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } });
+// Same upload rules as chat attachments: 100 MB, programs refused, UTF-8 file names,
+// and clear 413/415 answers instead of a 500.
+const { upload } = require('../../modules/uploads/upload.controller');
 
 function handleError(res, err) {
     const status = err.statusCode || 500;

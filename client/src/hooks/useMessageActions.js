@@ -97,6 +97,12 @@ export function useMessageActions(conversationId, conversationType, workspaceId 
                     name: attachment.name,
                     size: attachment.size,
                     mimeType: attachment.mimeType,
+                    // Duration (voice/video) and pixel size let receivers show length and
+                    // reserve space before the media loads.
+                    ...(Number.isFinite(attachment.duration) ? { duration: attachment.duration } : {}),
+                    ...(Number.isFinite(attachment.width) ? { width: attachment.width } : {}),
+                    ...(Number.isFinite(attachment.height) ? { height: attachment.height } : {}),
+                    ...(attachment.variant ? { variant: attachment.variant } : {}),
                 };
 
                 const payload = conversationType === 'channel'

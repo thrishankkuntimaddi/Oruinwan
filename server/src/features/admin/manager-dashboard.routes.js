@@ -20,23 +20,22 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
         
         const workspaceIds = (user.workspaces || []).map(w => w.workspace);
 
-        const workspaces = await Workspace.find({ _id: { $in: workspaceIds } })
+        const workspaces = await Workspace.find({ _id: { $in: workspaceIds }, company: user.companyId })
             .populate('members.user', 'username email profilePicture')
             .lean();
 
         
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         for (const workspace of workspaces) {
-            const [messageCount, taskCount, activeTaskCount] = await Promise.all([
+            const live = { workspace: workspace._id, deleted: { $ne: true } };
+            const [messageCount, taskCount, activeTaskCount, completedTaskCount] = await Promise.all([
                 Message.countDocuments({
                     workspace: workspace._id,
                     createdAt: { $gte: sevenDaysAgo }
                 }),
-                Task.countDocuments({ workspace: workspace._id }),
-                Task.countDocuments({
-                    workspace: workspace._id,
-                    status: { $in: ['todo', 'in_progress', 'review'] }
-                })
+                Task.countDocuments(live),
+                Task.countDocuments({ ...live, status: { $in: ['todo', 'in_progress', 'review', 'blocked'] } }),
+                Task.countDocuments({ ...live, status: 'done' })
             ]);
 
             workspace.memberCount = workspace.members.length;
@@ -45,7 +44,7 @@ router.get('/my-workspaces', requireAuth, requireManager, async (req, res) => {
                 messages: messageCount,
                 tasksTotal: taskCount,
                 tasksActive: activeTaskCount,
-                tasksCompleted: taskCount - activeTaskCount
+                tasksCompleted: completedTaskCount
             };
         }
 
@@ -66,7 +65,7 @@ router.get('/team-load', requireAuth, requireManager, async (req, res) => {
         const workspaceIds = (user.workspaces || []).map(w => w.workspace);
 
         
-        const workspaceDocs = await Workspace.find({ _id: { $in: workspaceIds } }).select('members');
+        const workspaceDocs = await Workspace.find({ _id: { $in: workspaceIds }, company: companyId }).select('members');
         const teamMemberIds = new Set();
         workspaceDocs.forEach(ws => {
             ws.members.forEach(m => teamMemberIds.add(m.user.toString()));
@@ -84,10 +83,11 @@ router.get('/team-load', requireAuth, requireManager, async (req, res) => {
         
         for (const member of teamMembers) {
             const [workspaces, activeTasks] = await Promise.all([
-                Workspace.find({ 'members.user': member._id }).select('name'),
+                Workspace.find({ 'members.user': member._id, company: companyId }).select('name'),
                 Task.countDocuments({
                     assignedTo: member._id,
-                    status: { $in: ['todo', 'in_progress', 'review'] }
+                    status: { $in: ['todo', 'in_progress', 'review', 'blocked'] },
+                    deleted: { $ne: true }
                 })
             ]);
 
@@ -116,6 +116,7 @@ router.get('/unassigned-employees', requireAuth, requireManager, async (req, res
 
         
         const managerWorkspaces = await Workspace.find({
+            company: user.companyId,
             $or: [
                 { 'members': { $elemMatch: { user: userId, role: 'owner' } } },
                 { 'members': { $elemMatch: { user: userId, role: 'admin' } } }
@@ -129,6 +130,7 @@ router.get('/unassigned-employees', requireAuth, requireManager, async (req, res
 
         
         const unassigned = await User.find({
+            companyId: user.companyId,
             departments: { $in: managedDepts },
             _id: { $nin: Array.from(workspaceMemberIds) },
             accountStatus: 'active'
@@ -144,172 +146,122 @@ router.get('/unassigned-employees', requireAuth, requireManager, async (req, res
     }
 });
 
+/**
+ * Department guard for the /dashboard/* routes: the department must be in the
+ * caller's company; plain managers must manage it (managedDepartments, the
+ * department's managers list or its head). Sends 400/403/404 and returns null
+ * when refused, else { ctx, dept }.
+ */
+async function _departmentGuard(req, res) {
+    const { departmentId } = req.params;
+    if (!isValidObjectId(departmentId)) {
+        res.status(400).json({ success: false, message: 'Invalid department ID' });
+        return null;
+    }
+    const ctx = await _managerContext(req);
+    if (!ctx) {
+        res.status(401).json({ success: false, message: 'User not found' });
+        return null;
+    }
+    const { dept, allowed } = await _managesDepartment(ctx, departmentId);
+    if (!dept || (ctx.manager.companyId && String(dept.company) !== String(ctx.manager.companyId))) {
+        res.status(404).json({ success: false, message: 'Department not found' });
+        return null;
+    }
+    if (!allowed) {
+        res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
+        return null;
+    }
+    return { ctx, dept };
+}
+
+const OPEN_STATUSES = ['todo', 'in_progress', 'review', 'blocked'];
+
 router.get('/dashboard/metrics/:departmentId', requireAuth, requireManager, async (req, res) => {
     try {
-        const userId = req.user.sub || req.user._id;
+        const guard = await _departmentGuard(req, res);
+        if (!guard) return;
         const { departmentId } = req.params;
+        const companyId = guard.ctx.manager.companyId;
 
-        
-        if (!isValidObjectId(departmentId)) {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
+        const dept = await Department.findById(departmentId).populate('head', 'username email').lean();
+        const inDept = { departments: departmentId, companyId };
 
-        
-        const [manager, dept] = await Promise.all([
-            User.findById(userId),
-            Department.findById(departmentId).populate('head', 'username email').lean()
-        ]);
-
-        if (!dept) return res.status(404).json({ success: false, message: 'Department not found' });
-
-        const inManagedDepts = (manager.managedDepartments || []).map(d => d.toString()).includes(departmentId);
-        const inDeptManagers = (dept.managers || []).map(d => d.toString()).includes(userId.toString());
-        const isHead = dept.head && dept.head._id && dept.head._id.toString() === userId.toString();
-
-        if (!inManagedDepts && !inDeptManagers && !isHead) {
-            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
-        }
-
-        
         const [totalMembers, activeMembers, pendingMembers, managers] = await Promise.all([
-            User.countDocuments({ departments: departmentId }),
-            User.countDocuments({ departments: departmentId, accountStatus: 'active' }),
-            User.countDocuments({ departments: departmentId, accountStatus: 'pending' }),
-            User.countDocuments({ departments: departmentId, companyRole: 'manager' })
+            User.countDocuments(inDept),
+            User.countDocuments({ ...inDept, accountStatus: 'active' }),
+            User.countDocuments({ ...inDept, accountStatus: { $in: ['pending', 'invited'] } }),
+            User.countDocuments({ ...inDept, companyRole: 'manager' })
         ]);
 
-        
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const memberIds = (await User.find(inDept).select('_id').lean()).map(m => m._id);
 
-        
-        const departmentMembers = await User.find({ departments: departmentId }).select('_id');
-        const memberIds = departmentMembers.map(m => m._id);
-
-        const [messagesThisWeek, tasksCompletedThisWeek] = await Promise.all([
-            Message.countDocuments({
-                user: { $in: memberIds },
-                createdAt: { $gte: sevenDaysAgo }
-            }),
-            Task.countDocuments({
-                assignedTo: { $in: memberIds },
-                status: 'completed',
-                updatedAt: { $gte: sevenDaysAgo }
-            })
+        const [messagesThisWeek, tasksCompletedThisWeek, openTasks, overdueTasks] = await Promise.all([
+            Message.countDocuments({ sender: { $in: memberIds }, createdAt: { $gte: sevenDaysAgo } }),
+            Task.countDocuments({ assignedTo: { $in: memberIds }, status: 'done', deleted: { $ne: true }, updatedAt: { $gte: sevenDaysAgo } }),
+            Task.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true } }),
+            Task.countDocuments({ assignedTo: { $in: memberIds }, status: { $in: OPEN_STATUSES }, deleted: { $ne: true }, dueDate: { $lt: new Date() } }),
         ]);
 
         res.json({
-            team: {
-                total: totalMembers,
-                active: activeMembers,
-                pending: pendingMembers,
-                managers
-            },
-            activity: {
-                messagesThisWeek,
-                tasksThisWeek: tasksCompletedThisWeek,
-                meetingsThisWeek: 0
-            },
-            department: {
-                name: dept.name,
-                description: dept.description,
-                head: dept.head,
-                createdAt: dept.createdAt
-            }
+            team: { total: totalMembers, active: activeMembers, pending: pendingMembers, managers },
+            activity: { messagesThisWeek, tasksThisWeek: tasksCompletedThisWeek, openTasks, overdueTasks },
+            department: { _id: dept._id, name: dept.name, description: dept.description, head: dept.head, createdAt: dept.createdAt }
         });
     } catch (error) {
         logger.error('Manager Dashboard Metrics Error:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
 router.get('/dashboard/team-load/:departmentId', requireAuth, requireManager, async (req, res) => {
     try {
-        const userId = req.user.sub || req.user._id;
+        const guard = await _departmentGuard(req, res);
+        if (!guard) return;
         const { departmentId } = req.params;
+        const companyId = guard.ctx.manager.companyId;
 
-        
-        if (!isValidObjectId(departmentId)) {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
-
-        
-        const manager = await User.findById(userId);
-        if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
-            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
-        }
-
-        
-        const teamMembers = await User.find({
-            departments: departmentId,
-            accountStatus: 'active'
-        })
-            .select('username email profilePicture')
+        const teamMembers = await User.find({ departments: departmentId, companyId, accountStatus: 'active' })
+            .select('username email profilePicture jobTitle')
             .lean();
 
-        
         for (const member of teamMembers) {
             const [workspaces, activeTasks] = await Promise.all([
-                Workspace.find({
-                    'members.user': member._id
-                }).select('name'),
-                Task.countDocuments({
-                    assignedTo: member._id,
-                    status: { $in: ['todo', 'in_progress', 'review'] }
-                })
+                Workspace.find({ 'members.user': member._id, company: companyId }).select('name'),
+                Task.countDocuments({ assignedTo: member._id, status: { $in: OPEN_STATUSES }, deleted: { $ne: true } })
             ]);
-
             member.workspaces = workspaces.map(ws => ws.name);
             member.activeTasks = activeTasks;
             member.workload = activeTasks > 10 ? 'high' : activeTasks > 5 ? 'medium' : 'low';
         }
 
-        
-        const overloaded = teamMembers.filter(m => m.workload === 'high');
-        const idle = teamMembers.filter(m => m.activeTasks === 0);
-
         res.json({
             teamMembers,
-            overloaded,
-            idle
+            overloaded: teamMembers.filter(m => m.workload === 'high'),
+            idle: teamMembers.filter(m => m.activeTasks === 0)
         });
     } catch (error) {
         logger.error('Manager Dashboard Team Load Error:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
 router.get('/dashboard/unassigned/:departmentId', requireAuth, requireManager, async (req, res) => {
     try {
-        const userId = req.user.sub || req.user._id;
+        const guard = await _departmentGuard(req, res);
+        if (!guard) return;
         const { departmentId } = req.params;
+        const companyId = guard.ctx.manager.companyId;
 
-        
-        if (!isValidObjectId(departmentId)) {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
-
-        
-        const manager = await User.findById(userId);
-        if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
-            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
-        }
-
-        
-        const workspaces = await Workspace.find().select('members');
+        // "Unassigned" = in the department but in none of the company's workspaces.
+        const workspaces = await Workspace.find({ company: companyId }).select('members').lean();
         const workspaceMemberIds = new Set();
-        workspaces.forEach(ws => {
-            ws.members.forEach(m => workspaceMemberIds.add(m.user.toString()));
-        });
+        workspaces.forEach(ws => (ws.members || []).forEach(m => workspaceMemberIds.add(String(m.user))));
 
-        
         const unassigned = await User.find({
             departments: departmentId,
+            companyId,
             _id: { $nin: Array.from(workspaceMemberIds) },
             accountStatus: 'active'
         })
@@ -320,44 +272,42 @@ router.get('/dashboard/unassigned/:departmentId', requireAuth, requireManager, a
         res.json({ unassigned });
     } catch (error) {
         logger.error('Manager Dashboard Unassigned Error:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 
 router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, async (req, res) => {
     try {
-        const userId = req.user.sub || req.user._id;
+        const guard = await _departmentGuard(req, res);
+        if (!guard) return;
         const { departmentId } = req.params;
+        const companyId = guard.ctx.manager.companyId;
 
-        
-        if (!isValidObjectId(departmentId)) {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
+        const members = await User.find({ departments: departmentId, companyId }).select('_id username').lean();
+        const memberIds = members.map(m => m._id);
+        const base = { assignedTo: { $in: memberIds }, deleted: { $ne: true } };
 
-        
-        const manager = await User.findById(userId);
-        if (!manager.managedDepartments || !manager.managedDepartments.map(d => d.toString()).includes(departmentId)) {
-            return res.status(403).json({ success: false, message: 'Access denied: You do not manage this department' });
-        }
-
-        
-        const departmentMembers = await User.find({ departments: departmentId }).select('_id');
-        const memberIds = departmentMembers.map(m => m._id);
-
-        
-        const [totalTasks, completedTasks, inProgressTasks] = await Promise.all([
-            Task.countDocuments({ assignedTo: { $in: memberIds } }),
-            Task.countDocuments({ assignedTo: { $in: memberIds }, status: 'completed' }),
-            Task.countDocuments({ assignedTo: { $in: memberIds }, status: 'in_progress' })
+        const [totalTasks, completedTasks, inProgressTasks, doneWithTimes, perMember] = await Promise.all([
+            Task.countDocuments(base),
+            Task.countDocuments({ ...base, status: 'done' }),
+            Task.countDocuments({ ...base, status: 'in_progress' }),
+            Task.find({ ...base, status: 'done', completedAt: { $ne: null } }).select('createdAt completedAt').limit(500).lean(),
+            Task.aggregate([
+                { $match: { assignedTo: { $in: memberIds }, deleted: { $ne: true } } },
+                { $unwind: '$assignedTo' },
+                { $match: { assignedTo: { $in: memberIds } } },
+                { $group: { _id: '$assignedTo', total: { $sum: 1 }, done: { $sum: { $cond: [{ $eq: ['$status', 'done'] }, 1, 0] } } } },
+            ]),
         ]);
 
         const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+        // Average days from creation to completion; null when nothing has completed.
+        const avgTime = doneWithTimes.length
+            ? Math.round((doneWithTimes.reduce((sum, t) => sum + (new Date(t.completedAt) - new Date(t.createdAt)), 0) / doneWithTimes.length / 86400000) * 10) / 10
+            : null;
 
-        
-        const avgTime = 3.5; 
+        const names = new Map(members.map(m => [String(m._id), m.username]));
+        const teamWorkload = perMember.map(r => ({ userId: r._id, username: names.get(String(r._id)) || 'Unknown', total: r.total, done: r.done }));
 
         res.json({
             completionRate,
@@ -365,16 +315,12 @@ router.get('/dashboard/reports/:departmentId', requireAuth, requireManager, asyn
             inProgress: inProgressTasks,
             total: totalTasks,
             avgTime,
-            
             taskVolumeOverTime: [],
-            teamWorkload: []
+            teamWorkload
         });
     } catch (error) {
         logger.error('Manager Dashboard Reports Error:', error);
-        if (error.name === 'CastError') {
-            return res.status(400).json({ success: false, message: 'Invalid department ID' });
-        }
-        res.status(500).json({ success: false, message: 'Server error', error: error.message });
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 });
 

@@ -283,6 +283,7 @@ exports.postThreadReply = async (req, res) => {
                     senderUsername,
                     workspaceId: parentMessage.workspace,
                     channelId: parentMessage.channel ? String(parentMessage.channel) : null,
+                    dmSessionId: parentMessage.dm ? String(parentMessage.dm) : null,
                     channelName,
                     parentMessageId: String(messageId),
                 });

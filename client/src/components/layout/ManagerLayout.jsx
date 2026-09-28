@@ -1,144 +1,74 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
-import { Menu, X, Shield } from 'lucide-react';
-import ManagerSidebar from '../manager/ManagerSidebar';
-import { useCompany } from '../../contexts/CompanyContext';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import api from '@services/api';
+import DashShell from '../company-dash/DashShell';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAdminUser } from '../company-dash/dashNav';
+import logger from '../../utils/logger';
 
+const STORE_KEY = 'oruinwan.manager.department';
+const readStore = () => { try { return localStorage.getItem(STORE_KEY); } catch { return null; } };
+const writeStore = (v) => { try { localStorage.setItem(STORE_KEY, v); } catch { /* storage blocked */ } };
+
+/**
+ * Frame for the Manager console. A manager sees the departments they manage
+ * (GET /api/managers/scope); an owner or admin can look at any department
+ * (GET /api/departments). The chosen department is passed to every page as
+ * the outlet context { selectedDepartment, departments, departmentsLoading }.
+ */
 const ManagerLayout = () => {
-    const { company, isCompanyOwner, isCompanyAdmin } = useCompany();
     const { user } = useAuth();
-    const navigate = useNavigate();
-    const location = useLocation();
+    const admin = isAdminUser(user);
+    const [departments, setDepartments] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [selectedId, setSelectedId] = useState(readStore);
 
-    const showAdminButton = isCompanyOwner() || isCompanyAdmin();
+    const load = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const res = admin ? await api.get('/api/departments') : await api.get('/api/managers/scope');
+            const list = (res.data?.departments || []).filter((d) => d && d._id);
+            setDepartments(list);
+        } catch (err) {
+            logger.error('Manager scope load failed', err);
+            setError(err?.response?.data?.message || 'Could not load your departments');
+        } finally {
+            setLoading(false);
+        }
+    }, [admin]);
 
-    const isValidObjectId = (id) => /^[a-f\d]{24}$/i.test(String(id ?? ''));
+    useEffect(() => { load(); }, [load]);
 
-    const selectedDept = (() => {
-        const depts = company?.departments ?? [];
-        const managed = depts.find(d => d.head?._id === user?._id || d.head === user?._id);
-        const candidate = managed ?? depts[0] ?? null;
-        return candidate && isValidObjectId(candidate._id) ? candidate : null;
-    })();
-
-    const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    useEffect(() => {
-        const onResize = () => {
-            const mobile = window.innerWidth < 768;
-            setIsMobile(mobile);
-            if (!mobile) setSidebarOpen(false);
-        };
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, []);
-
-    
-    useEffect(() => {
-        if (isMobile) setSidebarOpen(false);
-    }, [location.pathname, isMobile]);
-
-    const closeSidebar = useCallback(() => setSidebarOpen(false), []);
-
-    return (
-        <div style={{
-            display: 'flex', height: '100vh', overflow: 'hidden',
-            background: 'var(--bg-base)',
-            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-            position: 'relative',
-        }}>
-            {}
-            {isMobile && sidebarOpen && (
-                <div
-                    onClick={closeSidebar}
-                    style={{
-                        position: 'fixed', inset: 0, zIndex: 35,
-                        background: 'rgba(0,0,0,0.65)',
-                        backdropFilter: 'blur(2px)',
-                    }}
-                />
-            )}
-
-            {}
-            <div style={{
-                ...(isMobile ? {
-                    position: 'fixed', top: 0, left: 0, height: '100%', zIndex: 40,
-                    transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
-                    transition: 'transform 280ms cubic-bezier(0.16,1,0.3,1)',
-                    boxShadow: sidebarOpen ? '4px 0 32px rgba(0,0,0,0.5)' : 'none',
-                } : { flexShrink: 0 })
-            }}>
-                <ManagerSidebar onNavigate={closeSidebar} />
-            </div>
-
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', minWidth: 0 }}>
-                {}
-                <header style={{
-                    height: '56px', flexShrink: 0,
-                    padding: isMobile ? '0 16px' : '0 28px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: 'var(--bg-surface)',
-                    borderBottom: '1px solid var(--border-subtle)',
-                    zIndex: 10, gap: '12px',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                        {isMobile && (
-                            <button
-                                onClick={() => setSidebarOpen(o => !o)}
-                                style={{
-                                    padding: '6px', flexShrink: 0,
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    color: 'var(--text-secondary)', borderRadius: '4px',
-                                    display: 'flex', alignItems: 'center',
-                                    transition: 'color 150ms ease',
-                                }}
-                                aria-label="Toggle sidebar"
-                            >
-                                {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
-                            </button>
-                        )}
-                        <div style={{ minWidth: 0 }}>
-                            <p style={{ fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.15em', color: 'var(--text-muted)', marginBottom: '2px' }}>
-                                Workspace Manager
-                            </p>
-                            <h1 style={{ fontSize: isMobile ? '15px' : '18px', fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em', lineHeight: 1, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {company?.displayName || company?.name || 'My Company'}
-                            </h1>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-                        {showAdminButton && !isMobile && (
-                            <AdminConsoleBtn onClick={() => navigate('/admin/dashboard')} />
-                        )}
-                        {!isMobile && (
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-                            </span>
-                        )}
-                    </div>
-                </header>
-
-                {}
-                <main style={{ flex: 1, overflow: 'hidden', background: 'var(--bg-base)', position: 'relative' }}>
-                    <Outlet context={{ selectedDepartment: selectedDept }} />
-                </main>
-            </div>
-        </div>
+    const selectedDepartment = useMemo(
+        () => departments.find((d) => String(d._id) === String(selectedId)) || departments[0] || null,
+        [departments, selectedId],
     );
-};
 
-const AdminConsoleBtn = ({ onClick }) => {
-    const [hov, setHov] = React.useState(false);
-    return (
-        <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: hov ? 'rgba(184,149,106,0.15)' : 'var(--bg-active)', border: '1px solid var(--border-default)', color: hov ? 'var(--accent)' : 'var(--text-secondary)', fontSize: '11px', fontWeight: 700, cursor: 'pointer', borderRadius: '2px', transition: 'all 150ms ease' }}>
-            <Shield size={12} /> Admin Console
-        </button>
-    );
+    const choose = useCallback((id) => { setSelectedId(id); writeStore(id); }, []);
+
+    const outletContext = useMemo(() => ({
+        selectedDepartment,
+        departments,
+        departmentsLoading: loading,
+        departmentsError: error,
+        reloadDepartments: load,
+        selectDepartment: choose,
+    }), [selectedDepartment, departments, loading, error, load, choose]);
+
+    const topExtra = departments.length > 1 ? (
+        <select
+            className="gl-input cd-select"
+            aria-label="Department"
+            value={selectedDepartment?._id || ''}
+            onChange={(e) => choose(e.target.value)}
+            style={{ maxWidth: 180 }}
+        >
+            {departments.map((d) => <option key={d._id} value={d._id}>{d.name}</option>)}
+        </select>
+    ) : null;
+
+    return <DashShell outletContext={outletContext} topExtra={topExtra} />;
 };
 
 export default ManagerLayout;

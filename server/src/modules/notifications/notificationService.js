@@ -77,6 +77,7 @@ const PREF_KEY_BY_TYPE = {
 
 const getPrefs = () => require('./notificationPreferenceService');
 const getPush = () => require('../../features/push/push.service');
+const getViewing = () => require('./viewingPresence');
 
 async function loadPrefs(userId, workspaceId) {
     try {
@@ -122,7 +123,9 @@ async function create(io, { recipient, workspaceId, type, title, body = '', link
 
         emitToUser(io, recipient, 'notification:new', { notification: notif.toObject() });
 
-        if (push !== false && (!prefs || prefs.push !== false)) {
+        // Mobile push only when the user isn't actively using the web app: an
+        // active tab shows its own in-app alert (or nothing, when on screen).
+        if (push !== false && (!prefs || prefs.push !== false) && !getViewing().isActive(recipient)) {
             getPush().sendToUser(String(recipient), title, body || 'Oruinwan', {
                 type,
                 workspaceId: String(workspaceId),

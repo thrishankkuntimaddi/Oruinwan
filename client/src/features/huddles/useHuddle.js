@@ -63,6 +63,8 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
     const [screenStream, setScreenStream] = useState(null);
     // RTCPeerConnection.connectionState per remote user (real connection status for the UI).
     const [peerStates, setPeerStates] = useState({});
+    // Where the current call lives: { channelId, dmId, workspaceId } (null when not in a call).
+    const [callScope, setCallScope] = useState(null);
 
     const myUserId = String(currentUser?.id || currentUser?._id || currentUser?.sub || '');
     const myName = currentUser?.username || currentUser?.name || 'You';
@@ -161,6 +163,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         setCameraOn(false);
         setRemoteStreams({});
         setPeerStates({});
+        setCallScope(null);
     }, []);
 
     const flushCandidates = async (entry) => {
@@ -234,8 +237,13 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
 
     // ── Actions ─────────────────────────────────────────────────────────────
 
-    const enter = useCallback(async (id, { start, video = false }) => {
-        if (!socket || (!channelId && !dmId && !workspaceId) || !currentUser) {
+    // `scope` ({ channelId } | { dmId } | { workspaceId }) overrides this instance's
+    // own scope: the app-wide provider places calls in any channel or DM.
+    const enter = useCallback(async (id, { start, video = false, scope = null }) => {
+        const target = scope
+            ? { channelId: scope.channelId || null, dmId: scope.channelId ? null : (scope.dmId || null), workspaceId: scope.workspaceId || workspaceId || null }
+            : { channelId, dmId, workspaceId };
+        if (!socket || (!target.channelId && !target.dmId && !target.workspaceId) || !currentUser) {
             throw new Error('Not connected yet. Please try again in a moment.');
         }
         // Already in a huddle, or a start/join is already waiting for the microphone.
@@ -277,9 +285,10 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         setCameraOn(withCamera);
 
         huddleIdRef.current = id;
-        joinScopeRef.current = { channelId, dmId, workspaceId };
-        const scope = scopePayload();
-        const joinPayload = { ...scope, huddleId: id, audioEnabled: true, videoEnabled: withCamera };
+        joinScopeRef.current = target;
+        setCallScope(target);
+        const payloadScope = scopePayload();
+        const joinPayload = { ...payloadScope, huddleId: id, audioEnabled: true, videoEnabled: withCamera };
         if (start) {
             // The server handles start and join concurrently; if join is processed first the
             // huddle is created as voice-only. Join once our own huddle:started has come back.
@@ -295,7 +304,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
             const onOwnStart = (payload) => { if (payload?.huddleId === id) sendJoin(); };
             socket.on('huddle:started', onOwnStart);
             timer = setTimeout(sendJoin, 1500);
-            socket.emit('huddle:start', { ...scope, huddleId: id, video: !!video });
+            socket.emit('huddle:start', { ...payloadScope, huddleId: id, video: !!video });
         } else {
             socket.emit('huddle:join', joinPayload);
         }
@@ -309,9 +318,9 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
     }, [socket, channelId, dmId, workspaceId, currentUser, myUserId, myName, showToast]);
 
     // opts.huddleId: a fixed id (e.g. one huddle per scheduled meeting); starting an existing one joins it.
-    const startHuddle = useCallback((opts = {}) => enter(opts?.huddleId || uuidv4(), { start: true, video: !!opts?.video }), [enter]);
+    const startHuddle = useCallback((opts = {}) => enter(opts?.huddleId || uuidv4(), { start: true, video: !!opts?.video, scope: opts?.scope || null }), [enter]);
     // Joining a video huddle turns the camera on too (the announcement says which kind it is).
-    const joinHuddle = useCallback((id, opts = {}) => enter(id, { start: false, video: !!opts?.video }), [enter]);
+    const joinHuddle = useCallback((id, opts = {}) => enter(id, { start: false, video: !!opts?.video, scope: opts?.scope || null }), [enter]);
 
     const toggleCamera = useCallback(() => {
         const id = huddleIdRef.current;
@@ -591,6 +600,7 @@ export function useHuddle({ channelId, dmId, workspaceId, currentUser, socket })
         startScreenShare,
         stopScreenShare,
         peerStates,
+        callScope,
         dismissAnnouncement: () => setHuddleAnnouncement(null),
     };
 }

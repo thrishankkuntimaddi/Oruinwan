@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Plus, Search, CheckCircle2, Circle, Trash2, RotateCcw, Activity, LayoutGrid, List,
-  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X,
+  ChevronLeft, Inbox, Send, Eye, Hash, GitBranch, Users, Bell, X, CheckSquare,
 } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -23,6 +23,8 @@ import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useToast } from '../../contexts/ToastContext';
 import { PRIORITIES, PRIORITY_META, priorityLabel, statusLabel, canTransition, isClosed, STATUSES } from '../../utils/taskMeta';
 import { taskAbilities, isCreator, isAssignee, deleteOnlyHides } from '../../utils/taskPermissions';
+import WorkspacePanel, { PanelSection } from '../../components/layout/WorkspacePanel';
+import '../../styles/gloss-x-panels.css';
 
 /* ── Views: one filter per sidebar entry, used for both the list and its count ── */
 const VIEWS = [
@@ -278,9 +280,15 @@ export default function MyTasks() {
   if (loading) {
     return (
       <div className="tasks-ui" style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)' }}>
-        <div className="tk-shimmer" style={{ width: '208px', flexShrink: 0, background: 'var(--bg-surface)', borderRight: '1px solid var(--border-subtle)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {[100, 80, 90, 70, 85].map((w, i) => <div key={i} style={{ height: '28px', background: 'var(--bg-hover)', width: `${w}%` }} />)}
-        </div>
+        {!isMobile && (
+          <div className="gl-x-tasks-side">
+            <WorkspacePanel icon={CheckSquare} title="Tasks" subtitle={activeWorkspace?.name}>
+              <div className="tk-shimmer" style={{ padding: '6px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[100, 80, 90, 70, 85].map((w, i) => <div key={i} style={{ height: '26px', background: 'var(--bg-hover)', width: `${w}%` }} />)}
+              </div>
+            </WorkspacePanel>
+          </div>
+        )}
         <div className="tk-shimmer" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px', gap: '12px' }}>
           <div style={{ height: '20px', width: '180px', background: 'var(--bg-active)' }} />
           {[90, 75, 85, 65, 80].map((w, i) => <div key={i} style={{ height: '44px', background: 'var(--bg-hover)', width: `${w}%` }} />)}
@@ -289,106 +297,97 @@ export default function MyTasks() {
     );
   }
 
-  const navButton = (active) => ({
-    width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '7px 10px', borderRadius: '2px',
-    background: active ? 'var(--accent-dim)' : 'transparent', border: `1px solid ${active ? tint('var(--accent)', 30) : 'transparent'}`,
-    color: active ? 'var(--text-primary)' : 'var(--text-secondary)', fontWeight: active ? 600 : 500, fontSize: '13px',
-    fontFamily: FONT, cursor: 'pointer', textAlign: 'left',
-  });
-
   const emptyText = view.trash ? 'Trash is empty' : (search || channelFilter !== 'all' || priorityFilter !== 'all') ? 'No matching tasks' : 'No tasks here';
 
   return (
     <div className="tasks-ui" style={{ display: 'flex', height: '100%', overflow: 'hidden', background: 'var(--bg-base)', fontFamily: FONT }}>
 
       {/* ── Views sidebar ── */}
-      <nav aria-label="Task views" style={{
-        width: isMobile ? '100%' : '208px', flexShrink: 0, background: 'var(--bg-surface)',
-        borderRight: isMobile ? 'none' : '1px solid var(--border-subtle)',
-        display: (isMobile && mobileShowList) ? 'none' : 'flex', flexDirection: 'column', overflowY: 'auto',
-      }}>
-        <div style={{ padding: '16px 10px' }}>
-          <p className="tk-label" style={{ padding: '0 8px' }}>Tasks</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      <nav aria-label="Task views" className={`gl-x-tasks-side${isMobile ? ' is-mobile' : ''}`}
+        style={{ display: (isMobile && mobileShowList) ? 'none' : 'block' }}>
+        <WorkspacePanel
+          icon={CheckSquare}
+          title="Tasks"
+          subtitle={activeWorkspace?.name}
+          actions={canCreate && (
+            <button type="button" className="gl-icon-btn" onClick={() => setShowModal(true)} title="New task" aria-label="New task">
+              <Plus size={15} />
+            </button>
+          )}
+        >
+          <PanelSection label="Views">
             {VIEWS.map((v, i) => (v === null
-              ? <div key={`sep-${i}`} style={{ height: '1px', background: 'var(--border-subtle)', margin: '6px 8px' }} />
+              ? <div key={`sep-${i}`} style={{ height: '1px', background: 'var(--border-subtle)', margin: '6px 14px' }} />
               : (
                 <button key={v.key} type="button" onClick={() => setView(v.key)} aria-current={activeView === v.key ? 'page' : undefined}
-                  style={navButton(activeView === v.key)}
-                  onMouseEnter={(e) => { if (activeView !== v.key) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                  onMouseLeave={(e) => { if (activeView !== v.key) e.currentTarget.style.background = 'transparent'; }}>
-                  <v.Icon size={14} style={{ color: activeView === v.key ? 'var(--accent)' : 'var(--text-secondary)', flexShrink: 0 }} />
-                  <span style={{ flex: 1 }}>{v.label}</span>
-                  <span style={{ fontSize: '11px', fontWeight: 700, fontVariantNumeric: 'tabular-nums', color: activeView === v.key ? 'var(--accent)' : 'var(--text-secondary)' }}>{counts[v.key] || 0}</span>
+                  className={`gl-item${activeView === v.key ? ' is-active' : ''}`}>
+                  <v.Icon size={14} className="gl-x-item-icon" />
+                  <span className="gl-x-item-title">{v.label}</span>
+                  <span className="gl-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{counts[v.key] || 0}</span>
                 </button>
               )))}
-          </div>
+          </PanelSection>
 
           {channelGroups.length > 0 && !isMobile && (
-            <div style={{ marginTop: '18px' }}>
-              <p className="tk-label" style={{ padding: '0 8px' }}>By channel</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {[{ key: 'all', name: 'All channels', count: channelTotal }, ...channelGroups].map((g) => (
-                  <button key={g.key} type="button" onClick={() => setChannelFilter(g.key)} aria-pressed={channelFilter === g.key}
-                    style={{ ...navButton(channelFilter === g.key), fontSize: '12px', padding: '5px 10px', gap: '8px' }}
-                    onMouseEnter={(e) => { if (channelFilter !== g.key) e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                    onMouseLeave={(e) => { if (channelFilter !== g.key) e.currentTarget.style.background = 'transparent'; }}>
-                    <Hash size={11} style={{ color: channelFilter === g.key ? 'var(--accent)' : 'var(--text-secondary)', flexShrink: 0 }} />
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)' }}>{g.count}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <PanelSection label="By channel">
+              {[{ key: 'all', name: 'All channels', count: channelTotal }, ...channelGroups].map((g) => (
+                <button key={g.key} type="button" onClick={() => setChannelFilter(g.key)} aria-pressed={channelFilter === g.key}
+                  className="gl-item" style={{ minHeight: '28px' }}>
+                  <Hash size={12} className="gl-x-item-icon" />
+                  <span className="gl-x-item-title" style={{ fontSize: '12px' }}>{g.name}</span>
+                  <span className="gl-count">{g.count}</span>
+                </button>
+              ))}
+            </PanelSection>
           )}
-        </div>
+        </WorkspacePanel>
       </nav>
 
       {/* ── Main ── */}
       <div style={{ flex: 1, minWidth: 0, display: (isMobile && !mobileShowList) ? 'none' : 'flex', overflow: 'hidden' }}>
         <div className="tasks-main" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
-          <header className="tasks-header" style={{ position: 'relative', padding: isMobile ? '10px 14px' : undefined }}>
+          <header className="gl-x-tasks-head">
             {refreshing && (
               <div aria-hidden style={{ position: 'absolute', left: 0, right: 0, bottom: -1, height: '2px', overflow: 'hidden' }}>
                 <div style={{ width: '40%', height: '100%', background: 'var(--accent)', animation: 'tk-progress 1s linear infinite' }} />
               </div>
             )}
-            <div className="tasks-header-top">
+            <div className="gl-x-tasks-top">
               {isMobile && (
-                <button type="button" className="tk-icon-btn" onClick={() => setMobileShowList(false)} aria-label="Back to views"><ChevronLeft size={18} /></button>
+                <button type="button" className="gl-icon-btn" onClick={() => setMobileShowList(false)} aria-label="Back to views"><ChevronLeft size={18} /></button>
               )}
-              <div className="tasks-header-title">
+              <div className="gl-x-tasks-title">
                 <h1>{view.label}</h1>
                 {!isMobile && <p>{view.desc}</p>}
               </div>
               {canCreate && (
-                <button type="button" className="tk-btn tk-btn-primary" onClick={() => setShowModal(true)} style={{ padding: '7px 14px' }}>
+                <button type="button" className="gl-btn gl-btn--primary" onClick={() => setShowModal(true)}>
                   <Plus size={13} strokeWidth={2.5} /> Create
                 </button>
               )}
             </div>
-            <div className="tasks-toolbar" role="toolbar" aria-label="Filter and view">
-              <div className="tk-search">
-                <Search size={13} style={{ position: 'absolute', left: '9px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                <input className="tk-field" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" aria-label="Search tasks" style={{ paddingLeft: '28px', paddingRight: search ? '26px' : undefined }} />
-                {search && <button type="button" className="tk-icon-btn" onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: '2px', top: '50%', transform: 'translateY(-50%)', width: 22, height: 22 }}><X size={12} /></button>}
+            <div className="gl-x-tasks-toolbar" role="toolbar" aria-label="Filter and view">
+              <div className="gl-search">
+                <Search size={13} />
+                <input className="gl-input" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" aria-label="Search tasks" style={{ paddingRight: search ? '28px' : undefined }} />
+                {search && <button type="button" className="gl-icon-btn gl-x-xs" onClick={() => setSearch('')} aria-label="Clear search" style={{ position: 'absolute', right: '4px', top: '50%', transform: 'translateY(-50%)' }}><X size={12} /></button>}
               </div>
-              <select className="tk-field" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} aria-label="Sort by">
+              <select className="gl-input" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} aria-label="Sort by">
                 {SORT_OPTIONS.map((o) => <option key={o.id} value={o.id}>Sort: {o.label}</option>)}
               </select>
-              <select className="tk-field" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} aria-label="Priority filter">
+              <select className="gl-input" value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} aria-label="Priority filter">
                 <option value="all">All priorities</option>
                 {PRIORITIES.map((p) => <option key={p} value={p}>{priorityLabel(p)}</option>)}
               </select>
-              <div className="tasks-viewswitch" role="group" aria-label="Layout">
+              <div className="gl-tabs gl-x-tabs-fit gl-x-vs" role="group" aria-label="Layout">
                 {VIEW_MODES.map(({ key, Icon, label }) => (
-                  <button key={key} type="button" onClick={() => setViewMode(key)} aria-pressed={viewMode === key} title={label}>
+                  <button key={key} type="button" className={`gl-tab${viewMode === key ? ' is-active' : ''}`} onClick={() => setViewMode(key)} aria-pressed={viewMode === key} title={label}>
                     <Icon size={14} /><span className="tk-vs-label">{label}</span>
                   </button>
                 ))}
               </div>
-              <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+              <span className="gl-x-tasks-count">
                 {viewMode !== 'workload' && `${shown.length} ${shown.length === 1 ? 'task' : 'tasks'}`}
               </span>
             </div>

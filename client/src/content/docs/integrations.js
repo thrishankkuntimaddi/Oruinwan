@@ -1,0 +1,137 @@
+// Integrations & apps: GitHub, Jira, Zoom, outgoing webhooks, marketplace.
+export default {
+    id: 'integrations',
+    title: 'Integrations & apps',
+    icon: 'Plug',
+    blurb: 'Connect GitHub, Jira and Zoom, send events to your own services with webhooks, and install apps.',
+    pages: [
+        {
+            id: 'overview',
+            title: 'Integrations overview',
+            summary: 'What you can connect, where to set it up, and who is allowed to.',
+            keywords: 'integrations overview apps connect settings admin github jira zoom webhooks marketplace',
+            blocks: [
+                { table: { caption: 'Integrations', head: ['Integration', 'What it does', 'Set up in'], rows: [
+                    ['GitHub', 'PR, review, push and check cards in channels; task linking and status sync; AI PR review; `/github`, `/review`.', 'Settings → Integrations'],
+                    ['Jira Cloud', 'Issue cards in channels, tasks from new issues, status sync, `/jira`.', 'Settings → Integrations'],
+                    ['Zoom', '`/zoom` creates a meeting and posts the join link.', 'Settings → Integrations'],
+                    ['Outgoing webhooks', 'POST signed JSON to your URL when tasks change, messages are sent and more.', 'Settings → Integrations, or the Developer portal'],
+                    ['Apps marketplace', 'Browse, install and review apps for the workspace.', 'Apps (sidebar)'],
+                    ['Public API and SDK', 'Read and create workspace data from your own code.', 'Developer portal. See [Developer platform](/docs/developers/overview).'],
+                ] } },
+                { h: 'Who can connect things' },
+                'Only workspace **owners and admins** can connect or disconnect integrations, change their settings, rotate secrets and manage webhooks. Everyone in the workspace benefits: members see the cards, can open code reviews and use `/github issue`, `/jira` and `/zoom`.',
+                { callout: 'note', text: 'GitHub, Jira and Zoom are behind a server release flag. On your own server, enable them with `FEATURES_ENABLED=integrations`. Outgoing webhooks and the public API are always available.' },
+                { figure: 'github-flow', caption: 'GitHub sends signed events; Oruinwan verifies them and routes them to channels, tasks and the AI.' },
+            ],
+        },
+        {
+            id: 'github',
+            title: 'GitHub',
+            summary: 'Connect with a token, add the webhook, route repositories to channels, and let PRs drive your tasks.',
+            keywords: 'github connect token pat personal access token webhook secret routes repo channel pr pull request card push checks issue review link tasks status sync',
+            blocks: [
+                { h: '1. Connect with a personal access token' },
+                { steps: [
+                    'Go to **Settings → Integrations** (pick the workspace) and open **GitHub**.',
+                    'Create a GitHub token. **Fine-grained (recommended)**: Pull requests (Read), Contents (Read) and Metadata (Read), plus Issues (Read and write) if you want `/github issue`. Add Checks and Commit statuses (Read) for check results. **Classic**: the `repo` scope.',
+                    'Paste it into **Personal access token** (`github_pat_…` or `ghp_…`). Oruinwan tests it before saving. It is stored encrypted and never shown again.',
+                ] },
+                { h: '2. Add the webhook in GitHub' },
+                'After connecting, Oruinwan shows a **Payload URL** and a **Secret**. Copy the secret now: it is shown only once (use **Rotate secret** to get a new one).',
+                { code: 'https://YOUR-SERVER/api/v2/integrations/webhook/github?workspaceId=WORKSPACE_ID', title: 'Payload URL' },
+                { steps: [
+                    'In GitHub open the repository (or organisation) **Settings → Webhooks → Add webhook**.',
+                    'Paste the **Payload URL**, set content type to `application/json`, and paste the **Secret**.',
+                    'Choose **Let me select individual events** and tick **Pull requests**, **Pull request reviews**, **Issues**, **Pushes** and **Check suites**.',
+                    'Save. GitHub sends a ping, which Oruinwan answers.',
+                ] },
+                'Every delivery must carry a valid `X-Hub-Signature-256` (HMAC-SHA256 of the body with your secret), or it is rejected.',
+                { h: '3. Route repositories to channels' },
+                'Under **Where events are posted**, add routes: a repository (`owner/name`, or `*` for every repository), a channel, and which events to post. An exact repository route wins over `*`.',
+                { callout: 'note', text: 'Cards appear in a channel only after someone has sent at least one message there, because Oruinwan needs that channel’s encryption key.' },
+                { h: 'What you get' },
+                { figure: 'pr-card', caption: 'One card per PR per channel, updated in place; the linked task follows the PR.' },
+                { list: [
+                    '**PR cards**: repository and number, state (open, draft, merged, closed), author, branch → base, lines added and removed, files, linked tasks, review state and checks. Buttons: **View changes**, **AI review**, **Open on GitHub**.',
+                    'Thread replies on the card for submitted reviews, merges (“Merged by … into main”) and failed checks.',
+                    'A compact card for each **push**.',
+                    '**Behaviour** switches: **Link tasks** (task keys in the PR title, branch or description), **Sync task status** (opened → In review, merged → Done; see [Linked pull requests](/docs/tasks/linked-prs)), and **Oruinwan AI auto-review**.',
+                ] },
+                { h: 'Code review side window' },
+                'Any PR card, pasted PR link, a task’s linked PR or `/review owner/repo#12` opens the pull request **next to the chat**: a file tree, per-file diffs you can collapse, a whole-file view, an Overview and the AI review. Drag to resize; [[Esc]] closes it.',
+                { h: 'Slash commands' },
+                { table: { caption: 'GitHub commands', head: ['Command', 'Result'], rows: [
+                    ['`/github issue [owner/repo] <title>`', 'Opens a GitHub issue (in the repository routed to this channel if you leave it out).'],
+                    ['`/github pr owner/repo#12`', 'Posts the PR link with its title.'],
+                    ['`/review owner/repo#12`', 'Opens the code review window. Also accepts `owner/repo 12` or a PR URL.'],
+                ] } },
+            ],
+        },
+        {
+            id: 'jira-zoom',
+            title: 'Jira and Zoom',
+            summary: 'Jira issue cards and task sync; Zoom meetings from a slash command.',
+            keywords: 'jira atlassian issue cards webhook token zoom meeting server to server oauth',
+            blocks: [
+                { h: 'Jira Cloud' },
+                { steps: [
+                    'In **Settings → Integrations → Jira**, enter your **Jira site** (`https://your-team.atlassian.net`), the **Account email** and an **API token** (id.atlassian.com → Security → API tokens). The account needs “Browse projects” and “Create issues”.',
+                    'Route projects to channels (a project key, or `*`).',
+                    'In Jira: **Settings → System → WebHooks → Create a WebHook**, paste the URL Oruinwan shows (it contains a secret token, shown once), and tick issue **created**, **updated** and **deleted**. Optionally filter with JQL.',
+                ] },
+                { list: [
+                    'Issue cards (key, status, type, assignee, priority) appear in the routed channel and update in place; status changes add a thread reply.',
+                    'With **Link tasks** on, a new Jira issue creates a channel task titled `[KEY] summary`; status changes move linked tasks (To do → In progress → Done).',
+                    '`/jira <PROJECT> <summary>` creates an issue from the chat.',
+                ] },
+                { h: 'Zoom' },
+                { steps: [
+                    'In the Zoom Marketplace choose **Develop → Build App → Server-to-Server OAuth**, add the scope `meeting:write:meeting:admin` (or `meeting:write:admin`) and activate the app.',
+                    'In **Settings → Integrations → Zoom**, enter the **Account ID**, **Client ID** and **Client secret**.',
+                    'Type `/zoom Design review` in a conversation: Oruinwan creates an instant meeting (default topic “Quick sync”) and posts the join link.',
+                ] },
+            ],
+        },
+        {
+            id: 'webhooks',
+            title: 'Outgoing webhooks',
+            summary: 'Get a signed POST on your server when tasks change, messages are sent or integrations connect.',
+            keywords: 'webhook webhooks outgoing events post signature hmac secret retry',
+            blocks: [
+                { steps: [
+                    'Go to **Settings → Integrations → Outgoing webhooks** (or the Developer portal’s **Webhooks** tab).',
+                    'Enter your endpoint URL (HTTPS; plain HTTP only for `localhost`) and choose events, or `*` for all.',
+                    'Save and **copy the signing secret**: it is shown only once.',
+                    'Use **Test** to send a `webhook.test` delivery. Pause or delete the webhook any time.',
+                ] },
+                { table: { caption: 'Webhook events', head: ['Event', 'Sent when'], rows: [
+                    ['`task.created`', 'A task is created (also from the public API).'],
+                    ['`task.updated`', 'A task changes.'],
+                    ['`task.completed`', 'A task is done.'],
+                    ['`message.sent`', 'A message is posted in a **public** channel (ids and metadata only, never text).'],
+                    ['`integration.connected` / `integration.disconnected`', 'An integration is connected or removed.'],
+                ] } },
+                'The payload format, headers, retries and a signature check are on [Webhooks for developers](/docs/developers/webhooks).',
+            ],
+        },
+        {
+            id: 'marketplace',
+            title: 'Apps marketplace',
+            summary: 'Browse apps by category, install them in a workspace, and leave reviews.',
+            keywords: 'apps marketplace install uninstall review rating app market catalogue',
+            blocks: [
+                { steps: [
+                    'Open **Apps** in the icon sidebar (or the Developer portal’s **App Market** tab).',
+                    'Browse by category (productivity, communication, developer, automation, analytics) or search.',
+                    'Open an app to read its description, rating and reviews, then **Install** it for the workspace (owners and admins).',
+                ] },
+                { list: [
+                    'Rate an app from 1 to 5 and leave a comment; you can update your review later.',
+                    'Uninstall any time from the same place.',
+                ] },
+                { callout: 'note', text: 'Installing a marketplace app records it for the workspace; it does not grant the app access to your data. Apps that need data use the [public API](/docs/developers/public-api) with an API key an admin creates.' },
+            ],
+        },
+    ],
+};

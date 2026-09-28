@@ -1325,6 +1325,87 @@ async function getWorkload(userId, workspaceId) {
     return { workload };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Integrations (GitHub / Jira): external links, activity and status sync
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Apply an update coming from an integration to a workspace task. Runs as a
+ * system actor (the integration bot), so the per-user policy checks of
+ * updateTask do not apply, but the workflow rules do: a status move happens
+ * only when `isValidTransition(current, status)` allows it.
+ *
+ * @param {string} taskId
+ * @param {object} opts
+ *   actorId   bot / user id recorded on activity entries
+ *   link      optional external link, upserted into task.externalLinks by url
+ *   note      optional activity text ("PR #12 opened by octocat")
+ *   action    activity action for the note: 'integration_event' (default) | 'ai_note'
+ *   status    optional target status
+ *   onlyFrom  optional list: move only when the current status is one of these
+ * @returns {Promise<{ task: object|null, statusChanged: boolean, from?: string, to?: string }>}
+ */
+async function applyExternalUpdate(taskId, { actorId, link = null, note = null, action = 'integration_event', status = null, onlyFrom = null } = {}, io = null) {
+    const task = await Task.findOne({ _id: taskId, deleted: { $ne: true } });
+    if (!task) return { task: null, statusChanged: false };
+
+    let dirty = false;
+    if (link && link.url) {
+        const links = (task.externalLinks || []).map(l => (typeof l.toObject === 'function' ? l.toObject() : { ...l }));
+        const i = links.findIndex(l => l.url === link.url);
+        const next = { ...(i >= 0 ? links[i] : {}), ...link, updatedAt: new Date() };
+        if (i >= 0) links[i] = next; else links.push(next);
+        task.externalLinks = links;
+        task.markModified('externalLinks');
+        dirty = true;
+    }
+
+    const from = task.status;
+    let statusChanged = false;
+    if (status && TASK_STATUSES.includes(status) && status !== from && status !== 'blocked'
+        && (!onlyFrom || onlyFrom.includes(from)) && isValidTransition(from, status)) {
+        task.previousStatus = from;
+        task.status = status;
+        if (from === 'blocked') {
+            task.blockedBy = null;
+            task.blockedAt = null;
+            task.blockedReason = null;
+        }
+        if (status === 'done') {
+            task.completedAt = new Date();
+            task.completedBy = actorId || null;
+        } else if (from === 'done') {
+            task.completedAt = null;
+            task.completedBy = null;
+            task.completionNote = '';
+        }
+        statusChanged = true;
+        dirty = true;
+    }
+
+    if (dirty) await task.save();
+
+    const meta = link ? { provider: link.provider, kind: link.kind, url: link.url } : {};
+    if (note && actorId) {
+        await _logActivity(task._id, actorId, action, { metadata: { ...meta, text: String(note).slice(0, 2000) } });
+    }
+    if (statusChanged && actorId) {
+        await _logActivity(task._id, actorId, 'status_changed', {
+            field: 'status', from, to: status, metadata: { ...meta, source: link?.provider || 'integration' }
+        });
+    }
+
+    if (dirty || note) {
+        try {
+            const populated = await loadTaskForClient(task._id);
+            await emitToTaskAudience(io, task, 'task-updated', populated);
+        } catch (err) {
+            logger.warn({ err: err.message }, '[tasks] integration update emit failed');
+        }
+    }
+    return { task, statusChanged, from, to: statusChanged ? status : from };
+}
+
 module.exports = {
     getTasks,
     getTask,
@@ -1347,6 +1428,7 @@ module.exports = {
     startTimer,
     stopTimer,
     getWorkload,
+    applyExternalUpdate,
     // exported for tests
     _buildVisibilityQuery,
     _validateWorkspaceMember,

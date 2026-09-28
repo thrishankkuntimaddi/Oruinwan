@@ -157,7 +157,7 @@ async function getUserActivityAnalytics(companyId, period = 30) {
           as: 'user'
         }
       },
-      { $unwind: { path: '$user', preserveNullAndEmpty: true } },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
       {
         $project: {
           userId: '$_id',
@@ -264,7 +264,7 @@ async function getChannelEngagementAnalytics(companyId, period = 30) {
         as: 'channel'
       }
     },
-    { $unwind: { path: '$channel', preserveNullAndEmpty: true } },
+    { $unwind: { path: '$channel', preserveNullAndEmptyArrays: true } },
     {
       $project: {
         channelId: '$_id',
@@ -574,7 +574,7 @@ async function getCommunicationPatterns(companyId, period = 30) {
     { $sort: { count: -1 } },
     { $limit: 5 },
     { $lookup: { from: 'channels', localField: '_id', foreignField: '_id', as: 'c' } },
-    { $unwind: { path: '$c', preserveNullAndEmpty: true } },
+    { $unwind: { path: '$c', preserveNullAndEmptyArrays: true } },
     { $project: { name: { $ifNull: ['$c.name', 'Unknown'] }, count: 1 } }
   ]);
 

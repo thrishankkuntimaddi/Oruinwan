@@ -33,7 +33,7 @@ const AudioBlock = ({
     const mediaRecorderRef = useRef(null);
     const timerRef = useRef(null);
     const autoStopRef = useRef(null);
-    const { url, error } = useBlockMediaUrl(block.content);
+    const { url, error, onMediaError } = useBlockMediaUrl(block.content);
 
     useEffect(() => () => {
         clearInterval(timerRef.current);
@@ -121,7 +121,7 @@ const AudioBlock = ({
                         {error ? (
                             <p style={{ ...mediaStyles.error, padding: 0 }}>This audio could not be loaded.</p>
                         ) : (
-                            <audio src={url || undefined} controls style={{ flex: 1, height: '36px', minWidth: 0 }} />
+                            <audio src={url || undefined} onError={onMediaError} controls style={{ flex: 1, height: '36px', minWidth: 0 }} />
                         )}
                     </div>
                 ) : (

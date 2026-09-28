@@ -154,9 +154,38 @@ async function updateDepartment(departmentId, companyId, updates) {
         throw err;
     }
 
+    // Head changes keep dept.managers and the head's managedDepartments in step.
+    let previousHead = null;
+    let newHead = null;
+    if (sanitized.head !== undefined) {
+        const current = await Department.findOne({ _id: departmentId, company: companyId }).select('head managers').lean();
+        if (!current) {
+            const err = new Error('Department not found.');
+            err.status = 404;
+            throw err;
+        }
+        previousHead = current.head ? String(current.head) : null;
+        if (sanitized.head) {
+            newHead = await User.findOne({ _id: sanitized.head, companyId }).select('_id companyRole').lean();
+            if (!newHead) {
+                const err = new Error('The department head must be a member of this company.');
+                err.status = 400;
+                throw err;
+            }
+        } else {
+            sanitized.head = null;
+        }
+    }
+
+    const headIsManager = newHead && newHead.companyRole === 'manager';
+    if (headIsManager && Array.isArray(sanitized.managers) && !sanitized.managers.map(String).includes(String(newHead._id))) {
+        sanitized.managers = [...sanitized.managers, newHead._id];
+    }
+    const addHead = headIsManager && !Array.isArray(sanitized.managers);
+
     const dept = await Department.findOneAndUpdate(
         { _id: departmentId, company: companyId },
-        { $set: sanitized },
+        { $set: sanitized, ...(addHead ? { $addToSet: { managers: newHead._id } } : {}) },
         { new: true, runValidators: true }
     )
         .populate('head', 'username email profilePicture')
@@ -167,6 +196,16 @@ async function updateDepartment(departmentId, companyId, updates) {
         const err = new Error('Department not found.');
         err.status = 404;
         throw err;
+    }
+
+    if (sanitized.head !== undefined) {
+        const managerIds = (dept.managers || []).map((m) => String(m._id || m));
+        if (newHead && newHead.companyRole === 'manager') {
+            await User.updateOne({ _id: newHead._id }, { $addToSet: { managedDepartments: dept._id } });
+        }
+        if (previousHead && previousHead !== String(newHead?._id || '') && !managerIds.includes(previousHead)) {
+            await User.updateOne({ _id: previousHead }, { $pull: { managedDepartments: dept._id } });
+        }
     }
 
     return dept;

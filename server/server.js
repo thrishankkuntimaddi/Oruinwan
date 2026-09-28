@@ -67,8 +67,11 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Incoming integration webhooks are HMAC-signed over the exact request bytes,
+// so the raw body is kept for /api/v2/integrations/webhook/* only.
+const { captureRawBody } = require('./src/features/integrations/webhook.verify');
+app.use(express.json({ limit: '50mb', verify: captureRawBody }));
+app.use(express.urlencoded({ limit: '50mb', extended: true, verify: captureRawBody }));
 app.use(cookieParser());
 app.use(helmet());
 app.use(passport.initialize());

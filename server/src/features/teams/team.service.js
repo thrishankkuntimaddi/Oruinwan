@@ -29,6 +29,22 @@ async function getTeamById(teamId, companyId) {
   return team;
 }
 
+/** Department and lead must be in this company (null clears them). Throws 400. */
+async function assertTeamRefs(companyId, { department, lead }) {
+  const mongoose = require('mongoose');
+  const bad = (msg) => Object.assign(new Error(msg), { status: 400 });
+  if (department) {
+    if (!mongoose.Types.ObjectId.isValid(String(department))) throw bad('Invalid department id.');
+    const dept = await Department.findOne({ _id: department, company: companyId, isActive: true }).select('_id').lean();
+    if (!dept) throw bad('Department not found or does not belong to this company.');
+  }
+  if (lead) {
+    if (!mongoose.Types.ObjectId.isValid(String(lead))) throw bad('Invalid lead id.');
+    const u = await User.findOne({ _id: lead, companyId }).select('_id').lean();
+    if (!u) throw bad('Team lead must be a member of this company.');
+  }
+}
+
 async function createTeam({ companyId, name, description, icon, color, departmentId, leadId, creatorId }) {
   
   const existing = await Team.findOne({
@@ -51,6 +67,8 @@ async function createTeam({ companyId, name, description, icon, color, departmen
       throw err;
     }
   }
+
+  await assertTeamRefs(companyId, { lead: leadId });
 
   const initialMembers = [];
   if (leadId) {
@@ -90,6 +108,8 @@ async function updateTeam(teamId, companyId, updates) {
     err.status = 400;
     throw err;
   }
+
+  await assertTeamRefs(companyId, { department: sanitized.department, lead: sanitized.lead });
 
   const team = await Team.findOneAndUpdate(
     { _id: teamId, company: companyId },

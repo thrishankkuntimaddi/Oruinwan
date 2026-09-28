@@ -14,6 +14,9 @@ export const useSocket = () => {
     return context;
 };
 
+/** Like useSocket, but null outside a SocketProvider (widgets that also render in tests). */
+export const useOptionalSocket = () => useContext(SocketContext);
+
 const CHANNEL_EVENTS = [
     'channel-created', 'channel-updated', 'channel-deleted', 'invited-to-channel',
     'removed-from-channel', 'channel-member-added', 'channel-member-joined',

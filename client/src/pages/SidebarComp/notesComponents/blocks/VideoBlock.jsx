@@ -32,7 +32,7 @@ const VideoBlock = ({
     readOnly = false,
 }) => {
     const embed = embedUrlOf(block.content);
-    const { url, error } = useBlockMediaUrl(embed ? null : block.content);
+    const { url, error, onMediaError } = useBlockMediaUrl(embed ? null : block.content);
 
     const handleFile = async (file) => {
         if (!file.type.startsWith('video/')) { showToast('Please choose a video file', 'error'); return; }
@@ -72,7 +72,7 @@ const VideoBlock = ({
                         ) : error ? (
                             <p style={mediaStyles.error}>This video could not be loaded.</p>
                         ) : url ? (
-                            <video style={{ width: '100%', maxHeight: '384px', display: 'block' }} controls src={url} />
+                            <video style={{ width: '100%', maxHeight: '384px', display: 'block' }} controls playsInline src={url} onError={onMediaError} />
                         ) : (
                             <div style={{ width: '100%', aspectRatio: '16 / 9', background: 'var(--bg-hover)' }} />
                         )}
